@@ -8,12 +8,25 @@ export const AWAKENING = {
   /** Camera pulls back; nothing has changed yet. */
   zoomOut: 1.2,
   /** Energy sweeps from the shrine to the edge of the region. */
-  wave: 8,
+  wave: 8.8,
   /** Pause on the fully energised region. */
   hold: 3,
   /** Camera returns to the player. */
   zoomIn: 1.6,
 } as const;
+
+/**
+ * Seconds into the sequence at which the audio swell (`dawn-reverence`) peaks in its file.
+ */
+export const SWELL_CREST = 8;
+
+/**
+ * How much later than `SWELL_CREST` the crest is actually perceived, in seconds. Tuned by ear:
+ * with the energy finishing just before the file's peak the crest still felt late by about this
+ * much (the cause is not known; audio start-up and the time the ear needs to register a crest are
+ * candidates). The energy is timed to finish just before the perceived crest.
+ */
+export const SWELL_LAG = 1;
 
 export const AWAKENING_TOTAL = AWAKENING.zoomOut + AWAKENING.wave + AWAKENING.hold + AWAKENING.zoomIn;
 
@@ -27,6 +40,8 @@ export interface AwakeningFrame {
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 const ease = (t: number): number => t * t * (3 - 2 * t);
+/** Eases in gently but keeps moving at the end, so the front does not crawl through the last stretch. */
+const sweep = (u: number): number => 0.5 * u + 0.5 * ease(u);
 
 export function awakeningFrame(t: number): AwakeningFrame {
   const waveStart = AWAKENING.zoomOut;
@@ -34,7 +49,7 @@ export function awakeningFrame(t: number): AwakeningFrame {
   const zoomInStart = holdStart + AWAKENING.hold;
   if (t >= AWAKENING_TOTAL) return { progress: 1, zoom: 0, done: true };
   if (t < waveStart) return { progress: 0, zoom: ease(clamp01(t / AWAKENING.zoomOut)), done: false };
-  if (t < holdStart) return { progress: ease(clamp01((t - waveStart) / AWAKENING.wave)), zoom: 1, done: false };
+  if (t < holdStart) return { progress: sweep(clamp01((t - waveStart) / AWAKENING.wave)), zoom: 1, done: false };
   if (t < zoomInStart) return { progress: 1, zoom: 1, done: false };
   return { progress: 1, zoom: 1 - ease(clamp01((t - zoomInStart) / AWAKENING.zoomIn)), done: false };
 }

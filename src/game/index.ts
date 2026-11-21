@@ -27,6 +27,6 @@ export {
 export type { MoveResult } from "./player";
 export { nextShrine } from "./guidance";
 export type { Guidance } from "./guidance";
-export { AWAKENING, AWAKENING_TOTAL, awakeningFrame, skipTarget } from "./awakening";
+export { AWAKENING, AWAKENING_TOTAL, SWELL_CREST, SWELL_LAG, awakeningFrame, skipTarget } from "./awakening";
 export type { AwakeningFrame } from "./awakening";
-export { FRONT_WIDTH, frontGlow, frontRadius, lifeAt } from "./vitality-field";
+export { FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";

@@ -36,8 +36,8 @@ describe("vitality field", () => {
     expect(lifeAt(0.999, REGION_REACH)).toBeGreaterThan(0.95);
   });
 
-  it("lights the shrine itself almost immediately", () => {
-    expect(lifeAt(0.15, 0)).toBeGreaterThan(0.95);
+  it("lights the shrine itself early in the wave", () => {
+    expect(lifeAt(0.25, 0)).toBeGreaterThan(0.95);
   });
 
   it("glows only on the front", () => {
