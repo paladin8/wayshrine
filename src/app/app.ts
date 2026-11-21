@@ -77,6 +77,7 @@ export function startApp(container: HTMLElement): void {
   const seed = params.get("seed") ?? "wayshrine";
   const world = createWorld(seed);
   const terrain = createTerrain(world);
+  const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
   const stage = createStage(container, terrain, monuments);
   const hud = createHud(container);
@@ -271,7 +272,7 @@ export function startApp(container: HTMLElement): void {
       messages: t,
       showCompass: prefs.showCompass,
     });
-    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map });
+    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, monuments: debug ? monuments.all : undefined });
 
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     cues.update(dt);

@@ -1,6 +1,6 @@
 import { isExplored, isRestored, type GameState } from "../game";
 import { palette } from "../render";
-import { REGION_SIZE, type Biome, type Point, type Region, type World } from "../world";
+import { REGION_SIZE, type Biome, type Monument, type Point, type Region, type World } from "../world";
 import { UI_FONT, setText } from "./style";
 
 const SMALL_SIZE = 168;
@@ -31,6 +31,8 @@ export interface MapInput {
   readonly target: Region | null;
   /** False hides the map entirely (a player setting). */
   readonly visible: boolean;
+  /** Debug only: monuments to mark, whether or not their regions have been explored. */
+  readonly monuments?: readonly Monument[];
   /** The corner hint, in the player's language. */
   readonly labels: { readonly expand: string; readonly close: string };
 }
@@ -88,7 +90,8 @@ export function createMinimap(
     return isRestored(state, r) ? alive : mix(alive, DEAD_GREY, 0.8);
   };
 
-  function draw({ pos, state, target }: MapInput, size: number, block: number): void {
+  function draw(input: MapInput, size: number, block: number): void {
+    const { pos, state, target } = input;
     // View: centre (ground point) and scale (world units per pixel).
     let centre: Point = pos;
     let scale = SMALL_SCALE;
@@ -180,6 +183,23 @@ export function createMinimap(
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
+    // Debug: monuments as diamonds, bright until read.
+    for (const m of input.monuments ?? []) {
+      const [x, y] = project(m);
+      if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
+      const r = expanded ? 3.5 : 3;
+      ctx.beginPath();
+      ctx.moveTo(x, y - r);
+      ctx.lineTo(x + r, y);
+      ctx.lineTo(x, y + r);
+      ctx.lineTo(x - r, y);
+      ctx.closePath();
+      ctx.fillStyle = state.collected.includes(m.id) ? "#8a8a8a" : "#ffd23f";
+      ctx.fill();
+      ctx.strokeStyle = "#2a2424";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
     if (target) {
       const [x, y] = project(target.site);
       ctx.beginPath();
@@ -218,6 +238,8 @@ export function createMinimap(
         size,
         input.state.restored.size,
         input.state.explored.size,
+        input.state.collected.length,
+        input.monuments?.length ?? 0,
         input.target?.id ?? "",
       ].join("|");
       const moved = Math.hypot(input.pos.x - lastPos.x, input.pos.z - lastPos.z);
