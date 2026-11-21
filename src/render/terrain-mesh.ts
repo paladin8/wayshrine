@@ -45,7 +45,7 @@ export function buildTerrainChunk(
   cz: number,
   vitalityOf: (regionId: string) => number,
 ): VitalityMesh {
-  const builder = new VitalityBuilder();
+  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).site);
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
@@ -58,6 +58,7 @@ export function buildTerrainChunk(
         quad([tx, h, tz], [tx, h, tz + 1], [tx + 1, h, tz + 1], [tx + 1, h, tz], [0, 1, 0]),
         top,
         tile.regionId,
+        tile.biome === "water" ? { water: true } : undefined,
       );
 
       const faces: ReadonlyArray<{ dx: number; dz: number; corners: (lo: number) => [V, V, V, V] }> = [

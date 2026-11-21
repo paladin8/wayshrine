@@ -8,10 +8,11 @@
 - **Music:** audio layer with crossfading player, first track in all biomes, volume/mute controls.
 - **Guidance:** compass to the nearest reachable unrestored shrine, exploration tracking, corner map and expanded map (M), debug reset tools.
 - **Scenery:** biome-specific props with clustering, lantern rings at shrines, shared dead-to-alive colour system.
+- **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.
 - **Vertical slice:** streamed tile terrain per biome, WASD player gated by capabilities, shrines that go from dead to alive (animated vitality), HUD, localStorage saves, `?debug` hooks.
 
 ## Next
-1. Ambient life that scales with vitality: swaying foliage, drifting blossom, water surface motion, biome edge shapes.
+1. Music swell during the awakening; biome edge shapes.
 2. Unlock feedback: capability pickup moment, boat/snowshoes/climbing visuals on the player.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.

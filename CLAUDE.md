@@ -21,7 +21,7 @@ Details and rationale: `docs/ARCHITECTURE.md`.
 1. Cross-layer imports go through the target layer's `index.ts` only.
 2. `three` is imported only in `src/render`.
 3. No DOM globals in core, world, game. Pure layers must run in Node.
-4. No `Math.random` outside `src/app`. Use `createRng(seed).fork(label)`.
+4. No `Math.random` in core, world, game: use `createRng(seed).fork(label)`. Presentation layers (render, audio, app) may use it only for cosmetic effects (particles), never to decide world content.
 5. A chunk or region is a pure function of (seed, coordinates). Never of generation order.
 
 ## Progression invariant

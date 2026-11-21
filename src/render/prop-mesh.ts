@@ -93,7 +93,17 @@ function cachedParts(kind: PropKind, variant: number): Part[] {
 const place = new THREE.Matrix4();
 const instance = new THREE.Matrix4();
 
+/** How tall each kind's swaying part is, before the prop's own scale. Rigid props are absent. */
+const SWAY_HEIGHT: Partial<Record<PropKind, number>> = {
+  tree: 1.5,
+  bush: 0.4,
+  flower: 0.35,
+  pine: 1.7,
+};
+
 function addProp(builder: VitalityBuilder, p: Prop): void {
+  const height = SWAY_HEIGHT[p.kind];
+  const motion = height ? { sway: { baseY: p.y, height: height * p.scale } } : undefined;
   place.compose(
     new THREE.Vector3(p.x, p.y, p.z),
     new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotation),
@@ -104,7 +114,7 @@ function addProp(builder: VitalityBuilder, p: Prop): void {
     instance.multiplyMatrices(place, part.matrix);
     geo.applyMatrix4(instance);
     const color = new THREE.Color(part.color).offsetHSL(0, 0, (p.variant - 0.5) * 0.08);
-    builder.addTriangles(geo.getAttribute("position").array, color, p.regionId);
+    builder.addTriangles(geo.getAttribute("position").array, color, p.regionId, motion);
     geo.dispose();
   }
 }
@@ -116,7 +126,7 @@ export function buildPropChunk(
   cz: number,
   vitalityOf: (regionId: string) => number,
 ): VitalityMesh | null {
-  const builder = new VitalityBuilder();
+  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).site);
   for (const p of propsInChunk(terrain, cx, cz)) addProp(builder, p);
   return builder.isEmpty ? null : builder.build(vitalityOf);
 }

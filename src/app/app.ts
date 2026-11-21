@@ -1,4 +1,6 @@
 import {
+  AWAKENING,
+  awakeningFrame,
   capabilitiesOf,
   deserialize,
   discoverNear,
@@ -11,6 +13,7 @@ import {
   resetShrines,
   restoreShrine,
   safePosition,
+  skipTarget,
   serialize,
   SHRINE_REACH,
   shrineInReach,
@@ -81,6 +84,10 @@ export function startApp(container: HTMLElement): void {
   let facing = 0;
   let hint: string | null = null;
   let hintLeft = 0;
+  /** The restoration sequence in progress, if any; `t` is seconds since it began. */
+  let awakening: { regionId: string; t: number } | null = null;
+  /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
+  let fixedDt: number | null = null;
 
   const restore = (id: string): void => {
     state = restoreShrine(state, world.regionById(id));
@@ -96,10 +103,12 @@ export function startApp(container: HTMLElement): void {
     const actions = {
       restoreSpine,
       resetShrines: () => {
+        awakening = null;
         reset(resetShrines);
         pos = startPosition(terrain); // land reached with lost capabilities may now be cut off
       },
       resetAll: () => {
+        awakening = null;
         reset(resetGame);
         pos = startPosition(terrain);
       },
@@ -111,7 +120,7 @@ export function startApp(container: HTMLElement): void {
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, music, teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, music, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -128,8 +137,16 @@ export function startApp(container: HTMLElement): void {
     if (e.code === KEY_MAP) minimap.toggleExpanded();
     if (e.code === KEY_MUTE) audioControls.toggleMute();
     if (KEY_ACT.includes(e.code)) {
-      const region = shrineInReach(terrain, pos);
-      if (region && !isRestored(state, region)) restore(region.id);
+      if (awakening) {
+        // Once the camera has pulled back, the sequence can be skipped to its end.
+        if (awakening.t > AWAKENING.zoomOut) awakening.t = skipTarget(awakening.t);
+      } else {
+        const region = shrineInReach(terrain, pos);
+        if (region && !isRestored(state, region)) {
+          restore(region.id);
+          awakening = { regionId: region.id, t: 0 };
+        }
+      }
     }
   });
   window.addEventListener("pointerdown", () => music.unlock());
@@ -143,7 +160,7 @@ export function startApp(container: HTMLElement): void {
 
   let last = performance.now();
   const frame = (now: number): void => {
-    const dt = Math.min(0.05, (now - last) / 1000);
+    const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
     last = now;
 
     const caps = capabilitiesOf(state, world);
@@ -156,7 +173,7 @@ export function startApp(container: HTMLElement): void {
     }
     const right = any(KEY_RIGHT) - any(KEY_LEFT);
     const up = any(KEY_UP) - any(KEY_DOWN);
-    if (right !== 0 || up !== 0) {
+    if (!awakening && (right !== 0 || up !== 0)) {
       const dir = stage.groundDirection(right, up);
       const moved = movePlayer(pos, dir, dt, terrain, caps);
       pos = moved.pos;
@@ -169,8 +186,22 @@ export function startApp(container: HTMLElement): void {
     hintLeft = Math.max(0, hintLeft - dt);
     if (hintLeft === 0) hint = null;
 
+    let scene: { regionId: string; progress: number; zoom: number } | undefined;
+    if (awakening) {
+      awakening.t += dt;
+      const f = awakeningFrame(awakening.t);
+      if (f.done) awakening = null;
+      else scene = { regionId: awakening.regionId, progress: f.progress, zoom: f.zoom };
+    }
+
     const reach = shrineInReach(terrain, pos);
-    const prompt = reach && !isRestored(state, reach) ? "Press E to restore the shrine" : null;
+    const prompt = awakening
+      ? awakening.t > AWAKENING.zoomOut
+        ? "Press E to skip"
+        : null
+      : reach && !isRestored(state, reach)
+        ? "Press E to restore the shrine"
+        : null;
     const guide = nextShrine(world, state, pos);
     let compass = null;
     if (guide) {
@@ -183,7 +214,7 @@ export function startApp(container: HTMLElement): void {
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     music.update(dt);
 
-    stage.render(dt, { player: pos, facing, state });
+    stage.render(dt, { player: pos, facing, state, awakening: scene });
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { lifeAt } from "../game";
 import { palette } from "./palette";
 
 const DEAD_RED = new THREE.Color(0x77716e);
@@ -6,8 +7,8 @@ const DEAD_ROOF = new THREE.Color(0x4a4644);
 
 export interface ShrineMesh {
   readonly group: THREE.Group;
-  /** 0 is dead and grey with the orb dark; 1 is restored and glowing. */
-  setVitality(v: number): void;
+  /** Restoration progress: 0 is dead and grey with the orb dark; 1 is restored and glowing. */
+  setVitality(progress: number): void;
   /** Animates the orb. */
   tick(seconds: number): void;
 }
@@ -44,12 +45,16 @@ export function buildShrine(): ShrineMesh {
   const alive = new THREE.Color(palette.red);
   const aliveRoof = new THREE.Color(palette.roof);
 
-  const setVitality = (v: number): void => {
+  const setVitality = (progress: number): void => {
+    // The shrine sits at the centre of the field, so it wakes first.
+    const v = lifeAt(progress, 0);
     vitality = v;
     redMat.color.copy(DEAD_RED).lerp(alive, v);
     roofMat.color.copy(DEAD_ROOF).lerp(aliveRoof, v);
-    orbMat.emissiveIntensity = 1.2 * v;
-    orb.scale.setScalar(0.4 + 0.6 * v);
+    // While the energy is being released the orb flares, then settles.
+    const flare = progress > 0 && progress < 0.35 ? Math.sin((progress / 0.35) * Math.PI) : 0;
+    orbMat.emissiveIntensity = 1.2 * v + 3.2 * flare;
+    orb.scale.setScalar(0.4 + 0.6 * v + 0.9 * flare);
   };
   setVitality(0);
 

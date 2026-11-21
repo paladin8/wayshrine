@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { neighborsOf, regionId } from "./coords";
+import { REGION_REACH, neighborsOf, regionId } from "./coords";
 import { greedyProgress, reachableRegions } from "./progression";
 import { BIOME_REQUIRES, CAPABILITIES } from "./terrain";
 import { createWorld } from "./world";
@@ -37,6 +37,20 @@ describe("createWorld", () => {
       const start = createWorld(seed).region(0, 0);
       expect(start.biome).toBe("meadow");
       expect(start.shrine.grants).toBe(CAPABILITIES[0]);
+    }
+  });
+});
+
+describe("region reach", () => {
+  it("never extends farther from its shrine than REGION_REACH", () => {
+    for (const seed of SEEDS.slice(0, 40)) {
+      const w = createWorld(seed);
+      for (let x = -150; x < 150; x += 3) {
+        for (let z = -150; z < 150; z += 3) {
+          const r = w.regionAt(x, z);
+          expect(Math.hypot(x - r.site.x, z - r.site.z)).toBeLessThanOrEqual(REGION_REACH);
+        }
+      }
     }
   });
 });

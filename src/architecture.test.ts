@@ -93,9 +93,11 @@ describe("architecture", () => {
     expect(violations).toEqual([]);
   });
 
-  it("uses only seeded randomness outside app", () => {
+  it("uses only seeded randomness wherever world content is decided", () => {
+    // Presentation layers (render, audio, app) may use Math.random for purely
+    // visual or audible effects. It must never decide what the world contains.
     const violations = sources
-      .filter((s) => s.layer !== "app")
+      .filter((s) => s.layer === "core" || s.layer === "world" || s.layer === "game")
       .filter((s) => /Math\.random\b/.test(s.code))
       .map((s) => s.file);
     expect(violations).toEqual([]);

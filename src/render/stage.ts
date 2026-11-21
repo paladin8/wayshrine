@@ -1,23 +1,29 @@
 import * as THREE from "three";
-import { vitality, type GameState } from "../game";
+import { lifeAt, vitality, type GameState } from "../game";
 import { CHUNK_SIZE, type Point, type Terrain } from "../world";
+import { createAmbient } from "./ambient";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import { buildPlayer } from "./player-mesh";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
-import type { VitalityMesh } from "./vitality-mesh";
+import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
 
-/** World units visible vertically. */
+/** World units visible vertically in normal play, and when pulled back to see a whole region. */
 const VIEW_SIZE = 16;
-/** Chunks kept loaded around the player: enough to cover the isometric view. */
+const WIDE_VIEW_SIZE = 62;
+/** Chunks kept loaded around the camera: enough to cover the view, more when pulled back. */
 const LOAD_RADIUS = 2;
-const UNLOAD_RADIUS = LOAD_RADIUS + 1;
-/** Regions (around the player's) whose shrines are shown. */
-const SHRINE_RADIUS = 2;
+const EXTRA_LOAD_RADIUS = 3;
 const CHUNKS_PER_FRAME = 2;
-/** Vitality change per second when a region is restored. */
-const VITALITY_RATE = 0.5;
+const CHUNKS_PER_FRAME_WIDE = 8;
+/** Regions (around the camera's) whose shrines are shown. */
+const SHRINE_RADIUS = 2;
+/** Progress change per second for regions that are restored or reset without the full sequence. */
+const QUICK_RATE = 0.5;
+/** Half-extent of the shadow map, in world units, in normal play and when pulled back. */
+const SHADOW_NEAR = 22;
+const SHADOW_WIDE = 62;
 
 // Isometric view: the camera looks down the (1,1,1) diagonal. Screen-right and
 // screen-up are therefore fixed ground directions.
@@ -29,6 +35,18 @@ export interface StageView {
   /** Heading in radians about the vertical axis. */
   readonly facing: number;
   readonly state: GameState;
+  /**
+   * Present while a shrine is being restored. The camera pulls back and centres
+   * on the shrine, and the region's restoration is drawn at `progress` instead of
+   * its saved state.
+   */
+  readonly awakening?: {
+    readonly regionId: string;
+    /** Restoration progress, 0 to 1. */
+    readonly progress: number;
+    /** Camera pull-back, 0 normal to 1 whole region. */
+    readonly zoom: number;
+  };
 }
 
 /**
@@ -55,16 +73,20 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(palette.background);
 
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 300);
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
   const target = new THREE.Vector3();
-  const offset = new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(80);
+  const offset = new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(120);
   let targetReady = false;
+  let aspect = 16 / 9;
+  let heightPixels = 720;
+  let appliedZoom = -1;
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc4a8, 1.4));
   const sun = new THREE.DirectionalLight(0xffffff, 2.4);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 160;
   scene.add(sun, sun.target);
 
   const player = buildPlayer();
@@ -72,33 +94,54 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
 
   const chunks = new Map<string, VitalityMesh>();
   const shrines = new Map<string, ShrineMesh>();
-  /** Current (tweened) vitality per region. */
+  /** Restoration progress currently drawn per region. */
   const shown = new Map<string, number>();
+  let state: GameState | null = null;
+  let awakeningRegion: string | null = null;
+  let awakeningProgress = 0;
   let clock = 0;
   let playerY = 1;
 
   const chunkKey = (cx: number, cz: number): string => `${cx},${cz}`;
 
-  function streamChunks(playerPos: Point, state: GameState): void {
-    const pcx = Math.floor(playerPos.x / CHUNK_SIZE);
-    const pcz = Math.floor(playerPos.z / CHUNK_SIZE);
+  function targetProgress(id: string): number {
+    return vitality(state!, world.regionById(id));
+  }
+
+  /** Progress to draw now; a region seen for the first time appears at its true value. */
+  function shownProgress(id: string): number {
+    if (id === awakeningRegion) return awakeningProgress;
+    let v = shown.get(id);
+    if (v === undefined) {
+      v = targetProgress(id);
+      shown.set(id, v);
+    }
+    return v;
+  }
+
+  function streamChunks(centre: Point, zoom: number): void {
+    const radius = LOAD_RADIUS + Math.ceil(zoom * EXTRA_LOAD_RADIUS);
+    const pcx = Math.floor(centre.x / CHUNK_SIZE);
+    const pcz = Math.floor(centre.z / CHUNK_SIZE);
     const wanted: Array<{ cx: number; cz: number; d: number }> = [];
-    for (let dz = -LOAD_RADIUS; dz <= LOAD_RADIUS; dz++) {
-      for (let dx = -LOAD_RADIUS; dx <= LOAD_RADIUS; dx++) {
+    for (let dz = -radius; dz <= radius; dz++) {
+      for (let dx = -radius; dx <= radius; dx++) {
         if (!chunks.has(chunkKey(pcx + dx, pcz + dz))) wanted.push({ cx: pcx + dx, cz: pcz + dz, d: dx * dx + dz * dz });
       }
     }
     wanted.sort((a, b) => a.d - b.d);
     // The first frame builds everything so the screen is never empty; later frames are budgeted.
-    const budget = chunks.size === 0 ? wanted.length : CHUNKS_PER_FRAME;
+    const budget = chunks.size === 0 ? wanted.length : zoom > 0 ? CHUNKS_PER_FRAME_WIDE : CHUNKS_PER_FRAME;
     for (const w of wanted.slice(0, budget)) {
-      const built = buildChunk(terrain, w.cx, w.cz, (id) => shownVitality(id, state));
+      const built = buildChunk(terrain, w.cx, w.cz, shownProgress);
       chunks.set(chunkKey(w.cx, w.cz), built);
       scene.add(built.object);
     }
+    // Keep a margin so chunks are not rebuilt as the camera zooms in and out.
+    const keep = LOAD_RADIUS + EXTRA_LOAD_RADIUS + 1;
     for (const [key, chunk] of chunks) {
       const [cx, cz] = key.split(",").map(Number) as [number, number];
-      if (Math.max(Math.abs(cx - pcx), Math.abs(cz - pcz)) > UNLOAD_RADIUS) {
+      if (Math.max(Math.abs(cx - pcx), Math.abs(cz - pcz)) > Math.max(keep, radius + 1)) {
         scene.remove(chunk.object);
         chunk.dispose();
         chunks.delete(key);
@@ -106,8 +149,8 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
     }
   }
 
-  function streamShrines(playerPos: Point, state: GameState): void {
-    const here = world.regionAt(playerPos.x, playerPos.z).coord;
+  function streamShrines(centre: Point): void {
+    const here = world.regionAt(centre.x, centre.z).coord;
     const keep = new Set<string>();
     for (let dz = -SHRINE_RADIUS; dz <= SHRINE_RADIUS; dz++) {
       for (let dx = -SHRINE_RADIUS; dx <= SHRINE_RADIUS; dx++) {
@@ -117,7 +160,7 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
         const shrine = buildShrine();
         const ground = terrain.tileAtPoint(region.site.x, region.site.z).height;
         shrine.group.position.set(region.site.x, ground, region.site.z);
-        shrine.setVitality(shownVitality(region.id, state));
+        shrine.setVitality(shownProgress(region.id));
         shrines.set(region.id, shrine);
         scene.add(shrine.group);
       }
@@ -130,33 +173,51 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
     }
   }
 
-  function targetVitality(id: string, state: GameState): number {
-    return vitality(state, world.regionById(id));
-  }
-
-  /** Vitality to draw now; a region seen for the first time appears at its true value. */
-  function shownVitality(id: string, state: GameState): number {
-    let v = shown.get(id);
-    if (v === undefined) {
-      v = targetVitality(id, state);
-      shown.set(id, v);
+  /** Moves drawn progress toward its target and recolours only what changed. */
+  function updateProgress(dt: number): void {
+    const dirty = new Set<string>();
+    if (awakeningRegion !== null) {
+      const before = shown.get(awakeningRegion);
+      shown.set(awakeningRegion, awakeningProgress);
+      if (before !== awakeningProgress) dirty.add(awakeningRegion);
     }
-    return v;
-  }
-
-  function tweenVitality(dt: number, state: GameState): void {
-    let changed = false;
     for (const [id, v] of shown) {
-      const goal = targetVitality(id, state);
+      if (id === awakeningRegion) continue;
+      const goal = targetProgress(id);
       if (v === goal) continue;
-      const step = VITALITY_RATE * dt;
+      const step = QUICK_RATE * dt;
       shown.set(id, v < goal ? Math.min(goal, v + step) : Math.max(goal, v - step));
-      changed = true;
+      dirty.add(id);
     }
-    if (!changed) return;
-    const lookup = (id: string): number => shown.get(id) ?? 0;
-    for (const chunk of chunks.values()) chunk.applyVitality(lookup);
-    for (const [id, shrine] of shrines) shrine.setVitality(lookup(id));
+    if (dirty.size === 0) return;
+    for (const chunk of chunks.values()) chunk.applyVitality(shownProgress, dirty);
+    for (const [id, shrine] of shrines) if (dirty.has(id)) shrine.setVitality(shownProgress(id));
+  }
+
+  function lifeAtPoint(x: number, z: number): number {
+    const region = world.regionAt(x, z);
+    return lifeAt(shownProgress(region.id), Math.hypot(x - region.site.x, z - region.site.z));
+  }
+
+  const ambient = createAmbient(
+    scene,
+    terrain,
+    lifeAtPoint,
+    () => renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720)),
+  );
+
+  function applyZoom(zoom: number): void {
+    if (zoom === appliedZoom) return;
+    appliedZoom = zoom;
+    const size = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
+    camera.left = (-size * aspect) / 2;
+    camera.right = (size * aspect) / 2;
+    camera.top = size / 2;
+    camera.bottom = -size / 2;
+    camera.updateProjectionMatrix();
+    const half = SHADOW_NEAR + (SHADOW_WIDE - SHADOW_NEAR) * zoom;
+    Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half });
+    sun.shadow.camera.updateProjectionMatrix();
   }
 
   return {
@@ -167,43 +228,56 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
     screenDirection(dx, dz) {
       return { right: dx * RIGHT.x + dz * RIGHT.z, up: dx * FORWARD.x + dz * FORWARD.z };
     },
-    resize(widthPixels, heightPx) {
-      const aspect = widthPixels / heightPx;
-      renderer.setSize(widthPixels, heightPx);
-      camera.left = (-VIEW_SIZE * aspect) / 2;
-      camera.right = (VIEW_SIZE * aspect) / 2;
-      camera.top = VIEW_SIZE / 2;
-      camera.bottom = -VIEW_SIZE / 2;
-      camera.updateProjectionMatrix();
+    resize(w, h) {
+      heightPixels = h;
+      aspect = w / h;
+      renderer.setSize(w, h);
+      appliedZoom = -1;
     },
     render(dt, view) {
       clock += dt;
-      const { player: pos, facing, state } = view;
+      state = view.state;
+      const awakening = view.awakening ?? null;
+      awakeningRegion = awakening?.regionId ?? null;
+      awakeningProgress = awakening?.progress ?? 0;
+      const zoom = awakening?.zoom ?? 0;
+      const pos = view.player;
+      setLifeTime(clock);
 
-      streamChunks(pos, state);
-      streamShrines(pos, state);
-      tweenVitality(dt, state);
+      // The camera follows the player, or the shrine being restored.
+      const focus = awakening ? world.regionById(awakening.regionId).site : pos;
+      if (!targetReady) {
+        target.set(focus.x, 1, focus.z);
+        targetReady = true;
+      } else {
+        const k = Math.min(1, dt * (awakening ? 3 : 6));
+        target.x += (focus.x - target.x) * k;
+        target.z += (focus.z - target.z) * k;
+      }
+      const centre = { x: target.x, z: target.z };
+
+      streamChunks(centre, zoom);
+      streamShrines(centre);
+      updateProgress(dt);
       for (const shrine of shrines.values()) shrine.tick(clock);
+      ambient.update(dt, {
+        focus: centre,
+        zoom,
+        awakening: awakening ? { regionId: awakening.regionId, progress: awakening.progress } : null,
+      });
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       const onWater = tile.biome === "water";
       const groundY = tile.height + (onWater ? 0.05 + Math.sin(clock * 3) * 0.03 : 0);
       playerY += (groundY - playerY) * Math.min(1, dt * 14);
       player.group.position.set(pos.x, playerY, pos.z);
-      player.group.rotation.y = facing;
+      player.group.rotation.y = view.facing;
       player.setBoat(onWater);
 
-      if (!targetReady) {
-        target.set(pos.x, 1, pos.z);
-        targetReady = true;
-      } else {
-        const k = Math.min(1, dt * 6);
-        target.x += (pos.x - target.x) * k;
-        target.z += (pos.z - target.z) * k;
-      }
+      applyZoom(zoom);
       camera.position.copy(target).add(offset);
       camera.lookAt(target);
-      sun.position.set(target.x - 10, 20, target.z + 8);
+      sun.position.set(target.x - 14, 28, target.z + 11);
       sun.target.position.set(target.x, 0, target.z);
       sun.target.updateMatrixWorld();
       renderer.render(scene, camera);

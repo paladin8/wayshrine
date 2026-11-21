@@ -3,6 +3,12 @@
 /** Side length of one region grid cell, in world units. */
 export const REGION_SIZE = 64;
 
+/**
+ * No point of a region is farther than this from its shrine (checked in tests).
+ * The restoration wave uses it to know when a region is fully energised.
+ */
+export const REGION_REACH = REGION_SIZE * 1.125;
+
 export interface Point {
   readonly x: number;
   readonly z: number;

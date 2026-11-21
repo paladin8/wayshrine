@@ -1,11 +1,18 @@
 import * as THREE from "three";
+import { frontGlow, lifeAt } from "../game";
+import type { Point } from "../world";
+import { palette } from "./palette";
 
-/** A drawable chunk of the world whose colours follow region vitality. */
+/** A drawable chunk of the world whose look follows region restoration. */
 export interface VitalityMesh {
   readonly object: THREE.Object3D;
   readonly regionIds: ReadonlySet<string>;
-  /** Recolours: 0 is dead and grey, 1 is fully alive. */
-  applyVitality(vitalityOf: (regionId: string) => number): void;
+  /**
+   * Recolours from each region's restoration progress (0 dead, 1 alive, in
+   * between a front sweeping out from the shrine). With `only`, regions not
+   * in the set are left as they are.
+   */
+  applyVitality(progressOf: (regionId: string) => number, only?: ReadonlySet<string>): void;
   dispose(): void;
 }
 
@@ -16,32 +23,94 @@ export function deadOf(c: THREE.Color): THREE.Color {
   return new THREE.Color().setHSL(hsl.h, hsl.s * 0.12, hsl.l * 0.62);
 }
 
+// --- shared material: wind sway for plants, ripples for water ---------------
+
+const timeUniform = { value: 0 };
+
+/** Advances the clock used by the wind and water motion. */
+export function setLifeTime(seconds: number): void {
+  timeUniform.value = seconds;
+}
+
+/**
+ * One material for all terrain and props. Per-vertex `aMotion.x` is how much a
+ * vertex sways in the wind (0 for rocks and ground, up to 1 at treetops),
+ * `aMotion.y` marks water surface, and `aLife` is how alive the vertex is, so
+ * dead regions are perfectly still.
+ */
+const lifeMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true });
+lifeMaterial.onBeforeCompile = (shader) => {
+  shader.uniforms.uTime = timeUniform;
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      "#include <common>",
+      `#include <common>
+attribute float aLife;
+attribute vec2 aMotion;
+uniform float uTime;`,
+    )
+    .replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+vec4 lifeWorld = modelMatrix * vec4(position, 1.0);
+float lifePhase = lifeWorld.x * 0.31 + lifeWorld.z * 0.23;
+float wind = sin(uTime * 1.7 + lifePhase) + 0.5 * sin(uTime * 2.9 + lifePhase * 1.7);
+transformed.x += wind * 0.07 * aMotion.x * aLife;
+transformed.z += wind * 0.045 * aMotion.x * aLife;
+float ripple = sin(uTime * 2.2 + lifeWorld.x * 0.9 + lifeWorld.z * 0.6) * 0.5 + 0.5;
+transformed.y += ripple * 0.05 * aMotion.y * aLife;`,
+    );
+};
+lifeMaterial.customProgramCacheKey = () => "wayshrine-life";
+
+const GLOW = new THREE.Color(palette.glow);
+const GLOW_STRENGTH = 0.55;
+
+export interface Motion {
+  /** Vertices sway more the higher they are above `baseY`, reaching full sway at `height`. */
+  readonly sway?: { readonly baseY: number; readonly height: number };
+  /** The triangles are a water surface. */
+  readonly water?: boolean;
+}
+
 /**
  * Accumulates flat-coloured triangles belonging to regions, then builds one
- * mesh. Both the alive and dead colour of every vertex are kept, so a region
- * can be recoloured without rebuilding geometry.
+ * mesh. Each vertex remembers its alive and dead colour and its distance from
+ * its shrine, so a region can be recoloured, with energy sweeping outward,
+ * without rebuilding geometry.
  */
 export class VitalityBuilder {
   private readonly positions: number[] = [];
   private readonly alive: number[] = [];
   private readonly dead: number[] = [];
+  private readonly distance: number[] = [];
+  private readonly motion: number[] = [];
   private readonly vertexRegion: number[] = [];
   private readonly regionList: string[] = [];
   private readonly regionIndex = new Map<string, number>();
 
+  constructor(private readonly siteOf: (regionId: string) => Point) {}
+
   /** Adds non-indexed triangles: `positions` holds x,y,z per vertex, three vertices per triangle. */
-  addTriangles(positions: ArrayLike<number>, color: THREE.Color, regionId: string): void {
+  addTriangles(positions: ArrayLike<number>, color: THREE.Color, regionId: string, motion?: Motion): void {
     let region = this.regionIndex.get(regionId);
     if (region === undefined) {
       region = this.regionList.length;
       this.regionList.push(regionId);
       this.regionIndex.set(regionId, region);
     }
+    const site = this.siteOf(regionId);
     const dc = deadOf(color);
     for (let i = 0; i < positions.length; i += 3) {
-      this.positions.push(positions[i]!, positions[i + 1]!, positions[i + 2]!);
+      const x = positions[i]!;
+      const y = positions[i + 1]!;
+      const z = positions[i + 2]!;
+      this.positions.push(x, y, z);
       this.alive.push(color.r, color.g, color.b);
       this.dead.push(dc.r, dc.g, dc.b);
+      this.distance.push(Math.hypot(x - site.x, z - site.z));
+      const sway = motion?.sway ? Math.min(1, Math.max(0, (y - motion.sway.baseY) / motion.sway.height)) ** 1.5 : 0;
+      this.motion.push(sway, motion?.water ? 1 : 0);
       this.vertexRegion.push(region);
     }
   }
@@ -50,41 +119,52 @@ export class VitalityBuilder {
     return this.positions.length === 0;
   }
 
-  build(vitalityOf: (regionId: string) => number): VitalityMesh {
-    const { alive, dead, vertexRegion, regionList } = this;
+  build(progressOf: (regionId: string) => number): VitalityMesh {
+    const { alive, dead, distance, vertexRegion, regionList } = this;
+    const count = vertexRegion.length;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.positions, 3));
     const colors = new Float32Array(alive);
-    const colorAttr = new THREE.BufferAttribute(colors, 3);
+    const colorAttr = new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute("color", colorAttr);
+    const life = new Float32Array(count);
+    const lifeAttr = new THREE.BufferAttribute(life, 1).setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute("aLife", lifeAttr);
+    geometry.setAttribute("aMotion", new THREE.Float32BufferAttribute(this.motion, 2));
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true });
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, lifeMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
 
-    const applyVitality = (v: (regionId: string) => number): void => {
-      const perRegion = regionList.map((id) => Math.min(1, Math.max(0, v(id))));
-      for (let i = 0; i < vertexRegion.length; i++) {
-        const t = perRegion[vertexRegion[i]!]!;
-        for (let k = 0; k < 3; k++) {
-          const j = i * 3 + k;
-          colors[j] = dead[j]! + (alive[j]! - dead[j]!) * t;
-        }
+    const applyVitality = (progressFor: (regionId: string) => number, only?: ReadonlySet<string>): void => {
+      if (only && !regionList.some((id) => only.has(id))) return;
+      const progress = regionList.map((id) => Math.min(1, Math.max(0, progressFor(id))));
+      const skip = regionList.map((id) => (only ? !only.has(id) : false));
+      for (let i = 0; i < count; i++) {
+        const r = vertexRegion[i]!;
+        if (skip[r]) continue;
+        const p = progress[r]!;
+        const d = distance[i]!;
+        const t = lifeAt(p, d);
+        const glow = frontGlow(p, d) * GLOW_STRENGTH;
+        life[i] = t;
+        const k = i * 3;
+        colors[k] = Math.min(1, dead[k]! + (alive[k]! - dead[k]!) * t + GLOW.r * glow);
+        colors[k + 1] = Math.min(1, dead[k + 1]! + (alive[k + 1]! - dead[k + 1]!) * t + GLOW.g * glow);
+        colors[k + 2] = Math.min(1, dead[k + 2]! + (alive[k + 2]! - dead[k + 2]!) * t + GLOW.b * glow);
       }
       colorAttr.needsUpdate = true;
+      lifeAttr.needsUpdate = true;
     };
-    applyVitality(vitalityOf);
+    applyVitality(progressOf);
 
     return {
       object: mesh,
       regionIds: new Set(regionList),
       applyVitality,
-      dispose: () => {
-        geometry.dispose();
-        material.dispose();
-      },
+      // The material is shared by every chunk, so only the geometry is freed here.
+      dispose: () => geometry.dispose(),
     };
   }
 }
@@ -100,7 +180,7 @@ export function combine(parts: readonly VitalityMesh[]): VitalityMesh {
   return {
     object,
     regionIds: ids,
-    applyVitality: (v) => parts.forEach((p) => p.applyVitality(v)),
+    applyVitality: (v, only) => parts.forEach((p) => p.applyVitality(v, only)),
     dispose: () => parts.forEach((p) => p.dispose()),
   };
 }

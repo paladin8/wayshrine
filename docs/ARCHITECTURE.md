@@ -45,8 +45,13 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 ## Audio
 `audio/music.ts` is a small manager over `HTMLAudioElement` (injectable for tests): nothing plays until the first user gesture (`unlock()`), tracks crossfade on `setTrack()`, and a finished track pauses a few seconds and repeats. `audio/tracks.ts` is the registry and `trackFor(biome)` is the single place that decides what plays where. See [music.md](music.md) for assets and how to add tracks.
 
+## Restoration and ambient life
+Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance from shrine)` to life in [0,1] with a smooth front of `FRONT_WIDTH` travelling out to `REGION_REACH`. Every vertex stores its distance to its region's shrine, so the render layer recolours only dirty regions on the CPU and writes `aLife`. One shared material injects wind sway and water ripple in the vertex shader, scaled by `aLife` and driven by `uTime`.
+
+`game/awakening.ts` is the pure timeline (zoom out 1.2s, wave 8s, hold 3s, zoom in 1.6s). The app owns the clock, ignores movement during it and lets E skip to the zoom-in. The stage focuses on the shrine, widens the orthographic view, scales the shadow frustum and streams chunks for the wider view. `render/ambient.ts` runs two particle layers (additive glow, soft normal) gated by `lifeAtPoint`; cosmetic randomness there may use `Math.random`.
+
 ## Debugging
-`?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)` and `restore(id)`. Resets save immediately and return the player to the start.
+`?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)`, `restore(id)` and `setFixedDt(seconds|null)` (fixed sim step, for deterministic screenshots on slow renderers). Resets save immediately and return the player to the start.
 
 ## Key concepts
 - **Region:** a Voronoi cell around a jittered grid site (`REGION_SIZE` 64). Has a biome and one shrine.
@@ -55,7 +60,7 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - **Fork:** `rng.fork(label)` derives an independent stream from a label, so adding a new consumer never shifts existing output.
 
 ## Enforcement
-`src/architecture.test.ts` checks import direction, index-only imports, `three` containment, no DOM globals in pure layers, no `Math.random` outside `app`. `world/world.test.ts` checks the progression guarantees at region level over 300 seeds, and `game/player.test.ts` checks them again at tile level (BFS over real tiles) on a few seeds.
+`src/architecture.test.ts` checks import direction, index-only imports, `three` containment, no DOM globals in pure layers, no `Math.random` in the pure layers (presentation layers may use it for purely cosmetic effects such as particles). `world/world.test.ts` checks the progression guarantees at region level over 300 seeds, and `game/player.test.ts` checks them again at tile level (BFS over real tiles) on a few seeds.
 
 ## Conventions
 - Pure functions and immutable state in `world` and `game`.
