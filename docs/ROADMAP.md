@@ -16,7 +16,7 @@
 - **Vertical slice:** streamed tile terrain per biome, WASD player gated by capabilities, shrines that go from dead to alive (animated vitality), HUD, localStorage saves, `?debug` hooks.
 
 ## Next
-0. Landmarks: shrines as beacons that reveal landmarks (map markers, screen-edge glow), compass to revealed landmarks, skyline peek for tall landmarks, glTF loader for the hand-crafted models, new biomes and abilities for acts V to IX, landmark names in the UI.
+0. Landmarks: shrines as beacons that reveal landmarks (map markers, screen-edge glow), compass to revealed landmarks, skyline peek for tall landmarks, new biomes and abilities for acts V to IX, landmark names in the UI.
 1. Real scenery for the haiku (ponds, bridges, fields) from the tags in `content/haiku-scenery.json`; tie the book to technological advancement; biome edge shapes.
 2. Unlock feedback: capability pickup moment, boat/snowshoes/climbing visuals on the player.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).

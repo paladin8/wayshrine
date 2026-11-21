@@ -13,6 +13,8 @@ export interface LandmarkSpec {
   readonly act: number;
   /** The region's biome. It must be traversable with the abilities held when the act begins. */
   readonly biome: Biome;
+  /** Radius of the solid footprint, if the model is larger than the placeholder's. */
+  readonly radius?: number;
 }
 
 export interface Landmark extends LandmarkSpec {
@@ -21,7 +23,7 @@ export interface Landmark extends LandmarkSpec {
 }
 
 export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
-  { id: "fushimi-inari", act: 1, biome: "meadow" },
+  { id: "fushimi-inari", act: 1, biome: "meadow", radius: 7.5 },
   { id: "kinkaku-ji", act: 1, biome: "meadow" },
   { id: "todai-ji-daibutsu", act: 1, biome: "meadow" },
   { id: "itsukushima-torii", act: 2, biome: "water" },
@@ -69,9 +71,17 @@ export function landmarksBeforeAct(act: number): number {
 export const LANDMARK_PLATEAU_RADIUS = 9.5;
 /**
  * A landmark stands at its region's site and is the shrine: the player restores
- * it from just outside this radius (within SHRINE_REACH).
+ * it from just outside this radius (within LANDMARK_REACH_MARGIN of the edge).
  */
 export const LANDMARK_SOLID_RADIUS = 3.0;
+
+/** The solid footprint of a landmark, in world units. */
+export function landmarkRadius(landmark: LandmarkSpec): number {
+  return landmark.radius ?? LANDMARK_SOLID_RADIUS;
+}
+
+/** How far beyond its footprint a landmark can be used from. */
+export const LANDMARK_REACH_MARGIN = 1.2;
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;

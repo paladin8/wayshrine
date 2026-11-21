@@ -19,7 +19,7 @@ import {
   safePosition,
   skipTarget,
   serialize,
-  SHRINE_REACH,
+  reachOf,
   shrineInReach,
   startPosition,
   type GameState,
@@ -269,7 +269,7 @@ export function startApp(container: HTMLElement): void {
     let compass = null;
     if (guide) {
       const s = stage.screenDirection(guide.dx, guide.dz);
-      compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: guide.distance <= SHRINE_REACH };
+      compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: guide.distance <= reachOf(guide.region) };
     }
     hud.update({
       capabilities: caps,

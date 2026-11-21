@@ -34,6 +34,7 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 ## Props
 - `world/props.ts` places scenery (trees, bushes, flowers, pines, rocks, crags, shrine lanterns) as a pure function of (seed, chunk). Density is clustered by noise and each biome has its own table.
 - Props themselves are decorative data. Solidity is a separate layer (see Collision) built from them; walkability for progression stays a function of biomes only, which keeps the guarantee in ADR 0003 provable.
+- `render/landmark-mesh.ts` draws a landmark: a placeholder at once, swapped for `public/models/landmarks/<id>.glb` when that has loaded (fetched lazily, parsed per instance so each owns its materials; a missing file, including a dev server's index-page reply, leaves the placeholder). Materials fade dead to alive with the region, `glow_*` parts light up. See `docs/landmarks.md`.
 - `render/prop-mesh.ts` merges a chunk's props into one mesh through `VitalityBuilder` (`render/vitality-mesh.ts`), the same alive/dead colour mechanism the terrain uses, so everything in a region fades with its vitality. `render/chunk-mesh.ts` combines ground and props per chunk.
 
 ## Guidance, discovery and the map

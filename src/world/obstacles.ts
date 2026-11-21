@@ -1,5 +1,5 @@
 import { REGION_SIZE } from "./coords";
-import { LANDMARK_SOLID_RADIUS } from "./landmarks";
+import { LANDMARK_SPECS, landmarkRadius } from "./landmarks";
 import { MONUMENT_CLEARING, monumentsAroundChunk, type MonumentPlan } from "./monuments";
 import { propsInChunk, type PropKind } from "./props";
 import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
@@ -33,7 +33,7 @@ const PROP_RADIUS: Partial<Record<PropKind, number>> = {
 const SHRINE_PILLAR_OFFSET = 0.9;
 const SHRINE_PILLAR_RADIUS = 0.22;
 const MONUMENT_RADIUS = 0.65;
-const MAX_RADIUS = LANDMARK_SOLID_RADIUS;
+const MAX_RADIUS = Math.max(0.7, ...LANDMARK_SPECS.map(landmarkRadius));
 
 /**
  * Collision for a world, built lazily a chunk at a time and cached. Obstacles are a pure function of
@@ -67,7 +67,7 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
         const { site, landmark } = world.region(rx, rz);
         if (landmark) {
           // The landmark is the shrine: one solid footprint, no gate pillars.
-          if (inside(site.x, site.z)) list.push({ x: site.x, z: site.z, r: LANDMARK_SOLID_RADIUS });
+          if (inside(site.x, site.z)) list.push({ x: site.x, z: site.z, r: landmarkRadius(landmark) });
           continue;
         }
         for (const dx of [-SHRINE_PILLAR_OFFSET, SHRINE_PILLAR_OFFSET]) {

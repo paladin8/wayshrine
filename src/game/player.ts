@@ -1,6 +1,8 @@
 import {
   BIOME_REQUIRES,
+  LANDMARK_REACH_MARGIN,
   canTraverse,
+  landmarkRadius,
   type Biome,
   type Capability,
   type Obstacles,
@@ -121,10 +123,15 @@ export function movePlayer(
   return { pos: { x, z }, blockedBy };
 }
 
+/** How close to a region's site the player must be to use it. A landmark is used from just outside its footprint. */
+export function reachOf(region: Region): number {
+  return region.landmark ? landmarkRadius(region.landmark) + LANDMARK_REACH_MARGIN : SHRINE_REACH;
+}
+
 /** The shrine the player is close enough to use, if any. */
 export function shrineInReach(terrain: Terrain, pos: Point): Region | null {
   const r = terrain.world.regionAt(pos.x, pos.z);
-  return Math.hypot(r.site.x - pos.x, r.site.z - pos.z) <= SHRINE_REACH ? r : null;
+  return Math.hypot(r.site.x - pos.x, r.site.z - pos.z) <= reachOf(r) ? r : null;
 }
 
 /** The capability needed to cross a biome, for messages. */

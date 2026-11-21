@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LANDMARK_SOLID_RADIUS } from "./landmarks";
+import { landmarkRadius } from "./landmarks";
 import { createWorld } from "./world";
 import { createTerrain, CHUNK_SIZE } from "./terrain-grid";
 import { planMonuments, type MonumentSpec } from "./monuments";
@@ -20,12 +20,12 @@ describe("createObstacles", () => {
     expect(createObstacles(terrain, plan).near(40, 40, 10)).toEqual(a);
   });
 
-  it("makes a landmark solid at its footprint, with no gate pillars, and reachable from outside", () => {
-    const { site } = terrain.world.landmarks[0]!;
+  it("makes a landmark solid at its footprint, with no gate pillars", () => {
+    const region = terrain.world.landmarks[0]!;
+    const { site } = region;
+    const r = landmarkRadius(region.landmark!);
     expect(obstacles.near(site.x, site.z, 0).length).toBeGreaterThan(0);
-    expect(obstacles.near(site.x + 0.9, site.z, 0).every((o) => o.r === LANDMARK_SOLID_RADIUS)).toBe(true);
-    // A player standing against the footprint is still within reach of the shrine.
-    expect(LANDMARK_SOLID_RADIUS + PLAYER).toBeLessThanOrEqual(3.5); // SHRINE_REACH in game/player.ts
+    expect(obstacles.near(site.x + 0.9, site.z, 0).every((o) => o.r === r)).toBe(true);
   });
 
   it("makes trees and shrine pillars solid but not flowers", () => {

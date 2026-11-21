@@ -1,18 +1,127 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { lifeAt } from "../game";
 import type { ShrineMesh } from "./shrine-mesh";
 import { palette } from "./palette";
+import { deadOf } from "./vitality-mesh";
 
 const DEAD_STONE = new THREE.Color(0x77736f);
 const DEAD_RED = new THREE.Color(0x77716e);
 
+/** Where a landmark's model lives: public/models/landmarks/<id>.glb */
+function modelUrl(id: string): string {
+  return `${import.meta.env.BASE_URL}models/landmarks/${id}.glb`;
+}
+
+/** Raw model files, fetched once; each landmark instance parses its own copy so it owns its materials. */
+const files = new Map<string, Promise<ArrayBuffer | null>>();
+function fetchModel(id: string): Promise<ArrayBuffer | null> {
+  let hit = files.get(id);
+  if (!hit) {
+    hit = fetch(modelUrl(id))
+      .then(async (r) => {
+        if (!r.ok) return null;
+        const buffer = await r.arrayBuffer();
+        // A dev server answers a missing file with its index page; only accept real binary glTF.
+        return new TextDecoder().decode(buffer.slice(0, 4)) === "glTF" ? buffer : null;
+      })
+      .catch(() => null);
+    files.set(id, hit);
+  }
+  return hit;
+}
+
+/** Light glows and the like: nodes the artist named `glow_*` are lit up as the region wakes. */
+const isGlow = (name: string): boolean => name.startsWith("glow_");
+
+interface Tinted {
+  readonly material: THREE.MeshStandardMaterial;
+  readonly alive: THREE.Color;
+  readonly dead: THREE.Color;
+  readonly glows: boolean;
+}
+
 /**
- * Stand-in for a hand-crafted landmark model: a stepped plinth, a spire and a
- * floating gem. Every landmark uses it until its real model is made, and it
- * is deliberately plain so it is never mistaken for one. It is the region's
- * shrine, so there is no torii; it is solid within LANDMARK_SOLID_RADIUS.
+ * Applies a crafted model: every material fades from a desaturated dead colour
+ * to its authored one with the region's life (as props do), and `glow_*`
+ * parts light up and flare while it wakes.
  */
-export function buildLandmarkPlaceholder(): ShrineMesh {
+function adopt(root: THREE.Object3D): { tinted: Tinted[] } {
+  const tinted = new Map<THREE.Material, Tinted>();
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    o.castShadow = true;
+    o.receiveShadow = true;
+    const material = o.material as THREE.MeshStandardMaterial;
+    const glows = isGlow(o.name) || isGlow(material.name);
+    const seen = tinted.get(material);
+    if (seen) return;
+    material.flatShading = true;
+    if (glows) material.emissive = material.color.clone();
+    tinted.set(material, { material, alive: material.color.clone(), dead: deadOf(material.color), glows });
+  });
+  return { tinted: [...tinted.values()] };
+}
+
+/**
+ * A landmark's visual. It is drawn as a plain placeholder at once, and swapped
+ * for the crafted model as soon as that has loaded (if the landmark has one).
+ * The landmark is the region's shrine, so there is no torii; it is solid within
+ * the landmark's footprint.
+ */
+export function buildLandmark(id: string): ShrineMesh {
+  const group = new THREE.Group();
+  const stand = buildPlaceholder();
+  group.add(stand.group);
+  let model: { tinted: Tinted[] } | null = null;
+  let progress = 0;
+
+  const apply = (): void => {
+    const v = lifeAt(progress, 0);
+    const flare = progress > 0 && progress < 0.35 ? Math.sin((progress / 0.35) * Math.PI) : 0;
+    stand.setVitality(progress);
+    if (!model) return;
+    for (const t of model.tinted) {
+      t.material.color.copy(t.dead).lerp(t.alive, v);
+      if (t.glows) t.material.emissiveIntensity = 0.9 * v + 3.0 * flare;
+    }
+  };
+
+  void fetchModel(id).then((buffer) => {
+    if (!buffer) return;
+    new GLTFLoader().parse(
+      buffer,
+      "",
+      (gltf) => {
+        // The landmark may have been streamed out again while the file was loading.
+        if (!group.parent) return;
+        group.remove(stand.group);
+        gltf.scene.position.y = 0.03; // lift the model's own ground clear of the terrain under it
+        group.add(gltf.scene);
+        model = adopt(gltf.scene);
+        apply();
+      },
+      () => undefined,
+    );
+  });
+
+  return {
+    group,
+    setVitality(p) {
+      progress = p;
+      apply();
+    },
+    tick(seconds) {
+      if (!model) stand.tick(seconds);
+    },
+  };
+}
+
+/**
+ * Stand-in for a landmark without a model yet: a stepped plinth, a spire and a
+ * floating gem. Deliberately plain so it is never mistaken for a crafted one.
+ */
+function buildPlaceholder(): ShrineMesh {
   const group = new THREE.Group();
   const stone = new THREE.MeshStandardMaterial({ color: palette.rock, flatShading: true });
   const red = new THREE.MeshStandardMaterial({ color: palette.red, flatShading: true });

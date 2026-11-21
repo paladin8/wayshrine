@@ -21,6 +21,7 @@ export {
   PLAYER_RADIUS,
   PLAYER_SPEED,
   SHRINE_REACH,
+  reachOf,
   blockerAt,
   clearOfObstacles,
   movePlayer,

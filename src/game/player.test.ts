@@ -4,7 +4,7 @@ import {
   capabilitiesForCount,
   landmarksBeforeAct,
   neighborsOf,
-  LANDMARK_SOLID_RADIUS,
+  landmarkRadius,
   createTerrain,
   createWorld,
   type Capability,
@@ -14,7 +14,7 @@ import {
   type Terrain,
   type World,
 } from "../world";
-import { PLAYER_RADIUS, PLAYER_SPEED, SHRINE_REACH, blockerAt, clearOfObstacles, movePlayer, shrineInReach, startPosition } from "./player";
+import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, reachOf, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
 
@@ -181,7 +181,14 @@ describe("collision with obstacles", () => {
 });
 
 describe("landmark as shrine", () => {
-  it("can be reached from just outside its solid footprint", () => {
-    expect(LANDMARK_SOLID_RADIUS + PLAYER_RADIUS).toBeLessThanOrEqual(SHRINE_REACH);
+  const terrain = createTerrain(createWorld("lm-reach"));
+
+  it("can be used from just outside its solid footprint, but not from far away", () => {
+    for (const region of terrain.world.landmarks) {
+      const r = landmarkRadius(region.landmark!);
+      expect(reachOf(region)).toBeGreaterThanOrEqual(r + PLAYER_RADIUS);
+      expect(shrineInReach(terrain, { x: region.site.x + r + PLAYER_RADIUS, z: region.site.z })).toBe(region);
+      expect(shrineInReach(terrain, { x: region.site.x + r + 4, z: region.site.z })).toBeNull();
+    }
   });
 });

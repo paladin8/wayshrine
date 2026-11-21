@@ -4,7 +4,15 @@ Landmarks are hand-crafted places emblematic of Japan, one per special region, b
 
 Fifty are planned, in nine **acts**. An act is a band: its landmarks sit in a ring farther from the start than the act before, on a bearing that is rotated per seed, so the world grows outward in a spiral rather than along a chain. Geography is loose: an act's biome is the main constraint, and real-world location only decides order within it.
 
-Status: acts I to IV (landmarks 1 to 20) are in the code, because their biomes and abilities exist. Acts V to IX need new biomes and abilities first (below). Models are placeholders until crafted; the ids are the file names (`public/models/landmarks/<id>.glb`) once the loader exists.
+Status: acts I to IV (landmarks 1 to 20) are in the code, because their biomes and abilities exist. Acts V to IX need new biomes and abilities first (below). ## Models
+
+A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one unit = one world unit), centred on the region's site and sitting on its flat plateau. Without a file, the landmark shows a plain placeholder. Conventions the loader relies on:
+
+- Author it alive; the dead look is derived per material (as for scenery), so keep one material per colour and name them.
+- Parts named `glow_*` (or using a `glow_*` material) light up and flare as the region wakes.
+- The model is a diorama up to about 19 units square; set `radius` on its entry in `LANDMARK_SPECS` to its solid footprint (the player is stopped there, and uses the landmark from just outside it).
+
+Done: fushimi-inari. Everything else uses the placeholder.
 
 ## Abilities
 
