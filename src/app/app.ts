@@ -1,12 +1,18 @@
 import {
   capabilitiesOf,
   deserialize,
+  discoverNear,
   isRestored,
   movePlayer,
   newGame,
+  nextShrine,
   requirementOf,
+  resetGame,
+  resetShrines,
   restoreShrine,
+  safePosition,
   serialize,
+  SHRINE_REACH,
   shrineInReach,
   startPosition,
   type GameState,
@@ -14,7 +20,9 @@ import {
 } from "../game";
 import { createStage } from "../render";
 import { createTerrain, createWorld, type Biome, type Point } from "../world";
+import { createDebugPanel } from "./debug";
 import { createHud, labelOf } from "./hud";
+import { createMinimap } from "./minimap";
 
 const HINT_SECONDS = 1.5;
 
@@ -23,6 +31,7 @@ const KEY_DOWN = ["KeyS", "ArrowDown"];
 const KEY_LEFT = ["KeyA", "ArrowLeft"];
 const KEY_RIGHT = ["KeyD", "ArrowRight"];
 const KEY_ACT = ["KeyE", "Space", "Enter"];
+const KEY_MAP = "KeyM";
 
 function loadGame(seed: string): GameState {
   try {
@@ -51,6 +60,7 @@ export function startApp(container: HTMLElement): void {
   const terrain = createTerrain(world);
   const stage = createStage(container, terrain);
   const hud = createHud(container);
+  const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up));
 
   let state = loadGame(seed);
   let pos: Point = startPosition(terrain);
@@ -64,14 +74,30 @@ export function startApp(container: HTMLElement): void {
   };
 
   if (params.has("debug")) {
-    // Developer hooks: ?debug exposes window.wayshrine for teleporting and restoring.
-    Object.assign(window, {
-      wayshrine: {
-        world,
-        teleport: (x: number, z: number) => (pos = { x, z }),
-        restore,
-        restoreSpine: () => world.spine.forEach((r) => restore(r.id)),
+    const restoreSpine = (): void => world.spine.forEach((r) => restore(r.id));
+    const reset = (next: (s: GameState) => GameState): void => {
+      state = next(state);
+      saveGame(state);
+    };
+    const actions = {
+      restoreSpine,
+      resetShrines: () => {
+        reset(resetShrines);
+        pos = startPosition(terrain); // land reached with lost capabilities may now be cut off
       },
+      resetAll: () => {
+        reset(resetGame);
+        pos = startPosition(terrain);
+      },
+      goToTarget: () => {
+        const g = nextShrine(world, state, pos);
+        if (g) pos = { x: g.region.site.x, z: g.region.site.z + 3 };
+      },
+    };
+    createDebugPanel(container, actions);
+    // Also available from the console: window.wayshrine.
+    Object.assign(window, {
+      wayshrine: { world, teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -84,6 +110,7 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     down.add(e.code);
+    if (e.code === KEY_MAP) minimap.toggleExpanded();
     if (KEY_ACT.includes(e.code)) {
       const region = shrineInReach(terrain, pos);
       if (region && !isRestored(state, region)) restore(region.id);
@@ -103,6 +130,13 @@ export function startApp(container: HTMLElement): void {
     last = now;
 
     const caps = capabilitiesOf(state, world);
+    // Losing a capability (a reset, an old save) must never strand the player.
+    pos = safePosition(terrain, caps, pos);
+    const seen = discoverNear(state, world, pos);
+    if (seen !== state) {
+      state = seen;
+      saveGame(state);
+    }
     const right = any(KEY_RIGHT) - any(KEY_LEFT);
     const up = any(KEY_UP) - any(KEY_DOWN);
     if (right !== 0 || up !== 0) {
@@ -120,7 +154,14 @@ export function startApp(container: HTMLElement): void {
 
     const reach = shrineInReach(terrain, pos);
     const prompt = reach && !isRestored(state, reach) ? "Press E to restore the shrine" : null;
-    hud.update({ capabilities: caps, restoredCount: state.restored.size, prompt, hint });
+    const guide = nextShrine(world, state, pos);
+    let compass = null;
+    if (guide) {
+      const s = stage.screenDirection(guide.dx, guide.dz);
+      compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: guide.distance <= SHRINE_REACH };
+    }
+    hud.update({ capabilities: caps, restoredCount: state.restored.size, compass, prompt, hint });
+    minimap.update({ pos, state, target: guide?.region ?? null });
 
     stage.render(dt, { player: pos, facing, state });
     requestAnimationFrame(frame);

@@ -4,11 +4,16 @@ import {
   canEnter,
   capabilitiesOf,
   deserialize,
+  discoverNear,
+  isExplored,
   isRestored,
   newGame,
+  resetGame,
+  resetShrines,
   restoreShrine,
   serialize,
   vitality,
+  DISCOVER_RADIUS,
 } from "./state";
 
 const world = createWorld("game-tests");
@@ -47,6 +52,59 @@ describe("game state", () => {
   });
 
   it("rejects unknown save versions", () => {
-    expect(() => deserialize({ v: 2 as 1, seed: "x", restored: [] })).toThrow();
+    expect(() => deserialize({ v: 3 } as never)).toThrow();
+  });
+
+  it("loads version 1 saves with nothing explored", () => {
+    const loaded = deserialize({ v: 1, seed: world.seed, restored: [world.spine[0]!.id] });
+    expect(loaded.restored.size).toBe(1);
+    expect(loaded.explored.size).toBe(0);
+  });
+
+  it("round-trips exploration", () => {
+    const s = discoverNear(newGame(world.seed), world, world.spine[0]!.site);
+    expect(deserialize(JSON.parse(JSON.stringify(serialize(s)))).explored).toEqual(s.explored);
+  });
+});
+
+describe("exploration", () => {
+  it("always explores the region the player stands in", () => {
+    const here = world.regionAt(100, -40);
+    const s = discoverNear(newGame(world.seed), world, { x: 100, z: -40 });
+    expect(isExplored(s, here)).toBe(true);
+  });
+
+  it("explores nearby shrines but not distant ones", () => {
+    const start = world.region(0, 0);
+    const s = discoverNear(newGame(world.seed), world, start.site);
+    for (const r of [world.region(1, 0), world.region(-1, 0), world.region(0, 1), world.region(0, -1)]) {
+      const near = Math.hypot(r.site.x - start.site.x, r.site.z - start.site.z) <= DISCOVER_RADIUS;
+      expect(isExplored(s, r)).toBe(near);
+    }
+    expect(isExplored(s, world.region(5, 5))).toBe(false);
+  });
+
+  it("returns the same state when nothing is new", () => {
+    const s = discoverNear(newGame(world.seed), world, { x: 10, z: 10 });
+    expect(discoverNear(s, world, { x: 10, z: 10 })).toBe(s);
+  });
+});
+
+describe("resets", () => {
+  const start = world.spine[0]!;
+
+  it("resetShrines clears restorations but keeps exploration", () => {
+    const s = restoreShrine(discoverNear(newGame(world.seed), world, start.site), start);
+    const reset = resetShrines(s);
+    expect(reset.restored.size).toBe(0);
+    expect(reset.explored).toBe(s.explored);
+    expect(capabilitiesOf(reset, world).size).toBe(0);
+  });
+
+  it("resetGame returns a fresh game on the same seed", () => {
+    const s = restoreShrine(discoverNear(newGame(world.seed), world, start.site), start);
+    const fresh = resetGame(s);
+    expect(fresh.seed).toBe(s.seed);
+    expect(fresh.restored.size + fresh.explored.size).toBe(0);
   });
 });

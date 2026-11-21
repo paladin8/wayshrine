@@ -79,3 +79,32 @@ export function shrineInReach(terrain: Terrain, pos: Point): Region | null {
 export function requirementOf(biome: Biome): Capability | null {
   return BIOME_REQUIRES[biome];
 }
+
+/**
+ * A spot the player may stand on: `pos` itself if it is free, else the nearest
+ * free tile centre. Used when capabilities are lost (a reset, an old save) so
+ * the player is never left stuck in terrain they can no longer cross.
+ */
+export function safePosition(terrain: Terrain, caps: ReadonlySet<Capability>, pos: Point): Point {
+  if (blockerAt(terrain, caps, pos.x, pos.z) === null) return pos;
+  const tx = Math.floor(pos.x);
+  const tz = Math.floor(pos.z);
+  for (let r = 1; r <= 64; r++) {
+    let best: Point | null = null;
+    let bestDist = Infinity;
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        const x = tx + dx + 0.5;
+        const z = tz + dz + 0.5;
+        const d = Math.hypot(x - pos.x, z - pos.z);
+        if (d < bestDist && blockerAt(terrain, caps, x, z) === null) {
+          best = { x, z };
+          bestDist = d;
+        }
+      }
+    }
+    if (best) return best;
+  }
+  return startPosition(terrain);
+}

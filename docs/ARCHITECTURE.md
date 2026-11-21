@@ -35,6 +35,15 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - Props are **decorative and never block movement**. Walkability stays a function of biomes only, which keeps the progression guarantee (ADR 0003) provable. If solid props are ever wanted, the tile-level progression test must account for them.
 - `render/prop-mesh.ts` merges a chunk's props into one mesh through `VitalityBuilder` (`render/vitality-mesh.ts`), the same alive/dead colour mechanism the terrain uses, so everything in a region fades with its vitality. `render/chunk-mesh.ts` combines ground and props per chunk.
 
+## Guidance, discovery and the map
+- `GameState.explored` records regions the player has seen (within `DISCOVER_RADIUS` of a shrine, or standing in them). It is saved with the game (save format v2; v1 saves still load with nothing explored).
+- `game/guidance.ts` (`nextShrine`) picks the nearest unrestored shrine the player can reach with their current capabilities. It never points at a shrine behind terrain they cannot yet cross, and a test proves that following it alone always collects every capability.
+- `game/player.ts` (`safePosition`) moves a stranded player to the nearest free ground. The app calls it every frame, so losing a capability (a reset, an old save) cannot trap anyone.
+- The compass and map live in `app/` (DOM and canvas). The map is drawn region by region in the game's rotated screen orientation, using the stage's own ground/screen basis, and unexplored regions stay fogged.
+
+## Debugging
+`?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)` and `restore(id)`. Resets save immediately and return the player to the start.
+
 ## Key concepts
 - **Region:** a Voronoi cell around a jittered grid site (`REGION_SIZE` 64). Has a biome and one shrine.
 - **Spine:** the guaranteed path of regions: keystone meadow (grants a capability), barrier biome (needs it), next keystone beyond.

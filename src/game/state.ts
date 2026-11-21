@@ -1,4 +1,4 @@
-import { canTraverse, type Biome, type Capability, type Region, type World } from "../world";
+import { canTraverse, type Biome, type Capability, type Point, type Region, type World } from "../world";
 
 /**
  * Everything the player has changed about the world. A save is the world seed
@@ -8,10 +8,15 @@ export interface GameState {
   readonly seed: string;
   /** Ids of regions whose shrines have been restored. */
   readonly restored: ReadonlySet<string>;
+  /** Ids of regions the player has seen; drives what the map reveals. */
+  readonly explored: ReadonlySet<string>;
 }
 
+/** A region counts as seen when the player is within this distance of its shrine. */
+export const DISCOVER_RADIUS = 40;
+
 export function newGame(seed: string): GameState {
-  return { seed, restored: new Set() };
+  return { seed, restored: new Set(), explored: new Set() };
 }
 
 /** Restores a region's shrine. Restoring twice has no further effect. */
@@ -22,6 +27,40 @@ export function restoreShrine(state: GameState, region: Region): GameState {
 
 export function isRestored(state: GameState, region: Region): boolean {
   return state.restored.has(region.id);
+}
+
+export function isExplored(state: GameState, region: Region): boolean {
+  return state.explored.has(region.id);
+}
+
+/**
+ * Marks the player's region and any shrine close enough to see as explored.
+ * Returns the same object when nothing is new, so callers can cheaply detect change.
+ */
+export function discoverNear(state: GameState, world: World, pos: Point): GameState {
+  const here = world.regionAt(pos.x, pos.z);
+  let next: Set<string> | null = null;
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const r = world.region(here.coord.rx + dx, here.coord.rz + dz);
+      const seen = r.id === here.id || Math.hypot(r.site.x - pos.x, r.site.z - pos.z) <= DISCOVER_RADIUS;
+      if (seen && !state.explored.has(r.id)) {
+        next ??= new Set(state.explored);
+        next.add(r.id);
+      }
+    }
+  }
+  return next ? { ...state, explored: next } : state;
+}
+
+/** Un-restores every shrine, keeping what has been explored. For debugging. */
+export function resetShrines(state: GameState): GameState {
+  return state.restored.size === 0 ? state : { ...state, restored: new Set() };
+}
+
+/** Back to a brand-new game on the same seed. For debugging. */
+export function resetGame(state: GameState): GameState {
+  return newGame(state.seed);
 }
 
 /** Capabilities held, derived from the shrines restored so far. */
@@ -43,17 +82,37 @@ export function vitality(state: GameState, region: Region): number {
   return isRestored(state, region) ? 1 : 0;
 }
 
-export interface SaveData {
+/** Saves written before exploration was tracked. */
+export interface SaveV1 {
   readonly v: 1;
   readonly seed: string;
   readonly restored: readonly string[];
 }
 
-export function serialize(state: GameState): SaveData {
-  return { v: 1, seed: state.seed, restored: [...state.restored].sort() };
+export interface SaveV2 {
+  readonly v: 2;
+  readonly seed: string;
+  readonly restored: readonly string[];
+  readonly explored: readonly string[];
+}
+
+export type SaveData = SaveV1 | SaveV2;
+
+export function serialize(state: GameState): SaveV2 {
+  return {
+    v: 2,
+    seed: state.seed,
+    restored: [...state.restored].sort(),
+    explored: [...state.explored].sort(),
+  };
 }
 
 export function deserialize(data: SaveData): GameState {
-  if (data.v !== 1) throw new Error(`unsupported save version: ${String(data.v)}`);
-  return { seed: data.seed, restored: new Set(data.restored) };
+  const version = (data as { v: unknown }).v;
+  if (version === 1) return { seed: data.seed, restored: new Set(data.restored), explored: new Set() };
+  if (version === 2) {
+    const d = data as SaveV2;
+    return { seed: d.seed, restored: new Set(d.restored), explored: new Set(d.explored) };
+  }
+  throw new Error(`unsupported save version: ${String(version)}`);
 }

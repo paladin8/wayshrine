@@ -1,7 +1,7 @@
 # Wayshrine: working notes for agents
 
 ## Commands
-- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` exposes `window.wayshrine` (teleport, restore).
+- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` shows a debug panel (restore/reset shrines, go to nearest shrine) and exposes `window.wayshrine`. `M` toggles the full map.
 - `npm run check`: typecheck, tests, build. Run before declaring anything done.
 - `npx vitest run <path>`: a single test file.
 
