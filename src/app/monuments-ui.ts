@@ -25,7 +25,10 @@ const CSS = `
 .mu-x:hover{background:#2a242414}
 .mu-kind{font-size:12px;letter-spacing:.08em;opacity:.6;text-align:center;margin-bottom:12px}
 .mu-ja{font-family:${SERIF};font-size:30px;line-height:1.5;text-align:center;letter-spacing:.08em;margin:6px 0 14px}
-.mu-ja.v{writing-mode:vertical-rl;white-space:nowrap;margin:6px auto 14px;font-size:clamp(16px,3.5vh,26px);line-height:1.8;letter-spacing:.1em}
+.mu-ja.v{writing-mode:vertical-rl;white-space:nowrap;width:fit-content;margin:6px auto 14px;font-size:clamp(18px,4vh,30px);line-height:1.6;letter-spacing:.1em}
+.mu-line{display:block;margin-left:.5em}
+.mu-line:nth-child(2){margin-top:1.2em}
+.mu-line:nth-child(3){margin-top:2.4em}
 .mu-en{text-align:center;font-size:16px;line-height:1.5;white-space:pre-line;opacity:.85;margin:0 0 10px}
 .mu-by{text-align:center;font-size:13px;opacity:.6;margin:6px 0 0}
 .mu-bar{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 28px 10px 0}
@@ -99,7 +102,9 @@ export function createMonumentUi(
       return;
     }
     setText(el("div", "mu-kind", card), t.monuments.kind[entry.kind]);
-    setText(el("div", entry.kind === "haiku" ? "mu-ja v" : "mu-ja", card), entry.ja);
+    const ja = el("div", entry.kind === "haiku" ? "mu-ja v" : "mu-ja", card);
+    if (entry.lines) for (const line of entry.lines) setText(el("div", "mu-line", ja), line);
+    else setText(ja, entry.ja);
     // The Japanese text stands alone in Japanese; the English rendering appears only in English.
     if (language === "en") setText(el("p", "mu-en", card), entry.en);
     if (entry.by) setText(el("p", "mu-by", card), `— ${entry.by[language]}`);

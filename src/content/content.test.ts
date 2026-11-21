@@ -7,7 +7,9 @@ const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../../$
 const source = read("content/source/japanese-texts.json") as SourceFile;
 const scenery = read("content/haiku-scenery.json") as Record<string, Scenery>;
 delete (scenery as Record<string, unknown>)["_about"];
-const built = buildContent(source, scenery);
+const lines = read("content/haiku-lines.json") as Record<string, string[]>;
+delete (lines as Record<string, unknown>)["_about"];
+const built = buildContent(source, scenery, undefined, lines);
 
 describe("content", () => {
   it("has 1000 unique texts", () => {
@@ -27,12 +29,16 @@ describe("content", () => {
     expect(built.index.filter((e) => e.biome).length).toBe(50);
   });
 
+  it("splits every haiku into three lines that rejoin to the text", () => {
+    for (const h of built.texts.filter((t) => t.kind === "haiku")) expect(h.lines?.join("")).toBe(h.ja);
+  });
+
   it("drops spelling-variant parentheticals", () => {
     expect(built.texts.find((t) => t.id === "jmdict-2175010")?.en).toBe("love your neighbor");
   });
 
   it("rejects overrides and scenery for unknown ids", () => {
-    expect(() => buildContent(source, scenery, { nope: "x" })).toThrow();
-    expect(() => buildContent(source, { ...scenery, nope: { biome: "water", season: "spring", scene: "" } })).toThrow();
+    expect(() => buildContent(source, scenery, { nope: "x" }, lines)).toThrow();
+    expect(() => buildContent(source, { ...scenery, nope: { biome: "water", season: "spring", scene: "" } }, undefined, lines)).toThrow();
   });
 });

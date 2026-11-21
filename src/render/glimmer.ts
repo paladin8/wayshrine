@@ -6,8 +6,8 @@ import { Kind, ParticleLayer } from "./particles";
 const MOTES = 5;
 const PER_MONUMENT = MOTES + 1;
 const MAX_MONUMENTS = 8;
-const GOLD = new THREE.Color(0xffe08a);
-const CYCLE = 3.2;
+/** Cool violet-white, so it cannot be mistaken for the warm gold and green of living land. */
+const GLIMMER = new THREE.Color(0xa9b8ff);
 
 /**
  * A faint rising glimmer over monuments that have not been read yet, so that an
@@ -25,7 +25,7 @@ export function createGlimmer(scene: THREE.Scene): Glimmer {
   for (const p of layer.particles) {
     p.kind = Kind.Spark;
     p.maxAge = 1;
-    [p.r, p.g, p.b] = [GOLD.r, GOLD.g, GOLD.b];
+    [p.r, p.g, p.b] = [GLIMMER.r, GLIMMER.g, GLIMMER.b];
     p.alpha = 1;
   }
   return {
@@ -47,14 +47,15 @@ export function createGlimmer(scene: THREE.Scene): Glimmer {
         }
         p.alpha = 1;
         const k = slot - 1;
-        // Each mote rises and fades on its own offset of a shared cycle, drifting a little sideways.
-        const phase = (clock / CYCLE + k / MOTES + m.variant) % 1;
-        p.age = phase;
-        const swirl = (k + m.variant * 6) * 2.1;
-        p.x = m.x + Math.cos(swirl + clock * 0.6) * 0.35;
-        p.z = m.z + Math.sin(swirl + clock * 0.6) * 0.35;
-        p.y = heightAt(m) + 0.5 + phase * 2.2;
-        p.size = 10 + 3 * Math.sin(clock * 2 + k);
+        // Motes circle the top of the stone in a slow ring, twinkling in turn: a different
+        // motion from the drifting fireflies and the rising sparks of living land.
+        const angle = clock * 0.8 + (k / MOTES) * Math.PI * 2;
+        p.age = 0.5;
+        p.x = m.x + Math.cos(angle) * 0.75;
+        p.z = m.z + Math.sin(angle) * 0.75;
+        p.y = heightAt(m) + 1.5 + Math.sin(angle * 2 + m.variant * 6) * 0.25;
+        p.size = 8 + 5 * Math.max(0, Math.sin(clock * 2.4 + k * 1.7));
+        p.alpha = 0.5 + 0.5 * Math.max(0, Math.sin(clock * 2.4 + k * 1.7));
       });
       layer.flush(pixelScale);
     },

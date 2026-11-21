@@ -32,6 +32,8 @@ export interface TextEntry {
   kind: TextKind;
   ja: string;
   en: string;
+  /** Haiku only: the poem in three lines, for the vertical layout. Joined, equal to `ja`. */
+  lines?: [string, string, string];
   /** Present for haiku, which are credited to their poet. */
   by?: { en: string; ja: string };
 }
@@ -106,6 +108,7 @@ export function buildContent(
   source: SourceFile,
   scenery: Readonly<Record<string, Scenery>>,
   overrides: Readonly<Record<string, string>> = ENGLISH_OVERRIDES,
+  lines: Readonly<Record<string, readonly string[]>> = {},
 ): Built {
   const ids = new Set<string>();
   for (const e of source.entries) {
@@ -127,6 +130,9 @@ export function buildContent(
       const poet = e.author ? POETS[e.author] : undefined;
       if (!poet) throw new Error(`haiku ${e.id} has an unknown poet: ${String(e.author)}`);
       entry.by = poet;
+      const l = lines[e.id];
+      if (!l || l.length !== 3 || l.join("") !== entry.ja) throw new Error(`haiku ${e.id} needs three lines that join to its text`);
+      entry.lines = [l[0] as string, l[1] as string, l[2] as string];
       const s = scenery[e.id];
       if (!s) throw new Error(`haiku ${e.id} has no scenery tag`);
       index.push({ id: e.id, kind, biome: s.biome, season: s.season, scene: s.scene });

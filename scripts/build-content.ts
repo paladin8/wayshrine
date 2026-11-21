@@ -6,7 +6,10 @@ const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../${pa
 const scenery = read("content/haiku-scenery.json") as Record<string, never>;
 delete (scenery as Record<string, unknown>)["_about"];
 
-const { texts, index } = buildContent(read("content/source/japanese-texts.json") as never, scenery);
+const lines = read("content/haiku-lines.json") as Record<string, never>;
+delete (lines as Record<string, unknown>)["_about"];
+
+const { texts, index } = buildContent(read("content/source/japanese-texts.json") as never, scenery, undefined, lines);
 const write = (path: string, value: unknown): void =>
   writeFileSync(new URL(`../${path}`, import.meta.url), JSON.stringify(value) + "\n");
 write("src/content/texts.json", texts);
