@@ -3,9 +3,23 @@ export type { Biome, Capability } from "./terrain";
 export { REGION_REACH, REGION_SIZE, neighborsOf, parseRegionId, regionId } from "./coords";
 export type { Point, RegionCoord } from "./coords";
 export { createWorld } from "./world";
-export type { Region, Shrine, World } from "./world";
-export { greedyProgress, reachableRegions } from "./progression";
-export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain } from "./terrain-grid";
+export type { Region, World } from "./world";
+export { LANDMARK_TOTAL, greedyProgress, reachableRegions } from "./progression";
+export { reachableCoords } from "./reach";
+export {
+  CAPABILITY_THRESHOLDS,
+  HOME_RADIUS,
+  LANDMARK_PLATEAU_RADIUS,
+  LANDMARK_SOLID_RADIUS,
+  LANDMARKS,
+  LANDMARK_SPECS,
+  capabilitiesForCount,
+  landmarksBeforeAct,
+  planLandmarks,
+  ringRadius,
+} from "./landmarks";
+export type { Landmark, LandmarkSpec } from "./landmarks";
+export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauRadius } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
 export { PROP_KINDS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";

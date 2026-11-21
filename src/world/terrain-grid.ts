@@ -1,12 +1,18 @@
 import { createNoise } from "../core";
+import { LANDMARK_PLATEAU_RADIUS } from "./landmarks";
 import type { Biome } from "./terrain";
-import type { World } from "./world";
+import type { Region, World } from "./world";
 
 /** Tiles are 1x1 world units; chunks are CHUNK_SIZE x CHUNK_SIZE tiles. */
 export const CHUNK_SIZE = 16;
 
 /** Within this distance of a shrine the ground is flat, so the shrine has a base. */
 export const PLATEAU_RADIUS = 2.5;
+
+/** The flat ground around a region's shrine; wider where a landmark stands. */
+export function plateauRadius(region: Region): number {
+  return region.landmark ? LANDMARK_PLATEAU_RADIUS : PLATEAU_RADIUS;
+}
 
 export interface Tile {
   readonly biome: Biome;
@@ -45,7 +51,7 @@ export function createTerrain(world: World): Terrain {
     const x = tx + 0.5;
     const z = tz + 0.5;
     const region = world.regionAt(x, z);
-    const onPlateau = (x - region.site.x) ** 2 + (z - region.site.z) ** 2 <= PLATEAU_RADIUS ** 2;
+    const onPlateau = (x - region.site.x) ** 2 + (z - region.site.z) ** 2 <= plateauRadius(region) ** 2;
     // A shrine in a water region stands on an islet, reachable only by boat.
     const biome: Biome = onPlateau && region.biome === "water" ? "meadow" : region.biome;
     return { x, z, region, onPlateau, biome };

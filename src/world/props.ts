@@ -1,6 +1,6 @@
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
-import { CHUNK_SIZE, PLATEAU_RADIUS, type Terrain } from "./terrain-grid";
+import { CHUNK_SIZE, plateauRadius, type Terrain } from "./terrain-grid";
 import type { Biome } from "./terrain";
 
 export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern"] as const;
@@ -84,7 +84,7 @@ export function propsInChunk(
       let roll = rng.next();
 
       const region = world.regionAt(x, z);
-      const clear = Math.hypot(x - region.site.x, z - region.site.z) > PLATEAU_RADIUS + 0.4;
+      const clear = Math.hypot(x - region.site.x, z - region.site.z) > plateauRadius(region) + 0.4;
       if (!clear) continue;
       if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius)) continue;
 
@@ -108,7 +108,8 @@ export function propsInChunk(
   const rzMax = Math.floor((z0 + CHUNK_SIZE) / REGION_SIZE) + 1;
   for (let rz = rzMin; rz <= rzMax; rz++) {
     for (let rx = rxMin; rx <= rxMax; rx++) {
-      const { site, id } = world.region(rx, rz);
+      const { site, id, landmark } = world.region(rx, rz);
+      if (landmark) continue; // the landmark is the shrine, and has no lanterns
       for (const a of LANTERN_ANGLES) {
         const x = site.x + Math.cos(a) * LANTERN_RADIUS;
         const z = site.z + Math.sin(a) * LANTERN_RADIUS;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { CAPABILITIES, createWorld } from "../world";
+import { CAPABILITIES, CAPABILITY_THRESHOLDS, createWorld } from "../world";
 import {
+  landmarksRestored,
   canEnter,
   collectMonument,
   isCollected,
@@ -19,6 +20,9 @@ import {
 } from "./state";
 
 const world = createWorld("game-tests");
+const landmark = (n: number) => world.landmarks[n]!;
+/** A state with the first `n` landmarks restored. */
+const withLandmarks = (n: number) => world.landmarks.slice(0, n).reduce(restoreShrine, newGame(world.seed));
 
 describe("game state", () => {
   it("starts with nothing restored and no capabilities", () => {
@@ -28,26 +32,40 @@ describe("game state", () => {
     expect(canEnter(s, world, "water")).toBe(false);
   });
 
-  it("restoring a keystone shrine grants its capability and revives the region", () => {
-    const start = world.spine[0]!;
+  it("restoring an ordinary shrine revives the region but grants nothing", () => {
+    const start = world.region(0, 0);
     const s = restoreShrine(newGame(world.seed), start);
     expect(isRestored(s, start)).toBe(true);
     expect(vitality(s, start)).toBe(1);
-    expect(capabilitiesOf(s, world).has(CAPABILITIES[0])).toBe(true);
-    expect(canEnter(s, world, "water")).toBe(true);
-    expect(canEnter(s, world, "snow")).toBe(false);
+    expect(capabilitiesOf(s, world).size).toBe(0);
+  });
+
+  it("unlocks each ability at its landmark count, not before", () => {
+    for (const cap of CAPABILITIES) {
+      const need = CAPABILITY_THRESHOLDS[cap];
+      expect(capabilitiesOf(withLandmarks(need - 1), world).has(cap)).toBe(false);
+      expect(capabilitiesOf(withLandmarks(need), world).has(cap)).toBe(true);
+    }
+    expect(canEnter(withLandmarks(3), world, "water")).toBe(true);
+    expect(canEnter(withLandmarks(3), world, "snow")).toBe(false);
+  });
+
+  it("counts landmarks, not shrines", () => {
+    let s = withLandmarks(2);
+    for (let rx = -2; rx <= 2; rx++) for (let rz = -2; rz <= 2; rz++) s = restoreShrine(s, world.region(rx, rz));
+    expect(landmarksRestored(s, world)).toBe(2 + world.landmarks.slice(2).filter((r) => Math.max(Math.abs(r.coord.rx), Math.abs(r.coord.rz)) <= 2).length);
+    expect(capabilitiesOf(s, world).has("boat")).toBe(landmarksRestored(s, world) >= 3);
   });
 
   it("is immutable and idempotent", () => {
     const base = newGame(world.seed);
-    const once = restoreShrine(base, world.spine[0]!);
+    const once = restoreShrine(base, landmark(0));
     expect(base.restored.size).toBe(0);
-    expect(restoreShrine(once, world.spine[0]!)).toBe(once);
+    expect(restoreShrine(once, landmark(0))).toBe(once);
   });
 
   it("round-trips through a save", () => {
-    let s = newGame(world.seed);
-    for (const r of world.spine.slice(0, 3)) s = restoreShrine(s, r);
+    const s = withLandmarks(3);
     const loaded = deserialize(JSON.parse(JSON.stringify(serialize(s))));
     expect(loaded.seed).toBe(s.seed);
     expect([...loaded.restored].sort()).toEqual([...s.restored].sort());
@@ -58,13 +76,13 @@ describe("game state", () => {
   });
 
   it("loads version 1 saves with nothing explored", () => {
-    const loaded = deserialize({ v: 1, seed: world.seed, restored: [world.spine[0]!.id] });
+    const loaded = deserialize({ v: 1, seed: world.seed, restored: [landmark(0).id] });
     expect(loaded.restored.size).toBe(1);
     expect(loaded.explored.size).toBe(0);
   });
 
   it("round-trips exploration", () => {
-    const s = discoverNear(newGame(world.seed), world, world.spine[0]!.site);
+    const s = discoverNear(newGame(world.seed), world, landmark(0).site);
     expect(deserialize(JSON.parse(JSON.stringify(serialize(s)))).explored).toEqual(s.explored);
   });
 });
@@ -93,7 +111,7 @@ describe("exploration", () => {
 });
 
 describe("resets", () => {
-  const start = world.spine[0]!;
+  const start = world.region(0, 0);
 
   it("resetShrines clears restorations but keeps exploration", () => {
     const s = restoreShrine(discoverNear(newGame(world.seed), world, start.site), start);

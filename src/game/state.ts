@@ -1,4 +1,4 @@
-import { canTraverse, type Biome, type Capability, type Point, type Region, type World } from "../world";
+import { capabilitiesForCount, canTraverse, type Biome, type Capability, type Point, type Region, type World } from "../world";
 
 /**
  * Everything the player has changed about the world. A save is the world seed
@@ -75,14 +75,16 @@ export function resetGame(state: GameState): GameState {
   return newGame(state.seed);
 }
 
-/** Capabilities held, derived from the shrines restored so far. */
+/** How many landmarks have been restored. */
+export function landmarksRestored(state: GameState, world: World): number {
+  let n = 0;
+  for (const id of state.restored) if (world.regionById(id).landmark) n++;
+  return n;
+}
+
+/** Capabilities held, derived from the landmarks restored so far (ADR 0006). */
 export function capabilitiesOf(state: GameState, world: World): ReadonlySet<Capability> {
-  const held = new Set<Capability>();
-  for (const id of state.restored) {
-    const grants = world.regionById(id).shrine.grants;
-    if (grants) held.add(grants);
-  }
-  return held;
+  return capabilitiesForCount(landmarksRestored(state, world));
 }
 
 export function canEnter(state: GameState, world: World, biome: Biome): boolean {

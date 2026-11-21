@@ -9,7 +9,7 @@
 | Layer | Owns | May import |
 | --- | --- | --- |
 | `core` | seeded RNG, hashing, seeded value noise | nothing |
-| `world` | biomes, capabilities, traversal rules, region graph, progression spine, tile terrain (`Terrain`, `CHUNK_SIZE`) | core |
+| `world` | biomes, capabilities, traversal rules, region graph, landmark placement and progression, tile terrain (`Terrain`, `CHUNK_SIZE`) | core |
 | `game` | `GameState` (restored shrines), derived capabilities, vitality, save/load, player movement and collision, shrine reach | core, world |
 | `render` | three.js stage, chunk streaming, terrain/shrine/player meshes, palette, camera | core, world, game |
 | `audio` | music playback: track registry, biome-to-track choice, crossfading player (browser audio, no three.js) | core, world, game |
@@ -19,7 +19,7 @@ Each layer exposes a public surface through `index.ts`. Other layers import only
 
 ## Data flow
 ```
-seed ─► world (regions, spine) ─┐
+seed ─► world (regions, landmarks) ─┐
                                 ├─► game state (restored set) ─► render (vitality, meshes) ─► screen
 input ─► app ───────────────────┘ (restore, move)
 ```
@@ -51,7 +51,7 @@ Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance fro
 `game/awakening.ts` is the pure timeline (zoom out 1.2s, wave 8.8s, hold 3s, zoom in 1.6s). The app owns the clock, ignores movement during it and lets E skip to the zoom-in. The stage focuses on the shrine, widens the orthographic view, scales the shadow frustum and streams chunks for the wider view. `render/ambient.ts` runs two particle layers (additive glow, soft normal) gated by `lifeAtPoint`; cosmetic randomness there may use `Math.random`.
 
 ## Debugging
-`?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)`, `restore(id)` and `setFixedDt(seconds|null)` (fixed sim step, for deterministic screenshots on slow renderers). Resets save immediately and return the player to the start.
+`?debug` shows a panel (restore all landmarks, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)`, `restore(id)` and `setFixedDt(seconds|null)` (fixed sim step, for deterministic screenshots on slow renderers). Resets save immediately and return the player to the start.
 
 ## Collision
 `world/obstacles.ts` (`createObstacles`) turns the scenery into solid discs: tree and pine trunks, rocks, crags, lanterns, the two pillars of each shrine's torii (the gap between them stays open) and each monument. It derives them from the same `propsInChunk` call, with the same monument clearings, that the renderer draws, so nothing is solid that is not visible. Discs are cached per chunk. Low plants and bushes are not solid, and crowns are ignored, so the player walks under foliage and between trunks. `game/player.ts` slides the player around discs by pushing them radially out of any overlap after each step (`pushOut`), which also frees anyone who starts inside one (a teleport, an old save). The push never carries the player onto ground their capabilities forbid. Walkability for progression is still decided by biomes alone, and a test floods a patch of the world to check that free ground stays one connected expanse, so scenery cannot wall a region off (ADR 0003 still holds).
@@ -66,7 +66,7 @@ Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance fro
 
 ## Key concepts
 - **Region:** a Voronoi cell around a jittered grid site (`REGION_SIZE` 64). Has a biome and one shrine.
-- **Spine:** the guaranteed path of regions: keystone meadow (grants a capability), barrier biome (needs it), next keystone beyond.
+- **Landmark:** a special region with a fixed biome and a hand-crafted model; restoring a number of them unlocks each capability. Planned in outward ring bands, always reachable with the abilities already held.
 - **Vitality:** 0 to 1 per region; drives saturation, brightness and animation. Dead regions use the same geometry with a muted palette.
 - **Fork:** `rng.fork(label)` derives an independent stream from a label, so adding a new consumer never shifts existing output.
 

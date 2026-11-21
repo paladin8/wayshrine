@@ -7,6 +7,7 @@ import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import { buildPlayer } from "./player-mesh";
+import { buildLandmarkPlaceholder } from "./landmark-mesh";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
 import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
 
@@ -160,7 +161,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
         const region = world.region(here.rx + dx, here.rz + dz);
         keep.add(region.id);
         if (shrines.has(region.id)) continue;
-        const shrine = buildShrine();
+        const shrine = region.landmark ? buildLandmarkPlaceholder() : buildShrine();
         const ground = terrain.tileAtPoint(region.site.x, region.site.z).height;
         shrine.group.position.set(region.site.x, ground, region.site.z);
         shrine.setVitality(shownProgress(region.id));

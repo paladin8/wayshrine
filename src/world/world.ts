@@ -1,12 +1,7 @@
 import { createRng, type Rng } from "../core";
 import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
-import { generateSpine } from "./spine";
-import type { Biome, Capability } from "./terrain";
-
-export interface Shrine {
-  /** Capability granted when this shrine is restored, if any. */
-  readonly grants: Capability | null;
-}
+import { HOME_RADIUS, planLandmarks, type Landmark } from "./landmarks";
+import type { Biome } from "./terrain";
 
 /** A region is the area energised by one shrine. Regions tile the infinite plane. */
 export interface Region {
@@ -16,9 +11,8 @@ export interface Region {
   /** Shrine location, and the region's Voronoi site. */
   readonly site: Point;
   readonly biome: Biome;
-  readonly shrine: Shrine;
-  /** Position along the progression spine, or null for regions off it. */
-  readonly spineIndex: number | null;
+  /** The landmark this region is built around, or null for an ordinary region. */
+  readonly landmark: Landmark | null;
 }
 
 export interface World {
@@ -27,14 +21,14 @@ export interface World {
   regionById(id: string): Region;
   /** The region containing a world-space point (nearest site). */
   regionAt(x: number, z: number): Region;
-  /** Regions on the progression spine, in order. */
-  readonly spine: readonly Region[];
+  /** Landmark regions, in landmark order. */
+  readonly landmarks: readonly Region[];
 }
 
 /** Sites are jittered up to this fraction of REGION_SIZE from their cell centre. */
 const SITE_JITTER = 0.2;
 
-const OFF_SPINE_BIOME_WEIGHTS: ReadonlyArray<readonly [Biome, number]> = [
+const AMBIENT_BIOME_WEIGHTS: ReadonlyArray<readonly [Biome, number]> = [
   ["meadow", 0.4],
   ["water", 0.2],
   ["snow", 0.2],
@@ -43,7 +37,7 @@ const OFF_SPINE_BIOME_WEIGHTS: ReadonlyArray<readonly [Biome, number]> = [
 
 function pickBiome(rng: Rng): Biome {
   let roll = rng.next();
-  for (const [biome, weight] of OFF_SPINE_BIOME_WEIGHTS) {
+  for (const [biome, weight] of AMBIENT_BIOME_WEIGHTS) {
     if (roll < weight) return biome;
     roll -= weight;
   }
@@ -56,11 +50,23 @@ function pickBiome(rng: Rng): Biome {
  */
 export function createWorld(seed: string): World {
   const root = createRng(seed);
-  const spineCells = generateSpine(seed);
-  const onSpine = new Map(
-    spineCells.map((cell, index) => [regionId(cell.coord.rx, cell.coord.rz), { cell, index }]),
-  );
   const cache = new Map<string, Region>();
+  const ambientCache = new Map<string, Biome>();
+
+  /** A region's biome before landmarks are placed. The start is always open meadow. */
+  function ambient(rx: number, rz: number): Biome {
+    if (Math.hypot(rx, rz) <= HOME_RADIUS) return "meadow";
+    const id = regionId(rx, rz);
+    let hit = ambientCache.get(id);
+    if (!hit) {
+      hit = pickBiome(root.fork(`biome:${id}`));
+      ambientCache.set(id, hit);
+    }
+    return hit;
+  }
+
+  let plan: ReadonlyMap<string, Landmark> | null = null;
+  const landmarkAt = (id: string): Landmark | null => (plan ??= planLandmarks(seed, ambient)).get(id) ?? null;
 
   function region(rx: number, rz: number): Region {
     const id = regionId(rx, rz);
@@ -72,14 +78,13 @@ export function createWorld(seed: string): World {
       x: (rx + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
       z: (rz + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
     };
-    const spine = onSpine.get(id);
+    const landmark = landmarkAt(id);
     const made: Region = {
       id,
       coord: { rx, rz },
       site,
-      biome: spine ? spine.cell.biome : pickBiome(rng),
-      shrine: { grants: spine ? spine.cell.grants : null },
-      spineIndex: spine ? spine.index : null,
+      biome: landmark ? landmark.biome : ambient(rx, rz),
+      landmark,
     };
     cache.set(id, made);
     return made;
@@ -105,14 +110,22 @@ export function createWorld(seed: string): World {
     return best;
   }
 
+  const regionById = (id: string): Region => {
+    const { rx, rz } = parseRegionId(id);
+    return region(rx, rz);
+  };
+  let landmarkRegions: Region[] | null = null;
+
   return {
     seed,
     region,
     regionAt,
-    regionById: (id) => {
-      const { rx, rz } = parseRegionId(id);
-      return region(rx, rz);
+    regionById,
+    get landmarks() {
+      landmarkRegions ??= [...(plan ??= planLandmarks(seed, ambient)).entries()]
+        .sort((a, b) => a[1].order - b[1].order)
+        .map(([id]) => regionById(id));
+      return landmarkRegions;
     },
-    spine: spineCells.map((c) => region(c.coord.rx, c.coord.rz)),
   };
 }

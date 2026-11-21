@@ -2,6 +2,7 @@ export {
   DISCOVER_RADIUS,
   canEnter,
   capabilitiesOf,
+  landmarksRestored,
   collectMonument,
   deserialize,
   discoverNear,

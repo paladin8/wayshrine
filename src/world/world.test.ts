@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { REGION_REACH, neighborsOf, regionId } from "./coords";
+import { describe, expect, it, vi } from "vitest";
+import { REGION_REACH } from "./coords";
+import {
+  CAPABILITY_THRESHOLDS,
+  HOME_RADIUS,
+  LANDMARKS,
+  capabilitiesForCount,
+  landmarksBeforeAct,
+  ringRadius,
+} from "./landmarks";
 import { greedyProgress, reachableRegions } from "./progression";
-import { BIOME_REQUIRES, CAPABILITIES } from "./terrain";
+import { CAPABILITIES, canTraverse } from "./terrain";
 import { createWorld } from "./world";
+
+vi.setConfig({ testTimeout: 60_000 });
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => `seed-${i}`);
 
@@ -32,11 +42,15 @@ describe("createWorld", () => {
     expect(() => w.regionById("nope")).toThrow();
   });
 
-  it("starts in a meadow whose shrine grants the first capability", () => {
+  it("starts in open meadow", () => {
     for (const seed of SEEDS) {
-      const start = createWorld(seed).region(0, 0);
-      expect(start.biome).toBe("meadow");
-      expect(start.shrine.grants).toBe(CAPABILITIES[0]);
+      const w = createWorld(seed);
+      expect(w.region(0, 0).biome).toBe("meadow");
+      for (let rx = -HOME_RADIUS; rx <= HOME_RADIUS; rx++) {
+        for (let rz = -HOME_RADIUS; rz <= HOME_RADIUS; rz++) {
+          if (Math.hypot(rx, rz) <= HOME_RADIUS) expect(w.region(rx, rz).biome).toBe("meadow");
+        }
+      }
     }
   });
 });
@@ -55,85 +69,123 @@ describe("region reach", () => {
   });
 });
 
-describe("progression spine", () => {
-  it("is a self-avoiding path of edge-adjacent regions", () => {
+describe("landmarks", () => {
+  it("places every landmark once, in order, with its own biome", () => {
     for (const seed of SEEDS) {
-      const { spine } = createWorld(seed);
-      expect(spine).toHaveLength(1 + 2 * CAPABILITIES.length);
-      expect(new Set(spine.map((r) => r.id)).size).toBe(spine.length);
-      for (let i = 1; i < spine.length; i++) {
-        const prev = spine[i - 1]!;
-        const near = neighborsOf(prev.coord).map((n) => regionId(n.rx, n.rz));
-        expect(near).toContain(spine[i]!.id);
-      }
-    }
-  });
-
-  it("alternates keystones and barriers in capability order", () => {
-    for (const seed of SEEDS) {
-      const { spine } = createWorld(seed);
-      spine.forEach((r, i) => {
-        expect(r.spineIndex).toBe(i);
-        if (i % 2 === 0) {
-          // keystone: meadow whose shrine grants the next capability (or nothing at the end)
-          expect(r.biome).toBe("meadow");
-          expect(r.shrine.grants).toBe(CAPABILITIES[i / 2] ?? null);
-        } else {
-          // barrier: needs exactly the capability granted by the keystone before it
-          expect(BIOME_REQUIRES[r.biome]).toBe(CAPABILITIES[(i - 1) / 2]);
-          expect(r.shrine.grants).toBeNull();
-        }
+      const w = createWorld(seed);
+      expect(w.landmarks).toHaveLength(LANDMARKS.length);
+      expect(new Set(w.landmarks.map((r) => r.id)).size).toBe(LANDMARKS.length);
+      w.landmarks.forEach((r, i) => {
+        expect(r.landmark).toEqual(LANDMARKS[i]);
+        expect(r.biome).toBe(LANDMARKS[i]!.biome);
+        expect(r.id).not.toBe("0,0");
       });
     }
   });
 
-  it("keeps each step's straight line inside the two regions it joins", () => {
-    // Adjacent grid cells must really share a boundary, so travel between them
-    // never has to pass through a third region.
-    for (const seed of SEEDS) {
-      const w = createWorld(seed);
-      for (let i = 1; i < w.spine.length; i++) {
-        const a = w.spine[i - 1]!;
-        const b = w.spine[i]!;
-        for (let t = 0; t <= 24; t++) {
-          const f = t / 24;
-          const at = w.regionAt(a.site.x + (b.site.x - a.site.x) * f, a.site.z + (b.site.z - a.site.z) * f);
-          expect([a.id, b.id]).toContain(at.id);
-        }
+  it("has landmarks only where the plan says", () => {
+    const w = createWorld("only");
+    const ids = new Set(w.landmarks.map((r) => r.id));
+    for (let rx = -12; rx <= 12; rx++) {
+      for (let rz = -12; rz <= 12; rz++) {
+        const r = w.region(rx, rz);
+        expect(r.landmark !== null).toBe(ids.has(r.id));
       }
     }
+  });
+
+  it("is deterministic and varies with the seed", () => {
+    const a = createWorld("lm").landmarks.map((r) => r.id);
+    expect(createWorld("lm").landmarks.map((r) => r.id)).toEqual(a);
+    expect(createWorld("lm-other").landmarks.map((r) => r.id)).not.toEqual(a);
+  });
+
+  it("grows outward: each act sits farther from the start than the one before", () => {
+    const mean = (xs: number[]) => xs.reduce((p, q) => p + q, 0) / xs.length;
+    for (const seed of SEEDS.slice(0, 100)) {
+      const w = createWorld(seed);
+      const acts = [...new Set(LANDMARKS.map((l) => l.act))];
+      const means = acts.map((act) =>
+        mean(w.landmarks.filter((r) => r.landmark!.act === act).map((r) => Math.hypot(r.coord.rx, r.coord.rz))),
+      );
+      for (let i = 1; i < means.length; i++) expect(means[i]!).toBeGreaterThan(means[i - 1]!);
+    }
+  });
+
+  it("keeps landmarks near the target density", () => {
+    for (const seed of SEEDS.slice(0, 100)) {
+      const w = createWorld(seed);
+      const reach = ringRadius(LANDMARKS.length) + 5;
+      for (const r of w.landmarks) expect(Math.hypot(r.coord.rx, r.coord.rz)).toBeLessThanOrEqual(reach);
+    }
+  });
+
+  it("spreads acts around the start rather than in one direction", () => {
+    // The bearing of the act centroids should not all fall in one half-plane.
+    let spread = 0;
+    for (const seed of SEEDS.slice(0, 100)) {
+      const w = createWorld(seed);
+      const bearings = [2, 3, 4].map((act) => {
+        const rs = w.landmarks.filter((r) => r.landmark!.act === act);
+        const x = rs.reduce((p, r) => p + r.coord.rx, 0);
+        const z = rs.reduce((p, r) => p + r.coord.rz, 0);
+        return Math.atan2(z, x);
+      });
+      const unit = bearings.map((b) => ({ x: Math.cos(b), z: Math.sin(b) }));
+      const sum = Math.hypot(unit.reduce((p, u) => p + u.x, 0), unit.reduce((p, u) => p + u.z, 0));
+      if (sum < 2.5) spread++;
+    }
+    expect(spread).toBeGreaterThan(50);
   });
 });
 
-describe("progress guarantees (ADR 0003)", () => {
-  it("a greedy player collects every capability, for every seed", () => {
+describe("unlock thresholds", () => {
+  it("are ordered like the abilities and reachable from the landmark list", () => {
+    let last = 0;
+    for (const cap of CAPABILITIES) {
+      expect(CAPABILITY_THRESHOLDS[cap]).toBeGreaterThan(last);
+      last = CAPABILITY_THRESHOLDS[cap];
+    }
+    expect(last).toBeLessThanOrEqual(LANDMARKS.length);
+  });
+
+  it("only ever need what the previous acts unlocked", () => {
+    // Each ability is unlocked by landmarks that don't themselves need it.
+    for (const l of LANDMARKS) expect(canTraverse(l.biome, capabilitiesForCount(landmarksBeforeAct(l.act)))).toBe(true);
+  });
+});
+
+describe("progress guarantees (ADR 0006)", () => {
+  it("a greedy player restores every landmark and gains every ability, for every seed", () => {
     for (const seed of SEEDS) {
-      const { capabilities } = greedyProgress(createWorld(seed), 8);
+      const { capabilities, restored } = greedyProgress(createWorld(seed), 16);
       expect([...capabilities].sort()).toEqual([...CAPABILITIES].sort());
+      expect(restored.size).toBe(LANDMARKS.length);
     }
   });
 
-  it("each capability is obtainable using only the capabilities before it", () => {
+  it("never runs out of landmarks to reach before all are restored", () => {
     for (const seed of SEEDS) {
       const w = createWorld(seed);
-      CAPABILITIES.forEach((_, i) => {
-        const have = new Set(CAPABILITIES.slice(0, i));
-        const keystone = w.spine[2 * i]!;
-        const reachable = reachableRegions(w, have, 8).map((r) => r.id);
-        expect(reachable).toContain(keystone.id);
-      });
-    }
-  });
-
-  it("an unrestored shrine is always reachable until every capability is held", () => {
-    for (const seed of SEEDS) {
-      const w = createWorld(seed);
-      const have = new Set<(typeof CAPABILITIES)[number]>();
-      for (const cap of CAPABILITIES) {
-        const open = reachableRegions(w, have, 8).filter((r) => r.shrine.grants === cap);
-        expect(open.length).toBeGreaterThan(0);
-        have.add(cap);
+      const restored = new Set<string>();
+      while (restored.size < LANDMARKS.length) {
+        const open = reachableRegions(w, capabilitiesForCount(restored.size), 16).filter(
+          (r) => r.landmark && !restored.has(r.id),
+        );
+        expect(open.length, `${seed} at ${restored.size}`).toBeGreaterThan(0);
+        restored.add(open[0]!.id);
       }
     }
+  });
+
+  it("some landmarks really are out of reach until an ability is gained", () => {
+    // Otherwise the guarantee above would be vacuous.
+    let gated = 0;
+    for (const seed of SEEDS.slice(0, 50)) {
+      const w = createWorld(seed);
+      const open = new Set(reachableRegions(w, new Set(), 16).map((r) => r.id));
+      gated += w.landmarks.filter((r) => !open.has(r.id)).length;
+    }
+    expect(gated).toBeGreaterThan(0);
   });
 });

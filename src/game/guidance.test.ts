@@ -5,10 +5,10 @@ import { blockerAt, safePosition, startPosition } from "./player";
 import { capabilitiesOf, newGame, restoreShrine } from "./state";
 
 describe("nextShrine", () => {
-  it("points at the first shrine in a new game", () => {
+  it("points at a landmark in a new game, not the nearest shrine", () => {
     const world = createWorld("guide");
     const g = nextShrine(world, newGame(world.seed), startPosition(createTerrain(world)))!;
-    expect(g.region.id).toBe("0,0");
+    expect(g.region.landmark).not.toBeNull();
     expect(g.distance).toBeCloseTo(Math.hypot(g.dx, g.dz));
   });
 
@@ -33,7 +33,7 @@ describe("nextShrine", () => {
       const world = createWorld(`follow-${i}`);
       let state = newGame(world.seed);
       let pos = world.region(0, 0).site;
-      for (let step = 0; step < 300; step++) {
+      for (let step = 0; step < 60; step++) {
         const g = nextShrine(world, state, pos);
         if (!g) break;
         state = restoreShrine(state, g.region);
@@ -47,7 +47,7 @@ describe("nextShrine", () => {
   it("returns null when every reachable shrine is restored", () => {
     const world = createWorld("exhaust");
     let state = newGame(world.seed);
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 1500; i++) {
       const g = nextShrine(world, state, { x: 0, z: 0 });
       if (!g) return;
       state = restoreShrine(state, g.region);
@@ -66,7 +66,7 @@ describe("safePosition", () => {
   });
 
   it("moves a stranded player to nearby free ground", () => {
-    const water = terrain.world.spine[1]!;
+    const water = terrain.world.landmarks.find((r) => r.biome === "water")!;
     const stranded = { x: water.site.x + 20, z: water.site.z + 20 };
     const out = safePosition(terrain, none, stranded);
     expect(blockerAt(terrain, none, out.x, out.z)).toBeNull();

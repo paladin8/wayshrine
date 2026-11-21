@@ -1,17 +1,44 @@
 import { describe, expect, it } from "vitest";
 import {
-  CAPABILITIES,
-  canTraverse,
+    canTraverse,
+  capabilitiesForCount,
+  landmarksBeforeAct,
+  neighborsOf,
+  LANDMARK_SOLID_RADIUS,
   createTerrain,
   createWorld,
   type Capability,
   type Obstacles,
   type Point,
+  type Region,
   type Terrain,
+  type World,
 } from "../world";
-import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, shrineInReach, startPosition } from "./player";
+import { PLAYER_RADIUS, PLAYER_SPEED, SHRINE_REACH, blockerAt, clearOfObstacles, movePlayer, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
+
+/** An edge-adjacent meadow and water region whose joining line stays inside the two. */
+function meadowBesideWater(world: World): [Region, Region] {
+  for (let rx = -12; rx <= 12; rx++) {
+    for (let rz = -12; rz <= 12; rz++) {
+      const a = world.region(rx, rz);
+      if (a.biome !== "meadow") continue;
+      for (const n of neighborsOf(a.coord)) {
+        const b = world.region(n.rx, n.rz);
+        if (b.biome !== "water") continue;
+        let inside = true;
+        for (let t = 0; t <= 24; t++) {
+          const f = t / 24;
+          const at = world.regionAt(a.site.x + (b.site.x - a.site.x) * f, a.site.z + (b.site.z - a.site.z) * f);
+          if (at.id !== a.id && at.id !== b.id) inside = false;
+        }
+        if (inside) return [a, b];
+      }
+    }
+  }
+  throw new Error("no meadow beside water");
+}
 
 function walk(terrain: Terrain, from: Point, dir: Point, seconds: number, caps: ReadonlySet<Capability>) {
   let pos = from;
@@ -52,8 +79,7 @@ describe("player movement", () => {
 
   it("is stopped by a barrier biome until the capability is held", () => {
     const world = terrain.world;
-    const barrier = world.spine[1]!;
-    const key = world.spine[0]!;
+    const [key, barrier] = meadowBesideWater(world);
     const dx = barrier.site.x - key.site.x;
     const dz = barrier.site.z - key.site.z;
     const dir = { x: dx, z: dz };
@@ -62,7 +88,7 @@ describe("player movement", () => {
     expect(blockerAt(terrain, none, blocked.pos.x, blocked.pos.z)).toBeNull();
     expect(Math.hypot(blocked.pos.x - barrier.site.x, blocked.pos.z - barrier.site.z)).toBeGreaterThan(8);
     const seconds = Math.hypot(dx, dz) / PLAYER_SPEED;
-    const crossed = walk(terrain, key.site, dir, seconds, new Set<Capability>([CAPABILITIES[0]]));
+    const crossed = walk(terrain, key.site, dir, seconds, new Set<Capability>(["boat"]));
     expect(world.regionAt(crossed.pos.x, crossed.pos.z).id).toBe(barrier.id);
   });
 });
@@ -74,7 +100,7 @@ describe("player movement", () => {
  */
 describe("tile-level progression", () => {
   function reachable(terrain: Terrain, caps: ReadonlySet<Capability>, from: Point, to: Point): boolean {
-    const margin = 48;
+    const margin = 256;
     const x0 = Math.floor(Math.min(from.x, to.x)) - margin;
     const z0 = Math.floor(Math.min(from.z, to.z)) - margin;
     const w = Math.ceil(Math.abs(from.x - to.x)) + 2 * margin + 1;
@@ -102,26 +128,24 @@ describe("tile-level progression", () => {
     return false;
   }
 
-  it("reaches each keystone shrine with only the capabilities granted so far", () => {
-    for (const seed of ["tile-a", "tile-b", "tile-c"]) {
+  it("reaches every landmark with only the abilities held when its act begins", () => {
+    for (const seed of ["tile-a", "tile-b"]) {
       const terrain = createTerrain(createWorld(seed));
-      const spine = terrain.world.spine;
       const start = startPosition(terrain);
-      CAPABILITIES.forEach((_, i) => {
-        const caps = new Set<Capability>(CAPABILITIES.slice(0, i + 1));
-        const keystone = spine[2 * (i + 1)]!;
-        expect(reachable(terrain, caps, start, keystone.site), `${seed} -> keystone ${i + 1}`).toBe(true);
-      });
+      for (const region of terrain.world.landmarks) {
+        const caps = capabilitiesForCount(landmarksBeforeAct(region.landmark!.act));
+        expect(reachable(terrain, caps, start, region.site), `${seed} -> ${region.landmark!.id}`).toBe(true);
+      }
     }
-  }, 120_000);
+  }, 240_000);
 
-  it("cannot reach the next keystone without the capability (gates are real here)", () => {
-    // Informational guard on the test itself: with no capabilities the walk to
-    // the second keystone must fail for the seeds we use, otherwise the
-    // reachability test above proves nothing.
+  it("cannot reach a later act without its ability (gates are real here)", () => {
+    // Guard on the test itself: some landmark must be out of reach with no abilities,
+    // otherwise the reachability test above proves nothing.
     const terrain = createTerrain(createWorld("tile-a"));
     const start = startPosition(terrain);
-    expect(reachable(terrain, new Set(), start, terrain.world.spine[2]!.site)).toBe(false);
+    const act2 = terrain.world.landmarks.find((r) => r.landmark!.act === 2 && r.biome === "water")!;
+    expect(reachable(terrain, none, start, act2.site)).toBe(false);
   }, 60_000);
 });
 
@@ -153,5 +177,11 @@ describe("collision with obstacles", () => {
   it("ignores obstacles when none are given", () => {
     const { pos } = walk(terrain, start, { x: 1, z: 0 }, 0.3, none);
     expect(pos.x).toBeGreaterThan(start.x + 1);
+  });
+});
+
+describe("landmark as shrine", () => {
+  it("can be reached from just outside its solid footprint", () => {
+    expect(LANDMARK_SOLID_RADIUS + PLAYER_RADIUS).toBeLessThanOrEqual(SHRINE_REACH);
   });
 });

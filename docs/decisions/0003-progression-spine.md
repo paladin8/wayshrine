@@ -1,5 +1,5 @@
 # 0003: Lock-and-key progression spine
-Status: accepted
+Status: superseded by [0006](0006-landmarks-and-progression.md)
 
 **Context.** Capabilities (boat, snowshoes, climbing) gate terrain. A random map could strand the player.
 

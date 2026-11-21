@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createWorld } from "./world";
+import { LANDMARK_PLATEAU_RADIUS } from "./landmarks";
 import { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain } from "./terrain-grid";
 
 describe("terrain", () => {
@@ -45,5 +46,21 @@ describe("terrain", () => {
     const terrain = createTerrain(createWorld("floor"));
     expect(terrain.tileAtPoint(-0.2, 3.9)).toEqual(terrain.tileAt(-1, 3));
     expect(CHUNK_SIZE).toBe(16);
+  });
+});
+
+describe("landmark plateaus", () => {
+  it("are wide, flat and dry around the landmark", () => {
+    const terrain = createTerrain(createWorld("lm-plateau"));
+    for (const region of terrain.world.landmarks) {
+      const { site } = region;
+      const centre = terrain.tileAtPoint(site.x, site.z);
+      for (let a = 0; a < 8; a++) {
+        const x = site.x + Math.cos((a * Math.PI) / 4) * (LANDMARK_PLATEAU_RADIUS - 0.8);
+        const z = site.z + Math.sin((a * Math.PI) / 4) * (LANDMARK_PLATEAU_RADIUS - 0.8);
+        expect(terrain.tileAtPoint(x, z).height).toBe(centre.height);
+        expect(terrain.biomeAt(x, z)).not.toBe("water");
+      }
+    }
   });
 });

@@ -128,13 +128,13 @@ export function startApp(container: HTMLElement): void {
   };
 
   if (params.has("debug")) {
-    const restoreSpine = (): void => world.spine.forEach((r) => restore(r.id));
+    const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
       state = next(state);
       saveGame(state);
     };
     const actions = {
-      restoreSpine,
+      restoreLandmarks,
       resetShrines: () => {
         awakening = null;
         AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));

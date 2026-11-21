@@ -1,6 +1,6 @@
 /** Buttons for developer testing, shown only with ?debug. */
 export interface DebugActions {
-  readonly restoreSpine: () => void;
+  readonly restoreLandmarks: () => void;
   readonly resetShrines: () => void;
   readonly resetAll: () => void;
   readonly goToTarget: () => void;
@@ -26,7 +26,7 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions):
     });
     panel.appendChild(button);
   };
-  add("Restore spine shrines", actions.restoreSpine);
+  add("Restore all landmarks", actions.restoreLandmarks);
   add("Reset shrines", actions.resetShrines);
   add("Reset everything", actions.resetAll);
   add("Go to nearest shrine", actions.goToTarget);

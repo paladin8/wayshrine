@@ -2,10 +2,10 @@
  * Terrain classes and the abilities that open them up.
  *
  * The player starts able to walk on meadow only. Every other biome requires a
- * capability, granted by restoring a particular shrine (see spine.ts).
+ * capability, unlocked by restoring a number of landmarks (see landmarks.ts).
  */
 
-/** Abilities in the order the progression spine grants them. */
+/** Abilities in the order landmarks unlock them. */
 export const CAPABILITIES = ["boat", "snowshoes", "climbing"] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 

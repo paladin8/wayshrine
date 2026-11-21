@@ -47,18 +47,18 @@ describe("propsInChunk", () => {
     }
   });
 
-  it("places four lanterns around every shrine", () => {
+  it("places four lanterns around every shrine, and none at a landmark", () => {
     const world = terrain.world;
     for (let rx = -2; rx <= 2; rx++) {
       for (let rz = -2; rz <= 2; rz++) {
-        const { site, id } = world.region(rx, rz);
+        const { site, id, landmark } = world.region(rx, rz);
         let count = 0;
         for (let cx = Math.floor(site.x / CHUNK_SIZE) - 1; cx <= Math.floor(site.x / CHUNK_SIZE) + 1; cx++) {
           for (let cz = Math.floor(site.z / CHUNK_SIZE) - 1; cz <= Math.floor(site.z / CHUNK_SIZE) + 1; cz++) {
             count += propsInChunk(terrain, cx, cz).filter((p) => p.kind === "lantern" && p.regionId === id).length;
           }
         }
-        expect(count).toBe(4);
+        expect(count).toBe(landmark ? 0 : 4);
       }
     }
   });

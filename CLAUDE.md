@@ -27,7 +27,7 @@ Details and rationale: `docs/ARCHITECTURE.md`.
 5. A chunk or region is a pure function of (seed, coordinates). Never of generation order.
 
 ## Progression invariant
-The player must never be stuck. Do not change `world/spine.ts`, `world/terrain.ts` or `world/progression.ts` without re-reading `docs/decisions/0003-progression-spine.md` and keeping the property tests in `world/world.test.ts` green.
+The player must never be stuck. Do not change `world/landmarks.ts`, `world/terrain.ts`, `world/reach.ts` or `world/progression.ts` without re-reading `docs/decisions/0006-landmarks-and-progression.md` and keeping the property tests in `world/world.test.ts` green.
 
 ## Documentation upkeep
 - Changed a layer boundary or added a layer: update `docs/ARCHITECTURE.md` and `architecture.test.ts` together.
