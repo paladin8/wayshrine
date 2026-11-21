@@ -7,3 +7,5 @@ export type { Region, Shrine, World } from "./world";
 export { greedyProgress, reachableRegions } from "./progression";
 export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
+export { PROP_KINDS, propsInChunk } from "./props";
+export type { Prop, PropKind } from "./props";

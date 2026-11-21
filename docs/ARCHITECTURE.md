@@ -30,6 +30,11 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - `render/stage.ts` streams chunks within `LOAD_RADIUS` of the player (2 built per frame after the first) and unloads beyond `LOAD_RADIUS + 1`. A chunk mesh keeps alive and dead vertex colours, so restoring a region recolours it without rebuilding geometry.
 - Movement (`game/player.ts`) checks the four corners of the player's footprint against tile biomes and slides along obstacles. It is the single place walkability is decided; the tile-level progression test uses the same `canTraverse` rule.
 
+## Props
+- `world/props.ts` places scenery (trees, bushes, flowers, pines, rocks, crags, shrine lanterns) as a pure function of (seed, chunk). Density is clustered by noise and each biome has its own table.
+- Props are **decorative and never block movement**. Walkability stays a function of biomes only, which keeps the progression guarantee (ADR 0003) provable. If solid props are ever wanted, the tile-level progression test must account for them.
+- `render/prop-mesh.ts` merges a chunk's props into one mesh through `VitalityBuilder` (`render/vitality-mesh.ts`), the same alive/dead colour mechanism the terrain uses, so everything in a region fades with its vitality. `render/chunk-mesh.ts` combines ground and props per chunk.
+
 ## Key concepts
 - **Region:** a Voronoi cell around a jittered grid site (`REGION_SIZE` 64). Has a biome and one shrine.
 - **Spine:** the guaranteed path of regions: keystone meadow (grants a capability), barrier biome (needs it), next keystone beyond.

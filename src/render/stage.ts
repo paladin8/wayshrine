@@ -1,11 +1,12 @@
 import * as THREE from "three";
 import { vitality, type GameState } from "../game";
 import { CHUNK_SIZE, type Point, type Terrain } from "../world";
+import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import { buildPlayer } from "./player-mesh";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
-import { buildChunk, type ChunkMesh } from "./terrain-mesh";
+import type { VitalityMesh } from "./vitality-mesh";
 
 /** World units visible vertically. */
 const VIEW_SIZE = 16;
@@ -67,7 +68,7 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
   const player = buildPlayer();
   scene.add(player.group);
 
-  const chunks = new Map<string, ChunkMesh>();
+  const chunks = new Map<string, VitalityMesh>();
   const shrines = new Map<string, ShrineMesh>();
   /** Current (tweened) vitality per region. */
   const shown = new Map<string, number>();
@@ -91,13 +92,12 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
     for (const w of wanted.slice(0, budget)) {
       const built = buildChunk(terrain, w.cx, w.cz, (id) => shownVitality(id, state));
       chunks.set(chunkKey(w.cx, w.cz), built);
-      scene.add(built.mesh);
-      built.mesh.position.set(0, 0, 0);
+      scene.add(built.object);
     }
     for (const [key, chunk] of chunks) {
       const [cx, cz] = key.split(",").map(Number) as [number, number];
       if (Math.max(Math.abs(cx - pcx), Math.abs(cz - pcz)) > UNLOAD_RADIUS) {
-        scene.remove(chunk.mesh);
+        scene.remove(chunk.object);
         chunk.dispose();
         chunks.delete(key);
       }
