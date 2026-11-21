@@ -9,7 +9,7 @@ export const en: Messages = {
   promptSkip: "Press E to skip",
   compassHere: "Shrine here",
   compassNearest: (distance) => `Nearest shrine · ${distance}`,
-  map: { expand: "M: expand", close: "M: close" },
+  map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel" },
   monuments: {
     promptRead: "Press E to read the stone",
     promptWorn: "The inscription has worn away. Restore this land to read it.",

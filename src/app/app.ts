@@ -81,7 +81,12 @@ export function startApp(container: HTMLElement): void {
   const monuments = planMonuments(terrain, monumentSpecs);
   const stage = createStage(container, terrain, monuments);
   const hud = createHud(container);
-  const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up));
+  const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up), (region) => {
+    if (awakening) return;
+    // Land on the shrine's plateau, within reach of its gate.
+    pos = { x: region.site.x, z: region.site.z + 2 };
+    minimap.toggleExpanded();
+  });
 
   const music = createMusic();
   const cues = createCuePlayer();
@@ -272,7 +277,7 @@ export function startApp(container: HTMLElement): void {
       messages: t,
       showCompass: prefs.showCompass,
     });
-    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, monuments: debug ? monuments.all : undefined });
+    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     cues.update(dt);

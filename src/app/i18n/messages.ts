@@ -20,7 +20,7 @@ export interface Messages {
   readonly promptSkip: string;
   readonly compassHere: string;
   readonly compassNearest: (distance: number) => string;
-  readonly map: { readonly expand: string; readonly close: string };
+  readonly map: { readonly expand: string; readonly close: string; readonly travel: string };
   readonly monuments: {
     readonly promptRead: string;
     /** Shown beside a monument in a region that has not been restored: the inscription cannot be read. */

@@ -31,10 +31,19 @@ export interface MapInput {
   readonly target: Region | null;
   /** False hides the map entirely (a player setting). */
   readonly visible: boolean;
-  /** Debug only: monuments to mark, whether or not their regions have been explored. */
+  /** Debug only: monuments to mark; only those in restored regions are drawn. */
   readonly monuments?: readonly Monument[];
+  /** Debug only: any explored shrine can be travelled to, not just restored ones. */
+  readonly travelToAny?: boolean;
   /** The corner hint, in the player's language. */
-  readonly labels: { readonly expand: string; readonly close: string };
+  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string };
+}
+
+/** A shrine the player can travel to from the expanded map, in canvas pixels. */
+interface Waypoint {
+  readonly x: number;
+  readonly y: number;
+  readonly region: Region;
 }
 
 export interface Minimap {
@@ -45,8 +54,9 @@ export interface Minimap {
 const CSS = `
 .map{position:fixed;pointer-events:none;border-radius:14px;overflow:hidden;border:2px solid #fffaf0cc;box-shadow:0 2px 12px #0004;background:#3a3434}
 .map.small{right:14px;bottom:14px}
-.map.large{left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
+.map.large{pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
+.map canvas.travel{cursor:pointer}
 .map .hint{position:absolute;left:8px;bottom:6px;font:11px ${UI_FONT};color:#f2ede0;opacity:.8}
 `;
 
@@ -60,6 +70,8 @@ export function createMinimap(
   world: World,
   /** Ground direction for a screen-space (right, up) unit vector. */
   basis: (right: number, up: number) => Point,
+  /** Called when the player clicks a shrine on the expanded map. */
+  onTravel: (region: Region) => void,
 ): Minimap {
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -82,6 +94,8 @@ export function createMinimap(
   const F = basis(0, 1);
   let expanded = false;
   let lastKey = "";
+  let waypoints: Waypoint[] = [];
+  let hovered: Waypoint | null = null;
   let lastPos: Point = { x: Infinity, z: Infinity };
 
   const regionRgb = (r: Region, state: GameState): RGB => {
@@ -165,10 +179,12 @@ export function createMinimap(
 
     // Shrines of explored regions.
     const dotR = expanded ? 4.5 : 3.5;
+    waypoints = [];
     for (const id of state.explored) {
       const r = world.regionById(id);
       const [x, y] = project(r.site);
       if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
+      if (expanded && (input.travelToAny || isRestored(state, r))) waypoints.push({ x, y, region: r });
       ctx.beginPath();
       ctx.arc(x, y, dotR, 0, Math.PI * 2);
       if (isRestored(state, r)) {
@@ -183,8 +199,9 @@ export function createMinimap(
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
-    // Debug: monuments as diamonds, bright until read.
+    // Debug: monuments in restored regions as diamonds, bright until read.
     for (const m of input.monuments ?? []) {
+      if (!state.restored.has(m.regionId)) continue;
       const [x, y] = project(m);
       if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
       const r = expanded ? 3.5 : 3;
@@ -199,6 +216,16 @@ export function createMinimap(
       ctx.strokeStyle = "#2a2424";
       ctx.lineWidth = 1;
       ctx.stroke();
+    }
+    if (hovered) {
+      const h = waypoints.find((w) => w.region.id === hovered?.region.id);
+      if (h) {
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, dotR + 3.5, 0, Math.PI * 2);
+        ctx.strokeStyle = "#fffaf0";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
     if (target) {
       const [x, y] = project(target.site);
@@ -220,18 +247,55 @@ export function createMinimap(
     ctx.stroke();
   }
 
+  let lastInput: MapInput | null = null;
+  let lastSize = SMALL_SIZE;
+  const HIT_RADIUS = 11;
+  const hit = (e: MouseEvent): Waypoint | null => {
+    if (!expanded) return null;
+    const box = canvas.getBoundingClientRect();
+    const x = ((e.clientX - box.left) / box.width) * canvas.width;
+    const y = ((e.clientY - box.top) / box.height) * canvas.height;
+    let best: Waypoint | null = null;
+    let bestD = HIT_RADIUS;
+    for (const w of waypoints) {
+      const d = Math.hypot(w.x - x, w.y - y);
+      if (d <= bestD) {
+        best = w;
+        bestD = d;
+      }
+    }
+    return best;
+  };
+  canvas.addEventListener("mousemove", (e) => {
+    const next = hit(e);
+    canvas.classList.toggle("travel", next !== null);
+    if (next?.region.id === hovered?.region.id) return;
+    hovered = next;
+    if (lastInput) draw(lastInput, lastSize, 4);
+  });
+  canvas.addEventListener("mouseleave", () => {
+    if (!hovered) return;
+    hovered = null;
+    if (lastInput) draw(lastInput, lastSize, 4);
+  });
+  canvas.addEventListener("click", (e) => {
+    const target = hit(e);
+    if (target) onTravel(target.region);
+  });
+
   return {
     toggleExpanded() {
       if (!shown) return; // the key does nothing while the map is hidden
       expanded = !expanded;
       frame.className = expanded ? "map large" : "map small";
+      hovered = null;
       lastKey = "";
     },
     update(input) {
       shown = input.visible;
       frame.style.display = shown ? "" : "none";
       if (!shown) return;
-      setText(hint, expanded ? input.labels.close : input.labels.expand);
+      setText(hint, expanded ? `${input.labels.close} · ${input.labels.travel}` : input.labels.expand);
       const size = expanded ? Math.max(240, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.78)) : SMALL_SIZE;
       const key = [
         expanded,
@@ -246,6 +310,8 @@ export function createMinimap(
       if (key === lastKey && moved < 2) return;
       lastKey = key;
       lastPos = input.pos;
+      lastInput = input;
+      lastSize = size;
       draw(input, size, expanded ? 4 : 3);
     },
   };

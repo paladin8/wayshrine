@@ -9,7 +9,7 @@ export const ja: Messages = {
   promptSkip: "Eキーでスキップ",
   compassHere: "祠はここ",
   compassNearest: (distance) => `最寄りの祠 · ${distance}`,
-  map: { expand: "M: 拡大", close: "M: 閉じる" },
+  map: { expand: "M: 拡大", close: "M: 閉じる", travel: "蘇った祠をクリックで移動" },
   monuments: {
     promptRead: "Eキーで石碑を読む",
     promptWorn: "碑文は風化して読めない。この地を蘇らせよう。",
