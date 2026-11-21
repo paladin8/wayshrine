@@ -32,6 +32,8 @@ import { loadSettings, saveSettings } from "./settings";
 
 const HINT_SECONDS = 1.5;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
+/** Everything that plays for an awakening: the burst at the wave launch and the swell under the whole sequence. */
+const AWAKENING_CUES = ["awakening-burst", "dawn-reverence"] as const;
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
 
@@ -112,13 +114,13 @@ export function startApp(container: HTMLElement): void {
       restoreSpine,
       resetShrines: () => {
         awakening = null;
-        cues.stop("dawn-reverence", 0.3);
+        AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
         reset(resetShrines);
         pos = startPosition(terrain); // land reached with lost capabilities may now be cut off
       },
       resetAll: () => {
         awakening = null;
-        cues.stop("dawn-reverence", 0.3);
+        AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
         reset(resetGame);
         pos = startPosition(terrain);
       },
@@ -151,7 +153,7 @@ export function startApp(container: HTMLElement): void {
         // Once the camera has pulled back, the sequence can be skipped to its end.
         if (awakening.t > AWAKENING.zoomOut) {
           awakening.t = skipTarget(awakening.t);
-          cues.stop("dawn-reverence", SWELL_SKIP_FADE);
+          AWAKENING_CUES.forEach((id) => cues.stop(id, SWELL_SKIP_FADE));
         }
       } else {
         const region = shrineInReach(terrain, pos);
@@ -159,7 +161,7 @@ export function startApp(container: HTMLElement): void {
           restore(region.id);
           awakening = { regionId: region.id, t: 0 };
           // Trimmed so the swell peaks at about 8 s, just before the wave finishes filling the region.
-          cues.play("dawn-reverence");
+          AWAKENING_CUES.forEach((id) => cues.play(id));
         }
       }
     }

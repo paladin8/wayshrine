@@ -15,7 +15,9 @@
 | --- | --- | --- |
 | `dawn-reverence` | `public/audio/cues/dawn-reverence.mp3` | Awakening swell made with ElevenLabs. Original was 16.0 s with its peak at 13.7 s; the first 5.7 s were trimmed (0.4 s fade-in) so the peak lands at 8.0 s, a little before the wave finishes filling the region at 9.2 s, which keeps the build-up brisk. Now about 10.3 s; it fades out by about 9.8 s, inside the 3 s hold. |
 
-Sync rule: a cue is started when the awakening starts, so its peak should land at about `zoomOut + wave - 1.2` seconds (8.0 s). If the timeline in `game/awakening.ts` changes, re-trim the swell. Skipping with E fades the swell over 1.5 s.
+| `awakening-burst` | `public/audio/cues/awakening-burst.mp3` | Activation and burst effect made with ElevenLabs (option 2 of two takes; the file has no charge-up, just a burst with a bright bloom and a short tail). 0.75 s of silence is padded at the start so the peak lands at 1.2 s, when the wave launches, with the onset at about 1.0 s. +3 dB, peak about -5.5 dBFS. 3.75 s. |
+
+Sync rule: cues are all started when the awakening starts (the burst is padded to peak at 1.2 s, the wave launch), so the swell's peak should land at about `zoomOut + wave - 1.2` seconds (8.0 s). If the timeline in `game/awakening.ts` changes, re-trim the swell. Skipping with E fades the swell over 1.5 s.
 
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `trackFor(biome)`, the one place that decides what plays where.
