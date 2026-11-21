@@ -67,8 +67,15 @@ export function landmarksBeforeAct(act: number): number {
   return LANDMARKS.filter((l) => l.act < act).length;
 }
 
-/** A landmark region's plateau is wider than a shrine's, to give the landmark a flat base. */
-export const LANDMARK_PLATEAU_RADIUS = 9.5;
+/**
+ * A landmark region's plateau is a flat square of this half-width (the models are
+ * square dioramas), and the ground eases back to natural height over
+ * LANDMARK_BLEND further units so it never stands as a wall.
+ */
+export const LANDMARK_PLATEAU_RADIUS = 9.7;
+export const LANDMARK_BLEND = 8;
+/** Monuments keep clear of the plateau and its slope (Chebyshev distance from the site). */
+export const LANDMARK_MONUMENT_CLEARANCE = LANDMARK_PLATEAU_RADIUS + LANDMARK_BLEND + 1.5;
 /**
  * A landmark stands at its region's site and is the shrine: the player restores
  * it from just outside this radius (within LANDMARK_REACH_MARGIN of the edge).
@@ -81,7 +88,7 @@ export function landmarkRadius(landmark: LandmarkSpec): number {
 }
 
 /** How far beyond its footprint a landmark can be used from. */
-export const LANDMARK_REACH_MARGIN = 1.2;
+export const LANDMARK_REACH_MARGIN = 3.5;
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;

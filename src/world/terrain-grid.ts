@@ -1,5 +1,5 @@
 import { createNoise } from "../core";
-import { LANDMARK_PLATEAU_RADIUS } from "./landmarks";
+import { LANDMARK_BLEND, LANDMARK_PLATEAU_RADIUS } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
@@ -9,9 +9,14 @@ export const CHUNK_SIZE = 16;
 /** Within this distance of a shrine the ground is flat, so the shrine has a base. */
 export const PLATEAU_RADIUS = 2.5;
 
-/** The flat ground around a region's shrine; wider where a landmark stands. */
-export function plateauRadius(region: Region): number {
-  return region.landmark ? LANDMARK_PLATEAU_RADIUS : PLATEAU_RADIUS;
+/**
+ * Distance from a point to the edge of its region's flat plateau; negative on
+ * the plateau. Round around a shrine, a wider square around a landmark.
+ */
+export function plateauDistance(region: Region, x: number, z: number): number {
+  const dx = x - region.site.x;
+  const dz = z - region.site.z;
+  return region.landmark ? Math.max(Math.abs(dx), Math.abs(dz)) - LANDMARK_PLATEAU_RADIUS : Math.hypot(dx, dz) - PLATEAU_RADIUS;
 }
 
 export interface Tile {
@@ -47,38 +52,48 @@ export function createTerrain(world: World): Terrain {
   const broad = createNoise(`${world.seed}:broad`);
   const fine = createNoise(`${world.seed}:fine`);
 
+  /** Height of the natural ground of a biome, before any plateau. */
+  function natural(x: number, z: number, biome: Biome): number {
+    const n = broad(x * 0.1, z * 0.1) * 0.7 + fine(x * 0.4, z * 0.4) * 0.3;
+    switch (biome) {
+      case "water":
+        return 0.4;
+      case "meadow":
+        return 1 + quantize(n * 0.5, 0.25);
+      case "snow":
+        return 1.2 + quantize(n * 0.9, 0.3);
+      case "mountain":
+        return 1.6 + quantize(n ** 1.5 * 3.6, 0.6);
+    }
+  }
+
   function sample(tx: number, tz: number) {
     const x = tx + 0.5;
     const z = tz + 0.5;
     const region = world.regionAt(x, z);
-    const onPlateau = (x - region.site.x) ** 2 + (z - region.site.z) ** 2 <= plateauRadius(region) ** 2;
+    const away = plateauDistance(region, x, z);
+    const onPlateau = away <= 0;
     // A shrine in a water region stands on an islet, reachable only by boat.
-    const biome: Biome = onPlateau && region.biome === "water" ? "meadow" : region.biome;
-    return { x, z, region, onPlateau, biome };
-  }
-
-  function tileAt(tx: number, tz: number): Tile {
-    const { x, z, region, onPlateau, biome } = sample(tx, tz);
+    let biome: Biome = onPlateau && region.biome === "water" ? "meadow" : region.biome;
     let height: number;
     if (onPlateau) {
       height = PLATEAU_HEIGHT[biome];
+    } else if (region.landmark && away < LANDMARK_BLEND) {
+      // Ease from the plateau down (or up) to natural ground, so it never stands as a wall.
+      const t = away / LANDMARK_BLEND;
+      const k = t * t * (3 - 2 * t);
+      const base = PLATEAU_HEIGHT[region.biome === "water" ? "meadow" : region.biome];
+      height = base + (natural(x, z, region.biome) - base) * k;
+      // The slope down to water becomes shore, then water.
+      if (region.biome === "water") biome = height > 0.55 ? "meadow" : "water";
     } else {
-      const n = broad(x * 0.1, z * 0.1) * 0.7 + fine(x * 0.4, z * 0.4) * 0.3;
-      switch (biome) {
-        case "water":
-          height = 0.4;
-          break;
-        case "meadow":
-          height = 1 + quantize(n * 0.5, 0.25);
-          break;
-        case "snow":
-          height = 1.2 + quantize(n * 0.9, 0.3);
-          break;
-        case "mountain":
-          height = 1.6 + quantize(n ** 1.5 * 3.6, 0.6);
-          break;
-      }
+      height = natural(x, z, biome);
     }
+    return { x, z, region, biome, height };
+  }
+
+  function tileAt(tx: number, tz: number): Tile {
+    const { region, biome, height } = sample(tx, tz);
     return { biome, height, regionId: region.id };
   }
 

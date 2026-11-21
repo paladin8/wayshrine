@@ -88,6 +88,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
   scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc4a8, 1.4));
   const sun = new THREE.DirectionalLight(0xffffff, 2.4);
   sun.castShadow = true;
+  sun.shadow.normalBias = 0.04; // stops shadow acne on large flat model surfaces
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 160;

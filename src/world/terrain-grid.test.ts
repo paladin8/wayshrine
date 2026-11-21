@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorld } from "./world";
-import { LANDMARK_PLATEAU_RADIUS } from "./landmarks";
-import { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain } from "./terrain-grid";
+import { LANDMARK_BLEND, LANDMARK_PLATEAU_RADIUS } from "./landmarks";
+import { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauDistance } from "./terrain-grid";
 
 describe("terrain", () => {
   it("is deterministic and independent of sampling order", () => {
@@ -60,6 +60,31 @@ describe("landmark plateaus", () => {
         const z = site.z + Math.sin((a * Math.PI) / 4) * (LANDMARK_PLATEAU_RADIUS - 0.8);
         expect(terrain.tileAtPoint(x, z).height).toBe(centre.height);
         expect(terrain.biomeAt(x, z)).not.toBe("water");
+      }
+    }
+  });
+});
+
+describe("landmark slopes", () => {
+  it("ease down from the plateau in small steps, never a wall", () => {
+    for (const seed of ["lm-slope-a", "lm-slope-b", "lm-slope-c"]) {
+      const terrain = createTerrain(createWorld(seed));
+      for (const region of terrain.world.landmarks) {
+        const reach = LANDMARK_PLATEAU_RADIUS + LANDMARK_BLEND + 2;
+        for (let dx = -reach; dx <= reach; dx++) {
+          for (let dz = -reach; dz <= reach; dz++) {
+            const x = Math.floor(region.site.x + dx);
+            const z = Math.floor(region.site.z + dz);
+            if (terrain.world.regionAt(x + 0.5, z + 0.5) !== region) continue;
+            // The slope's first half: beyond it, ordinary terrain noise takes over.
+            if (plateauDistance(region, x + 1.5, z + 1.5) > LANDMARK_BLEND / 2) continue;
+            const here = terrain.tileAt(x, z).height;
+            for (const [ax, az] of [[1, 0], [0, 1]] as const) {
+              if (terrain.world.regionAt(x + ax + 0.5, z + az + 0.5) !== region) continue;
+              expect(Math.abs(terrain.tileAt(x + ax, z + az).height - here)).toBeLessThanOrEqual(0.65); // at most one natural mountain step
+            }
+          }
+        }
       }
     }
   });

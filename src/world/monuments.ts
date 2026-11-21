@@ -1,6 +1,7 @@
 import { createRng, type Rng } from "../core";
 import type { Point } from "./coords";
 import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
+import { LANDMARK_MONUMENT_CLEARANCE } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
@@ -78,22 +79,26 @@ function edgeMargin(world: World, region: Region, x: number, z: number): number 
 function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, avoid: Point | null): Point {
   const valid = (p: Point, margin: number): boolean => {
     if (world.regionAt(p.x, p.z) !== region) return false;
+    if (region.landmark && Math.max(Math.abs(p.x - region.site.x), Math.abs(p.z - region.site.z)) < LANDMARK_MONUMENT_CLEARANCE) {
+      return false; // the landmark, its plateau and its slope
+    }
     if (terrain.tileAtPoint(p.x, p.z).biome !== region.biome) return false;
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) return false;
     return edgeMargin(world, region, p.x, p.z) >= margin;
   };
   for (let attempt = 0; attempt < 60; attempt++) {
     const a = rng.range(0, Math.PI * 2);
-    const r = rng.range(SHRINE_CLEARANCE, MAX_SHRINE_DISTANCE);
+    const r = rng.range(region.landmark ? LANDMARK_MONUMENT_CLEARANCE : SHRINE_CLEARANCE, MAX_SHRINE_DISTANCE + (region.landmark ? 6 : 0));
     const p = { x: region.site.x + Math.cos(a) * r, z: region.site.z + Math.sin(a) * r };
     if (valid(p, MONUMENT_EDGE_MARGIN)) return p;
   }
   // Squeezed regions: take the direction with the most room, close to the shrine.
-  let best: Point = { x: region.site.x + SHRINE_CLEARANCE, z: region.site.z };
+  const near = region.landmark ? LANDMARK_MONUMENT_CLEARANCE + 2 : 12;
+  let best: Point = { x: region.site.x + near, z: region.site.z };
   let bestMargin = -Infinity;
   for (let i = 0; i < 64; i++) {
     const a = (i / 64) * Math.PI * 2;
-    const p = { x: region.site.x + Math.cos(a) * 12, z: region.site.z + Math.sin(a) * 12 };
+    const p = { x: region.site.x + Math.cos(a) * near, z: region.site.z + Math.sin(a) * near };
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) continue;
     const m = edgeMargin(world, region, p.x, p.z);
     if (m > bestMargin) {

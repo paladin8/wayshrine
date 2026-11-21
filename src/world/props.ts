@@ -1,6 +1,6 @@
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
-import { CHUNK_SIZE, plateauRadius, type Terrain } from "./terrain-grid";
+import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
 import type { Biome } from "./terrain";
 
 export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern"] as const;
@@ -84,7 +84,7 @@ export function propsInChunk(
       let roll = rng.next();
 
       const region = world.regionAt(x, z);
-      const clear = Math.hypot(x - region.site.x, z - region.site.z) > plateauRadius(region) + 0.4;
+      const clear = plateauDistance(region, x, z) > 0.4;
       if (!clear) continue;
       if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius)) continue;
 

@@ -9,6 +9,8 @@ export { reachableCoords } from "./reach";
 export {
   CAPABILITY_THRESHOLDS,
   HOME_RADIUS,
+  LANDMARK_BLEND,
+  LANDMARK_MONUMENT_CLEARANCE,
   LANDMARK_PLATEAU_RADIUS,
   LANDMARK_REACH_MARGIN,
   LANDMARK_SOLID_RADIUS,
@@ -21,7 +23,7 @@ export {
   ringRadius,
 } from "./landmarks";
 export type { Landmark, LandmarkSpec } from "./landmarks";
-export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauRadius } from "./terrain-grid";
+export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauDistance } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
 export { PROP_KINDS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";

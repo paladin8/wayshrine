@@ -10,6 +10,7 @@ A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one
 
 - Author it alive; the dead look is derived per material (as for scenery), so keep one material per colour and name them.
 - Parts named `glow_*` (or using a `glow_*` material) light up and flare as the region wakes.
+- The ground under it is a flat square plateau of half-width 9.7 (`LANDMARK_PLATEAU_RADIUS`) that eases back to natural height over 8 more units (`LANDMARK_BLEND`), so keep the diorama within about 19.4 units square and let its edge sit at ground level. Monuments keep clear of the plateau and slope.
 - The model is a diorama up to about 19 units square; set `radius` on its entry in `LANDMARK_SPECS` to its solid footprint (the player is stopped there, and uses the landmark from just outside it).
 
 Done: fushimi-inari. Everything else uses the placeholder.
@@ -87,4 +88,4 @@ Each threshold sits at the end of an act, so an act's landmarks never need the a
 
 - Acts V to IX each need a biome with its own palette, props and traversal rule, and the matching ability; these should be designed together.
 - The names and a line of text for each landmark go through `src/app/i18n/`, in English and Japanese, when the UI shows them.
-- Haiku could be tied to specific landmarks, so the monument texts near one are about it.
+- Haiku are linked to the landmark they are about by `landmark` in `content/haiku-scenery.json` (nine so far, from Bashō; the poems are in `content/source/landmark-haiku.json`). The link reaches the text index but does not yet change placement: placing a linked monument near its landmark is still to do.
