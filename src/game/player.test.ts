@@ -5,10 +5,11 @@ import {
   createTerrain,
   createWorld,
   type Capability,
+  type Obstacles,
   type Point,
   type Terrain,
 } from "../world";
-import { PLAYER_SPEED, blockerAt, movePlayer, shrineInReach, startPosition } from "./player";
+import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
 
@@ -122,4 +123,35 @@ describe("tile-level progression", () => {
     const start = startPosition(terrain);
     expect(reachable(terrain, new Set(), start, terrain.world.spine[2]!.site)).toBe(false);
   }, 60_000);
+});
+
+describe("collision with obstacles", () => {
+  const terrain = createTerrain(createWorld("collide"));
+  const start = startPosition(terrain);
+  const disc = (x: number, z: number, r: number): Obstacles => ({
+    near: (px, pz, radius) => (Math.hypot(x - px, z - pz) <= radius + r ? [{ x, z, r }] : []),
+  });
+
+  it("is stopped by a solid disc in its way and slides around it", () => {
+    const tree = disc(start.x + 1.5, start.z, 0.4);
+    let pos = start;
+    for (let i = 0; i < 120; i++) pos = movePlayer(pos, { x: 1, z: 0.01 }, 1 / 60, terrain, none, tree).pos;
+    expect(Math.hypot(pos.x - (start.x + 1.5), pos.z - start.z)).toBeGreaterThanOrEqual(0.4 + PLAYER_RADIUS - 1e-6);
+    // Pushing diagonally into it slides along its edge rather than sticking.
+    let slide = { x: start.x + 1.0, z: start.z - 0.5 };
+    const before = slide.z;
+    for (let i = 0; i < 60; i++) slide = movePlayer(slide, { x: 1, z: 0.6 }, 1 / 60, terrain, none, tree).pos;
+    expect(slide.z).toBeGreaterThan(before);
+  });
+
+  it("frees a player who starts inside an obstacle", () => {
+    const rock = disc(start.x, start.z, 0.5);
+    const out = clearOfObstacles(terrain, none, rock, start);
+    expect(Math.hypot(out.x - start.x, out.z - start.z)).toBeGreaterThanOrEqual(0.5 + PLAYER_RADIUS - 1e-6);
+  });
+
+  it("ignores obstacles when none are given", () => {
+    const { pos } = walk(terrain, start, { x: 1, z: 0 }, 0.3, none);
+    expect(pos.x).toBeGreaterThan(start.x + 1);
+  });
 });

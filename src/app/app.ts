@@ -2,6 +2,7 @@ import {
   AWAKENING,
   awakeningFrame,
   capabilitiesOf,
+  clearOfObstacles,
   collectMonument,
   deserialize,
   discoverNear,
@@ -27,7 +28,7 @@ import {
 import { createCuePlayer, createMusic, trackFor } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { createTerrain, createWorld, planMonuments, type Biome, type Point } from "../world";
+import { createObstacles, createTerrain, createWorld, planMonuments, type Biome, type Point } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
@@ -79,6 +80,7 @@ export function startApp(container: HTMLElement): void {
   const terrain = createTerrain(world);
   const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
+  const obstacles = createObstacles(terrain, monuments);
   const stage = createStage(container, terrain, monuments);
   const hud = createHud(container);
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up), (region) => {
@@ -153,7 +155,7 @@ export function startApp(container: HTMLElement): void {
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, monuments, readMonument: (id: string) => { state = collectMonument(state, id); saveGame(state); monumentUi.read(id); }, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument: (id: string) => { state = collectMonument(state, id); saveGame(state); monumentUi.read(id); }, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -211,7 +213,7 @@ export function startApp(container: HTMLElement): void {
 
     const caps = capabilitiesOf(state, world);
     // Losing a capability (a reset, an old save) must never strand the player.
-    pos = safePosition(terrain, caps, pos);
+    pos = clearOfObstacles(terrain, caps, obstacles, safePosition(terrain, caps, pos));
     const seen = discoverNear(state, world, pos);
     if (seen !== state) {
       state = seen;
@@ -222,7 +224,7 @@ export function startApp(container: HTMLElement): void {
     const up = live ? any(KEY_UP) - any(KEY_DOWN) : 0;
     if (!awakening && (right !== 0 || up !== 0)) {
       const dir = stage.groundDirection(right, up);
-      const moved = movePlayer(pos, dir, dt, terrain, caps);
+      const moved = movePlayer(pos, dir, dt, terrain, caps, obstacles);
       pos = moved.pos;
       facing = Math.atan2(dir.x, dir.z);
       if (moved.blockedBy) {

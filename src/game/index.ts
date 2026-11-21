@@ -17,9 +17,11 @@ export {
 } from "./state";
 export type { GameState, SaveData, SaveV1, SaveV2, SaveV3 } from "./state";
 export {
+  PLAYER_RADIUS,
   PLAYER_SPEED,
   SHRINE_REACH,
   blockerAt,
+  clearOfObstacles,
   movePlayer,
   requirementOf,
   safePosition,

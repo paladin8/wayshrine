@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, MONUMENT_CLEARING, type MonumentPlan, type Terrain } from "../world";
+import { monumentsAroundChunk, type MonumentPlan, type Terrain } from "../world";
 import { buildPropChunk } from "./prop-mesh";
 import { buildTerrainChunk } from "./terrain-mesh";
 import { combine, type VitalityMesh } from "./vitality-mesh";
@@ -12,10 +12,7 @@ export function buildChunk(
   monuments: MonumentPlan,
 ): VitalityMesh {
   const parts = [buildTerrainChunk(terrain, cx, cz, vitalityOf)];
-  // Anything whose clearing could touch this chunk: within its half-diagonal plus the clearing.
-  const centre = { x: (cx + 0.5) * CHUNK_SIZE, z: (cz + 0.5) * CHUNK_SIZE };
-  const nearby = monuments.near(centre.x, centre.z, CHUNK_SIZE * 0.71 + MONUMENT_CLEARING);
-  const props = buildPropChunk(terrain, cx, cz, vitalityOf, nearby);
+  const props = buildPropChunk(terrain, cx, cz, vitalityOf, monumentsAroundChunk(monuments, cx, cz));
   if (props) parts.push(props);
   return combine(parts);
 }

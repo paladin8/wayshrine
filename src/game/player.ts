@@ -1,4 +1,13 @@
-import { BIOME_REQUIRES, canTraverse, type Biome, type Capability, type Point, type Region, type Terrain } from "../world";
+import {
+  BIOME_REQUIRES,
+  canTraverse,
+  type Biome,
+  type Capability,
+  type Obstacles,
+  type Point,
+  type Region,
+  type Terrain,
+} from "../world";
 
 export const PLAYER_SPEED = 4.5;
 export const PLAYER_RADIUS = 0.3;
@@ -33,6 +42,42 @@ export function blockerAt(
   return null;
 }
 
+/**
+ * Pushes a position out of every solid disc it overlaps, along the line from the disc's centre.
+ * Because the push is always outward, it also frees a player who is already inside one
+ * (a teleport, an old save), and moving along an obstacle's edge slides naturally.
+ */
+function pushOut(obstacles: Obstacles, x: number, z: number): Point {
+  for (let pass = 0; pass < 3; pass++) {
+    let moved = false;
+    for (const o of obstacles.near(x, z, PLAYER_RADIUS)) {
+      const dx = x - o.x;
+      const dz = z - o.z;
+      const d = Math.hypot(dx, dz);
+      const min = o.r + PLAYER_RADIUS;
+      if (d >= min) continue;
+      const nx = d > 1e-6 ? dx / d : 1;
+      const nz = d > 1e-6 ? dz / d : 0;
+      x = o.x + nx * min;
+      z = o.z + nz * min;
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  return { x, z };
+}
+
+/** The position with any overlap with solid obstacles removed, or `pos` if that would leave allowed ground. */
+export function clearOfObstacles(
+  terrain: Terrain,
+  caps: ReadonlySet<Capability>,
+  obstacles: Obstacles,
+  pos: Point,
+): Point {
+  const pushed = pushOut(obstacles, pos.x, pos.z);
+  return blockerAt(terrain, caps, pushed.x, pushed.z) === null ? pushed : pos;
+}
+
 export interface MoveResult {
   readonly pos: Point;
   /** The biome that stopped (part of) the move, if any. */
@@ -46,6 +91,8 @@ export function movePlayer(
   dt: number,
   terrain: Terrain,
   caps: ReadonlySet<Capability>,
+  /** Solid things to slide around; none by default. */
+  obstacles?: Obstacles,
 ): MoveResult {
   const len = Math.hypot(dir.x, dir.z);
   if (len === 0 || dt <= 0) return { pos, blockedBy: null };
@@ -64,6 +111,11 @@ export function movePlayer(
       blockedBy = full;
       if (blockerAt(terrain, caps, x + sx, z) === null) x += sx;
       else if (blockerAt(terrain, caps, x, z + sz) === null) z += sz;
+    }
+    if (obstacles) {
+      const pushed = pushOut(obstacles, x, z);
+      // Never let a push carry the player onto ground they cannot stand on.
+      if (blockerAt(terrain, caps, pushed.x, pushed.z) === null) ({ x, z } = pushed);
     }
   }
   return { pos: { x, z }, blockedBy };

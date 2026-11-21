@@ -33,7 +33,7 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 
 ## Props
 - `world/props.ts` places scenery (trees, bushes, flowers, pines, rocks, crags, shrine lanterns) as a pure function of (seed, chunk). Density is clustered by noise and each biome has its own table.
-- Props are **decorative and never block movement**. Walkability stays a function of biomes only, which keeps the progression guarantee (ADR 0003) provable. If solid props are ever wanted, the tile-level progression test must account for them.
+- Props themselves are decorative data. Solidity is a separate layer (see Collision) built from them; walkability for progression stays a function of biomes only, which keeps the guarantee in ADR 0003 provable.
 - `render/prop-mesh.ts` merges a chunk's props into one mesh through `VitalityBuilder` (`render/vitality-mesh.ts`), the same alive/dead colour mechanism the terrain uses, so everything in a region fades with its vitality. `render/chunk-mesh.ts` combines ground and props per chunk.
 
 ## Guidance, discovery and the map
@@ -52,6 +52,9 @@ Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance fro
 
 ## Debugging
 `?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)`, `restore(id)` and `setFixedDt(seconds|null)` (fixed sim step, for deterministic screenshots on slow renderers). Resets save immediately and return the player to the start.
+
+## Collision
+`world/obstacles.ts` (`createObstacles`) turns the scenery into solid discs: tree and pine trunks, rocks, crags, lanterns, the two pillars of each shrine's torii (the gap between them stays open) and each monument. It derives them from the same `propsInChunk` call, with the same monument clearings, that the renderer draws, so nothing is solid that is not visible. Discs are cached per chunk. Low plants and bushes are not solid, and crowns are ignored, so the player walks under foliage and between trunks. `game/player.ts` slides the player around discs by pushing them radially out of any overlap after each step (`pushOut`), which also frees anyone who starts inside one (a teleport, an old save). The push never carries the player onto ground their capabilities forbid. Walkability for progression is still decided by biomes alone, and a test floods a patch of the world to check that free ground stays one connected expanse, so scenery cannot wall a region off (ADR 0003 still holds).
 
 ## Monuments and texts
 `content/` holds the source collection and hand-written haiku scenery tags; `scripts/build-content.ts` (`npm run content`) runs the pure transform in `src/content/build.ts` and writes `src/content/texts.json` and `text-index.json`. `src/content/` is deliberately not a layer: `monumentSpecs` (id, kind, biome) ships in the main bundle and `loadTexts()` fetches the texts on first read. `world/monuments.ts` (`planMonuments`) places each text once, ring by ring from the start region, 0 to 2 per region, away from shrines and region edges, haiku in regions of their biome. `propsInChunk` takes clearings so scatter leaves room around a stone. `game` holds `collected` (save v3) and the reach and legibility rules (`monumentInReach`, `isLegible`). `render/monument-mesh.ts` draws stones through the vitality pipeline, as part of the chunk, so they fade with their region; `render/glimmer.ts` shows motes over unread stones in restored regions that are near the view centre. `app/monuments-ui.ts` is the reading card and the book (B); it owns Escape while open.

@@ -7,9 +7,10 @@ export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "la
 export type PropKind = (typeof PROP_KINDS)[number];
 
 /**
- * A piece of scenery. Props are decorative and never block movement: that
- * keeps the walkability rule in one place (biomes), which the progression
- * guarantee (ADR 0003) depends on.
+ * A piece of scenery. Props never decide walkability: that rule stays in one
+ * place (biomes), which the progression guarantee (ADR 0003) depends on.
+ * Solid scenery is derived from them separately (obstacles.ts), as discs the
+ * player slides around but can always get past.
  */
 export interface Prop {
   readonly kind: PropKind;

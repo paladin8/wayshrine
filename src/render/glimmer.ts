@@ -4,7 +4,9 @@ import { Kind, ParticleLayer } from "./particles";
 
 /** Per monument: one soft halo and several rising motes. */
 const MOTES = 5;
-const PER_MONUMENT = 1 + 3 * MOTES;
+/** Three stacked layers make the central orb; each mote is three more. */
+const ORB = 3;
+const PER_MONUMENT = ORB + 3 * MOTES;
 const MAX_MONUMENTS = 8;
 /** Violet, drawn with normal blending (additive washes out to white on light ground), so it cannot be mistaken for the warm gold and green of living land. */
 const GLIMMER = new THREE.Color(0x7a3cff);
@@ -37,21 +39,23 @@ export function createGlimmer(scene: THREE.Scene): Glimmer {
         p.active = m !== undefined;
         if (!m) return;
         const slot = i % PER_MONUMENT;
-        if (slot === 0) {
-          // A slow-breathing halo around the top of the stone, so it reads from across the screen.
-          p.age = 0.5 * p.maxAge;
+        if (slot < ORB) {
+          // The orb: a deep-violet halo, a violet body and a white core, bobbing above the stone.
+          const pulse = 0.5 + 0.5 * Math.sin(clock * 1.6 + m.variant * 6);
+          const c = slot === 0 ? DEEP : slot === 1 ? GLIMMER : CORE;
+          [p.r, p.g, p.b] = [c.r, c.g, c.b];
+          p.age = 0.5;
           p.x = m.x;
           p.z = m.z;
-          p.y = heightAt(m) + 1.3;
-          p.size = 34 + 5 * Math.sin(clock * 1.3 + m.variant * 6);
-          [p.r, p.g, p.b] = [DEEP.r, DEEP.g, DEEP.b];
-          p.alpha = 0.3;
+          p.y = heightAt(m) + 2.3 + Math.sin(clock * 1.1 + m.variant * 6) * 0.12;
+          p.size = slot === 0 ? 120 + 18 * pulse : slot === 1 ? 56 + 6 * pulse : 28 + 4 * pulse;
+          p.alpha = slot === 0 ? 0.75 + 0.15 * pulse : 1;
           return;
         }
         // Each mote is three stacked layers, drawn in order: a wide deep-violet halo, a violet body,
         // and a small near-white core, which together read as a glow fading from white to deep violet.
-        const layer3 = Math.floor((slot - 1) / MOTES); // 0 halo, 1 body, 2 core
-        const k = (slot - 1) % MOTES;
+        const layer3 = Math.floor((slot - ORB) / MOTES); // 0 halo, 1 body, 2 core
+        const k = (slot - ORB) % MOTES;
         const angle = clock * 0.8 + (k / MOTES) * Math.PI * 2;
         p.age = 0.5;
         p.x = m.x + Math.cos(angle) * 0.75;

@@ -1,6 +1,6 @@
 import { createRng, type Rng } from "../core";
 import type { Point } from "./coords";
-import type { Terrain } from "./terrain-grid";
+import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
@@ -102,6 +102,12 @@ function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, 
     }
   }
   return best;
+}
+
+/** Monuments whose clearing could touch a chunk: within its half-diagonal plus the clearing radius. */
+export function monumentsAroundChunk(plan: MonumentPlan, cx: number, cz: number): Monument[] {
+  const centre = { x: (cx + 0.5) * CHUNK_SIZE, z: (cz + 0.5) * CHUNK_SIZE };
+  return plan.near(centre.x, centre.z, CHUNK_SIZE * 0.71 + MONUMENT_CLEARING);
 }
 
 export interface MonumentPlan {
