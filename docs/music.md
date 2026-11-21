@@ -4,12 +4,22 @@
 - One track plays at a time. Changing the wanted track crossfades (3 s) from the old one to the new one.
 - A track that finishes pauses for 4 s and starts over. This suits tracks that end with their own fade-out; it is not a sample-accurate loop.
 - Browsers block audio before a user gesture, so nothing plays until the first key press or click. If the browser still refuses, the next gesture retries.
+- Music plays at half the slider level (`DEFAULT_GAIN` 0.5 in `music.ts`) because the tracks are mastered loud. `setDuck(level)` eases the music down and back, used under stingers.
 - Master volume and mute are player settings (`wayshrine:settings` in localStorage). Keys: `N` mutes; the HUD has a mute button and slider.
 - `?debug` exposes `window.wayshrine.music.status()`.
 
+## Cues (one-shot sounds)
+`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). While a cue plays the app ducks the music to 20%.
+
+| Cue id | File | Notes |
+| --- | --- | --- |
+| `dawn-reverence` | `public/audio/cues/dawn-reverence.mp3` | Awakening swell made with ElevenLabs. Original was 16.0 s with its peak at 13.7 s; the first 4.5 s were trimmed (0.5 s fade-in) so the peak lands at 9.2 s, when the wave finishes filling the region (`AWAKENING.zoomOut + AWAKENING.wave`). Now 11.6 s; it fades out by about 11.0 s, inside the 3 s hold. |
+
+Sync rule: a cue is started when the awakening starts, so its peak must be at `zoomOut + wave` seconds. If the timeline in `game/awakening.ts` changes, re-trim the swell. Skipping with E fades the swell over 1.5 s.
+
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `trackFor(biome)`, the one place that decides what plays where.
-- `src/audio/music.ts`: the player. Pure logic over an injected player interface, so it is tested without a browser.
+- `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
 - `src/app/audio-controls.ts`, `src/app/settings.ts`: the UI and persisted settings.
 
 ## Assets

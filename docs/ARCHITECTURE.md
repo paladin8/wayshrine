@@ -43,7 +43,7 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - The compass and map live in `app/` (DOM and canvas). The map is drawn region by region in the game's rotated screen orientation, using the stage's own ground/screen basis, and unexplored regions stay fogged.
 
 ## Audio
-`audio/music.ts` is a small manager over `HTMLAudioElement` (injectable for tests): nothing plays until the first user gesture (`unlock()`), tracks crossfade on `setTrack()`, and a finished track pauses a few seconds and repeats. `audio/tracks.ts` is the registry and `trackFor(biome)` is the single place that decides what plays where. See [music.md](music.md) for assets and how to add tracks.
+`audio/music.ts` is a small manager over `HTMLAudioElement` (injectable for tests): nothing plays until the first user gesture (`unlock()`), tracks crossfade on `setTrack()`, and a finished track pauses a few seconds and repeats. `audio/tracks.ts` is the registry and `trackFor(biome)` is the single place that decides what plays where. `audio/cue-player.ts` plays one-shot cues (the awakening swell) and the app ducks the music while one plays. See [music.md](music.md) for assets, cue syncing and how to add tracks.
 
 ## Restoration and ambient life
 Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance from shrine)` to life in [0,1] with a smooth front of `FRONT_WIDTH` travelling out to `REGION_REACH`. Every vertex stores its distance to its region's shrine, so the render layer recolours only dirty regions on the CPU and writes `aLife`. One shared material injects wind sway and water ripple in the vertex shader, scaled by `aLife` and driven by `uTime`.

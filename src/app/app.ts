@@ -21,7 +21,7 @@ import {
   type GameState,
   type SaveData,
 } from "../game";
-import { createMusic, trackFor } from "../audio";
+import { createCuePlayer, createMusic, trackFor } from "../audio";
 import { createStage } from "../render";
 import { createTerrain, createWorld, type Biome, type Point } from "../world";
 import { createAudioControls } from "./audio-controls";
@@ -31,6 +31,9 @@ import { createMinimap } from "./minimap";
 import { loadSettings, saveSettings } from "./settings";
 
 const HINT_SECONDS = 1.5;
+/** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
+const SWELL_DUCK = 0.2;
+const SWELL_SKIP_FADE = 1.5;
 
 const KEY_UP = ["KeyW", "ArrowUp"];
 const KEY_DOWN = ["KeyS", "ArrowDown"];
@@ -70,12 +73,17 @@ export function startApp(container: HTMLElement): void {
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up));
 
   const music = createMusic();
+  const cues = createCuePlayer();
   const settings = loadSettings();
   music.setVolume(settings.musicVolume);
   music.setMuted(settings.musicMuted);
+  cues.setVolume(settings.musicVolume);
+  cues.setMuted(settings.musicMuted);
   const audioControls = createAudioControls(container, settings, (next) => {
     music.setVolume(next.musicVolume);
     music.setMuted(next.musicMuted);
+    cues.setVolume(next.musicVolume);
+    cues.setMuted(next.musicMuted);
     saveSettings(next);
   });
 
@@ -104,11 +112,13 @@ export function startApp(container: HTMLElement): void {
       restoreSpine,
       resetShrines: () => {
         awakening = null;
+        cues.stop("dawn-reverence", 0.3);
         reset(resetShrines);
         pos = startPosition(terrain); // land reached with lost capabilities may now be cut off
       },
       resetAll: () => {
         awakening = null;
+        cues.stop("dawn-reverence", 0.3);
         reset(resetGame);
         pos = startPosition(terrain);
       },
@@ -120,7 +130,7 @@ export function startApp(container: HTMLElement): void {
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, music, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -139,12 +149,17 @@ export function startApp(container: HTMLElement): void {
     if (KEY_ACT.includes(e.code)) {
       if (awakening) {
         // Once the camera has pulled back, the sequence can be skipped to its end.
-        if (awakening.t > AWAKENING.zoomOut) awakening.t = skipTarget(awakening.t);
+        if (awakening.t > AWAKENING.zoomOut) {
+          awakening.t = skipTarget(awakening.t);
+          cues.stop("dawn-reverence", SWELL_SKIP_FADE);
+        }
       } else {
         const region = shrineInReach(terrain, pos);
         if (region && !isRestored(state, region)) {
           restore(region.id);
           awakening = { regionId: region.id, t: 0 };
+          // Cut so the swell's peak lands as the wave finishes filling the region.
+          cues.play("dawn-reverence");
         }
       }
     }
@@ -212,6 +227,8 @@ export function startApp(container: HTMLElement): void {
     minimap.update({ pos, state, target: guide?.region ?? null });
 
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
+    cues.update(dt);
+    music.setDuck(cues.playing().length > 0 ? SWELL_DUCK : 1);
     music.update(dt);
 
     stage.render(dt, { player: pos, facing, state, awakening: scene });

@@ -22,12 +22,14 @@ class FakePlayer implements AudioPlayer {
 
 const tracks = { a: { url: "a.mp3" }, b: { url: "b.mp3" } } as never;
 
-function setup(opts: { fade?: number; gap?: number } = {}) {
+function setup(opts: { fade?: number; gap?: number; gain?: number } = {}) {
   const made: FakePlayer[] = [];
   const music = createMusic({
     tracks,
     fadeSeconds: opts.fade ?? 2,
     gapSeconds: opts.gap ?? 4,
+    gain: opts.gain ?? 1,
+    duckSeconds: 1,
     createPlayer: (url) => {
       const p = new FakePlayer(url);
       made.push(p);
@@ -149,5 +151,42 @@ describe("music", () => {
     expect(music.status().unlocked).toBe(true);
     expect(made).toHaveLength(2);
     expect(made[1]!.playing).toBe(true);
+  });
+
+  it("scales the volume by a fixed gain", () => {
+    const { music, made } = setup({ gain: 0.5 });
+    music.setVolume(0.8);
+    music.setTrack("a" as never);
+    music.unlock();
+    run(music, 5);
+    expect(made[0]!.volume).toBeCloseTo(0.4);
+  });
+
+  it("defaults to half level", () => {
+    const made: FakePlayer[] = [];
+    const music = createMusic({ tracks, fadeSeconds: 1, createPlayer: (u) => (made[made.length] = new FakePlayer(u)) });
+    music.setVolume(1);
+    music.setTrack("a" as never);
+    music.unlock();
+    run(music, 2);
+    expect(made[0]!.volume).toBeCloseTo(0.5);
+  });
+
+  it("eases the music down and back up when ducked", () => {
+    const { music, made } = setup();
+    music.setVolume(1);
+    music.setTrack("a" as never);
+    music.unlock();
+    run(music, 3);
+    music.setDuck(0.2);
+    run(music, 0.5);
+    const mid = made[0]!.volume;
+    expect(mid).toBeLessThan(1);
+    expect(mid).toBeGreaterThan(0.2);
+    run(music, 2);
+    expect(made[0]!.volume).toBeCloseTo(0.2);
+    music.setDuck(1);
+    run(music, 2);
+    expect(made[0]!.volume).toBeCloseTo(1);
   });
 });

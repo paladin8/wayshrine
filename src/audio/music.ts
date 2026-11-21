@@ -17,6 +17,13 @@ export interface MusicOptions {
   readonly fadeSeconds?: number;
   /** Silence between a track ending and starting over. */
   readonly gapSeconds?: number;
+  /**
+   * Fixed attenuation under the player's volume setting. The tracks are mastered hot
+   * (about -15 LUFS), so the slider's full range maps to a comfortable level.
+   */
+  readonly gain?: number;
+  /** Seconds the music takes to move between ducked and normal level. */
+  readonly duckSeconds?: number;
 }
 
 export interface MusicStatus {
@@ -25,6 +32,8 @@ export interface MusicStatus {
   readonly unlocked: boolean;
   readonly muted: boolean;
   readonly volume: number;
+  /** Current ducking multiplier in [0, 1] (1 = not ducked). */
+  readonly duck: number;
   /** Tracks currently audible or fading, newest last. */
   readonly voices: ReadonlyArray<{ readonly id: string; readonly level: number }>;
 }
@@ -37,6 +46,8 @@ export interface Music {
   /** Master volume in [0, 1]. */
   setVolume(volume: number): void;
   setMuted(muted: boolean): void;
+  /** Wants the music at this fraction of its level (e.g. under a stinger); 1 releases. Eased in `update`. */
+  setDuck(level: number): void;
   /** Advances fades and loop gaps; call once per frame. */
   update(dtSeconds: number): void;
   status(): MusicStatus;
@@ -51,6 +62,9 @@ interface Voice {
   /** Seconds left before a finished track starts over, or null while playing. */
   gap: number | null;
 }
+
+/** Music plays at half the nominal level: the tracks are mastered loud. */
+export const DEFAULT_GAIN = 0.5;
 
 const defaultFactory: PlayerFactory = (url) => {
   const audio = new Audio(url);
@@ -67,15 +81,19 @@ export function createMusic(options: MusicOptions = {}): Music {
   const createPlayer = options.createPlayer ?? defaultFactory;
   const fadeSeconds = options.fadeSeconds ?? 3;
   const gapSeconds = options.gapSeconds ?? 4;
+  const gain = options.gain ?? DEFAULT_GAIN;
+  const duckSeconds = options.duckSeconds ?? 0.8;
 
   let voices: Voice[] = [];
   let desired: TrackId | null = null;
   let unlocked = false;
   let muted = false;
   let volume = 0.5;
+  let duck = 1;
+  let duckTarget = 1;
 
   const apply = (v: Voice): void => {
-    v.player.volume = muted ? 0 : volume * v.level;
+    v.player.volume = muted ? 0 : volume * gain * duck * v.level;
   };
 
   const start = (id: TrackId): void => {
@@ -119,7 +137,13 @@ export function createMusic(options: MusicOptions = {}): Music {
       muted = m;
       voices.forEach(apply);
     },
+    setDuck(level) {
+      duckTarget = Math.min(1, Math.max(0, level));
+    },
     update(dt) {
+      const delta = duckTarget - duck;
+      const maxMove = dt / duckSeconds;
+      duck = Math.abs(delta) <= maxMove ? duckTarget : duck + Math.sign(delta) * maxMove;
       const step = dt / fadeSeconds;
       for (const v of voices) {
         v.level = v.target === 1 ? Math.min(1, v.level + step) : Math.max(0, v.level - step);
@@ -146,6 +170,7 @@ export function createMusic(options: MusicOptions = {}): Music {
       unlocked,
       muted,
       volume,
+      duck,
       voices: voices.map((v) => ({ id: v.id, level: v.level })),
     }),
   };
