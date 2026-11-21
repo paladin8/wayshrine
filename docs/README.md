@@ -2,6 +2,7 @@
 
 - [DESIGN.md](DESIGN.md): what the game is and why. Intent only.
 - [ARCHITECTURE.md](ARCHITECTURE.md): layers, data flow, conventions, how to add a feature.
+- [music.md](music.md): how music plays, assets, adding tracks.
 - [ROADMAP.md](ROADMAP.md): milestones and current status.
 - [decisions/](decisions/): architecture decision records, one per costly-to-reverse choice.
   - [0001](decisions/0001-stack.md) Three.js, TypeScript, Vite

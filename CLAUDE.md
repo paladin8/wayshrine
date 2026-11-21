@@ -1,7 +1,7 @@
 # Wayshrine: working notes for agents
 
 ## Commands
-- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` shows a debug panel (restore/reset shrines, go to nearest shrine) and exposes `window.wayshrine`. `M` toggles the full map.
+- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` shows a debug panel (restore/reset shrines, go to nearest shrine) and exposes `window.wayshrine`. `M` toggles the full map, `N` mutes music.
 - `npm run check`: typecheck, tests, build. Run before declaring anything done.
 - `npx vitest run <path>`: a single test file.
 
@@ -11,6 +11,7 @@ src/core     pure utilities (seeded RNG). imports nothing
 src/world    pure procedural world: terrain rules, regions, progression. imports core
 src/game     pure game state: restored shrines, capabilities, saves. imports core, world
 src/render   three.js: meshes, camera, lighting. imports core, world, game
+src/audio    music playback and track choice. imports core, world, game
 src/app      browser wiring: input, frame loop. imports everything
 src/main.ts  entry point, one line
 ```

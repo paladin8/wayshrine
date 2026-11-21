@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * either fix the import or change the architecture on purpose (and update the doc).
  */
 
-const LAYERS = ["core", "world", "game", "render", "app"] as const;
+const LAYERS = ["core", "world", "game", "render", "audio", "app"] as const;
 type Layer = (typeof LAYERS)[number];
 
 /** Which layers each layer may import from. Dependencies point one way. */
@@ -17,7 +17,8 @@ const ALLOWED: Record<Layer, readonly Layer[]> = {
   world: ["core"],
   game: ["core", "world"],
   render: ["core", "world", "game"],
-  app: ["core", "world", "game", "render"],
+  audio: ["core", "world", "game"],
+  app: ["core", "world", "game", "render", "audio"],
 };
 
 const SRC = dirname(fileURLToPath(import.meta.url));

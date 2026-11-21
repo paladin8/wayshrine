@@ -18,11 +18,14 @@ import {
   type GameState,
   type SaveData,
 } from "../game";
+import { createMusic, trackFor } from "../audio";
 import { createStage } from "../render";
 import { createTerrain, createWorld, type Biome, type Point } from "../world";
+import { createAudioControls } from "./audio-controls";
 import { createDebugPanel } from "./debug";
 import { createHud, labelOf } from "./hud";
 import { createMinimap } from "./minimap";
+import { loadSettings, saveSettings } from "./settings";
 
 const HINT_SECONDS = 1.5;
 
@@ -32,6 +35,7 @@ const KEY_LEFT = ["KeyA", "ArrowLeft"];
 const KEY_RIGHT = ["KeyD", "ArrowRight"];
 const KEY_ACT = ["KeyE", "Space", "Enter"];
 const KEY_MAP = "KeyM";
+const KEY_MUTE = "KeyN";
 
 function loadGame(seed: string): GameState {
   try {
@@ -61,6 +65,16 @@ export function startApp(container: HTMLElement): void {
   const stage = createStage(container, terrain);
   const hud = createHud(container);
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up));
+
+  const music = createMusic();
+  const settings = loadSettings();
+  music.setVolume(settings.musicVolume);
+  music.setMuted(settings.musicMuted);
+  const audioControls = createAudioControls(container, settings, (next) => {
+    music.setVolume(next.musicVolume);
+    music.setMuted(next.musicMuted);
+    saveSettings(next);
+  });
 
   let state = loadGame(seed);
   let pos: Point = startPosition(terrain);
@@ -97,7 +111,7 @@ export function startApp(container: HTMLElement): void {
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, music, teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -110,12 +124,15 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     down.add(e.code);
+    music.unlock(); // browsers allow audio only after a user gesture
     if (e.code === KEY_MAP) minimap.toggleExpanded();
+    if (e.code === KEY_MUTE) audioControls.toggleMute();
     if (KEY_ACT.includes(e.code)) {
       const region = shrineInReach(terrain, pos);
       if (region && !isRestored(state, region)) restore(region.id);
     }
   });
+  window.addEventListener("pointerdown", () => music.unlock());
   window.addEventListener("keyup", (e) => down.delete(e.code));
   window.addEventListener("blur", () => down.clear());
 
@@ -162,6 +179,9 @@ export function startApp(container: HTMLElement): void {
     }
     hud.update({ capabilities: caps, restoredCount: state.restored.size, compass, prompt, hint });
     minimap.update({ pos, state, target: guide?.region ?? null });
+
+    music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
+    music.update(dt);
 
     stage.render(dt, { player: pos, facing, state });
     requestAnimationFrame(frame);

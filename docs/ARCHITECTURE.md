@@ -12,7 +12,8 @@
 | `world` | biomes, capabilities, traversal rules, region graph, progression spine, tile terrain (`Terrain`, `CHUNK_SIZE`) | core |
 | `game` | `GameState` (restored shrines), derived capabilities, vitality, save/load, player movement and collision, shrine reach | core, world |
 | `render` | three.js stage, chunk streaming, terrain/shrine/player meshes, palette, camera | core, world, game |
-| `app` | DOM, keyboard input, HUD, frame loop, localStorage saves, seed from URL | all |
+| `audio` | music playback: track registry, biome-to-track choice, crossfading player (browser audio, no three.js) | core, world, game |
+| `app` | DOM, keyboard input, HUD, audio controls, frame loop, localStorage saves and settings, seed from URL | all |
 
 Each layer exposes a public surface through `index.ts`. Other layers import only that.
 
@@ -40,6 +41,9 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - `game/guidance.ts` (`nextShrine`) picks the nearest unrestored shrine the player can reach with their current capabilities. It never points at a shrine behind terrain they cannot yet cross, and a test proves that following it alone always collects every capability.
 - `game/player.ts` (`safePosition`) moves a stranded player to the nearest free ground. The app calls it every frame, so losing a capability (a reset, an old save) cannot trap anyone.
 - The compass and map live in `app/` (DOM and canvas). The map is drawn region by region in the game's rotated screen orientation, using the stage's own ground/screen basis, and unexplored regions stay fogged.
+
+## Audio
+`audio/music.ts` is a small manager over `HTMLAudioElement` (injectable for tests): nothing plays until the first user gesture (`unlock()`), tracks crossfade on `setTrack()`, and a finished track pauses a few seconds and repeats. `audio/tracks.ts` is the registry and `trackFor(biome)` is the single place that decides what plays where. See [music.md](music.md) for assets and how to add tracks.
 
 ## Debugging
 `?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)` and `restore(id)`. Resets save immediately and return the player to the start.
