@@ -1,7 +1,7 @@
 # Wayshrine: working notes for agents
 
 ## Commands
-- `npm run dev`: dev server. `?seed=<text>` selects the world.
+- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` exposes `window.wayshrine` (teleport, restore).
 - `npm run check`: typecheck, tests, build. Run before declaring anything done.
 - `npx vitest run <path>`: a single test file.
 

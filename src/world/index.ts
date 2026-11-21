@@ -5,5 +5,5 @@ export type { Point, RegionCoord } from "./coords";
 export { createWorld } from "./world";
 export type { Region, Shrine, World } from "./world";
 export { greedyProgress, reachableRegions } from "./progression";
-export { defaultIsland, islandOutline } from "./island";
-export type { IslandParams } from "./island";
+export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain } from "./terrain-grid";
+export type { Terrain, Tile } from "./terrain-grid";

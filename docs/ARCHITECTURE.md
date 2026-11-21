@@ -8,11 +8,11 @@
 ## Layers
 | Layer | Owns | May import |
 | --- | --- | --- |
-| `core` | seeded RNG, hashing | nothing |
-| `world` | biomes, capabilities, traversal rules, region graph, progression spine, island outline | core |
-| `game` | `GameState` (restored shrines), derived capabilities, vitality, save/load | core, world |
-| `render` | three.js stage, meshes, palette, camera | core, world, game |
-| `app` | DOM, input, frame loop, seed from URL | all |
+| `core` | seeded RNG, hashing, seeded value noise | nothing |
+| `world` | biomes, capabilities, traversal rules, region graph, progression spine, tile terrain (`Terrain`, `CHUNK_SIZE`) | core |
+| `game` | `GameState` (restored shrines), derived capabilities, vitality, save/load, player movement and collision, shrine reach | core, world |
+| `render` | three.js stage, chunk streaming, terrain/shrine/player meshes, palette, camera | core, world, game |
+| `app` | DOM, keyboard input, HUD, frame loop, localStorage saves, seed from URL | all |
 
 Each layer exposes a public surface through `index.ts`. Other layers import only that.
 
@@ -24,6 +24,12 @@ input ─► app ───────────────────┘ (r
 ```
 State flows down; `app` turns input into calls on `game` and hands results to `render`.
 
+## Terrain and streaming
+- Ground is a grid of 1x1 **tiles**; a **chunk** is 16x16 tiles. `Terrain.tileAt(tx, tz)` returns biome, height and region id as a pure function of seed and tile coordinates (`world/terrain-grid.ts`).
+- Heights are quantised so terrain reads as low-poly facets. Within `PLATEAU_RADIUS` of a shrine the ground is flat; a shrine in a water region stands on a meadow islet, reachable only by boat.
+- `render/stage.ts` streams chunks within `LOAD_RADIUS` of the player (2 built per frame after the first) and unloads beyond `LOAD_RADIUS + 1`. A chunk mesh keeps alive and dead vertex colours, so restoring a region recolours it without rebuilding geometry.
+- Movement (`game/player.ts`) checks the four corners of the player's footprint against tile biomes and slides along obstacles. It is the single place walkability is decided; the tile-level progression test uses the same `canTraverse` rule.
+
 ## Key concepts
 - **Region:** a Voronoi cell around a jittered grid site (`REGION_SIZE` 64). Has a biome and one shrine.
 - **Spine:** the guaranteed path of regions: keystone meadow (grants a capability), barrier biome (needs it), next keystone beyond.
@@ -31,7 +37,7 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - **Fork:** `rng.fork(label)` derives an independent stream from a label, so adding a new consumer never shifts existing output.
 
 ## Enforcement
-`src/architecture.test.ts` checks import direction, index-only imports, `three` containment, no DOM globals in pure layers, no `Math.random` outside `app`. `world/world.test.ts` checks the progression guarantees over 300 seeds.
+`src/architecture.test.ts` checks import direction, index-only imports, `three` containment, no DOM globals in pure layers, no `Math.random` outside `app`. `world/world.test.ts` checks the progression guarantees at region level over 300 seeds, and `game/player.test.ts` checks them again at tile level (BFS over real tiles) on a few seeds.
 
 ## Conventions
 - Pure functions and immutable state in `world` and `game`.
