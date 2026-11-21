@@ -1,7 +1,7 @@
 # Wayshrine: working notes for agents
 
 ## Commands
-- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` shows a debug panel (restore/reset shrines, go to nearest shrine) and exposes `window.wayshrine`. `M` toggles the full map, `N` mutes all sound, `Esc` opens settings.
+- `npm run dev`: dev server. `?seed=<text>` selects the world; `?debug` shows a debug panel (restore/reset shrines, go to nearest shrine) and exposes `window.wayshrine`. `M` toggles the full map, `N` mutes all sound, `B` opens the book of rubbings, `Esc` opens settings.
 - **All player-facing text goes through `src/app/i18n/`** (English in `en.ts`, Japanese in `ja.ts`, shape in `messages.ts`). Never hard-code a visible string in the UI; add it to `Messages` and both catalogs. `i18n.test.ts` fails if a language is missing text. The debug panel is the one deliberate exception (developer-only, English).
 - `npm run check`: typecheck, tests, build. Run before declaring anything done.
 - `npx vitest run <path>`: a single test file.
@@ -16,6 +16,7 @@ src/audio    music playback and track choice. imports core, world, game
 src/app      browser wiring: input, frame loop. imports everything
 src/main.ts  entry point, one line
 ```
+`content/` and `src/content/` (texts) are not layers. After editing `content/`, run `npm run content`; a test fails if the generated files are stale.
 Details and rationale: `docs/ARCHITECTURE.md`.
 
 ## Rules (enforced by `src/architecture.test.ts`)

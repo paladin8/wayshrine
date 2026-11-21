@@ -27,6 +27,7 @@ const CSS = `
 .sp-langs{display:flex;gap:8px}
 .sp-lang{all:unset;cursor:pointer;flex:1;text-align:center;padding:7px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .sp-lang[aria-pressed=true]{background:#d96b59;border-color:#d96b59;color:#fff}
+.sp-credits{margin:0;font-size:12px;line-height:1.5;opacity:.65}
 .sp-lang:focus-visible,.sp-x:focus-visible,.gear:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 `;
 
@@ -100,6 +101,9 @@ export function createSettingsPanel(container: HTMLElement, store: SettingsStore
     return [locale, b] as const;
   });
 
+  const creditsHeading = el("h3", undefined, card);
+  const creditsBody = el("p", "sp-credits", card);
+
   const percent = (v: number): string => `${Math.round(v * 100)}%`;
   const render = (): void => {
     const s = store.get();
@@ -119,6 +123,8 @@ export function createSettingsPanel(container: HTMLElement, store: SettingsStore
     setText(minimap.label, t.minimap);
     setText(compass.label, t.compass);
     setText(languageHeading, t.language);
+    setText(creditsHeading, t.credits);
+    setText(creditsBody, t.creditsText);
     music.input.value = String(s.musicVolume);
     sfx.input.value = String(s.sfxVolume);
     setText(music.out, percent(s.musicVolume));

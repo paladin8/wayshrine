@@ -15,6 +15,16 @@ function allText(m: Messages): string[] {
     m.compassNearest(52),
     ...Object.values(m.map),
     ...Object.values(m.settings),
+    m.monuments.promptRead,
+    m.monuments.promptWorn,
+    ...Object.values(m.monuments.kind),
+    m.monuments.book,
+    m.monuments.bookOpen,
+    m.monuments.progress(3, 1000),
+    m.monuments.empty,
+    m.monuments.filterAll,
+    m.monuments.close,
+    m.monuments.loading,
   ];
 }
 

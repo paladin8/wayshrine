@@ -2,9 +2,12 @@ import {
   AWAKENING,
   awakeningFrame,
   capabilitiesOf,
+  collectMonument,
   deserialize,
   discoverNear,
+  isLegible,
   isRestored,
+  monumentInReach,
   movePlayer,
   newGame,
   nextShrine,
@@ -23,11 +26,13 @@ import {
 } from "../game";
 import { createCuePlayer, createMusic, trackFor } from "../audio";
 import { createStage } from "../render";
-import { createTerrain, createWorld, type Biome, type Point } from "../world";
+import { monumentSpecs } from "../content";
+import { createTerrain, createWorld, planMonuments, type Biome, type Point } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
 import { createMinimap } from "./minimap";
+import { createMonumentUi } from "./monuments-ui";
 import { createSettingsStore } from "./settings";
 import { createSettingsPanel } from "./settings-panel";
 
@@ -44,6 +49,7 @@ const KEY_LEFT = ["KeyA", "ArrowLeft"];
 const KEY_RIGHT = ["KeyD", "ArrowRight"];
 const KEY_ACT = ["KeyE", "Space", "Enter"];
 const KEY_MAP = "KeyM";
+const KEY_BOOK = "KeyB";
 const KEY_MUTE = "KeyN";
 
 function loadGame(seed: string): GameState {
@@ -71,7 +77,8 @@ export function startApp(container: HTMLElement): void {
   const seed = params.get("seed") ?? "wayshrine";
   const world = createWorld(seed);
   const terrain = createTerrain(world);
-  const stage = createStage(container, terrain);
+  const monuments = planMonuments(terrain, monumentSpecs);
+  const stage = createStage(container, terrain, monuments);
   const hud = createHud(container);
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up));
 
@@ -89,6 +96,14 @@ export function startApp(container: HTMLElement): void {
   const panel = createSettingsPanel(container, settings);
 
   let state = loadGame(seed);
+  const monumentUi = createMonumentUi(container, {
+    collected: () => state.collected,
+    language: () => settings.get().language,
+  });
+  /** Dialogs own the keyboard while open. */
+  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isOpen();
+  let drawnCollected = state.collected.length;
+  let drawnLanguage = settings.get().language;
   let pos: Point = startPosition(terrain);
   let facing = 0;
   /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
@@ -132,7 +147,7 @@ export function startApp(container: HTMLElement): void {
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, monuments, readMonument: (id: string) => { state = collectMonument(state, id); saveGame(state); monumentUi.read(id); }, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -145,12 +160,13 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     music.unlock(); // browsers allow audio only after a user gesture
-    if (panel.isOpen()) {
-      down.clear(); // the settings dialog owns the keyboard while it is open
+    if (modalOpen()) {
+      down.clear(); // a dialog owns the keyboard while it is open
       return;
     }
     down.add(e.code);
     if (e.code === KEY_MAP) minimap.toggleExpanded();
+    if (e.code === KEY_BOOK && !awakening) monumentUi.toggleBook();
     if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });
     if (KEY_ACT.includes(e.code)) {
       if (awakening) {
@@ -166,6 +182,13 @@ export function startApp(container: HTMLElement): void {
           awakening = { regionId: region.id, t: 0 };
           // Trimmed so the swell peaks at about 8 s, just before the wave finishes filling the region.
           AWAKENING_CUES.forEach((id) => cues.play(id));
+        } else {
+          const stone = monumentInReach(monuments, pos);
+          if (stone && isLegible(state, stone)) {
+            state = collectMonument(state, stone.id);
+            saveGame(state);
+            monumentUi.read(stone.id);
+          }
         }
       }
     }
@@ -187,7 +210,7 @@ export function startApp(container: HTMLElement): void {
       state = seen;
       saveGame(state);
     }
-    const live = !panel.isOpen();
+    const live = !modalOpen();
     const right = live ? any(KEY_RIGHT) - any(KEY_LEFT) : 0;
     const up = live ? any(KEY_UP) - any(KEY_DOWN) : 0;
     if (!awakening && (right !== 0 || up !== 0)) {
@@ -216,13 +239,23 @@ export function startApp(container: HTMLElement): void {
     const needed = blockedBy ? requirementOf(blockedBy) : null;
     const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
     const reach = shrineInReach(terrain, pos);
+    const stone = awakening ? null : monumentInReach(monuments, pos);
     const prompt = awakening
       ? awakening.t > AWAKENING.zoomOut
         ? t.promptSkip
         : null
       : reach && !isRestored(state, reach)
         ? t.promptRestore
-        : null;
+        : stone
+          ? isLegible(state, stone)
+            ? t.monuments.promptRead
+            : t.monuments.promptWorn
+          : null;
+    if (state.collected.length !== drawnCollected || prefs.language !== drawnLanguage) {
+      drawnCollected = state.collected.length;
+      drawnLanguage = prefs.language;
+      monumentUi.refresh();
+    }
     const guide = nextShrine(world, state, pos);
     let compass = null;
     if (guide) {

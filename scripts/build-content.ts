@@ -1,0 +1,14 @@
+/** Regenerates src/content/*.json from the source collection: `npm run content`. */
+import { readFileSync, writeFileSync } from "node:fs";
+import { buildContent } from "../src/content/build.ts";
+
+const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
+const scenery = read("content/haiku-scenery.json") as Record<string, never>;
+delete (scenery as Record<string, unknown>)["_about"];
+
+const { texts, index } = buildContent(read("content/source/japanese-texts.json") as never, scenery);
+const write = (path: string, value: unknown): void =>
+  writeFileSync(new URL(`../${path}`, import.meta.url), JSON.stringify(value) + "\n");
+write("src/content/texts.json", texts);
+write("src/content/text-index.json", index);
+console.log(`wrote ${texts.length} texts`);

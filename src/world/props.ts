@@ -52,7 +52,13 @@ const cache = new WeakMap<Terrain, { cluster: ReturnType<typeof createNoise> }>(
  * All props within a chunk: a pure function of (seed, chunk coordinates),
  * so chunks can be built in any order and always agree.
  */
-export function propsInChunk(terrain: Terrain, cx: number, cz: number): Prop[] {
+export function propsInChunk(
+  terrain: Terrain,
+  cx: number,
+  cz: number,
+  /** Spots to keep free of scatter (monuments), each with a radius. */
+  clearings: ReadonlyArray<{ x: number; z: number; radius: number }> = [],
+): Prop[] {
   const world = terrain.world;
   let shared = cache.get(terrain);
   if (!shared) {
@@ -79,6 +85,7 @@ export function propsInChunk(terrain: Terrain, cx: number, cz: number): Prop[] {
       const region = world.regionAt(x, z);
       const clear = Math.hypot(x - region.site.x, z - region.site.z) > PLATEAU_RADIUS + 0.4;
       if (!clear) continue;
+      if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius)) continue;
 
       // Forests and meadows come in clumps rather than an even sprinkle.
       const c = shared.cluster(x * 0.07, z * 0.07);

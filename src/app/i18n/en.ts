@@ -10,6 +10,18 @@ export const en: Messages = {
   compassHere: "Shrine here",
   compassNearest: (distance) => `Nearest shrine · ${distance}`,
   map: { expand: "M: expand", close: "M: close" },
+  monuments: {
+    promptRead: "Press E to read the stone",
+    promptWorn: "The inscription has worn away. Restore this land to read it.",
+    kind: { haiku: "Haiku", proverb: "Proverb", fourCharacter: "Four-character saying", idiom: "Idiom" },
+    book: "Rubbings",
+    bookOpen: "Rubbings (B)",
+    progress: (found, total) => `${found} of ${total} found`,
+    empty: "Nothing yet. Stones stand far apart; walk and look for a glimmer.",
+    filterAll: "All",
+    close: "Close",
+    loading: "Loading…",
+  },
   settings: {
     title: "Settings",
     open: "Settings (Esc)",
@@ -22,5 +34,8 @@ export const en: Messages = {
     minimap: "Show minimap",
     compass: "Show next-shrine compass",
     language: "Language",
+    credits: "Credits",
+    creditsText:
+      "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0. Haiku by Matsuo Bashō, Yosa Buson and Kobayashi Issa.",
   },
 };

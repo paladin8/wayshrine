@@ -9,3 +9,5 @@ export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
 export { PROP_KINDS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";
+export { MONUMENT_CLEARING, MONUMENT_EDGE_MARGIN, planMonuments } from "./monuments";
+export type { Monument, MonumentPlan, MonumentSpec } from "./monuments";

@@ -9,3 +9,4 @@
   - [0002](decisions/0002-seed-plus-discoveries.md) A world is a seed plus discoveries
   - [0003](decisions/0003-progression-spine.md) Lock-and-key progression spine
   - [0004](decisions/0004-layered-architecture.md) Layered architecture enforced by test
+  - [0005](decisions/0005-monuments-and-texts.md) Monuments carry a finite collection of texts

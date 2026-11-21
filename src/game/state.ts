@@ -10,13 +10,15 @@ export interface GameState {
   readonly restored: ReadonlySet<string>;
   /** Ids of regions the player has seen; drives what the map reveals. */
   readonly explored: ReadonlySet<string>;
+  /** Ids of the texts whose monuments the player has read, in the order found. */
+  readonly collected: readonly string[];
 }
 
 /** A region counts as seen when the player is within this distance of its shrine. */
 export const DISCOVER_RADIUS = 40;
 
 export function newGame(seed: string): GameState {
-  return { seed, restored: new Set(), explored: new Set() };
+  return { seed, restored: new Set(), explored: new Set(), collected: [] };
 }
 
 /** Restores a region's shrine. Restoring twice has no further effect. */
@@ -51,6 +53,16 @@ export function discoverNear(state: GameState, world: World, pos: Point): GameSt
     }
   }
   return next ? { ...state, explored: next } : state;
+}
+
+/** Records a monument's text as read. Reading twice has no further effect. */
+export function collectMonument(state: GameState, id: string): GameState {
+  if (state.collected.includes(id)) return state;
+  return { ...state, collected: [...state.collected, id] };
+}
+
+export function isCollected(state: GameState, id: string): boolean {
+  return state.collected.includes(id);
 }
 
 /** Un-restores every shrine, keeping what has been explored. For debugging. */
@@ -96,23 +108,41 @@ export interface SaveV2 {
   readonly explored: readonly string[];
 }
 
-export type SaveData = SaveV1 | SaveV2;
+export interface SaveV3 {
+  readonly v: 3;
+  readonly seed: string;
+  readonly restored: readonly string[];
+  readonly explored: readonly string[];
+  readonly collected: readonly string[];
+}
 
-export function serialize(state: GameState): SaveV2 {
+export type SaveData = SaveV1 | SaveV2 | SaveV3;
+
+export function serialize(state: GameState): SaveV3 {
   return {
-    v: 2,
+    v: 3,
     seed: state.seed,
     restored: [...state.restored].sort(),
     explored: [...state.explored].sort(),
+    collected: [...state.collected],
   };
 }
 
 export function deserialize(data: SaveData): GameState {
   const version = (data as { v: unknown }).v;
-  if (version === 1) return { seed: data.seed, restored: new Set(data.restored), explored: new Set() };
+  if (version === 1) return { seed: data.seed, restored: new Set(data.restored), explored: new Set(), collected: [] };
   if (version === 2) {
     const d = data as SaveV2;
-    return { seed: d.seed, restored: new Set(d.restored), explored: new Set(d.explored) };
+    return { seed: d.seed, restored: new Set(d.restored), explored: new Set(d.explored), collected: [] };
+  }
+  if (version === 3) {
+    const d = data as SaveV3;
+    return {
+      seed: d.seed,
+      restored: new Set(d.restored),
+      explored: new Set(d.explored),
+      collected: [...new Set(d.collected)],
+    };
   }
   throw new Error(`unsupported save version: ${String(version)}`);
 }

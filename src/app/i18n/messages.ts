@@ -1,3 +1,4 @@
+import type { TextKind } from "../../content";
 import type { Biome, Capability } from "../../world";
 
 export const LOCALES = ["en", "ja"] as const;
@@ -20,6 +21,19 @@ export interface Messages {
   readonly compassHere: string;
   readonly compassNearest: (distance: number) => string;
   readonly map: { readonly expand: string; readonly close: string };
+  readonly monuments: {
+    readonly promptRead: string;
+    /** Shown beside a monument in a region that has not been restored: the inscription cannot be read. */
+    readonly promptWorn: string;
+    readonly kind: Readonly<Record<TextKind, string>>;
+    readonly book: string;
+    readonly bookOpen: string;
+    readonly progress: (found: number, total: number) => string;
+    readonly empty: string;
+    readonly filterAll: string;
+    readonly close: string;
+    readonly loading: string;
+  };
   readonly settings: {
     readonly title: string;
     readonly open: string;
@@ -32,6 +46,8 @@ export interface Messages {
     readonly minimap: string;
     readonly compass: string;
     readonly language: string;
+    readonly credits: string;
+    readonly creditsText: string;
   };
 }
 

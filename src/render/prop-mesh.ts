@@ -1,32 +1,13 @@
 import * as THREE from "three";
-import { propsInChunk, type Prop, type PropKind, type Terrain } from "../world";
+import { CHUNK_SIZE, MONUMENT_CLEARING, propsInChunk, type Monument, type Prop, type PropKind, type Terrain } from "../world";
+import { addMonument } from "./monument-mesh";
 import { palette } from "./palette";
+import { at, box, cone, cylinder, ico, type Part } from "./shapes";
 import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
 const LEAF = 0x5f9a52;
 const PINE = 0x4f8a5a;
 const STONE = 0xb9b4ac;
-
-/** One solid piece of a prop, in the prop's local space (y up, base at 0). */
-interface Part {
-  readonly geometry: THREE.BufferGeometry;
-  readonly color: number;
-  readonly matrix: THREE.Matrix4;
-}
-
-const cone = (r: number, h: number, sides: number) => new THREE.ConeGeometry(r, h, sides);
-const cylinder = (rTop: number, rBottom: number, h: number, sides: number) =>
-  new THREE.CylinderGeometry(rTop, rBottom, h, sides);
-const ico = () => new THREE.IcosahedronGeometry(1, 0);
-const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
-
-function at(x: number, y: number, z: number, sx = 1, sy = sx, sz = sx): THREE.Matrix4 {
-  return new THREE.Matrix4().compose(
-    new THREE.Vector3(x, y, z),
-    new THREE.Quaternion(),
-    new THREE.Vector3(sx, sy, sz),
-  );
-}
 
 /** Part lists are built once per kind and variant bucket, then reused for every instance. */
 const FLOWER_COLORS = [palette.blossom, palette.cream, palette.red] as const;
@@ -119,14 +100,22 @@ function addProp(builder: VitalityBuilder, p: Prop): void {
   }
 }
 
-/** The scenery of one chunk, or null if it has none. */
+/**
+ * The scenery of one chunk, or null if it has none. `monuments` are those near
+ * the chunk: stones inside it are drawn, and scatter is cleared around all of them.
+ */
 export function buildPropChunk(
   terrain: Terrain,
   cx: number,
   cz: number,
   vitalityOf: (regionId: string) => number,
+  monuments: readonly Monument[] = [],
 ): VitalityMesh | null {
   const builder = new VitalityBuilder((id) => terrain.world.regionById(id).site);
-  for (const p of propsInChunk(terrain, cx, cz)) addProp(builder, p);
+  const clearings = monuments.map((m) => ({ x: m.x, z: m.z, radius: MONUMENT_CLEARING }));
+  for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p);
+  for (const m of monuments) {
+    if (Math.floor(m.x / CHUNK_SIZE) === cx && Math.floor(m.z / CHUNK_SIZE) === cz) addMonument(builder, m);
+  }
   return builder.isEmpty ? null : builder.build(vitalityOf);
 }

@@ -37,7 +37,7 @@ State flows down; `app` turns input into calls on `game` and hands results to `r
 - `render/prop-mesh.ts` merges a chunk's props into one mesh through `VitalityBuilder` (`render/vitality-mesh.ts`), the same alive/dead colour mechanism the terrain uses, so everything in a region fades with its vitality. `render/chunk-mesh.ts` combines ground and props per chunk.
 
 ## Guidance, discovery and the map
-- `GameState.explored` records regions the player has seen (within `DISCOVER_RADIUS` of a shrine, or standing in them). It is saved with the game (save format v2; v1 saves still load with nothing explored).
+- `GameState.explored` records regions the player has seen (within `DISCOVER_RADIUS` of a shrine, or standing in them). It is saved with the game (save format v3 adds `collected`; v1 and v2 saves still load).
 - `game/guidance.ts` (`nextShrine`) picks the nearest unrestored shrine the player can reach with their current capabilities. It never points at a shrine behind terrain they cannot yet cross, and a test proves that following it alone always collects every capability.
 - `game/player.ts` (`safePosition`) moves a stranded player to the nearest free ground. The app calls it every frame, so losing a capability (a reset, an old save) cannot trap anyone.
 - The compass and map live in `app/` (DOM and canvas). The map is drawn region by region in the game's rotated screen orientation, using the stage's own ground/screen basis, and unexplored regions stay fogged.
@@ -52,6 +52,9 @@ Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance fro
 
 ## Debugging
 `?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)`, `restore(id)` and `setFixedDt(seconds|null)` (fixed sim step, for deterministic screenshots on slow renderers). Resets save immediately and return the player to the start.
+
+## Monuments and texts
+`content/` holds the source collection and hand-written haiku scenery tags; `scripts/build-content.ts` (`npm run content`) runs the pure transform in `src/content/build.ts` and writes `src/content/texts.json` and `text-index.json`. `src/content/` is deliberately not a layer: `monumentSpecs` (id, kind, biome) ships in the main bundle and `loadTexts()` fetches the texts on first read. `world/monuments.ts` (`planMonuments`) places each text once, ring by ring from the start region, 0 to 2 per region, away from shrines and region edges, haiku in regions of their biome. `propsInChunk` takes clearings so scatter leaves room around a stone. `game` holds `collected` (save v3) and the reach and legibility rules (`monumentInReach`, `isLegible`). `render/monument-mesh.ts` draws stones through the vitality pipeline, as part of the chunk, so they fade with their region; `render/glimmer.ts` shows motes over unread stones in restored regions that are near the view centre. `app/monuments-ui.ts` is the reading card and the book (B); it owns Escape while open.
 
 ## Settings and language
 `app/settings.ts` holds the persisted player settings (music and sound-effects volume, mute, minimap and compass visibility, language) as a small store with subscribers; parsing tolerates missing, damaged or older data, and the language defaults to the browser's. `app/settings-panel.ts` is the dialog that edits it (gear button or `Esc`); while it is open the game ignores movement and action keys. The app applies each change at once: volumes to the music and cue players, visibility to the HUD and minimap.

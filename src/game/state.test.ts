@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { CAPABILITIES, createWorld } from "../world";
 import {
   canEnter,
+  collectMonument,
+  isCollected,
   capabilitiesOf,
   deserialize,
   discoverNear,
@@ -52,7 +54,7 @@ describe("game state", () => {
   });
 
   it("rejects unknown save versions", () => {
-    expect(() => deserialize({ v: 3 } as never)).toThrow();
+    expect(() => deserialize({ v: 4 } as never)).toThrow();
   });
 
   it("loads version 1 saves with nothing explored", () => {
@@ -106,5 +108,21 @@ describe("resets", () => {
     const fresh = resetGame(s);
     expect(fresh.seed).toBe(s.seed);
     expect(fresh.restored.size + fresh.explored.size).toBe(0);
+  });
+});
+
+describe("collecting monuments", () => {
+  it("records each text once, in order, and survives a save", () => {
+    let s = newGame("c");
+    s = collectMonument(s, "b");
+    s = collectMonument(s, "a");
+    expect(collectMonument(s, "b")).toBe(s);
+    expect(s.collected).toEqual(["b", "a"]);
+    expect(isCollected(s, "a")).toBe(true);
+    expect(deserialize(serialize(s)).collected).toEqual(["b", "a"]);
+  });
+
+  it("loads version 2 saves with nothing collected", () => {
+    expect(deserialize({ v: 2, seed: "s", restored: [], explored: [] }).collected).toEqual([]);
   });
 });

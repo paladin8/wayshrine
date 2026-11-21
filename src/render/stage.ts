@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { lifeAt, vitality, type GameState } from "../game";
-import { CHUNK_SIZE, type Point, type Terrain } from "../world";
+import { CHUNK_SIZE, type MonumentPlan, type Point, type Terrain } from "../world";
 import { createAmbient } from "./ambient";
+import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
@@ -24,6 +25,8 @@ const QUICK_RATE = 0.5;
 /** Half-extent of the shadow map, in world units, in normal play and when pulled back. */
 const SHADOW_NEAR = 22;
 const SHADOW_WIDE = 62;
+/** Monuments within this distance of the view centre are on screen or about to be. */
+const GLIMMER_RADIUS = 17;
 
 // Isometric view: the camera looks down the (1,1,1) diagonal. Screen-right and
 // screen-up are therefore fixed ground directions.
@@ -62,7 +65,7 @@ export interface Stage {
   render(dtSeconds: number, view: StageView): void;
 }
 
-export function createStage(container: HTMLElement, terrain: Terrain): Stage {
+export function createStage(container: HTMLElement, terrain: Terrain, monuments: MonumentPlan): Stage {
   const world = terrain.world;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -133,7 +136,7 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
     // The first frame builds everything so the screen is never empty; later frames are budgeted.
     const budget = chunks.size === 0 ? wanted.length : zoom > 0 ? CHUNKS_PER_FRAME_WIDE : CHUNKS_PER_FRAME;
     for (const w of wanted.slice(0, budget)) {
-      const built = buildChunk(terrain, w.cx, w.cz, shownProgress);
+      const built = buildChunk(terrain, w.cx, w.cz, shownProgress, monuments);
       chunks.set(chunkKey(w.cx, w.cz), built);
       scene.add(built.object);
     }
@@ -206,6 +209,8 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
     () => renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720)),
   );
 
+  const glimmer = createGlimmer(scene);
+
   function applyZoom(zoom: number): void {
     if (zoom === appliedZoom) return;
     appliedZoom = zoom;
@@ -265,6 +270,15 @@ export function createStage(container: HTMLElement, terrain: Terrain): Stage {
         zoom,
         awakening: awakening ? { regionId: awakening.regionId, progress: awakening.progress } : null,
       });
+
+      // Glimmer over unread monuments in restored regions, only those near enough to be on screen.
+      const unread = awakening
+        ? []
+        : monuments
+            .near(centre.x, centre.z, GLIMMER_RADIUS)
+            .filter((m) => view.state.restored.has(m.regionId) && !view.state.collected.includes(m.id))
+            .slice(0, 8);
+      glimmer.update(clock, renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720)), unread, (m) => m.y);
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       const onWater = tile.biome === "water";

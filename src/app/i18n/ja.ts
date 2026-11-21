@@ -10,6 +10,18 @@ export const ja: Messages = {
   compassHere: "祠はここ",
   compassNearest: (distance) => `最寄りの祠 · ${distance}`,
   map: { expand: "M: 拡大", close: "M: 閉じる" },
+  monuments: {
+    promptRead: "Eキーで石碑を読む",
+    promptWorn: "碑文は風化して読めない。この地を蘇らせよう。",
+    kind: { haiku: "俳句", proverb: "諺", fourCharacter: "四字熟語", idiom: "慣用句" },
+    book: "拓本帳",
+    bookOpen: "拓本帳 (B)",
+    progress: (found, total) => `${found} / ${total} 発見`,
+    empty: "まだ何もない。石碑は遠くに点在する。きらめきを探して歩こう。",
+    filterAll: "すべて",
+    close: "閉じる",
+    loading: "読み込み中…",
+  },
   settings: {
     title: "設定",
     open: "設定 (Esc)",
@@ -22,5 +34,8 @@ export const ja: Messages = {
     minimap: "ミニマップを表示",
     compass: "次の祠のコンパスを表示",
     language: "言語",
+    credits: "クレジット",
+    creditsText:
+      "諺・慣用句: JMdict/EDICT (© 電子辞書研究開発グループ、CC BY-SA 4.0)。俳句: 松尾芭蕉、与謝蕪村、小林一茶。",
   },
 };

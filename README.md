@@ -23,3 +23,8 @@ npm run check      # typecheck + tests + production build
 | Work on the code with an AI agent | [CLAUDE.md](CLAUDE.md) |
 
 Full index: [docs/README.md](docs/README.md).
+
+## License
+
+Code: [Apache License 2.0](LICENSE). The collection of Japanese texts shown on the
+monuments is separate and licensed CC BY-SA 4.0; see [content/LICENSE.md](content/LICENSE.md).
