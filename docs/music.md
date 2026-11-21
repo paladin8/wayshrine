@@ -17,7 +17,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 
 | Track id | File | Notes |
 | --- | --- | --- |
-| `homeward-breeze` | `homeward-breeze.mp3` | Pastoral background track made by the project owner. 3:00, 192 kbps stereo MP3, about -15 LUFS integrated, true peak -1.1 dBFS. Starts with about 1.5 s near-silence and ends on a roughly 6 s fade-out. Used for every biome for now. |
+| `homeward-breeze` | `homeward-breeze.mp3` | Pastoral background track made by the project owner with ElevenLabs Music (plan tier and licence terms to be confirmed before release; see the Project doc `music-generation-plan`). 3:00, 192 kbps stereo MP3, about -15 LUFS integrated, true peak -1.1 dBFS. Starts with about 1.5 s near-silence and ends on a roughly 6 s fade-out. Used for every biome for now. |
 
 Record the origin and licence of each track here when it is added.
 
