@@ -1,32 +1,98 @@
+import { detectLocale, isLocale, type Locale } from "./i18n";
+
 /** Player preferences that persist across sessions (separate from per-world saves). */
 export interface Settings {
   readonly musicVolume: number;
-  readonly musicMuted: boolean;
+  readonly sfxVolume: number;
+  /** Silences all sound, music and effects alike. */
+  readonly muted: boolean;
+  readonly showMinimap: boolean;
+  readonly showCompass: boolean;
+  readonly language: Locale;
 }
 
 const KEY = "wayshrine:settings";
-const DEFAULTS: Settings = { musicVolume: 0.5, musicMuted: false };
 
-export function loadSettings(): Settings {
+export function defaultSettings(preferredLanguages: readonly string[] = []): Settings {
+  return {
+    musicVolume: 0.5,
+    sfxVolume: 0.7,
+    muted: false,
+    showMinimap: true,
+    showCompass: true,
+    language: detectLocale(preferredLanguages),
+  };
+}
+
+const volume = (v: unknown, fallback: number): number =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
+const flag = (v: unknown, fallback: boolean): boolean => (typeof v === "boolean" ? v : fallback);
+
+/**
+ * Reads saved settings from whatever was stored, tolerating missing, damaged or older data:
+ * any field that is absent or the wrong type falls back to its default. Saves from before
+ * sound effects had their own slider stored `musicMuted`, which now means "muted".
+ */
+export function parseSettings(raw: unknown, preferredLanguages: readonly string[] = []): Settings {
+  const d = defaultSettings(preferredLanguages);
+  if (typeof raw !== "object" || raw === null) return d;
+  const p = raw as Record<string, unknown>;
+  return {
+    musicVolume: volume(p.musicVolume, d.musicVolume),
+    sfxVolume: volume(p.sfxVolume, d.sfxVolume),
+    muted: flag(p.muted, flag(p.musicMuted, d.muted)),
+    showMinimap: flag(p.showMinimap, d.showMinimap),
+    showCompass: flag(p.showCompass, d.showCompass),
+    language: isLocale(p.language) ? p.language : d.language,
+  };
+}
+
+export interface SettingsStore {
+  get(): Settings;
+  /** Merges a change, saves it, and tells every subscriber. */
+  update(patch: Partial<Settings>): Settings;
+  /** Calls `listener` after every change; returns a function that stops it. */
+  subscribe(listener: (settings: Settings) => void): () => void;
+}
+
+type Storage = Pick<globalThis.Storage, "getItem" | "setItem">;
+
+export function createSettingsStore(
+  storage: Storage | null = safeStorage(),
+  preferredLanguages: readonly string[] = [],
+): SettingsStore {
+  let current = defaultSettings(preferredLanguages);
   try {
-    const raw = window.localStorage.getItem(KEY);
-    if (raw) {
-      const p = JSON.parse(raw) as Partial<Settings>;
-      return {
-        musicVolume: typeof p.musicVolume === "number" ? Math.min(1, Math.max(0, p.musicVolume)) : DEFAULTS.musicVolume,
-        musicMuted: typeof p.musicMuted === "boolean" ? p.musicMuted : DEFAULTS.musicMuted,
-      };
-    }
+    const raw = storage?.getItem(KEY);
+    if (raw) current = parseSettings(JSON.parse(raw), preferredLanguages);
   } catch {
     // Unreadable or unavailable storage: use defaults.
   }
-  return DEFAULTS;
+  const listeners = new Set<(settings: Settings) => void>();
+
+  return {
+    get: () => current,
+    update(patch) {
+      current = parseSettings({ ...current, ...patch }, preferredLanguages);
+      try {
+        storage?.setItem(KEY, JSON.stringify(current));
+      } catch {
+        // Saving is best-effort.
+      }
+      listeners.forEach((l) => l(current));
+      return current;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
 }
 
-export function saveSettings(settings: Settings): void {
+function safeStorage(): Storage | null {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(settings));
+    return window.localStorage;
   } catch {
-    // Saving is best-effort.
+    return null;
   }
 }

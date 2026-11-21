@@ -1,10 +1,6 @@
 import { CAPABILITIES, type Capability } from "../world";
-
-const LABEL: Readonly<Record<Capability, string>> = {
-  boat: "Boat",
-  snowshoes: "Snowshoes",
-  climbing: "Climbing gear",
-};
+import type { Messages } from "./i18n";
+import { UI_FONT, setText } from "./style";
 
 export interface CompassModel {
   /** Clockwise angle from screen-up, in radians. */
@@ -15,6 +11,10 @@ export interface CompassModel {
 }
 
 export interface HudModel {
+  /** Text in the player's language. */
+  readonly messages: Messages;
+  /** False hides the next-shrine compass (a player setting). */
+  readonly showCompass: boolean;
   readonly capabilities: ReadonlySet<Capability>;
   readonly restoredCount: number;
   /** Direction to the nearest reachable unrestored shrine, or null if none. */
@@ -29,12 +29,8 @@ export interface Hud {
   update(model: HudModel): void;
 }
 
-export function labelOf(capability: Capability): string {
-  return LABEL[capability];
-}
-
 const CSS = `
-.hud{position:fixed;inset:0;pointer-events:none;font:14px/1.3 system-ui,sans-serif;color:#2a2424}
+.hud{position:fixed;inset:0;pointer-events:none;font:14px/1.3 ${UI_FONT};color:#2a2424}
 .hud .chip{display:inline-block;margin-right:6px;padding:4px 10px;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422}
 .hud .chip.off{opacity:.4}
 .hud .tl{position:absolute;top:14px;left:14px}
@@ -71,7 +67,6 @@ export function createHud(container: HTMLElement): Hud {
   for (const cap of CAPABILITIES) {
     const chip = document.createElement("span");
     chip.className = "chip off";
-    chip.textContent = LABEL[cap];
     tl.appendChild(chip);
     chips.set(cap, chip);
   }
@@ -98,19 +93,24 @@ export function createHud(container: HTMLElement): Hud {
 
   return {
     update(m) {
-      for (const [cap, chip] of chips) chip.classList.toggle("off", !m.capabilities.has(cap));
-      count.textContent = `Shrines restored: ${m.restoredCount}`;
+      const t = m.messages;
+      for (const [cap, chip] of chips) {
+        setText(chip, t.capability[cap]);
+        chip.classList.toggle("off", !m.capabilities.has(cap));
+      }
+      setText(count, t.shrinesRestored(m.restoredCount));
 
-      compass.style.display = m.compass ? "flex" : "none";
-      if (m.compass) {
+      const showCompass = m.showCompass && m.compass !== null;
+      compass.style.display = showCompass ? "flex" : "none";
+      if (m.compass && showCompass) {
         needle.style.display = m.compass.arrived ? "none" : "block";
         dot.style.display = m.compass.arrived ? "block" : "none";
         needle.style.transform = `rotate(${m.compass.angle}rad)`;
-        compassText.textContent = m.compass.arrived ? "Shrine here" : `Nearest shrine · ${Math.round(m.compass.distance)}`;
+        setText(compassText, m.compass.arrived ? t.compassHere : t.compassNearest(Math.round(m.compass.distance)));
       }
 
       const text = m.hint ?? m.prompt;
-      msg.textContent = text ?? "";
+      setText(msg, text ?? "");
       msg.style.display = text ? "inline-block" : "none";
     },
   };

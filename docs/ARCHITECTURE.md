@@ -13,7 +13,7 @@
 | `game` | `GameState` (restored shrines), derived capabilities, vitality, save/load, player movement and collision, shrine reach | core, world |
 | `render` | three.js stage, chunk streaming, terrain/shrine/player meshes, palette, camera | core, world, game |
 | `audio` | music playback: track registry, biome-to-track choice, crossfading player (browser audio, no three.js) | core, world, game |
-| `app` | DOM, keyboard input, HUD, audio controls, frame loop, localStorage saves and settings, seed from URL | all |
+| `app` | DOM, keyboard input, HUD, settings dialog, translations, frame loop, localStorage saves and settings, seed from URL | all |
 
 Each layer exposes a public surface through `index.ts`. Other layers import only that.
 
@@ -52,6 +52,11 @@ Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance fro
 
 ## Debugging
 `?debug` shows a panel (restore spine shrines, reset shrines, reset everything, go to nearest shrine) and exposes `window.wayshrine` with the same actions plus `teleport(x, z)`, `restore(id)` and `setFixedDt(seconds|null)` (fixed sim step, for deterministic screenshots on slow renderers). Resets save immediately and return the player to the start.
+
+## Settings and language
+`app/settings.ts` holds the persisted player settings (music and sound-effects volume, mute, minimap and compass visibility, language) as a small store with subscribers; parsing tolerates missing, damaged or older data, and the language defaults to the browser's. `app/settings-panel.ts` is the dialog that edits it (gear button or `Esc`); while it is open the game ignores movement and action keys. The app applies each change at once: volumes to the music and cue players, visibility to the HUD and minimap.
+
+`app/i18n/` holds the catalogs. `Messages` (in `messages.ts`) is the single shape of all player-facing text, with `en.ts` and `ja.ts` each implementing it, so a missing string is a compile error and `i18n.test.ts` also checks both languages have identical coverage. Sentences with inserted values are functions, so each language controls word order. The HUD and minimap take the current `Messages` every frame and only touch the DOM when text changes, which makes a language switch instant. The debug panel is deliberately untranslated.
 
 ## Key concepts
 - **Region:** a Voronoi cell around a jittered grid site (`REGION_SIZE` 64). Has a biome and one shrine.

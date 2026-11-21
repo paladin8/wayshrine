@@ -24,16 +24,17 @@ import {
 import { createCuePlayer, createMusic, trackFor } from "../audio";
 import { createStage } from "../render";
 import { createTerrain, createWorld, type Biome, type Point } from "../world";
-import { createAudioControls } from "./audio-controls";
 import { createDebugPanel } from "./debug";
-import { createHud, labelOf } from "./hud";
+import { createHud } from "./hud";
+import { messagesFor } from "./i18n";
 import { createMinimap } from "./minimap";
-import { loadSettings, saveSettings } from "./settings";
+import { createSettingsStore } from "./settings";
+import { createSettingsPanel } from "./settings-panel";
 
 const HINT_SECONDS = 1.5;
-/** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 /** Everything that plays for an awakening: the burst at the wave launch and the swell under the whole sequence. */
 const AWAKENING_CUES = ["awakening-burst", "dawn-reverence"] as const;
+/** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
 
@@ -76,23 +77,22 @@ export function startApp(container: HTMLElement): void {
 
   const music = createMusic();
   const cues = createCuePlayer();
-  const settings = loadSettings();
-  music.setVolume(settings.musicVolume);
-  music.setMuted(settings.musicMuted);
-  cues.setVolume(settings.musicVolume);
-  cues.setMuted(settings.musicMuted);
-  const audioControls = createAudioControls(container, settings, (next) => {
-    music.setVolume(next.musicVolume);
-    music.setMuted(next.musicMuted);
-    cues.setVolume(next.musicVolume);
-    cues.setMuted(next.musicMuted);
-    saveSettings(next);
-  });
+  const settings = createSettingsStore(undefined, navigator.languages);
+  const applyAudio = (s = settings.get()): void => {
+    music.setVolume(s.musicVolume);
+    music.setMuted(s.muted);
+    cues.setVolume(s.sfxVolume);
+    cues.setMuted(s.muted);
+  };
+  applyAudio();
+  settings.subscribe(applyAudio);
+  const panel = createSettingsPanel(container, settings);
 
   let state = loadGame(seed);
   let pos: Point = startPosition(terrain);
   let facing = 0;
-  let hint: string | null = null;
+  /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
+  let blockedBy: Biome | null = null;
   let hintLeft = 0;
   /** The restoration sequence in progress, if any; `t` is seconds since it began. */
   let awakening: { regionId: string; t: number } | null = null;
@@ -144,10 +144,14 @@ export function startApp(container: HTMLElement): void {
   const any = (codes: readonly string[]): number => (codes.some((c) => down.has(c)) ? 1 : 0);
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
-    down.add(e.code);
     music.unlock(); // browsers allow audio only after a user gesture
+    if (panel.isOpen()) {
+      down.clear(); // the settings dialog owns the keyboard while it is open
+      return;
+    }
+    down.add(e.code);
     if (e.code === KEY_MAP) minimap.toggleExpanded();
-    if (e.code === KEY_MUTE) audioControls.toggleMute();
+    if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });
     if (KEY_ACT.includes(e.code)) {
       if (awakening) {
         // Once the camera has pulled back, the sequence can be skipped to its end.
@@ -170,11 +174,6 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keyup", (e) => down.delete(e.code));
   window.addEventListener("blur", () => down.clear());
 
-  const blockedMessage = (biome: Biome): string => {
-    const needed = requirementOf(biome);
-    return needed ? `You need the ${labelOf(needed).toLowerCase()} to cross ${biome}.` : "";
-  };
-
   let last = performance.now();
   const frame = (now: number): void => {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
@@ -188,20 +187,21 @@ export function startApp(container: HTMLElement): void {
       state = seen;
       saveGame(state);
     }
-    const right = any(KEY_RIGHT) - any(KEY_LEFT);
-    const up = any(KEY_UP) - any(KEY_DOWN);
+    const live = !panel.isOpen();
+    const right = live ? any(KEY_RIGHT) - any(KEY_LEFT) : 0;
+    const up = live ? any(KEY_UP) - any(KEY_DOWN) : 0;
     if (!awakening && (right !== 0 || up !== 0)) {
       const dir = stage.groundDirection(right, up);
       const moved = movePlayer(pos, dir, dt, terrain, caps);
       pos = moved.pos;
       facing = Math.atan2(dir.x, dir.z);
       if (moved.blockedBy) {
-        hint = blockedMessage(moved.blockedBy);
+        blockedBy = moved.blockedBy;
         hintLeft = HINT_SECONDS;
       }
     }
     hintLeft = Math.max(0, hintLeft - dt);
-    if (hintLeft === 0) hint = null;
+    if (hintLeft === 0) blockedBy = null;
 
     let scene: { regionId: string; progress: number; zoom: number } | undefined;
     if (awakening) {
@@ -211,13 +211,17 @@ export function startApp(container: HTMLElement): void {
       else scene = { regionId: awakening.regionId, progress: f.progress, zoom: f.zoom };
     }
 
+    const prefs = settings.get();
+    const t = messagesFor(prefs.language);
+    const needed = blockedBy ? requirementOf(blockedBy) : null;
+    const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
     const reach = shrineInReach(terrain, pos);
     const prompt = awakening
       ? awakening.t > AWAKENING.zoomOut
-        ? "Press E to skip"
+        ? t.promptSkip
         : null
       : reach && !isRestored(state, reach)
-        ? "Press E to restore the shrine"
+        ? t.promptRestore
         : null;
     const guide = nextShrine(world, state, pos);
     let compass = null;
@@ -225,8 +229,16 @@ export function startApp(container: HTMLElement): void {
       const s = stage.screenDirection(guide.dx, guide.dz);
       compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: guide.distance <= SHRINE_REACH };
     }
-    hud.update({ capabilities: caps, restoredCount: state.restored.size, compass, prompt, hint });
-    minimap.update({ pos, state, target: guide?.region ?? null });
+    hud.update({
+      capabilities: caps,
+      restoredCount: state.restored.size,
+      compass,
+      prompt,
+      hint,
+      messages: t,
+      showCompass: prefs.showCompass,
+    });
+    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map });
 
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     cues.update(dt);

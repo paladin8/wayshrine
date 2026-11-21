@@ -5,7 +5,7 @@
 - A track that finishes pauses for 4 s and starts over. This suits tracks that end with their own fade-out; it is not a sample-accurate loop.
 - Browsers block audio before a user gesture, so nothing plays until the first key press or click. If the browser still refuses, the next gesture retries.
 - Music plays at half the slider level (`DEFAULT_GAIN` 0.5 in `music.ts`) because the tracks are mastered loud. `setDuck(level)` eases the music down and back, used under stingers.
-- Master volume and mute are player settings (`wayshrine:settings` in localStorage). Keys: `N` mutes; the HUD has a mute button and slider.
+- Music volume, sound-effects volume and mute are player settings (`wayshrine:settings` in localStorage), set in the settings dialog (gear button or `Esc`). `N` mutes all sound. Music uses the music slider; every one-shot cue uses the sound-effects slider.
 - `?debug` exposes `window.wayshrine.music.status()`.
 
 ## Cues (one-shot sounds)
@@ -22,7 +22,7 @@ Sync rule: cues are all started when the awakening starts (the burst is padded t
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `trackFor(biome)`, the one place that decides what plays where.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
-- `src/app/audio-controls.ts`, `src/app/settings.ts`: the UI and persisted settings.
+- `src/app/settings.ts`, `src/app/settings-panel.ts`: persisted settings and the dialog that edits them.
 
 ## Assets
 Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`. Use lowercase kebab-case names that match the track id.

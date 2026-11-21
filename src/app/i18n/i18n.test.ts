@@ -1,0 +1,60 @@
+import { describe, expect, it } from "vitest";
+import { BIOMES, CAPABILITIES } from "../../world";
+import { LOCALES, detectLocale, isLocale, messagesFor, type Messages } from "./index";
+
+/** Every string a catalog yields, including the ones produced by functions. */
+function allText(m: Messages): string[] {
+  return [
+    ...CAPABILITIES.map((c) => m.capability[c]),
+    ...BIOMES.map((b) => m.terrain[b]),
+    m.blocked("X", "Y"),
+    m.shrinesRestored(7),
+    m.promptRestore,
+    m.promptSkip,
+    m.compassHere,
+    m.compassNearest(52),
+    ...Object.values(m.map),
+    ...Object.values(m.settings),
+  ];
+}
+
+describe("i18n", () => {
+  it("has the same number of strings in every language, none empty", () => {
+    const counts = LOCALES.map((l) => allText(messagesFor(l)).length);
+    expect(new Set(counts).size).toBe(1);
+    for (const l of LOCALES) for (const s of allText(messagesFor(l))) expect(s.trim()).not.toBe("");
+  });
+
+  it("keeps the values that are inserted into sentences", () => {
+    for (const l of LOCALES) {
+      const m = messagesFor(l);
+      // Lower case: English lower-cases the capability mid-sentence.
+      expect(m.blocked("qq", "zz")).toContain("qq");
+      expect(m.blocked("qq", "zz")).toContain("zz");
+      expect(m.shrinesRestored(42)).toContain("42");
+      expect(m.compassNearest(123)).toContain("123");
+    }
+  });
+
+  it("actually translates Japanese rather than repeating English", () => {
+    const en = allText(messagesFor("en"));
+    const ja = allText(messagesFor("ja"));
+    const same = ja.filter((s, i) => s === en[i]);
+    expect(same).toEqual([]);
+    for (const s of ja) expect(s).toMatch(/[぀-ヿ一-鿿]/);
+  });
+
+  it("detects the language from the browser's preference order", () => {
+    expect(detectLocale(["ja-JP", "en-US"])).toBe("ja");
+    expect(detectLocale(["fr-FR", "ja"])).toBe("ja");
+    expect(detectLocale(["en-GB"])).toBe("en");
+    expect(detectLocale(["de", "fr"])).toBe("en");
+    expect(detectLocale([])).toBe("en");
+  });
+
+  it("recognises only supported locales", () => {
+    expect(isLocale("ja")).toBe(true);
+    expect(isLocale("fr")).toBe(false);
+    expect(isLocale(3)).toBe(false);
+  });
+});

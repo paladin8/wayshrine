@@ -1,6 +1,7 @@
 import { isExplored, isRestored, type GameState } from "../game";
 import { palette } from "../render";
 import { REGION_SIZE, type Biome, type Point, type Region, type World } from "../world";
+import { UI_FONT, setText } from "./style";
 
 const SMALL_SIZE = 168;
 /** World units per map pixel in the corner map: about five regions across. */
@@ -28,6 +29,10 @@ export interface MapInput {
   readonly state: GameState;
   /** The shrine the compass is pointing at, if any. */
   readonly target: Region | null;
+  /** False hides the map entirely (a player setting). */
+  readonly visible: boolean;
+  /** The corner hint, in the player's language. */
+  readonly labels: { readonly expand: string; readonly close: string };
 }
 
 export interface Minimap {
@@ -40,7 +45,7 @@ const CSS = `
 .map.small{right:14px;bottom:14px}
 .map.large{left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
-.map .hint{position:absolute;left:8px;bottom:6px;font:11px system-ui,sans-serif;color:#f2ede0;opacity:.8}
+.map .hint{position:absolute;left:8px;bottom:6px;font:11px ${UI_FONT};color:#f2ede0;opacity:.8}
 `;
 
 /**
@@ -64,10 +69,10 @@ export function createMinimap(
   const ctx = canvas.getContext("2d")!;
   const hint = document.createElement("div");
   hint.className = "hint";
-  hint.textContent = "M: expand";
   frame.append(canvas, hint);
   container.appendChild(frame);
 
+  let shown = true;
   const sample = document.createElement("canvas");
   const sctx = sample.getContext("2d")!;
 
@@ -197,12 +202,16 @@ export function createMinimap(
 
   return {
     toggleExpanded() {
+      if (!shown) return; // the key does nothing while the map is hidden
       expanded = !expanded;
       frame.className = expanded ? "map large" : "map small";
-      hint.textContent = expanded ? "M: close" : "M: expand";
       lastKey = "";
     },
     update(input) {
+      shown = input.visible;
+      frame.style.display = shown ? "" : "none";
+      if (!shown) return;
+      setText(hint, expanded ? input.labels.close : input.labels.expand);
       const size = expanded ? Math.max(240, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.78)) : SMALL_SIZE;
       const key = [
         expanded,

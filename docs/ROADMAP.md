@@ -5,6 +5,7 @@
 - Project scaffold, layered structure, architecture test.
 - World core: seeded RNG and noise, regions, biomes, progression spine, no-soft-lock property tests (region level and tile level).
 - Game state: restore, capabilities, save format, player movement.
+- **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap and compass toggles), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, first track in all biomes, volume/mute controls.
 - **Guidance:** compass to the nearest reachable unrestored shrine, exploration tracking, corner map and expanded map (M), debug reset tools.
 - **Scenery:** biome-specific props with clustering, lantern rings at shrines, shared dead-to-alive colour system.
