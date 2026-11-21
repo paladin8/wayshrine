@@ -1,7 +1,7 @@
 const base = import.meta.env.BASE_URL;
 
 /** One-shot sounds, as opposed to the looping background music. */
-export const CUE_IDS = ["dawn-reverence", "awakening-burst"] as const;
+export const CUE_IDS = ["dawn-reverence", "awakening-burst", "monument-read"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -11,4 +11,5 @@ export interface CueInfo {
 export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "dawn-reverence": { url: `${base}audio/cues/dawn-reverence.mp3` },
   "awakening-burst": { url: `${base}audio/cues/awakening-burst.mp3` },
+  "monument-read": { url: `${base}audio/cues/monument-read.mp3` },
 };

@@ -194,6 +194,7 @@ export function startApp(container: HTMLElement): void {
             state = collectMonument(state, stone.id);
             saveGame(state);
             monumentUi.read(stone.id);
+            cues.play("monument-read");
           }
         }
       }
@@ -281,7 +282,8 @@ export function startApp(container: HTMLElement): void {
 
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     cues.update(dt);
-    music.setDuck(cues.playing().length > 0 ? SWELL_DUCK : 1);
+    // Only the awakening swell ducks the music; the monument chime sits under it at its normal level.
+    music.setDuck(AWAKENING_CUES.some((id) => cues.playing().includes(id)) ? SWELL_DUCK : 1);
     music.update(dt);
 
     stage.render(dt, { player: pos, facing, state, awakening: scene });
