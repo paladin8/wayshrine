@@ -1,35 +1,21 @@
-# Design notes
+# Design
 
-## Vision
+Design intent only. How it is built lives in [ARCHITECTURE.md](ARCHITECTURE.md).
 
-- An open-ended game: the map keeps extending as you explore.
-- Progression comes from discovery, and discoveries change the nature of the
-  procedural generation, not just what is on screen.
-- Sessions can be 5 minutes or 5 hours.
-- No combat. Exploration needs a discovery/achievement angle strong enough that it
-  does not go stale (undecided, see below).
-- Visual style: the low-poly isometric shrine diorama (flat shading, small palette,
-  soft sun shadow, translucent water). Polytopia is a loose reference for the vibe,
-  with much less complexity.
+## Pillars
+- **Open-ended, no combat.** The map extends as you explore. A session can be five minutes or five hours.
+- **Restoration is the core loop.** Each shrine is the energy source of its region. Restoring it takes the region from dead, dark and muted to lively and colourful. The reward is visible on the land itself.
+- **Discovery changes the world.** What you find changes what the generator produces next, so exploration stays fresh.
+- **Never stuck.** Terrain is opened by capabilities, and the world is built so the next capability is always reachable ([ADR 0003](decisions/0003-progression-spine.md)).
+- **Look.** Low-poly, flat-shaded, isometric diorama, from the Blender shrine reference.
 
-## Architecture direction (initial)
+## Movement and terrain
+Free walking by default. Capabilities unlock terrain: **boat** (water), **snowshoes** (snow), **climbing gear** (mountain).
 
-- **A world is a seed plus discoveries**, never stored geometry.
-- **A chunk is a pure function** of (world seed, chunk coordinates, discovery state).
-  Chunk RNG streams come from `rng.fork("chunk:x,z")`, so generation order does not
-  matter and chunks can be generated in workers.
-- **Generation regimes** are selected by discovery state. New discoveries unlock new
-  generators or change parameters (islands, structures, biomes), which is how
-  progression changes the world.
-- **Rendering stays cheap:** flat shading, a shared palette, instancing for repeated
-  props, animation in vertex shaders.
+## Narrative thread
+The shrines are older than the land suggests. Restoring them uncovers a more advanced, more complex civilisation, powered by the same shrine energy. Pacing of this reveal is open.
 
 ## Open questions
-
-- What is the core discovery/achievement loop? Candidates to explore: a codex of
-  discovered things, restoring shrines/landmarks, charting regions, unlocking new
-  kinds of places.
-- How does the player move: free walking, a boat/raft between islands, or both?
-- What does a discovery unlock in generation terms (new tile types, new structures,
-  new biomes, different island shapes)?
-- Where does the tile-placing idea fit, if at all?
+- Tile placing: only if an idea fits the restoration loop.
+- What the advanced-civilisation layers change in generation, beyond biomes.
+- Rest-and-return loop for short sessions.

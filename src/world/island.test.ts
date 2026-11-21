@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRng } from "../core/rng";
+import { createRng } from "../core";
 import { defaultIsland, islandOutline } from "./island";
 
 describe("islandOutline", () => {
