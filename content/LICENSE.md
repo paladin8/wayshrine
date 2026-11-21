@@ -10,7 +10,7 @@ The Japanese texts in `source/japanese-texts.json`, and the files generated from
 - The haiku are by Matsuo Bashō, Yosa Buson and Kobayashi Issa and are in the public
   domain. English renderings and the scenery tags (`haiku-scenery.json`) are part of
   this collection.
-- English glosses were lightly edited for the game (see `ENGLISH_OVERRIDES` in
-  `src/content/build.ts`).
+- English glosses and some haiku renderings were edited for the game, for accuracy and
+  clarity (see `ENGLISH_OVERRIDES` in `src/content/build.ts`).
 
 The game credits this in its settings panel.
