@@ -32,7 +32,7 @@ import { loadSettings, saveSettings } from "./settings";
 
 const HINT_SECONDS = 1.5;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
-const SWELL_DUCK = 0.2;
+const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
 
 const KEY_UP = ["KeyW", "ArrowUp"];
@@ -158,7 +158,7 @@ export function startApp(container: HTMLElement): void {
         if (region && !isRestored(state, region)) {
           restore(region.id);
           awakening = { regionId: region.id, t: 0 };
-          // Cut so the swell's peak lands as the wave finishes filling the region.
+          // Trimmed so the swell peaks at about 8 s, just before the wave finishes filling the region.
           cues.play("dawn-reverence");
         }
       }

@@ -9,13 +9,13 @@
 - `?debug` exposes `window.wayshrine.music.status()`.
 
 ## Cues (one-shot sounds)
-`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). While a cue plays the app ducks the music to 20%.
+`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). While a cue plays the app ducks the music to 4% (almost silent).
 
 | Cue id | File | Notes |
 | --- | --- | --- |
-| `dawn-reverence` | `public/audio/cues/dawn-reverence.mp3` | Awakening swell made with ElevenLabs. Original was 16.0 s with its peak at 13.7 s; the first 4.5 s were trimmed (0.5 s fade-in) so the peak lands at 9.2 s, when the wave finishes filling the region (`AWAKENING.zoomOut + AWAKENING.wave`). Now 11.6 s; it fades out by about 11.0 s, inside the 3 s hold. |
+| `dawn-reverence` | `public/audio/cues/dawn-reverence.mp3` | Awakening swell made with ElevenLabs. Original was 16.0 s with its peak at 13.7 s; the first 5.7 s were trimmed (0.4 s fade-in) so the peak lands at 8.0 s, a little before the wave finishes filling the region at 9.2 s, which keeps the build-up brisk. Now about 10.3 s; it fades out by about 9.8 s, inside the 3 s hold. |
 
-Sync rule: a cue is started when the awakening starts, so its peak must be at `zoomOut + wave` seconds. If the timeline in `game/awakening.ts` changes, re-trim the swell. Skipping with E fades the swell over 1.5 s.
+Sync rule: a cue is started when the awakening starts, so its peak should land at about `zoomOut + wave - 1.2` seconds (8.0 s). If the timeline in `game/awakening.ts` changes, re-trim the swell. Skipping with E fades the swell over 1.5 s.
 
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `trackFor(biome)`, the one place that decides what plays where.
