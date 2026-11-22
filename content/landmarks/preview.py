@@ -15,6 +15,13 @@ fwd=R@Vector((0,0,-1)); up=R@Vector((0,1,0))
 VCENTER=float(os.environ.get("FI_VCENTER","1.5"))
 cam.location=up*VCENTER - fwd*60
 sc.camera=cam
+if os.environ.get("FI_GROUND"):
+    # stand-in for the game's terrain under terrainSurface models (preview only; the .blend is not saved)
+    gm=bpy.data.meshes.new("PreviewGround"); h=9.8
+    gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
+    mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=(0.195,0.42,0.15,1)
+    p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=(0.195,0.42,0.15,1); p.inputs["Roughness"].default_value=1.0
+    gm.materials.append(mat); g=bpy.data.objects.new("PreviewGround",gm); col.objects.link(g)
 sun_d=bpy.data.lights.new("PreviewSun",'SUN'); sun_d.energy=float(os.environ.get("FI_SUN","2.2")); sun_d.angle=math.radians(3)
 sun=bpy.data.objects.new("PreviewSun",sun_d); col.objects.link(sun)
 ldir=Vector((0.35,0.55,-0.76)).normalized()

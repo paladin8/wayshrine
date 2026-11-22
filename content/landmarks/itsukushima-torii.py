@@ -113,6 +113,11 @@ import random
 rng=random.Random(4)
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
+def edge_k(x,y,w):
+    # 0 on the footprint's edge (square with chamfered corners), easing to 1 over w units inward,
+    # so the sidecar's outer ring is exactly the base height and the game terrain blends from one level
+    d=min(9.6-abs(x),9.6-abs(y),(18.0-abs(x)-abs(y))/math.sqrt(2))
+    return smooth(0.0,w,d)
 EXTRA_SOLIDS=[]   # [x, y, r] in Blender coordinates
 
 # ---- the bay: a squarish basin in front of the shrine, enclosed by a sand rim so that it never meets
@@ -134,7 +139,7 @@ def H(x,y):
     if bay_m(x,y)<0.97: return BED_Z
     band=2.4*smooth(7.6,10.4,y)
     bump=1.8*math.exp(-((x-6.4)**2+(y-7.0)**2)/5.0)
-    return max(0.0,band,bump)
+    return max(0.0,band,bump)*edge_k(x,y,1.8)
 
 def octo(z,h=9.6,ch=1.2):
     a=h-ch

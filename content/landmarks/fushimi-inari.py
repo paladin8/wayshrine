@@ -89,6 +89,11 @@ rng=random.Random(8)
 FLOORS=[]   # (x0,x1,y0,y1,top): flat surfaces the player can walk on, for the game sidecar
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
+def edge_k(x,y,w):
+    # 0 on the footprint's edge (square with chamfered corners), easing to 1 over w units inward,
+    # so the sidecar's outer ring is exactly the base height and the game terrain blends from one level
+    d=min(9.6-abs(x),9.6-abs(y),(18.0-abs(x)-abs(y))/math.sqrt(2))
+    return smooth(0.0,w,d)
 
 # ---- tunnel centreline: out of the gate, bend right, run up the slope, bend left to the summit
 SEGS=[(0.4,0.0),(3.0*math.radians(65),-1/3.0),(1.8,0.0),(3.0*math.radians(55),1/3.0)]
@@ -112,7 +117,7 @@ def Ha(x,y):
     dd=math.hypot(x-SHX,y-SHY)
     ramp=0.97+0.8*smooth(-1.0,6.5,y)       # meets the gate platform (z=1), rises gently toward the back
     cone=3.37-0.319*max(0.0,dd-2.4)        # even-grade mound up to a flat summit for the main shrine
-    return 0.03+max(ramp,cone)
+    return (0.03+max(ramp,cone))*edge_k(x,y,2.2)
 NX,NY=17,11
 GX=[-9.6+19.2*i/(NX-1) for i in range(NX)]; GYS=[-1.0+10.6*j/(NY-1) for j in range(NY)]
 gv={}
@@ -323,7 +328,7 @@ ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(G
 # Hm() is 0 outside the hill's triangles (the corners of the octagonal base); fill those holes from
 # their neighbours so the game's terrain doesn't fall to 0 there. Rows iz <= 13 are the hill (z <= 1);
 # the front (iz > 13) is legitimately flat at 0.
-_hole=[(r,c) for r in range(14) for c in range(GN) if ground[r][c]==0.0]
+_hole=[(r,c) for r in range(1,14) for c in range(1,GN-1) if ground[r][c]==0.0]   # never the edge ring
 for _ in range(400):
     for r,c in _hole:
         vs=[ground[rr][cc] for rr,cc in((r+1,c),(r-1,c),(r,c+1),(r,c-1)) if 0<=rr<GN and 0<=cc<GN and ground[rr][cc]>0]
