@@ -26,6 +26,8 @@ export interface NotebookSource {
 }
 
 const PER_PAGE = 2;
+/** How long after the cover starts to move the opening sound plays. */
+const SOUND_DELAY_MS = 350;
 const HAND_EN = '"Kaushan Script","Segoe Script","Bradley Hand","Brush Script MT",cursive';
 const HAND_JA = '"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif';
 const NARROW = "(max-width: 760px)";
@@ -52,7 +54,7 @@ const CSS = `
   radial-gradient(circle at 20% 15%,#6c3322,#4c2116 55%,#2f1209);
   box-shadow:0 22px 60px #000a,0 2px 0 #1f0905,inset 0 0 0 1px #ffffff12,inset 0 0 22px #0008,inset 0 2px 8px #ffffff18}
 .nb-back::before{content:"";position:absolute;inset:6px;border:2px dashed #dcbf8a77;border-radius:8px}
-.nb-spread{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;height:100%;border-radius:4px;box-shadow:0 1px 0 #e6d9b8,0 3px 0 #cfc09a,0 5px 0 #b9a97f,0 7px 0 #a39369,0 9px 4px #0007}
+.nb-spread{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;height:100%;border-radius:4px;box-shadow:0 4px 6px #0008}
 .nb-spread.single{grid-template-columns:1fr}
 .nb-page{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:clamp(14px,3vh,26px) clamp(18px,3.4vw,34px) clamp(30px,5vh,40px) clamp(24px,4vw,46px);box-sizing:border-box;background:
   radial-gradient(ellipse at 50% 0%,#fff6dc 0%,#0000 70%),
@@ -377,8 +379,11 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     page = 0;
     overlay.classList.add("open");
     render();
-    source.sound("book-open");
-    if (animated()) openCover();
+    if (animated()) {
+      openCover();
+      // The sound lands as the cover lifts, a beat after the animation starts.
+      window.setTimeout(() => open && source.sound("book-open"), SOUND_DELAY_MS);
+    } else source.sound("book-open");
     focusBook();
   }
 
