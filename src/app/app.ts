@@ -145,6 +145,7 @@ export function startApp(container: HTMLElement): void {
     restored: () => world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id),
     debug,
     language: () => settings.get().language,
+    sound: (cue) => cues.play(cue),
     onTravel: (id) => {
       const region = world.landmarks.find((r) => r.landmark?.id === id);
       if (!region || awakening) return;
