@@ -56,7 +56,7 @@ export const ja: Messages = {
     "asahiyama": "旭山動物園",
     "sapporo-tv-tower": "さっぽろテレビ塔",
   },
-  shrinesRestored: (count) => `蘇った祠: ${count}`,
+  landmarksRestored: (count) => `蘇った名所: ${count}`,
   promptRestore: "Eキーで祠を蘇らせる",
   promptSkip: "Eキーでスキップ",
   compassHere: "祠はここ",

@@ -135,8 +135,6 @@ export function createMinimap(
       };
       include(pos);
       for (const id of state.explored) include(world.regionById(id).site);
-      // Landmarks are always on the map, so the player can go and find them.
-      for (const l of world.landmarks) include(l.site);
       const span = Math.max(maxU - minU, maxV - minV) + REGION_SIZE * 1.6;
       scale = Math.max(span / size, 1.2);
       const u = (minU + maxU) / 2;
@@ -218,39 +216,12 @@ export function createMinimap(
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
-    // Landmarks: always shown, explored or not (shrine beacons will gate this later).
+    // Draw landmark stars inside the view, including landmarks in unexplored regions.
     const starR = expanded ? 9 : 7;
-    const offscreen: Array<{ x: number; y: number; d: number }> = [];
     for (const r of world.landmarks) {
       const [x, y] = project(r.site);
-      const done = isRestored(state, r);
-      if (x < -starR || y < -starR || x > size + starR || y > size + starR) {
-        if (!done) offscreen.push({ x, y, d: Math.hypot(r.site.x - pos.x, r.site.z - pos.z) });
-        continue;
-      }
-      drawStar(ctx, x, y, starR, done);
-    }
-    // In the corner map, point toward the nearest landmarks beyond the edge.
-    if (!expanded) {
-      offscreen.sort((a, b) => a.d - b.d);
-      for (const o of offscreen.slice(0, 3)) {
-        const dx = o.x - size / 2;
-        const dy = o.y - size / 2;
-        const k = (size / 2 - 9) / Math.max(Math.abs(dx), Math.abs(dy));
-        const ax = size / 2 + dx * k;
-        const ay = size / 2 + dy * k;
-        const a = Math.atan2(dy, dx);
-        ctx.beginPath();
-        ctx.moveTo(ax + Math.cos(a) * 6, ay + Math.sin(a) * 6);
-        ctx.lineTo(ax + Math.cos(a + 2.5) * 6, ay + Math.sin(a + 2.5) * 6);
-        ctx.lineTo(ax + Math.cos(a - 2.5) * 6, ay + Math.sin(a - 2.5) * 6);
-        ctx.closePath();
-        ctx.fillStyle = "#ffd23f";
-        ctx.fill();
-        ctx.strokeStyle = "#2a2424";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
+      if (x < -starR || y < -starR || x > size + starR || y > size + starR) continue;
+      drawStar(ctx, x, y, starR, isRestored(state, r));
     }
     // Debug: monuments in restored regions as diamonds, bright until read.
     for (const m of input.monuments ?? []) {

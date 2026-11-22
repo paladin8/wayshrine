@@ -5,3 +5,6 @@ dist
 
 # Blender auto-backups
 *.blend1
+
+# Fonts downloaded by scripts/landmark-names.py
+scripts/.fonts/

@@ -1,5 +1,5 @@
 {
-  "_about": "Hand-tagged scenery for each haiku. `biome` is used now to place the monument in a matching region; `season` and `scene` are recorded for when real scenery is added (ponds, bridges, fields...). Keyed by source id.",
+  "_about": "Hand-tagged scenery for each haiku. `biome` is used now to place the monument in a matching region; `season` and `scene` are recorded for when real scenery is added (ponds, bridges, fields...). Keyed by source id. `landmark`, where set, is the id (from docs/landmarks.md) of the landmark the poem is about.",
   "haiku-basho-mwCD4": { "biome": "water", "season": "spring", "scene": "old pond, frog" },
   "haiku-basho-mwDVs": { "biome": "mountain", "season": "summer", "scene": "rocks, cicadas" },
   "haiku-basho-mwDcQ": { "biome": "meadow", "season": "summer", "scene": "grassland, old battlefield" },
@@ -49,5 +49,14 @@
   "haiku-issa-pine-scroll": { "biome": "snow", "season": "summer", "scene": "shade of pines" },
   "haiku-issa-deer-manuscript": { "biome": "mountain", "season": "autumn", "scene": "deer resting" },
   "haiku-issa-geese-card": { "biome": "water", "season": "spring", "scene": "geese flying home" },
-  "haiku-issa-bush-clover": { "biome": "meadow", "season": "autumn", "scene": "bush clover, night" }
+  "haiku-issa-bush-clover": { "biome": "meadow", "season": "autumn", "scene": "bush clover, night" },
+  "haiku-basho-mwFh4": { "biome": "water", "season": "winter", "scene": "sacred rope, wedded rocks, year's end", "landmark": "meoto-iwa" },
+  "haiku-basho-mwETk": { "biome": "meadow", "season": "autumn", "scene": "shrine renewal, crowds", "landmark": "ise-jingu" },
+  "haiku-basho-mwGAM": { "biome": "meadow", "season": "winter", "scene": "first snow, unbuilt Great Buddha hall", "landmark": "todai-ji-daibutsu" },
+  "haiku-basho-mwDiY": { "biome": "mountain", "season": "summer", "scene": "green leaves, sunlight, shrine", "landmark": "nikko-toshogu" },
+  "haiku-basho-mwDbI": { "biome": "meadow", "season": "summer", "scene": "bamboo thicket, wind", "landmark": "arashiyama" },
+  "haiku-basho-mwEg0": { "biome": "mountain", "season": "autumn", "scene": "misty rain, hidden Fuji", "landmark": "mount-fuji" },
+  "haiku-basho-mwCpA": { "biome": "meadow", "season": "spring", "scene": "cherry blossoms, traveler's hat", "landmark": "yoshino-yama" },
+  "haiku-basho-mwCBI": { "biome": "mountain", "season": "spring", "scene": "pheasant's cry, temple mountain", "landmark": "koyasan-okunoin" },
+  "haiku-basho-mwGDk": { "biome": "mountain", "season": "winter", "scene": "mountain pass, morning snow", "landmark": "owakudani" }
 }

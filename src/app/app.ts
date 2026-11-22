@@ -9,6 +9,7 @@ import {
   discoverNear,
   isLegible,
   isRestored,
+  landmarksRestored,
   monumentInReach,
   movePlayer,
   newGame,
@@ -32,7 +33,7 @@ import {
 import { createCuePlayer, createMusic, trackFor, type CueId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point } from "../world";
+import { capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
@@ -247,7 +248,8 @@ export function startApp(container: HTMLElement): void {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
     last = now;
 
-    const caps = capabilitiesOf(state, world);
+    const restoredLandmarkCount = landmarksRestored(state, world);
+    const caps = capabilitiesForCount(restoredLandmarkCount);
     // Losing a capability (a reset, an old save) must never strand the player.
     pos = clearOfObstacles(terrain, caps, obstacles, safePosition(terrain, caps, pos));
     const seen = discoverNear(state, world, pos);
@@ -320,7 +322,7 @@ export function startApp(container: HTMLElement): void {
     }
     hud.update({
       capabilities: caps,
-      restoredCount: state.restored.size,
+      restoredLandmarkCount,
       compass,
       prompt,
       hint,

@@ -16,7 +16,7 @@ export interface HudModel {
   /** False hides the next-shrine compass (a player setting). */
   readonly showCompass: boolean;
   readonly capabilities: ReadonlySet<Capability>;
-  readonly restoredCount: number;
+  readonly restoredLandmarkCount: number;
   /** Direction to the nearest reachable unrestored shrine, or null if none. */
   readonly compass: CompassModel | null;
   /** Interaction prompt at the bottom of the screen, or null. */
@@ -152,7 +152,7 @@ export function createHud(container: HTMLElement): Hud {
         setText(chip, t.capability[cap]);
         chip.classList.toggle("off", !m.capabilities.has(cap));
       }
-      setText(count, t.shrinesRestored(m.restoredCount));
+      setText(count, t.landmarksRestored(m.restoredLandmarkCount));
 
       const showCompass = m.showCompass && m.compass !== null;
       compass.style.display = showCompass ? "flex" : "none";

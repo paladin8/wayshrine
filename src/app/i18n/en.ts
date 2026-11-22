@@ -56,7 +56,7 @@ export const en: Messages = {
     "asahiyama": "Asahiyama Zoo",
     "sapporo-tv-tower": "Sapporo TV Tower",
   },
-  shrinesRestored: (count) => `Shrines restored: ${count}`,
+  landmarksRestored: (count) => `Landmarks restored: ${count}`,
   promptRestore: "Press E to restore the shrine",
   promptSkip: "Press E to skip",
   compassHere: "Shrine here",

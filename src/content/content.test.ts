@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildContent } from "./build";
+import { buildContent, combineSources } from "./build";
 import type { Scenery, SourceFile } from "./build";
 
 const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"));
-const source = read("content/source/japanese-texts.json") as SourceFile;
+const source = combineSources(
+  read("content/source/japanese-texts.json") as SourceFile,
+  read("content/source/landmark-haiku.json") as SourceFile,
+);
 const scenery = read("content/haiku-scenery.json") as Record<string, Scenery>;
 delete (scenery as Record<string, unknown>)["_about"];
 const lines = read("content/haiku-lines.json") as Record<string, string[]>;
@@ -12,9 +15,9 @@ delete (lines as Record<string, unknown>)["_about"];
 const built = buildContent(source, scenery, undefined, lines);
 
 describe("content", () => {
-  it("has 1000 unique texts", () => {
-    expect(built.texts).toHaveLength(1000);
-    expect(new Set(built.texts.map((t) => t.id)).size).toBe(1000);
+  it("has 1009 unique texts", () => {
+    expect(built.texts).toHaveLength(1009);
+    expect(new Set(built.texts.map((t) => t.id)).size).toBe(1009);
   });
 
   it("generated files are up to date (run `npm run content`)", () => {
@@ -24,9 +27,20 @@ describe("content", () => {
 
   it("tags every haiku with scenery and a poet, and nothing else", () => {
     const haiku = built.texts.filter((t) => t.kind === "haiku");
-    expect(haiku).toHaveLength(50);
+    expect(haiku).toHaveLength(59);
     for (const h of haiku) expect(h.by?.ja).toBeTruthy();
-    expect(built.index.filter((e) => e.biome).length).toBe(50);
+    expect(built.index.filter((e) => e.biome).length).toBe(59);
+  });
+
+  it("links haiku only to landmarks on the list in docs/landmarks.md, at most one each", () => {
+    const listed = new Set(
+      [...readFileSync(new URL("../../docs/landmarks.md", import.meta.url), "utf8").matchAll(/^\| \d+ \|[^|]*\| ([a-z0-9-]+) \|/gm)].map((m) => m[1]),
+    );
+    expect(listed.size).toBe(50);
+    const linked = built.index.flatMap((e) => (e.landmark ? [e.landmark] : []));
+    expect(linked.length).toBe(9);
+    for (const id of linked) expect(listed).toContain(id);
+    expect(new Set(linked).size).toBe(linked.length);
   });
 
   it("splits every haiku into three lines that rejoin to the text", () => {

@@ -9,7 +9,7 @@ function allText(m: Messages): string[] {
     ...BIOMES.map((b) => m.terrain[b]),
     ...LANDMARKS.map((l) => m.landmarkNames[l.id] ?? ""),
     m.blocked("X", "Y"),
-    m.shrinesRestored(7),
+    m.landmarksRestored(7),
     m.promptRestore,
     m.promptSkip,
     m.compassHere,
@@ -49,7 +49,7 @@ describe("i18n", () => {
       // Lower case: English lower-cases the capability mid-sentence.
       expect(m.blocked("qq", "zz")).toContain("qq");
       expect(m.blocked("qq", "zz")).toContain("zz");
-      expect(m.shrinesRestored(42)).toContain("42");
+      expect(m.landmarksRestored(42)).toContain("42");
       expect(m.compassNearest(123)).toContain("123");
     }
   });

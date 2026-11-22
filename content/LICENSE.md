@@ -1,6 +1,6 @@
 # Content license
 
-The Japanese texts in `source/japanese-texts.json`, and the files generated from it
+The Japanese texts in `source/japanese-texts.json` and `source/landmark-haiku.json`, and the files generated from them
 (`src/content/texts.json`, `src/content/text-index.json`), are licensed under
 [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 

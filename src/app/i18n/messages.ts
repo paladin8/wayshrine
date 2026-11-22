@@ -17,7 +17,7 @@ export interface Messages {
   readonly blocked: (capability: string, terrain: string) => string;
   /** Display names of the landmarks, by id. */
   readonly landmarkNames: Readonly<Record<string, string>>;
-  readonly shrinesRestored: (count: number) => string;
+  readonly landmarksRestored: (count: number) => string;
   readonly promptRestore: string;
   readonly promptSkip: string;
   readonly compassHere: string;

@@ -1,4 +1,5 @@
 import fushimiInari from "./landmark-grounds/fushimi-inari.json";
+import kinkakuJi from "./landmark-grounds/kinkaku-ji.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -24,6 +25,7 @@ export interface LandmarkGround {
 
 const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   "fushimi-inari": fushimiInari as unknown as LandmarkGround,
+  "kinkaku-ji": kinkakuJi as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {
