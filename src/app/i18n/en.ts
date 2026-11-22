@@ -103,7 +103,7 @@ export const en: Messages = {
   promptSkip: "Press E to skip",
   compassHere: "Shrine here",
   compassNearest: (distance) => `Nearest shrine · ${distance}`,
-  map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel" },
+  map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel", zoom: "Zoom out (Z)" },
   mapNeeds: (gear) => `needs ${gear.toLowerCase()}`,
   monuments: {
     promptRead: "Press E to read the stone",
@@ -129,6 +129,13 @@ export const en: Messages = {
     minimap: "Show minimap",
     compass: "Show next-shrine compass",
     language: "Language",
+    instructions: "How to play",
+    instructionsText: [
+      "Walk with WASD or the arrow keys. Press E at a shrine to restore it and bring its region back to life.",
+      "Stone monuments carry poems and sayings. Press E to take a rubbing; the book (B) keeps them.",
+      "Every 7 rubbings reveal the nearest hidden landmark on the map (M). Restoring landmarks teaches you gear, such as a boat or snowshoes, that lets you cross new terrain.",
+      "The map hatches regions you cannot cross yet, and the legend says what they need. Z zooms out to look around.",
+    ],
     credits: "Credits",
     creditsText:
       "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0. Haiku by Matsuo Bashō, Yosa Buson and Kobayashi Issa. Landmark names and rubbings: Yuji Syuku and Kaushan Script (SIL Open Font License 1.1).",

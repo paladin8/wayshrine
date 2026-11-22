@@ -103,7 +103,7 @@ export const ja: Messages = {
   promptSkip: "Eキーでスキップ",
   compassHere: "祠はここ",
   compassNearest: (distance) => `最寄りの祠 · ${distance}`,
-  map: { expand: "M: 拡大", close: "M: 閉じる", travel: "蘇った祠をクリックで移動" },
+  map: { expand: "M: 拡大", close: "M: 閉じる", travel: "蘇った祠をクリックで移動", zoom: "俯瞰 (Z)" },
   mapNeeds: (gear) => `要${gear}`,
   monuments: {
     promptRead: "Eキーで石碑を読む",
@@ -129,6 +129,13 @@ export const ja: Messages = {
     minimap: "ミニマップを表示",
     compass: "次の祠のコンパスを表示",
     language: "言語",
+    instructions: "遊び方",
+    instructionsText: [
+      "WASD か矢印キーで歩きます。祠で E を押すと、その地が息を吹き返します。",
+      "石碑には詩や言葉が刻まれています。E で拓本を取ると、拓本帳 (B) に残ります。",
+      "拓本を7枚集めるごとに、まだ見ぬ名所のひとつが地図 (M) に現れます。名所を蘇らせると舟や雪駄などの道具を授かり、新しい地形を越えられます。",
+      "越えられない土地は地図に斜線で示され、凡例に必要な道具が出ます。Z で俯瞰できます。",
+    ],
     credits: "クレジット",
     creditsText:
       "諺・慣用句: JMdict/EDICT (© 電子辞書研究開発グループ、CC BY-SA 4.0)。俳句: 松尾芭蕉、与謝蕪村、小林一茶。 名所の名前・拓本の書体: 佑字 粛、Kaushan Script (SIL OFL 1.1)。",

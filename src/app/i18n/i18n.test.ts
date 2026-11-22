@@ -20,7 +20,7 @@ function allText(m: Messages): string[] {
     m.compassNearest(52),
     ...Object.values(m.map),
     m.mapNeeds("X"),
-    ...Object.values(m.settings),
+    ...Object.values(m.settings).flat(),
     m.monuments.promptRead,
     m.monuments.promptWorn,
     ...Object.values(m.monuments.kind),

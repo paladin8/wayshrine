@@ -113,6 +113,8 @@ export function startApp(container: HTMLElement): void {
     // Land on the shrine's plateau, within reach of its gate.
     pos = standPoint(region);
     minimap.toggleExpanded();
+  }, () => {
+    if (!awakening && overviewTime >= OVERVIEW_SECONDS) overviewTime = 0;
   });
 
   const hud = createHud(container);

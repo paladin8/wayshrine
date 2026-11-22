@@ -26,7 +26,7 @@ export interface Messages {
   readonly promptSkip: string;
   readonly compassHere: string;
   readonly compassNearest: (distance: number) => string;
-  readonly map: { readonly expand: string; readonly close: string; readonly travel: string };
+  readonly map: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };
   /** The map legend's note beside a biome the player cannot cross yet, e.g. "needs Geta". */
   readonly mapNeeds: (gear: string) => string;
   readonly monuments: {
@@ -54,6 +54,9 @@ export interface Messages {
     readonly minimap: string;
     readonly compass: string;
     readonly language: string;
+    readonly instructions: string;
+    /** A few short paragraphs. */
+    readonly instructionsText: readonly string[];
     readonly credits: string;
     readonly creditsText: string;
   };

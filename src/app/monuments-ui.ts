@@ -20,7 +20,8 @@ const EN_SCRIPT = '"Kaushan Script","Brush Script MT",cursive';
 const CSS = `
 @font-face{font-family:"Yuji Syuku";src:url("${import.meta.env.BASE_URL}fonts/yuji-syuku.woff2") format("woff2");font-display:swap}
 @font-face{font-family:"Kaushan Script";src:url("${import.meta.env.BASE_URL}fonts/kaushan-script.ttf") format("truetype");font-display:swap}
-.hud .mu-book{width:34px;font-size:17px;line-height:1}
+.hud .mu-book{gap:6px;padding:0 10px;font-size:17px;line-height:1}
+.hud .mu-book .mu-count{font-size:14px;font-variant-numeric:tabular-nums}
 .mu-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#2a242466;pointer-events:auto;font:14px/1.4 ${UI_FONT};color:#2a2424}
 .mu-overlay.open{display:flex}
 .mu-overlay.reading{color:#fff;pointer-events:none;background:radial-gradient(ellipse at 50% 52%,#120c0cc7,#120c0c80 40%,#120c0c00 77%);animation:mu-reveal .2s ease-out}
@@ -89,7 +90,8 @@ export function createMonumentUi(
 
   const bookButton = el("button", "hud-action mu-book", actions);
   bookButton.type = "button";
-  bookButton.textContent = "📖";
+  el("span", undefined, bookButton).textContent = "📖";
+  const bookCount = el("span", "mu-count", bookButton);
 
   const overlay = el("div", "mu-overlay", container);
   const card = el("div", "mu-card", overlay);
@@ -179,6 +181,7 @@ export function createMonumentUi(
   function render(): void {
     const language = source.language();
     const t = messagesFor(language);
+    setText(bookCount, String(source.collected().length));
     bookButton.title = t.monuments.bookOpen;
     bookButton.setAttribute("aria-label", t.monuments.bookOpen);
     card.replaceChildren();

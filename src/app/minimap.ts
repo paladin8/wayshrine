@@ -72,7 +72,7 @@ export interface MapInput {
   /** Debug only: any explored shrine can be travelled to, not just restored ones. */
   readonly travelToAny?: boolean;
   /** The corner hint, in the player's language. */
-  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string };
+  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };
   /** Names for the legend of the expanded map, in the player's language. */
   readonly names: {
     readonly terrain: Readonly<Record<Biome, string>>;
@@ -96,6 +96,10 @@ export interface Minimap {
 const CSS = `
 .map{position:fixed;pointer-events:none;border-radius:14px;overflow:hidden;border:2px solid #fffaf0cc;box-shadow:0 2px 12px #0004;background:#3a3434}
 .map.small{right:14px;bottom:14px}
+.map-zoom{position:fixed;bottom:14px;right:calc(14px + 172px + 8px);width:34px;height:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid #2a242422;background:#fffaf0cc;color:#2a2424;font:600 15px/1 ${UI_FONT};cursor:pointer;pointer-events:auto}
+.map-zoom:hover{background:#fffaf0}
+.map-zoom:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
+.map-zoom.alone{right:14px}
 .map.large{pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
 .map canvas.travel{cursor:pointer}
@@ -120,6 +124,8 @@ export function createMinimap(
   basis: (right: number, up: number) => Point,
   /** Called when the player clicks a shrine on the expanded map. */
   onTravel: (region: Region) => void,
+  /** Called by the zoom-out button beside the corner map. */
+  onZoom: () => void = () => {},
 ): Minimap {
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -135,6 +141,15 @@ export function createMinimap(
   legend.className = "legend";
   frame.append(canvas, legend, hint);
   container.appendChild(frame);
+  const zoom = document.createElement("button");
+  zoom.type = "button";
+  zoom.className = "map-zoom";
+  zoom.textContent = "Z";
+  zoom.addEventListener("click", () => {
+    onZoom();
+    zoom.blur(); // hand the keyboard back to the game
+  });
+  container.appendChild(zoom);
 
   let shown = true;
   const sample = document.createElement("canvas");
@@ -373,12 +388,17 @@ export function createMinimap(
       if (!shown) return; // the key does nothing while the map is hidden
       expanded = !expanded;
       frame.className = expanded ? "map large" : "map small";
+      zoom.style.display = expanded ? "none" : "";
       hovered = null;
       lastKey = "";
     },
     update(input) {
       shown = input.visible;
       frame.style.display = shown ? "" : "none";
+      zoom.classList.toggle("alone", !shown);
+      zoom.style.display = expanded ? "none" : "";
+      zoom.title = input.labels.zoom;
+      zoom.setAttribute("aria-label", input.labels.zoom);
       if (!shown) return;
       setText(hint, expanded ? `${input.labels.close} · ${input.labels.travel}` : input.labels.expand);
       const size = expanded ? Math.max(240, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.78)) : SMALL_SIZE;

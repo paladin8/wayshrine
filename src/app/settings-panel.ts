@@ -26,6 +26,7 @@ const CSS = `
 .sp-langs{display:flex;gap:8px}
 .sp-lang{all:unset;cursor:pointer;flex:1;text-align:center;padding:7px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .sp-lang[aria-pressed=true]{background:#d96b59;border-color:#d96b59;color:#fff}
+.sp-howto p{margin:6px 0;font-size:13px;line-height:1.45}
 .sp-credits{margin:0;font-size:12px;line-height:1.5;opacity:.65}
 .sp-lang:focus-visible,.sp-x:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 `;
@@ -62,6 +63,9 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
   const closeButton = el("button", "sp-x", head);
   closeButton.type = "button";
   closeButton.textContent = "×";
+
+  const howHeading = el("h3", undefined, card);
+  const howBody = el("div", "sp-howto", card);
 
   const audioHeading = el("h3", undefined, card);
   const slider = (): { label: HTMLElement; input: HTMLInputElement; out: HTMLOutputElement } => {
@@ -114,6 +118,12 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
     closeButton.setAttribute("aria-label", t.close);
     card.setAttribute("aria-label", t.title);
     setText(title, t.title);
+    setText(howHeading, t.instructions);
+    howBody.replaceChildren(...t.instructionsText.map((line) => {
+      const p = document.createElement("p");
+      setText(p, line);
+      return p;
+    }));
     setText(audioHeading, t.audio);
     setText(music.label, t.music);
     setText(sfx.label, t.soundEffects);
