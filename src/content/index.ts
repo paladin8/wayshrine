@@ -9,6 +9,7 @@ export const monumentSpecs: readonly MonumentSpec[] = (index as IndexEntry[]).ma
   id: e.id,
   kind: e.kind,
   biome: e.biome,
+  landmark: e.landmark,
 }));
 
 export const TEXT_COUNT = monumentSpecs.length;

@@ -56,3 +56,20 @@ describe("content", () => {
     expect(() => buildContent(source, { ...scenery, nope: { biome: "water", season: "spring", scene: "" } }, undefined, lines)).toThrow();
   });
 });
+
+describe("landmark haiku placement", () => {
+  it("stands every linked haiku in its landmark's region", async () => {
+    const { monumentSpecs } = await import("./index");
+    const { createWorld, createTerrain, planMonuments } = await import("../world");
+    const linked = monumentSpecs.filter((s) => s.landmark);
+    expect(linked).toHaveLength(9);
+    for (const seed of ["wayshrine", "another"]) {
+      const terrain = createTerrain(createWorld(seed));
+      const plan = planMonuments(terrain, monumentSpecs);
+      for (const spec of linked) {
+        const region = terrain.world.landmarks.find((r) => r.landmark?.id === spec.landmark);
+        expect(plan.byId(spec.id)?.regionId).toBe(region?.id);
+      }
+    }
+  });
+});

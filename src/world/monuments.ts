@@ -11,6 +11,8 @@ export interface MonumentSpec {
   readonly kind: string;
   /** If set, the monument goes in a region of this biome (haiku, which describe a scene). */
   readonly biome?: Biome;
+  /** If set, the monument stands in this landmark's region (a haiku about the place), whatever its biome. */
+  readonly landmark?: string;
 }
 
 /** A standing stone carrying one text. */
@@ -137,15 +139,35 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
   const world = terrain.world;
   const root = createRng(world.seed).fork("monuments");
 
-  // 1. Find valid slots ring by ring. A cramped region can hold fewer stones.
+  // 0. Texts about a landmark stand in its region, clear of the footprint. They count towards
+  //    the region's two stones; the rest of the layout fills around them.
   type Slot = { region: Region; position: Point; rotation: number; variant: number };
   const slots: Slot[] = [];
+  const pinnedSpecs: MonumentSpec[] = [];
+  const pinnedIn = new Map<string, Point[]>();
+  const landmarkRegions = new Map(world.landmarks.map((r) => [r.landmark?.id ?? "", r]));
+  for (const spec of specs) {
+    const region = spec.landmark ? landmarkRegions.get(spec.landmark) : undefined;
+    if (!region) continue;
+    const here = pinnedIn.get(region.id) ?? [];
+    if (here.length >= 2) continue;
+    const rng = root.fork(`landmark:${spec.id}`);
+    const position = pickPosition(world, terrain, region, rng, here[0] ?? null);
+    if (!position) continue;
+    here.push(position);
+    pinnedIn.set(region.id, here);
+    slots.push({ region, position, rotation: rng.range(-0.5, 0.5), variant: rng.next() });
+    pinnedSpecs.push(spec);
+  }
+
+  // 1. Find valid slots ring by ring. A cramped region can hold fewer stones.
   for (let r = 0; slots.length < specs.length; r++) {
     const ringSlots: Slot[] = [];
     for (const [rx, rz] of ring(r)) {
       const region = world.region(rx, rz);
-      const n = countFor(root.fork(`count:${region.id}`));
-      let previous: Point | null = null;
+      const taken = pinnedIn.get(region.id) ?? [];
+      const n = countFor(root.fork(`count:${region.id}`)) - taken.length;
+      let previous: Point | null = taken[taken.length - 1] ?? null;
       for (let index = 0; index < n; index++) {
         const rng = root.fork(`pos:${region.id}:${index}`);
         const position = pickPosition(world, terrain, region, rng, previous);
@@ -164,8 +186,12 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
   }
 
   // 2. Assign texts to slots. Scenery-bound texts take a slot in a matching biome; the rest fill in at random.
-  const free = slots.map((_, i) => i);
+  const free = slots.map((_, i) => i).slice(pinnedSpecs.length);
   const assigned = new Array<MonumentSpec>(slots.length);
+  pinnedSpecs.forEach((spec, i) => {
+    assigned[i] = spec;
+  });
+  const isPinned = new Set(pinnedSpecs);
   const take = (rng: Rng, accept: (i: number) => boolean): number | null => {
     const candidates = free.filter(accept);
     if (candidates.length === 0) return null;
@@ -173,7 +199,7 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
     free.splice(free.indexOf(pick), 1);
     return pick;
   };
-  const bound = specs.filter((s) => s.biome);
+  const bound = specs.filter((s) => s.biome && !isPinned.has(s));
   const assignRng = root.fork("assign");
   for (const spec of bound) {
     const slot =
@@ -181,7 +207,7 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
     if (slot === null) throw new Error("more specs than slots");
     assigned[slot] = spec;
   }
-  const rest = specs.filter((s) => !s.biome);
+  const rest = specs.filter((s) => !s.biome && !isPinned.has(s));
   const shuffle = root.fork("shuffle");
   for (let i = rest.length - 1; i > 0; i--) {
     const j = shuffle.int(0, i + 1);

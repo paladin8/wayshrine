@@ -3,6 +3,7 @@ import { createWorld } from "./world";
 import { createTerrain } from "./terrain-grid";
 import { MONUMENT_EDGE_MARGIN, MONUMENT_SHRINE_CLEARANCE, planMonuments, type MonumentSpec } from "./monuments";
 import { reachableRegions } from "./progression";
+import { LANDMARK_SPECS, LANDMARK_MONUMENT_CLEARANCE } from "./landmarks";
 import { CAPABILITIES, type Biome } from "./terrain";
 
 const BIOME_CYCLE: Biome[] = ["water", "meadow", "mountain", "snow"];
@@ -79,5 +80,36 @@ describe("planMonuments", () => {
       reachableRegions(terrain.world, new Set(CAPABILITIES), 30).map((r) => r.id),
     );
     for (const m of plan.all) expect(reachable.has(m.regionId)).toBe(true);
+  });
+});
+
+describe("landmark-linked texts", () => {
+  const linked: MonumentSpec[] = [
+    ...LANDMARK_SPECS.filter((_, i) => i % 7 === 0).map((l) => ({ id: `about-${l.id}`, kind: "haiku", biome: "meadow" as Biome, landmark: l.id })),
+    ...Array.from({ length: 400 }, (_, i) => ({ id: `p${i}`, kind: "proverb" })),
+  ];
+  for (const seed of ["monuments", "other-seed"]) {
+    it(`stands each in its landmark's region, clear of the footprint (${seed})`, () => {
+      const terrain = createTerrain(createWorld(seed));
+      const plan = planMonuments(terrain, linked);
+      expect(plan.all).toHaveLength(linked.length);
+      expect(new Set(plan.all.map((m) => m.id)).size).toBe(linked.length);
+      for (const spec of linked.filter((s) => s.landmark)) {
+        const m = plan.byId(spec.id);
+        const region = terrain.world.landmarks.find((r) => r.landmark?.id === spec.landmark);
+        expect(m).toBeDefined();
+        expect(m?.regionId).toBe(region?.id);
+        if (m && region) {
+          expect(Math.max(Math.abs(m.x - region.shrine.x), Math.abs(m.z - region.shrine.z))).toBeGreaterThanOrEqual(LANDMARK_MONUMENT_CLEARANCE);
+          expect(plan.inRegion(region.id).length).toBeLessThanOrEqual(2);
+        }
+      }
+    });
+  }
+
+  it("ignores an unknown landmark id", () => {
+    const terrain = createTerrain(createWorld("monuments"));
+    const plan = planMonuments(terrain, [{ id: "x", kind: "haiku", landmark: "nowhere" }, { id: "y", kind: "proverb" }]);
+    expect(plan.all).toHaveLength(2);
   });
 });

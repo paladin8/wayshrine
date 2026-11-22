@@ -7,7 +7,7 @@ Status: accepted
 **Decision.**
 - Every text appears exactly once, on a standing stone. The world is infinite but the set is finite, so `planMonuments` lays the stones out in rings around the start region, 0 to 2 per region (20% / 55% / 25%), far from shrines and region edges. A plan is a pure function of seed and text list (ADR 0002 holds: only what the player has read is saved, as `collected` in save v3).
 - A stone's inscription is legible only once its region is restored; until then the stone is worn smooth. Restored, unread stones glimmer, but only while on screen: no compass, no map marker.
-- Haiku carry a scenery tag (biome now; season and scene recorded for later) and are placed in regions of that biome. Other texts are placed at random.
+- Haiku carry a scenery tag (biome now; season and scene recorded for later) and are placed in regions of that biome. A haiku tagged with a landmark instead stands in that landmark's region. Other texts are placed at random.
 - Japanese mode shows the Japanese text alone, no English and no readings. English mode adds the translation.
 - The texts live outside the layers in `content/` (source, hand-written tags) and `src/content/` (generated JSON, built by `npm run content`; a test fails if they drift). The placement index ships in the main bundle; the texts themselves load on first read.
 - English glosses are lightly cleaned (`ENGLISH_OVERRIDES`): spelling variants and slot-fillers are dropped, explanatory asides kept.
