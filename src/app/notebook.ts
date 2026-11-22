@@ -27,7 +27,7 @@ export interface NotebookSource {
 
 const PER_PAGE = 2;
 /** How long after the cover starts to move the opening sound plays. */
-const SOUND_DELAY_MS = 350;
+const SOUND_DELAY_MS = 400;
 const HAND_EN = '"Kaushan Script","Segoe Script","Bradley Hand","Brush Script MT",cursive';
 const HAND_JA = '"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif';
 const NARROW = "(max-width: 760px)";
@@ -117,7 +117,7 @@ const CSS = `
 @media(prefers-reduced-motion:reduce){.nb-overlay.open{animation:none}}
 .nb-spread{perspective:2600px}
 .nb-spread.opening .nb-page.left{visibility:hidden}
-.nb-book.opening .nb-turn,.nb-book.opening .nb-ribbon{opacity:0}
+.nb-book.opening .nb-turn{opacity:0}
 .nb-turn,.nb-ribbon{transition:opacity .3s}
 .nb-leaf,.nb-lid{position:absolute;top:0;bottom:0;width:50%;z-index:4;pointer-events:none;transform-style:preserve-3d;will-change:transform}
 .nb-leaf.fwd,.nb-lid{left:50%;transform-origin:0 50%}
