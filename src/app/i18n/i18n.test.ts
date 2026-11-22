@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BIOMES, CAPABILITIES } from "../../world";
+import { BIOMES, CAPABILITIES, LANDMARKS } from "../../world";
 import { LOCALES, detectLocale, isLocale, messagesFor, type Messages } from "./index";
 
 /** Every string a catalog yields, including the ones produced by functions. */
@@ -7,6 +7,7 @@ function allText(m: Messages): string[] {
   return [
     ...CAPABILITIES.map((c) => m.capability[c]),
     ...BIOMES.map((b) => m.terrain[b]),
+    ...LANDMARKS.map((l) => m.landmarkNames[l.id] ?? ""),
     m.blocked("X", "Y"),
     m.shrinesRestored(7),
     m.promptRestore,
@@ -29,6 +30,13 @@ function allText(m: Messages): string[] {
 }
 
 describe("i18n", () => {
+  it("names every landmark in every language, and the Japanese uses Japanese script", () => {
+    for (const l of LANDMARKS) {
+      expect(messagesFor("en").landmarkNames[l.id], l.id).toBeTruthy();
+      expect(messagesFor("ja").landmarkNames[l.id], l.id).toMatch(/[\u3040-\u30ff\u4e00-\u9fff]/);
+    }
+  });
+
   it("has the same number of strings in every language, none empty", () => {
     const counts = LOCALES.map((l) => allText(messagesFor(l)).length);
     expect(new Set(counts).size).toBe(1);

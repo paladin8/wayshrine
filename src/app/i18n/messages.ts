@@ -15,6 +15,8 @@ export interface Messages {
   readonly terrain: Readonly<Record<Biome, string>>;
   /** Hint shown when the player walks into terrain they cannot yet cross. */
   readonly blocked: (capability: string, terrain: string) => string;
+  /** Display names of the landmarks, by id. */
+  readonly landmarkNames: Readonly<Record<string, string>>;
   readonly shrinesRestored: (count: number) => string;
   readonly promptRestore: string;
   readonly promptSkip: string;

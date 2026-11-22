@@ -1,6 +1,6 @@
 import {
-  AWAKENING,
   awakeningFrame,
+  awakeningTotal,
   capabilitiesOf,
   clearOfObstacles,
   collectMonument,
@@ -18,6 +18,8 @@ import {
   restoreShrine,
   safePosition,
   skipTarget,
+  timingOf,
+  type AwakeningKind,
   serialize,
   reachOf,
   shrineInReach,
@@ -25,7 +27,7 @@ import {
   type GameState,
   type SaveData,
 } from "../game";
-import { createCuePlayer, createMusic, trackFor } from "../audio";
+import { createCuePlayer, createMusic, trackFor, type CueId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
 import { createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point } from "../world";
@@ -39,7 +41,17 @@ import { createSettingsPanel } from "./settings-panel";
 
 const HINT_SECONDS = 1.5;
 /** Everything that plays for an awakening: the burst at the wave launch and the swell under the whole sequence. */
-const AWAKENING_CUES = ["awakening-burst", "dawn-reverence"] as const;
+const AWAKENING_CUES: Readonly<Record<AwakeningKind, readonly CueId[]>> = {
+  shrine: ["awakening-burst", "dawn-reverence"],
+  landmark: ["awakening-burst", "radiant-arrival"],
+};
+const ALL_AWAKENING_CUES: readonly CueId[] = ["awakening-burst", "dawn-reverence", "radiant-arrival"];
+/** A landmark's name fades in, stays, and fades out; seconds. */
+const BANNER_IN = 0.9;
+const BANNER_OUT = 1.4;
+const BANNER_SECONDS = 5.5;
+/** The same landmark's name is not shown again on re-entering its region within this many seconds. */
+const BANNER_COOLDOWN = 40;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
@@ -118,7 +130,12 @@ export function startApp(container: HTMLElement): void {
   let blockedBy: Biome | null = null;
   let hintLeft = 0;
   /** The restoration sequence in progress, if any; `t` is seconds since it began. */
-  let awakening: { regionId: string; t: number } | null = null;
+  let awakening: { regionId: string; kind: AwakeningKind; t: number } | null = null;
+  /** The landmark name on screen, if any: `t` is seconds since it appeared, `duration` when it has fully faded. */
+  let banner: { id: string; t: number; duration: number } | null = null;
+  let bannerLandmark: string | null = null;
+  const bannerShownAt = new Map<string, number>();
+  let clock = 0;
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
 
@@ -137,13 +154,13 @@ export function startApp(container: HTMLElement): void {
       restoreLandmarks,
       resetShrines: () => {
         awakening = null;
-        AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
+        ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
         reset(resetShrines);
         pos = startPosition(terrain); // land reached with lost capabilities may now be cut off
       },
       resetAll: () => {
         awakening = null;
-        AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
+        ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
         reset(resetGame);
         pos = startPosition(terrain);
       },
@@ -179,17 +196,25 @@ export function startApp(container: HTMLElement): void {
     if (KEY_ACT.includes(e.code)) {
       if (awakening) {
         // Once the camera has pulled back, the sequence can be skipped to its end.
-        if (awakening.t > AWAKENING.zoomOut) {
-          awakening.t = skipTarget(awakening.t);
-          AWAKENING_CUES.forEach((id) => cues.stop(id, SWELL_SKIP_FADE));
+        if (awakening.t > timingOf(awakening.kind).zoomOut) {
+          awakening.t = skipTarget(awakening.t, awakening.kind);
+          AWAKENING_CUES[awakening.kind].forEach((id) => cues.stop(id, SWELL_SKIP_FADE));
+          if (banner) banner.duration = Math.min(banner.duration, banner.t + timingOf(awakening.kind).zoomIn + BANNER_OUT / 2);
         }
       } else {
         const region = shrineInReach(terrain, pos);
         if (region && !isRestored(state, region)) {
           restore(region.id);
-          awakening = { regionId: region.id, t: 0 };
-          // Trimmed so the swell peaks at about 8 s, just before the wave finishes filling the region.
-          AWAKENING_CUES.forEach((id) => cues.play(id));
+          const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
+          awakening = { regionId: region.id, kind, t: 0 };
+          // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
+          AWAKENING_CUES[kind].forEach((id) => cues.play(id));
+          // A landmark's name is held over the whole sequence.
+          if (region.landmark) {
+            banner = { id: region.landmark.id, t: 0, duration: awakeningTotal(kind) };
+            bannerLandmark = region.landmark.id;
+            bannerShownAt.set(region.landmark.id, clock);
+          }
         } else {
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
@@ -209,6 +234,7 @@ export function startApp(container: HTMLElement): void {
   let last = performance.now();
   const frame = (now: number): void => {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
+    clock += dt;
     last = now;
 
     const caps = capabilitiesOf(state, world);
@@ -238,19 +264,38 @@ export function startApp(container: HTMLElement): void {
     let scene: { regionId: string; progress: number; zoom: number } | undefined;
     if (awakening) {
       awakening.t += dt;
-      const f = awakeningFrame(awakening.t);
+      const f = awakeningFrame(awakening.t, awakening.kind);
       if (f.done) awakening = null;
       else scene = { regionId: awakening.regionId, progress: f.progress, zoom: f.zoom };
     }
 
     const prefs = settings.get();
     const t = messagesFor(prefs.language);
+
+    // A landmark's name appears when the player arrives in its region, and is held over its restoration.
+    const here = world.regionAt(pos.x, pos.z).landmark?.id ?? null;
+    if (here !== bannerLandmark) {
+      bannerLandmark = here;
+      if (here && !awakening && clock - (bannerShownAt.get(here) ?? -Infinity) > BANNER_COOLDOWN) {
+        banner = { id: here, t: 0, duration: BANNER_SECONDS };
+        bannerShownAt.set(here, clock);
+      }
+    }
+    let bannerModel: { text: string; opacity: number } | null = null;
+    if (banner) {
+      banner.t += dt;
+      if (banner.t >= banner.duration) banner = null;
+      else {
+        const k = Math.min(1, banner.t / BANNER_IN, (banner.duration - banner.t) / BANNER_OUT);
+        bannerModel = { text: t.landmarkNames[banner.id] ?? banner.id, opacity: k * k * (3 - 2 * k) };
+      }
+    }
     const needed = blockedBy ? requirementOf(blockedBy) : null;
     const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
     const reach = shrineInReach(terrain, pos);
     const stone = awakening ? null : monumentInReach(monuments, pos);
     const prompt = awakening
-      ? awakening.t > AWAKENING.zoomOut
+      ? awakening.t > timingOf(awakening.kind).zoomOut
         ? t.promptSkip
         : null
       : reach && !isRestored(state, reach)
@@ -277,6 +322,7 @@ export function startApp(container: HTMLElement): void {
       compass,
       prompt,
       hint,
+      banner: bannerModel,
       messages: t,
       showCompass: prefs.showCompass,
     });
@@ -285,7 +331,7 @@ export function startApp(container: HTMLElement): void {
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     cues.update(dt);
     // Only the awakening swell ducks the music; the monument chime sits under it at its normal level.
-    music.setDuck(AWAKENING_CUES.some((id) => cues.playing().includes(id)) ? SWELL_DUCK : 1);
+    music.setDuck(ALL_AWAKENING_CUES.some((id) => cues.playing().includes(id)) ? SWELL_DUCK : 1);
     music.update(dt);
 
     stage.render(dt, { player: pos, facing, state, awakening: scene });
