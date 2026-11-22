@@ -109,8 +109,10 @@ export function createTerrain(world: World): Terrain {
     const z = tz + 0.5;
     const region = world.regionAt(x, z);
     const away = plateauDistance(region, x, z);
-    const onPlateau = away <= 0;
     const model = region.landmark ? groundOf(region.landmark.id) : undefined;
+    // Terrain sunk under a model's own ground must lie wholly inside its footprint: a tile straddling the edge
+    // would leave a trench between the model and the lawn, so it belongs to the blend instead.
+    const onPlateau = away <= (model && !model.terrainSurface ? -0.5 : 0);
     const dx = x - region.shrine.x;
     const dz = z - region.shrine.z;
     // A shrine in a water region stands on an islet, reachable only by boat.
@@ -127,7 +129,7 @@ export function createTerrain(world: World): Terrain {
       }
     } else if (region.landmark && away < LANDMARK_BLEND) {
       // Ease from the footprint's edge height to natural ground, so it never stands as a wall.
-      const t = away / LANDMARK_BLEND;
+      const t = Math.max(0, away) / LANDMARK_BLEND;
       const k = t * t * (3 - 2 * t);
       const edge = plateauBase(region) + (model && !model.terrainSurface ? groundHeight(model, dx, dz) : 0);
       height = edge + (natural(x, z, region.biome) - edge) * k;
