@@ -107,19 +107,23 @@ export function standPoint(region: Region): Point {
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;
-/** Region-grid area per landmark: itself plus about ten shrines. */
-const AREA_PER_LANDMARK = 11;
+/** Region-grid area per landmark: itself plus about seventeen shrines. */
+const AREA_PER_LANDMARK = 18;
 /** The planner searches this far (Chebyshev, in regions) for somewhere to put a landmark. */
-const WINDOW = 16;
+export const LANDMARK_WINDOW = 20;
+const WINDOW = LANDMARK_WINDOW;
 /** Landmarks keep at least this many regions apart where there is room. */
 const SEPARATION = 2;
 const GOLDEN_ANGLE = 2.399963;
 /** Half-width of the arc an act's landmarks are spread over, radians. */
-const ARC = 0.9;
+const ARC = 1.6;
 
-/** Radius (in regions) of the disc that holds `n` landmarks at the target density. */
+/** The first landmark is at least this many regions out, so the player passes several shrines before finding one. */
+const START_RADIUS = 5;
+
+/** Radius (in regions) of the disc that holds `n` landmarks at the target density, beyond the empty start. */
 export function ringRadius(n: number): number {
-  return Math.sqrt((AREA_PER_LANDMARK * n) / Math.PI);
+  return START_RADIUS + Math.sqrt((AREA_PER_LANDMARK * n) / Math.PI);
 }
 
 /**
@@ -201,11 +205,22 @@ export function planLandmarks(
       const a = bearing + (members.length === 1 ? 0 : ((i / (members.length - 1)) * 2 - 1) * ARC) + rng.range(-0.15, 0.15);
       const tx = Math.cos(a) * r;
       const tz = Math.sin(a) * r;
-      const ranked: Array<{ rx: number; rz: number; d: number }> = [];
+      // Candidates are regions the player can already reach, then (as a last resort) the ones
+      // beside them: the landmark's own biome makes it reachable, e.g. a lake next to the shore.
+      const ranked: Array<{ rx: number; rz: number; d: number; adj: boolean }> = [];
       for (let rz = -WINDOW; rz <= WINDOW; rz++) {
         for (let rx = -WINDOW; rx <= WINDOW; rx++) {
-          if (!seen[cell(rx, rz)] || (rx === 0 && rz === 0) || (landmark.biome !== "meadow" && Math.hypot(rx, rz) <= HOME_RADIUS) || placed.has(regionId(rx, rz))) continue;
-          ranked.push({ rx, rz, d: Math.hypot(rx - tx, rz - tz) });
+          if ((rx === 0 && rz === 0) || (landmark.biome !== "meadow" && Math.hypot(rx, rz) <= HOME_RADIUS) || placed.has(regionId(rx, rz))) continue;
+          let adj = false;
+          if (!seen[cell(rx, rz)]) {
+            adj = FOUR.some(([dx, dz]) => {
+              const nx = rx + dx;
+              const nz = rz + dz;
+              return nx >= -WINDOW && nx <= WINDOW && nz >= -WINDOW && nz <= WINDOW && seen[cell(nx, nz)] === 1;
+            });
+            if (!adj) continue;
+          }
+          ranked.push({ rx, rz, d: Math.hypot(rx - tx, rz - tz), adj });
         }
       }
       ranked.sort((p, q) => p.d - q.d || p.rx - q.rx || p.rz - q.rz);
@@ -216,8 +231,9 @@ export function planLandmarks(
         }
         return true;
       };
-      for (const spacing of [true, false]) {
+      for (const [spacing, adjacent] of [[true, false], [false, false], [true, true], [false, true]] as const) {
         for (const c of ranked) {
+          if (c.adj && !adjacent) continue;
           if (spacing && !apart(c)) continue;
           const id = regionId(c.rx, c.rz);
           const was = grid[cell(c.rx, c.rz)]!;

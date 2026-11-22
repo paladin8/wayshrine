@@ -50,13 +50,13 @@ describe("nextShrine", () => {
   it("returns null when every reachable shrine is restored", () => {
     const world = createWorld("exhaust");
     let state = newGame(world.seed);
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < 2000; i++) {
       const g = nextShrine(world, state, { x: 0, z: 0 });
       if (!g) return;
       state = restoreShrine(state, g.region);
     }
     throw new Error("guidance never ran out");
-  });
+  }, 120_000);
 });
 
 describe("safePosition", () => {

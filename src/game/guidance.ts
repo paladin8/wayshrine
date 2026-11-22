@@ -1,8 +1,8 @@
-import { anchorOf, reachableRegions, type Point, type Region, type World } from "../world";
+import { LANDMARK_WINDOW, anchorOf, reachableRegions, type Point, type Region, type World } from "../world";
 import { capabilitiesOf, type GameState } from "./state";
 
 /** How far (in regions from the start) the compass looks. Matches the landmark planner's window. */
-const SEARCH_RADIUS = 16;
+const SEARCH_RADIUS = LANDMARK_WINDOW;
 
 export interface Guidance {
   readonly region: Region;

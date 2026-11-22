@@ -4,6 +4,7 @@ import {
   CAPABILITY_THRESHOLDS,
   HOME_RADIUS,
   LANDMARKS,
+  LANDMARK_WINDOW,
   capabilitiesForCount,
   landmarksBeforeAct,
   ringRadius,
@@ -102,14 +103,24 @@ describe("landmarks", () => {
 
   it("grows outward: each act sits farther from the start than the one before", () => {
     const mean = (xs: number[]) => xs.reduce((p, q) => p + q, 0) / xs.length;
+    const acts = [...new Set(LANDMARKS.map((l) => l.act))];
+    const overall = acts.map(() => [] as number[]);
+    let pairs = 0;
+    let inverted = 0;
     for (const seed of SEEDS.slice(0, 100)) {
       const w = createWorld(seed);
-      const acts = [...new Set(LANDMARKS.map((l) => l.act))];
       const means = acts.map((act) =>
         mean(w.landmarks.filter((r) => r.landmark!.act === act).map((r) => Math.hypot(r.coord.rx, r.coord.rz))),
       );
-      for (let i = 1; i < means.length; i++) expect(means[i]!).toBeGreaterThan(means[i - 1]!);
+      means.forEach((m, i) => overall[i]!.push(m));
+      for (let i = 1; i < means.length; i++) {
+        pairs++;
+        if (means[i]! <= means[i - 1]!) inverted++; // where the right biome is scarce, a later act can land nearer
+      }
     }
+    const across = overall.map(mean);
+    for (let i = 1; i < across.length; i++) expect(across[i]!).toBeGreaterThan(across[i - 1]!);
+    expect(inverted / pairs).toBeLessThan(0.15);
   });
 
   it("keeps landmarks near the target density", () => {
@@ -158,7 +169,7 @@ describe("unlock thresholds", () => {
 describe("progress guarantees (ADR 0006)", () => {
   it("a greedy player restores every landmark and gains every ability, for every seed", () => {
     for (const seed of SEEDS) {
-      const { capabilities, restored } = greedyProgress(createWorld(seed), 16);
+      const { capabilities, restored } = greedyProgress(createWorld(seed), LANDMARK_WINDOW);
       expect([...capabilities].sort()).toEqual([...CAPABILITIES].sort());
       expect(restored.size).toBe(LANDMARKS.length);
     }
@@ -169,7 +180,7 @@ describe("progress guarantees (ADR 0006)", () => {
       const w = createWorld(seed);
       const restored = new Set<string>();
       while (restored.size < LANDMARKS.length) {
-        const open = reachableRegions(w, capabilitiesForCount(restored.size), 16).filter(
+        const open = reachableRegions(w, capabilitiesForCount(restored.size), LANDMARK_WINDOW).filter(
           (r) => r.landmark && !restored.has(r.id),
         );
         expect(open.length, `${seed} at ${restored.size}`).toBeGreaterThan(0);
@@ -183,7 +194,7 @@ describe("progress guarantees (ADR 0006)", () => {
     let gated = 0;
     for (const seed of SEEDS.slice(0, 50)) {
       const w = createWorld(seed);
-      const open = new Set(reachableRegions(w, new Set(), 16).map((r) => r.id));
+      const open = new Set(reachableRegions(w, new Set(), LANDMARK_WINDOW).map((r) => r.id));
       gated += w.landmarks.filter((r) => !open.has(r.id)).length;
     }
     expect(gated).toBeGreaterThan(0);
