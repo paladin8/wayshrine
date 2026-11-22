@@ -1,5 +1,6 @@
 import { createNoise } from "../core";
-import { LANDMARK_BLEND, LANDMARK_PLATEAU_RADIUS } from "./landmarks";
+import { groundHeight, groundOf } from "./landmark-ground";
+import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
@@ -16,14 +17,27 @@ export const PLATEAU_RADIUS = 2.5;
 export function plateauDistance(region: Region, x: number, z: number): number {
   const dx = x - region.site.x;
   const dz = z - region.site.z;
-  return region.landmark ? Math.max(Math.abs(dx), Math.abs(dz)) - LANDMARK_PLATEAU_RADIUS : Math.hypot(dx, dz) - PLATEAU_RADIUS;
+  return region.landmark ? Math.max(Math.abs(dx), Math.abs(dz)) - footprintHalf(region.landmark) : Math.hypot(dx, dz) - PLATEAU_RADIUS;
 }
+
+/** The height a region's plateau stands at: where a crafted model's origin sits. */
+export function plateauBase(region: Region): number {
+  return PLATEAU_HEIGHT[region.biome === "water" ? "meadow" : region.biome];
+}
+
+/** Terrain under a landmark's model sits this far below the model's own ground, so the model is never z-fought. */
+const MODEL_PAD = 0.2;
 
 export interface Tile {
   readonly biome: Biome;
   /** Height of the tile's top surface. */
   readonly height: number;
   readonly regionId: string;
+  /**
+   * On a landmark's slope: the tile is drawn as a smooth surface through its
+   * `corners` rather than as a flat-topped column, so the slope isn't stepped.
+   */
+  readonly skirt: boolean;
 }
 
 /**
@@ -37,6 +51,14 @@ export interface Terrain {
   tileAt(tx: number, tz: number): Tile;
   /** The tile containing a world-space point. */
   tileAtPoint(x: number, z: number): Tile;
+  /**
+   * Heights at a tile's corners, in the order (x0,z0) (x1,z0) (x0,z1) (x1,z1).
+   * All equal to the tile's height unless it is a skirt tile, where each corner is
+   * the mean of the skirt tiles meeting there, so neighbouring skirt tiles join.
+   */
+  corners(tx: number, tz: number): readonly [number, number, number, number];
+  /** Smooth surface height, which follows a landmark model's ground rather than the tile steps. */
+  groundAt(x: number, z: number): number;
 }
 
 const PLATEAU_HEIGHT: Readonly<Record<Biome, number>> = {
@@ -73,28 +95,59 @@ export function createTerrain(world: World): Terrain {
     const region = world.regionAt(x, z);
     const away = plateauDistance(region, x, z);
     const onPlateau = away <= 0;
+    const model = region.landmark ? groundOf(region.landmark.id) : undefined;
+    const dx = x - region.site.x;
+    const dz = z - region.site.z;
     // A shrine in a water region stands on an islet, reachable only by boat.
     let biome: Biome = onPlateau && region.biome === "water" ? "meadow" : region.biome;
     let height: number;
+    let skirt = false;
     if (onPlateau) {
-      height = PLATEAU_HEIGHT[biome];
+      height = model ? plateauBase(region) + groundHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
     } else if (region.landmark && away < LANDMARK_BLEND) {
-      // Ease from the plateau down (or up) to natural ground, so it never stands as a wall.
+      // Ease from the footprint's edge height to natural ground, so it never stands as a wall.
       const t = away / LANDMARK_BLEND;
       const k = t * t * (3 - 2 * t);
-      const base = PLATEAU_HEIGHT[region.biome === "water" ? "meadow" : region.biome];
-      height = base + (natural(x, z, region.biome) - base) * k;
+      const edge = plateauBase(region) + (model ? groundHeight(model, dx, dz) : 0);
+      height = edge + (natural(x, z, region.biome) - edge) * k;
       // The slope down to water becomes shore, then water.
       if (region.biome === "water") biome = height > 0.55 ? "meadow" : "water";
+      skirt = biome !== "water";
     } else {
       height = natural(x, z, biome);
     }
-    return { x, z, region, biome, height };
+    return { x, z, region, biome, height, skirt };
   }
 
   function tileAt(tx: number, tz: number): Tile {
-    const { region, biome, height } = sample(tx, tz);
-    return { biome, height, regionId: region.id };
+    const { region, biome, height, skirt } = sample(tx, tz);
+    return { biome, height, regionId: region.id, skirt };
+  }
+
+  /** Mean height of the skirt tiles meeting at the corner (cx, cz); undefined if none do. */
+  function cornerOf(cx: number, cz: number): number | undefined {
+    let sum = 0;
+    let n = 0;
+    for (const [dx, dz] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
+      const t = tileAt(cx + dx, cz + dz);
+      if (t.skirt) {
+        sum += t.height;
+        n++;
+      }
+    }
+    return n ? sum / n : undefined;
+  }
+
+  function corners(tx: number, tz: number): readonly [number, number, number, number] {
+    const own = tileAt(tx, tz);
+    const h = own.height;
+    if (!own.skirt) return [h, h, h, h];
+    return [
+      cornerOf(tx, tz) ?? h,
+      cornerOf(tx + 1, tz) ?? h,
+      cornerOf(tx, tz + 1) ?? h,
+      cornerOf(tx + 1, tz + 1) ?? h,
+    ];
   }
 
   return {
@@ -102,5 +155,21 @@ export function createTerrain(world: World): Terrain {
     biomeAt: (tx, tz) => sample(tx, tz).biome,
     tileAt,
     tileAtPoint: (x, z) => tileAt(Math.floor(x), Math.floor(z)),
+    corners,
+    groundAt(x, z) {
+      const region = world.regionAt(x, z);
+      const model = region.landmark ? groundOf(region.landmark.id) : undefined;
+      if (model && plateauDistance(region, x, z) <= 0) {
+        return plateauBase(region) + groundHeight(model, x - region.site.x, z - region.site.z);
+      }
+      const tx = Math.floor(x);
+      const tz = Math.floor(z);
+      const tile = tileAt(tx, tz);
+      if (!tile.skirt) return tile.height;
+      const [a, b, c, d] = corners(tx, tz);
+      const fx = x - tx;
+      const fz = z - tz;
+      return a * (1 - fx) * (1 - fz) + b * fx * (1 - fz) + c * (1 - fx) * fz + d * fx * fz;
+    },
   };
 }

@@ -86,6 +86,7 @@ def extrude_x(mat,prof,x0,x1,T=None): solid([[(x0,y,z) for y,z in prof],[(x1,y,z
 
 import random
 rng=random.Random(8)
+FLOORS=[]   # (x0,x1,y0,y1,top): flat surfaces the player can walk on, for the game sidecar
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 
@@ -164,9 +165,11 @@ solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt="foliage")
 # forecourt, steps, gate platform
 box("cream",0,-8.875,-0.05,0.04,1.5,0.675)
 box("stone",0,-3.6,-0.05,1.0,5.0,2.6)
+FLOORS+=[(-1.5,1.5,-9.55,-8.2,0.04),(-5.0,5.0,-6.2,-1.0,1.0)]
 for i in range(5):
     y0=-8.2+0.4*i
     box("stone",0,(y0-6.2)/2,-0.05,0.2*(i+1),1.75,(-6.2-y0)/2,mt="cream")
+    FLOORS.append((-1.75,1.75,y0,-6.2,0.2*(i+1)))
 box("cream",0,-3.6,0.95,1.04,1.35,2.6)
 
 # ---- Romon gate (two storeys, dark hip roofs)
@@ -306,6 +309,60 @@ def bush(cx,cy,s):
 for a in [(-7.4,6.8,1.1,0),(-5.0,8.7,1.0,0.3),(-7.8,2.6,0.9,0.6),(-1.8,8.6,0.9,0.5),(0.8,8.6,0.85,0.2),(8.6,4.6,0.9,0.2),(8.6,7.4,0.85,0.8)]: conifer(*a)
 for a in [(-7.6,-7.2,1.0),(-8.0,-2.6,0.9),(-3.0,2.8,0.8),(-4.4,5.6,0.85),(-0.6,5.0,0.8)]: roundtree(*a)
 for a in [(6.9,-8.2,1.0),(8.0,-6.4,0.8),(-5.8,-8.7,0.9),(6.6,-2.6,0.9),(-6.4,-4.2,0.8)]: bush(*a)
+
+# ---- sidecar for the game: ground heights, solid footprints and where to stand.
+# Written to src/world/landmark-grounds/fushimi-inari.json and read by the world layer.
+# Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
+HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+def ground_at(x,y):
+    h=Hm(x,y) if -1.0<=y<=9.6 else 0.0
+    for x0,x1,y0,y1,top in FLOORS:
+        if x0<=x<=x1 and y0<=y<=y1: h=max(h,top)
+    return h
+ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+# Hm() is 0 outside the hill's triangles (the corners of the octagonal base); fill those holes from
+# their neighbours so the game's terrain doesn't fall to 0 there. Rows iz <= 13 are the hill (z <= 1);
+# the front (iz > 13) is legitimately flat at 0.
+_hole=[(r,c) for r in range(14) for c in range(GN) if ground[r][c]==0.0]
+for _ in range(400):
+    for r,c in _hole:
+        vs=[ground[rr][cc] for rr,cc in((r+1,c),(r-1,c),(r,c+1),(r,c-1)) if 0<=rr<GN and 0<=cc<GN and ground[rr][cc]>0]
+        if vs: ground[r][c]=round(sum(vs)/len(vs),3)
+CELL=0.3; CN=int(round(2*HALF/CELL))
+cellg={}
+def cg(cx,cy):
+    k=(cx,cy)
+    if k not in cellg: cellg[k]=ground_at(-HALF+CELL*(cx+0.5), HALF-CELL*(cy+0.5)) if False else ground_at(-HALF+CELL*(cx+0.5), -HALF+CELL*(cy+0.5))
+    return cellg[k]
+# cells indexed by (cx, cy) with cy over Blender y; converted to game z at the end
+solid=set()
+BAND0,BAND1=0.35,1.6
+for key,(bv,bf) in B.items():
+    for f in bf:
+        for i in range(1,len(f)-1):
+            a,b,c=[Vector(bv[k]) for k in (f[0],f[i],f[i+1])]
+            n=(b-a).cross(c-a); ln=math.sqrt(n.dot(n))
+            if ln<1e-9: continue
+            nz=n.z/ln
+            e=max(math.dist(tuple(a),tuple(b)),math.dist(tuple(b),tuple(c)),math.dist(tuple(a),tuple(c)))
+            m=max(1,int(e/0.15))
+            for p in range(m+1):
+                for q in range(m+1-p):
+                    u,v=p/m,q/m; w=1-u-v
+                    x=a.x*w+b.x*u+c.x*v; y=a.y*w+b.y*u+c.y*v; z=a.z*w+b.z*u+c.z*v
+                    if not(-HALF<=x<HALF and -HALF<=y<HALF): continue
+                    cx=int((x+HALF)/CELL); cy=int((y+HALF)/CELL)
+                    g=cg(cx,cy)
+                    if z<g+BAND0 or z>g+BAND1: continue
+                    if nz>0.92 and z<g+0.6: continue   # the hill's own surface
+                    solid.add((cx,cy))
+solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid)]
+side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
+      "interact":[round(EX,2),round(-EY,2)],"reach":3.6,"stand":[0.0,8.9]}
+import json as _json, os as _os
+_p=ROOT+"/src/world/landmark-grounds/fushimi-inari.json"
+_os.makedirs(_os.path.dirname(_p),exist_ok=True)
+open(_p if not os.environ.get("FI_OUT") else os.environ["FI_OUT"],"w").write(_json.dumps(side,separators=(",",":")))
 
 # ---- one object per material (+ one object per glow part)
 mats={}

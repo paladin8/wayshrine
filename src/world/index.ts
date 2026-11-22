@@ -14,7 +14,10 @@ export {
   LANDMARK_PLATEAU_RADIUS,
   LANDMARK_REACH_MARGIN,
   LANDMARK_SOLID_RADIUS,
-  landmarkRadius,
+  anchorOf,
+  footprintHalf,
+  landmarkReach,
+  standPoint,
   LANDMARKS,
   LANDMARK_SPECS,
   capabilitiesForCount,
@@ -23,7 +26,9 @@ export {
   ringRadius,
 } from "./landmarks";
 export type { Landmark, LandmarkSpec } from "./landmarks";
-export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauDistance } from "./terrain-grid";
+export { groundHeight, groundOf } from "./landmark-ground";
+export type { LandmarkGround } from "./landmark-ground";
+export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauBase, plateauDistance } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
 export { PROP_KINDS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";

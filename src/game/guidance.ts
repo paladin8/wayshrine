@@ -1,4 +1,4 @@
-import { reachableRegions, type Point, type Region, type World } from "../world";
+import { anchorOf, reachableRegions, type Point, type Region, type World } from "../world";
 import { capabilitiesOf, type GameState } from "./state";
 
 /** How far (in regions from the start) the compass looks. Matches the landmark planner's window. */
@@ -38,8 +38,9 @@ export function nextShrine(world: World, state: GameState, pos: Point): Guidance
   const landmarks = open.filter((r) => r.landmark);
   let best: Guidance | null = null;
   for (const region of landmarks.length > 0 ? landmarks : open) {
-    const dx = region.site.x - pos.x;
-    const dz = region.site.z - pos.z;
+    const at = anchorOf(region);
+    const dx = at.x - pos.x;
+    const dz = at.z - pos.z;
     const distance = Math.hypot(dx, dz);
     if (!best || distance < best.distance) best = { region, distance, dx, dz };
   }

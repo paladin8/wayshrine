@@ -96,7 +96,6 @@ export function buildLandmark(id: string): ShrineMesh {
         // The landmark may have been streamed out again while the file was loading.
         if (!group.parent) return;
         group.remove(stand.group);
-        gltf.scene.position.y = 0.03; // lift the model's own ground clear of the terrain under it
         group.add(gltf.scene);
         model = adopt(gltf.scene);
         apply();

@@ -93,7 +93,7 @@ export function propsInChunk(
       const density = c * c * 3;
       for (const [kind, chance] of table) {
         if (roll < chance * density) {
-          props.push({ kind, x, y: tile.height, z, scale, rotation, variant, regionId: tile.regionId });
+          props.push({ kind, x, y: terrain.groundAt(x, z), z, scale, rotation, variant, regionId: tile.regionId });
           break;
         }
         roll -= chance * density;

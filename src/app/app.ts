@@ -28,7 +28,7 @@ import {
 import { createCuePlayer, createMusic, trackFor } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { createObstacles, createTerrain, createWorld, planMonuments, type Biome, type Point } from "../world";
+import { createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
@@ -86,7 +86,7 @@ export function startApp(container: HTMLElement): void {
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up), (region) => {
     if (awakening) return;
     // Land on the shrine's plateau, within reach of its gate.
-    pos = { x: region.site.x, z: region.site.z + 2 };
+    pos = standPoint(region);
     minimap.toggleExpanded();
   });
 
@@ -149,7 +149,7 @@ export function startApp(container: HTMLElement): void {
       },
       goToTarget: () => {
         const g = nextShrine(world, state, pos);
-        if (g) pos = { x: g.region.site.x, z: g.region.site.z + 3 };
+        if (g) pos = standPoint(g.region);
       },
     };
     createDebugPanel(container, actions);

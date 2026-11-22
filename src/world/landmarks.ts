@@ -1,6 +1,8 @@
 import { createRng } from "../core";
-import { regionId, type RegionCoord } from "./coords";
+import { regionId, type Point, type RegionCoord } from "./coords";
+import { groundOf } from "./landmark-ground";
 import { canTraverse, type Biome, type Capability } from "./terrain";
+import type { Region } from "./world";
 
 /**
  * Landmarks: hand-crafted places emblematic of Japan, one per special region.
@@ -13,8 +15,6 @@ export interface LandmarkSpec {
   readonly act: number;
   /** The region's biome. It must be traversable with the abilities held when the act begins. */
   readonly biome: Biome;
-  /** Radius of the solid footprint, if the model is larger than the placeholder's. */
-  readonly radius?: number;
 }
 
 export interface Landmark extends LandmarkSpec {
@@ -23,7 +23,7 @@ export interface Landmark extends LandmarkSpec {
 }
 
 export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
-  { id: "fushimi-inari", act: 1, biome: "meadow", radius: 7.5 },
+  { id: "fushimi-inari", act: 1, biome: "meadow" },
   { id: "kinkaku-ji", act: 1, biome: "meadow" },
   { id: "todai-ji-daibutsu", act: 1, biome: "meadow" },
   { id: "itsukushima-torii", act: 2, biome: "water" },
@@ -68,27 +68,42 @@ export function landmarksBeforeAct(act: number): number {
 }
 
 /**
- * A landmark region's plateau is a flat square of this half-width (the models are
- * square dioramas), and the ground eases back to natural height over
- * LANDMARK_BLEND further units so it never stands as a wall.
+ * The ground is the landmark's footprint (a square) at model height, easing to
+ * natural height over LANDMARK_BLEND further units so it never stands as a wall.
+ * A landmark without a model yet gets a flat footprint of the default half-width.
  */
 export const LANDMARK_PLATEAU_RADIUS = 9.7;
 export const LANDMARK_BLEND = 8;
-/** Monuments keep clear of the plateau and its slope (Chebyshev distance from the site). */
+/** Monuments keep clear of the footprint and its slope (Chebyshev distance from the site). */
 export const LANDMARK_MONUMENT_CLEARANCE = LANDMARK_PLATEAU_RADIUS + LANDMARK_BLEND + 1.5;
-/**
- * A landmark stands at its region's site and is the shrine: the player restores
- * it from just outside this radius (within LANDMARK_REACH_MARGIN of the edge).
- */
+/** A placeholder is one solid disc at the site, used from just outside it. */
 export const LANDMARK_SOLID_RADIUS = 3.0;
+export const LANDMARK_REACH_MARGIN = 3.5;
 
-/** The solid footprint of a landmark, in world units. */
-export function landmarkRadius(landmark: LandmarkSpec): number {
-  return landmark.radius ?? LANDMARK_SOLID_RADIUS;
+/** Half-width of a landmark's flat or model-shaped footprint. */
+export function footprintHalf(landmark: LandmarkSpec): number {
+  return groundOf(landmark.id)?.half ?? LANDMARK_PLATEAU_RADIUS;
 }
 
-/** How far beyond its footprint a landmark can be used from. */
-export const LANDMARK_REACH_MARGIN = 3.5;
+/** The point a landmark is used from, in world space. */
+export function anchorOf(region: Region): Point {
+  const g = region.landmark ? groundOf(region.landmark.id) : undefined;
+  return g ? { x: region.site.x + g.interact[0], z: region.site.z + g.interact[1] } : region.site;
+}
+
+/** How close to its anchor the player must be to use a landmark. */
+export function landmarkReach(landmark: LandmarkSpec): number {
+  return groundOf(landmark.id)?.reach ?? LANDMARK_SOLID_RADIUS + LANDMARK_REACH_MARGIN;
+}
+
+/** Where the player arrives when travelling to a region: free ground beside its shrine or landmark. */
+export function standPoint(region: Region): Point {
+  if (!region.landmark) return { x: region.site.x, z: region.site.z + 2 };
+  const g = groundOf(region.landmark.id);
+  return g
+    ? { x: region.site.x + g.stand[0], z: region.site.z + g.stand[1] }
+    : { x: region.site.x, z: region.site.z + LANDMARK_SOLID_RADIUS + 1.5 };
+}
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;

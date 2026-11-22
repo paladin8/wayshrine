@@ -1,5 +1,6 @@
 import { REGION_SIZE } from "./coords";
-import { LANDMARK_SPECS, landmarkRadius } from "./landmarks";
+import { groundOf } from "./landmark-ground";
+import { LANDMARK_SOLID_RADIUS } from "./landmarks";
 import { MONUMENT_CLEARING, monumentsAroundChunk, type MonumentPlan } from "./monuments";
 import { propsInChunk, type PropKind } from "./props";
 import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
@@ -33,7 +34,7 @@ const PROP_RADIUS: Partial<Record<PropKind, number>> = {
 const SHRINE_PILLAR_OFFSET = 0.9;
 const SHRINE_PILLAR_RADIUS = 0.22;
 const MONUMENT_RADIUS = 0.65;
-const MAX_RADIUS = Math.max(0.7, ...LANDMARK_SPECS.map(landmarkRadius));
+const MAX_RADIUS = LANDMARK_SOLID_RADIUS;
 
 /**
  * Collision for a world, built lazily a chunk at a time and cached. Obstacles are a pure function of
@@ -66,8 +67,15 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
       for (let rx = rxMin; rx <= rxMax; rx++) {
         const { site, landmark } = world.region(rx, rz);
         if (landmark) {
-          // The landmark is the shrine: one solid footprint, no gate pillars.
-          if (inside(site.x, site.z)) list.push({ x: site.x, z: site.z, r: landmarkRadius(landmark) });
+          // The landmark is the shrine: no gate pillars. A crafted model brings its own solids.
+          const model = groundOf(landmark.id);
+          if (!model) {
+            if (inside(site.x, site.z)) list.push({ x: site.x, z: site.z, r: LANDMARK_SOLID_RADIUS });
+          } else {
+            for (const [sx, sz, r] of model.solids) {
+              if (inside(site.x + sx, site.z + sz)) list.push({ x: site.x + sx, z: site.z + sz, r });
+            }
+          }
           continue;
         }
         for (const dx of [-SHRINE_PILLAR_OFFSET, SHRINE_PILLAR_OFFSET]) {

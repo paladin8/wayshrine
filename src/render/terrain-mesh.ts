@@ -53,25 +53,34 @@ export function buildTerrainChunk(
       const tile = terrain.tileAt(tx, tz);
       const top = tileColor(tx, tz, tile);
       const side = top.clone().multiplyScalar(SIDE_SHADE);
-      const h = tile.height;
+      const c = terrain.corners(tx, tz);
       builder.addTriangles(
-        quad([tx, h, tz], [tx, h, tz + 1], [tx + 1, h, tz + 1], [tx + 1, h, tz], [0, 1, 0]),
+        quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]),
         top,
         tile.regionId,
         tile.biome === "water" ? { water: true } : undefined,
       );
 
-      const faces: ReadonlyArray<{ dx: number; dz: number; corners: (lo: number) => [V, V, V, V] }> = [
-        { dx: 1, dz: 0, corners: (lo) => [[tx + 1, h, tz], [tx + 1, h, tz + 1], [tx + 1, lo, tz + 1], [tx + 1, lo, tz]] },
-        { dx: -1, dz: 0, corners: (lo) => [[tx, h, tz], [tx, h, tz + 1], [tx, lo, tz + 1], [tx, lo, tz]] },
-        { dx: 0, dz: 1, corners: (lo) => [[tx, h, tz + 1], [tx + 1, h, tz + 1], [tx + 1, lo, tz + 1], [tx, lo, tz + 1]] },
-        { dx: 0, dz: -1, corners: (lo) => [[tx, h, tz], [tx + 1, h, tz], [tx + 1, lo, tz], [tx, lo, tz]] },
+      // A side face wherever this tile's edge stands above its neighbour's, down to the neighbour's edge.
+      const n1 = terrain.corners(tx + 1, tz);
+      const n0 = terrain.corners(tx - 1, tz);
+      const m1 = terrain.corners(tx, tz + 1);
+      const m0 = terrain.corners(tx, tz - 1);
+      const edges: ReadonlyArray<{ out: V; a: V; b: V; ph: [number, number]; qh: [number, number] }> = [
+        { out: [1, 0, 0], a: [tx + 1, 0, tz], b: [tx + 1, 0, tz + 1], ph: [c[1], c[3]], qh: [n1[0], n1[2]] },
+        { out: [-1, 0, 0], a: [tx, 0, tz], b: [tx, 0, tz + 1], ph: [c[0], c[2]], qh: [n0[1], n0[3]] },
+        { out: [0, 0, 1], a: [tx, 0, tz + 1], b: [tx + 1, 0, tz + 1], ph: [c[2], c[3]], qh: [m1[0], m1[1]] },
+        { out: [0, 0, -1], a: [tx, 0, tz], b: [tx + 1, 0, tz], ph: [c[0], c[1]], qh: [m0[2], m0[3]] },
       ];
-      for (const f of faces) {
-        const lo = terrain.tileAt(tx + f.dx, tz + f.dz).height;
-        if (lo >= h) continue;
-        const [a, b, c, d] = f.corners(lo);
-        builder.addTriangles(quad(a, b, c, d, [f.dx, 0, f.dz]), side, tile.regionId);
+      for (const e of edges) {
+        const lo0 = Math.min(e.ph[0], e.qh[0]);
+        const lo1 = Math.min(e.ph[1], e.qh[1]);
+        if (lo0 >= e.ph[0] && lo1 >= e.ph[1]) continue;
+        builder.addTriangles(
+          quad([e.a[0], e.ph[0], e.a[2]], [e.b[0], e.ph[1], e.b[2]], [e.b[0], lo1, e.b[2]], [e.a[0], lo0, e.a[2]], e.out),
+          side,
+          tile.regionId,
+        );
       }
     }
   }

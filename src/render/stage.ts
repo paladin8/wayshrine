@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { lifeAt, vitality, type GameState } from "../game";
-import { CHUNK_SIZE, type MonumentPlan, type Point, type Terrain } from "../world";
+import { CHUNK_SIZE, plateauBase, type MonumentPlan, type Point, type Terrain } from "../world";
 import { createAmbient } from "./ambient";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
@@ -163,7 +163,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
         keep.add(region.id);
         if (shrines.has(region.id)) continue;
         const shrine = region.landmark ? buildLandmark(region.landmark.id) : buildShrine();
-        const ground = terrain.tileAtPoint(region.site.x, region.site.z).height;
+        // A landmark model's origin sits at its plateau's base height; its own ground rises from there.
+        const ground = region.landmark ? plateauBase(region) : terrain.tileAtPoint(region.site.x, region.site.z).height;
         shrine.group.position.set(region.site.x, ground, region.site.z);
         shrine.setVitality(shownProgress(region.id));
         shrines.set(region.id, shrine);
@@ -284,7 +285,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       const onWater = tile.biome === "water";
-      const groundY = tile.height + (onWater ? 0.05 + Math.sin(clock * 3) * 0.03 : 0);
+      const groundY = terrain.groundAt(pos.x, pos.z) + (onWater ? 0.05 + Math.sin(clock * 3) * 0.03 : 0);
       playerY += (groundY - playerY) * Math.min(1, dt * 14);
       player.group.position.set(pos.x, playerY, pos.z);
       player.group.rotation.y = view.facing;

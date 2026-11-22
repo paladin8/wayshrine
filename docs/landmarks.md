@@ -10,10 +10,12 @@ A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one
 
 - Author it alive; the dead look is derived per material (as for scenery), so keep one material per colour and name them.
 - Parts named `glow_*` (or using a `glow_*` material) light up and flare as the region wakes.
-- The ground under it is a flat square plateau of half-width 9.7 (`LANDMARK_PLATEAU_RADIUS`) that eases back to natural height over 8 more units (`LANDMARK_BLEND`), so keep the diorama within about 19.4 units square and let its edge sit at ground level. Monuments keep clear of the plateau and slope.
-- The model is a diorama up to about 19 units square; set `radius` on its entry in `LANDMARK_SPECS` to its solid footprint (the player is stopped there, and uses the landmark from just outside it).
+- **Ground.** The terrain under the footprint follows the model's own ground (a heightfield, below), 0.2 lower so the model's grass sits clear of it, and eases from the footprint edge to natural height over 8 units (`LANDMARK_BLEND`). The eased slope is drawn as a smooth surface (a "skirt": per-corner heights, `Terrain.corners`) rather than flat-topped tiles, and the player and props follow it via `Terrain.groundAt`. So the model may have a real hill, but its edge heights must be consistent: no holes, no vertical drop at the boundary. Keep the diorama within a square of half-width 9.6 and about 19.2 across. Monuments keep clear.
+- **Sidecar.** The generator also writes `src/world/landmark-grounds/<id>.json` (register it in `src/world/landmark-ground.ts`): `half`, `step`, `ground` (walkable surface height on a grid, indexed [z][x], game axes: x = Blender x, z = -Blender y), `solids` (discs [x, z, r] for everything the player must not walk through), `interact` (the point the shrine is used from) and `reach`, and `stand` (where map travel arrives). `content/landmarks/fushimi-inari.py` is the reference; it must not leave zero-height holes in `ground`.
+- **Walkable surfaces.** Anything the player climbs (steps, platforms, bridges) is not terrain: register it in the generator as a floor, `(x0, x1, y0, y1, top)`, so the ground grid includes it, and keep solids to what stands above the floor (the generator takes geometry in a band 0.35 to 1.6 above the local ground; up-facing hill triangles are ignored). Leave a clear path at least 0.7 wide from `stand` to `interact`; a test checks it by flood fill.
+- Without a sidecar, the landmark gets a flat plateau and one solid disc.
 
-Done: fushimi-inari. Everything else uses the placeholder.
+Done: fushimi-inari, kinkaku-ji. Everything else uses the placeholder.
 
 ## Abilities
 

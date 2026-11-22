@@ -28,7 +28,8 @@ describe("propsInChunk", () => {
           expect(Math.floor(p.x / CHUNK_SIZE)).toBe(cx);
           expect(Math.floor(p.z / CHUNK_SIZE)).toBe(cz);
           const tile = terrain.tileAtPoint(p.x, p.z);
-          expect(p.y).toBe(tile.height);
+          expect(p.y).toBeCloseTo(terrain.groundAt(p.x, p.z), 6);
+          expect(Math.abs(p.y - tile.height)).toBeLessThan(0.5); // a slope tile is smooth, not stepped
           expect(ALLOWED[tile.biome]).toContain(p.kind);
         }
       }

@@ -4,7 +4,10 @@ import {
   capabilitiesForCount,
   landmarksBeforeAct,
   neighborsOf,
-  landmarkRadius,
+  anchorOf,
+  createObstacles,
+  planMonuments,
+  standPoint,
   createTerrain,
   createWorld,
   type Capability,
@@ -17,6 +20,7 @@ import {
 import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, reachOf, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
+const every = new Set<Capability>(["boat", "snowshoes", "climbing"]);
 
 /** An edge-adjacent meadow and water region whose joining line stays inside the two. */
 function meadowBesideWater(world: World): [Region, Region] {
@@ -182,13 +186,43 @@ describe("collision with obstacles", () => {
 
 describe("landmark as shrine", () => {
   const terrain = createTerrain(createWorld("lm-reach"));
+  const obstacles = createObstacles(terrain, planMonuments(terrain, []));
 
-  it("can be used from just outside its solid footprint, but not from far away", () => {
+  it("is used from its anchor, not from far away", () => {
     for (const region of terrain.world.landmarks) {
-      const r = landmarkRadius(region.landmark!);
-      expect(reachOf(region)).toBeGreaterThanOrEqual(r + PLAYER_RADIUS);
-      expect(shrineInReach(terrain, { x: region.site.x + r + PLAYER_RADIUS, z: region.site.z })).toBe(region);
-      expect(shrineInReach(terrain, { x: region.site.x + r + 4, z: region.site.z })).toBeNull();
+      const at = anchorOf(region);
+      expect(shrineInReach(terrain, at)).toBe(region);
+      expect(shrineInReach(terrain, { x: at.x + reachOf(region) + 4, z: at.z })).not.toBe(region);
     }
   });
+
+  it("can be walked to from where travel arrives, through its collision", () => {
+    // Flood-fill the footprint at 0.2 resolution with the player's radius around every solid.
+    for (const region of terrain.world.landmarks) {
+      const start = standPoint(region);
+      expect(blockerAt(terrain, every, start.x, start.z)).toBeNull();
+      const free = (x: number, z: number): boolean =>
+        obstacles.near(x, z, PLAYER_RADIUS).every((o) => Math.hypot(o.x - x, o.z - z) >= o.r + PLAYER_RADIUS);
+      expect(free(start.x, start.z), `${region.landmark!.id} arrival`).toBe(true);
+      const res = 0.2;
+      const key = (x: number, z: number): string => `${Math.round(x / res)},${Math.round(z / res)}`;
+      const seen = new Set([key(start.x, start.z)]);
+      const stack: Point[] = [start];
+      const at = anchorOf(region);
+      let arrived = false;
+      while (stack.length && !arrived) {
+        const p = stack.pop()!;
+        if (Math.hypot(p.x - at.x, p.z - at.z) <= reachOf(region)) arrived = true;
+        for (const [dx, dz] of [[res, 0], [-res, 0], [0, res], [0, -res]] as const) {
+          const n = { x: p.x + dx, z: p.z + dz };
+          if (Math.abs(n.x - region.site.x) > 24 || Math.abs(n.z - region.site.z) > 24) continue;
+          const k = key(n.x, n.z);
+          if (seen.has(k) || blockerAt(terrain, every, n.x, n.z) !== null || !free(n.x, n.z)) continue;
+          seen.add(k);
+          stack.push(n);
+        }
+      }
+      expect(arrived, `${region.landmark!.id} reachable on foot`).toBe(true);
+    }
+  }, 120_000);
 });
