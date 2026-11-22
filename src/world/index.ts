@@ -27,7 +27,7 @@ export {
   ringRadius,
 } from "./landmarks";
 export type { Landmark, LandmarkSpec } from "./landmarks";
-export { groundHeight, groundOf } from "./landmark-ground";
+export { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
 export type { LandmarkGround } from "./landmark-ground";
 export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauBase, plateauDistance } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";

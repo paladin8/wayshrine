@@ -19,12 +19,20 @@ describe("landmark model sidecars", () => {
       });
 
       it("sits at the base height all round its edge, so the terrain blends from one level", () => {
-        const n = g.ground.length;
-        for (let i = 0; i < n; i++) {
-          for (const v of [g.ground[0]![i]!, g.ground[n - 1]![i]!, g.ground[i]![0]!, g.ground[i]![n - 1]!]) {
-            expect(Math.abs(v)).toBeLessThan(0.001);
+        for (const grid of [g.ground, g.terrain ?? g.ground]) {
+          const n = grid.length;
+          for (let i = 0; i < n; i++) {
+            for (const v of [grid[0]![i]!, grid[n - 1]![i]!, grid[i]![0]!, grid[i]![n - 1]!]) {
+              expect(Math.abs(v)).toBeLessThan(0.001);
+            }
           }
         }
+      });
+
+      it("never lets the terrain rise above the walkable ground", () => {
+        if (!g.terrain) return;
+        expect(g.terrain).toHaveLength(g.ground.length);
+        g.ground.forEach((row, z) => row.forEach((v, x) => expect(g.terrain![z]![x]!).toBeLessThanOrEqual(v + 0.001)));
       });
 
       it("stands the player on open ground, within reach of the interaction point", () => {

@@ -1,5 +1,5 @@
 import { createNoise, createRng } from "../core";
-import { groundHeight, groundOf } from "./landmark-ground";
+import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import { isWater, type Biome } from "./terrain";
 import type { Region, World } from "./world";
@@ -172,13 +172,13 @@ export function createTerrain(world: World): Terrain {
         height = plateauBase(region);
         skirt = true;
       } else {
-        height = model ? plateauBase(region) + groundHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
+        height = model ? plateauBase(region) + surfaceHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
       }
     } else if (region.landmark && away < LANDMARK_BLEND) {
       // Ease from the footprint's edge height to natural ground, so it never stands as a wall.
       const t = Math.max(0, away) / LANDMARK_BLEND;
       const k = t * t * (3 - 2 * t);
-      const edge = plateauBase(region) + (model && !model.terrainSurface ? groundHeight(model, dx, dz) : 0);
+      const edge = plateauBase(region) + (model && !model.terrainSurface ? surfaceHeight(model, dx, dz) : 0);
       height = edge + (natural(x, z, region.biome) - edge) * k;
       // The slope down to water becomes shore, then water.
       if (isWater(region.biome)) {

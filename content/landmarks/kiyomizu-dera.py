@@ -290,6 +290,9 @@ def ground_at(x,y):
         if x0<=x<=x1 and y0<=y<=y1: h=max(h,top)
     return h
 ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+# The terrain follows the hillside alone: the stage stands over open ground on its posts, so the
+# decks raise the walkable `ground` but must not raise the terrain, which would bury the posts.
+terrain=[[round(H(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
 CELL=0.3
 cellg={}
 def cg(cx,cy):
@@ -321,7 +324,7 @@ solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] fo
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=(OX,OY-2.1)   # in front of Otowa Waterfall
 STAND=(7.6,-8.2)       # the foot of the path, front-right corner
-side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
+side={"half":HALF,"step":GSTEP,"ground":ground,"terrain":terrain,"solids":solids,
       "interact":[round(INTERACT[0],2),round(-INTERACT[1],2)],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/kiyomizu-dera.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
