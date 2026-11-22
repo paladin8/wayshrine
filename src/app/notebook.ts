@@ -38,7 +38,7 @@ const CSS = `
 .nb-overlay{position:fixed;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 45%,#2a1f1a99,#120c0ccc);pointer-events:auto;font:14px/1.4 ${UI_FONT};color:#3a2c26}
 .nb-overlay.open{display:flex;animation:nb-in .22s ease-out}
 @keyframes nb-in{from{opacity:0}to{opacity:1}}
-.nb-book{--lh:clamp(22px,3.5vh,29px);position:relative;box-sizing:border-box;width:min(1000px,calc(100vw - 20px));height:min(660px,calc(100dvh - 24px));padding:clamp(8px,1.6vh,14px);outline:none}
+.nb-book{--lh:clamp(22px,3.5vh,29px);--pad:clamp(8px,1.6vh,14px);position:relative;box-sizing:border-box;width:min(1000px,calc(100vw - 20px));height:min(660px,calc(100dvh - 24px));padding:var(--pad);outline:none}
 .nb-back{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:10px 14px 14px 10px;background:
   linear-gradient(225deg,#b8975a 0 22px,#0000 22px) top right/22px 22px no-repeat,
   linear-gradient(315deg,#b8975a 0 22px,#0000 22px) bottom right/22px 22px no-repeat,
@@ -123,23 +123,39 @@ const CSS = `
 .nb-face{position:absolute;inset:0;overflow:hidden;box-shadow:0 0 16px #0006;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .nb-face.rear{transform:rotateY(180deg)}
 .nb-face>.nb-page{position:absolute;inset:0;width:auto;height:auto}
-.nb-face.cover{border-radius:0 6px 6px 0;background:
-  linear-gradient(225deg,#b8975a 0 22px,#0000 22px) top right/22px 22px no-repeat,
-  linear-gradient(315deg,#b8975a 0 22px,#0000 22px) bottom right/22px 22px no-repeat,
+.nb-lid{top:0;bottom:0}
+.nb-face.cover,.nb-face.inside{background:
   ${GRAIN},
   radial-gradient(ellipse 160px 46px at 70% 14%,#d9b47a38,#0000),
   radial-gradient(ellipse 200px 60px at 40% 90%,#c99a6430,#0000),
-  linear-gradient(90deg,#0000,#0000 94%,#d2a46a2e),
   radial-gradient(circle at 20% 15%,#6c3322,#4c2116 55%,#2f1209);box-shadow:inset 0 0 22px #0008,0 0 16px #0006}
-.nb-face.cover::before{content:"";position:absolute;inset:3px 3px 3px -3px;border:2px dashed #dcbf8a77;border-radius:4px}
+.nb-face.cover{border-radius:0 14px 14px 0;background:
+  linear-gradient(225deg,#b8975a 0 22px,#0000 22px) top right/22px 22px no-repeat,
+  linear-gradient(315deg,#b8975a 0 22px,#0000 22px) bottom right/22px 22px no-repeat,
+  linear-gradient(90deg,#0000,#0000 94%,#d2a46a2e),
+  ${GRAIN},
+  radial-gradient(ellipse 160px 46px at 70% 14%,#d9b47a38,#0000),
+  radial-gradient(ellipse 200px 60px at 40% 90%,#c99a6430,#0000),
+  radial-gradient(circle at 20% 15%,#6c3322,#4c2116 55%,#2f1209)}
+.nb-face.inside{border-radius:10px 0 0 10px;background:
+  linear-gradient(135deg,#b8975a 0 22px,#0000 22px) top left/22px 22px no-repeat,
+  linear-gradient(45deg,#b8975a 0 22px,#0000 22px) bottom left/22px 22px no-repeat,
+  linear-gradient(270deg,#0000,#0000 94%,#d2a46a2e),
+  ${GRAIN},
+  radial-gradient(ellipse 90px 120px at 12% 78%,#0000003a,#0000),
+  radial-gradient(circle at 20% 15%,#6c3322,#4c2116 55%,#2f1209)}
+.nb-face.cover::before,.nb-face.inside::before{content:"";position:absolute;inset:6px 6px 6px 0;border:2px dashed #dcbf8a77;border-left:0;border-radius:0 8px 8px 0}
+.nb-face.inside::before{inset:6px 0 6px 6px;border:2px dashed #dcbf8a77;border-right:0;border-radius:8px 0 0 8px}
+.nb-inset{position:absolute;left:var(--pad);top:var(--pad);bottom:var(--pad);right:0}
+.nb-inset>.nb-page{position:absolute;inset:0}
 .nb-label{position:absolute;left:50%;top:50%;width:62%;padding:clamp(12px,2.6vh,22px) 10px;transform:translate(-50%,-50%) rotate(-1.2deg);text-align:center;font-size:clamp(20px,3.6vh,30px);line-height:1.2;color:#2b2a4a;background:${STAINS},linear-gradient(#efe0b8,#e2cf9f);box-shadow:0 1px 3px #0008,inset 0 0 14px #8a5a2a55;border:1px solid #7a4b1f66}
 .nb-label.ja{font-family:${HAND_JA}}
 .nb-label.en{font-family:${HAND_EN}}
-.nb-back.unfold{clip-path:inset(-40px -40px -40px 50%);animation:nb-unfold .5s ease-in .5s forwards}
-@keyframes nb-unfold{from{clip-path:inset(-40px -40px -40px 50%)}to{clip-path:inset(-40px -40px -40px -40px)}}
 .nb-book.opening{animation:nb-slide .95s cubic-bezier(.5,0,.25,1) .15s both}
 @keyframes nb-slide{from{transform:translateX(-25%)}to{transform:none}}
-.nb-spread.opening{box-shadow:none}
+.nb-back.closed{clip-path:inset(-40px -40px -40px 50%)}
+.nb-spread.opening{clip-path:inset(-12px -12px -12px 50%)}
+.nb-book.opening{perspective:2600px}
 .nb-book.opening .nb-x{opacity:0}
 .nb-leaf.fwd{animation:nb-flip-fwd .6s cubic-bezier(.45,.05,.4,1) forwards}
 .nb-leaf.back{animation:nb-flip-back .6s cubic-bezier(.45,.05,.4,1) forwards}
@@ -339,13 +355,14 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     const v = viewNow();
     book.classList.add("opening");
     spread.classList.add("opening");
-    book.querySelector(".nb-back")?.classList.add("unfold");
-    const lid = el("div", "nb-lid", spread);
+    book.querySelector(".nb-back")?.classList.add("closed");
+    // The whole front board turns, binding and all: its outside is the cover, its inside the left page.
+    const lid = el("div", "nb-lid", book);
     const cover = el("div", "nb-face cover", lid);
     const label = el("div", `nb-label ${v.language}`, cover);
     label.textContent = messagesFor(v.language).notebook.title;
-    // The inside of the cover is the left-hand page, so it lands as the page it will become.
-    el("div", "nb-face rear", lid).appendChild(buildPage(v, page, "left"));
+    const inside = el("div", "nb-face inside rear", lid);
+    el("div", "nb-inset", inside).appendChild(buildPage(v, page, "left"));
     busy = true;
     whenDone(lid, 1400, () => {
       busy = false;
