@@ -43,6 +43,8 @@ export interface LandmarkNameModel {
 
 export interface Hud {
   readonly actions: HTMLElement;
+  /** The landmark counter; clicking it opens the travel notebook. */
+  readonly landmarkButton: HTMLButtonElement;
   update(model: HudModel): void;
 }
 
@@ -55,14 +57,8 @@ const CSS = `
 .hud .star-count::before{content:"";width:14px;height:14px;background:#b64e3d;clip-path:polygon(50% 0,64% 34%,100% 38%,74% 62%,81% 100%,50% 82%,19% 100%,26% 62%,0 38%,36% 34%)}
 .hud .hud-action{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:34px;padding:0;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422;color:inherit;font:inherit;cursor:pointer;pointer-events:auto}
 .hud .hud-action:hover,.hud .hud-action[aria-expanded=true]{background:#fffaf0}
-.hud .hud-action:focus-visible,.hud .landmark-list:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
+.hud .hud-action:focus-visible,.hud .landmark-count:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 .hud .landmark-count{gap:6px;padding:0 10px;font-variant-numeric:tabular-nums}
-.hud .landmark-list{position:absolute;top:calc(100% + 8px);right:0;box-sizing:border-box;width:min(280px,calc(100vw - 28px));max-height:min(420px,calc(100dvh - var(--actions-top) - 56px));overflow:auto;margin:0;padding:14px 16px;border:1px solid #2a242433;border-radius:14px;background:#fffaf0;box-shadow:0 8px 24px #0004;pointer-events:auto}
-.hud .landmark-list h2{margin:0 0 7px;font-size:16px}
-.hud .landmark-list p{margin:0;color:#5e5249}
-.hud .landmark-list ul{margin:0;padding:0;list-style:none}
-.hud .landmark-list li{padding:7px 0}
-.hud .landmark-list li+li{border-top:1px solid #2a242422}
 .hud .gear-stars{padding:1px 5px;border-radius:6px;background:#2a242410;font-size:12px}
 .hud .gear-stars::before{width:11px;height:11px}
 .hud .gear-chip.off .gear-stars::before{background:#88612c}
@@ -124,47 +120,11 @@ export function createHud(container: HTMLElement): Hud {
   const count = document.createElement("button");
   count.type = "button";
   count.className = "hud-action star-count landmark-count";
-  count.setAttribute("aria-controls", "landmark-list");
-  count.setAttribute("aria-expanded", "false");
+  count.setAttribute("aria-haspopup", "dialog");
   const countValue = document.createElement("span");
   count.appendChild(countValue);
 
-  const landmarkList = document.createElement("section");
-  landmarkList.id = "landmark-list";
-  landmarkList.className = "landmark-list";
-  landmarkList.hidden = true;
-  landmarkList.tabIndex = -1;
-  landmarkList.setAttribute("aria-labelledby", "landmark-list-title");
-  const landmarkTitle = document.createElement("h2");
-  landmarkTitle.id = "landmark-list-title";
-  const landmarkEmpty = document.createElement("p");
-  const landmarkEntries = document.createElement("ul");
-  landmarkEntries.setAttribute("role", "list");
-  landmarkList.append(landmarkTitle, landmarkEmpty, landmarkEntries);
-  tr.append(count, landmarkList);
-
-  const setLandmarkListOpen = (open: boolean): void => {
-    landmarkList.hidden = !open;
-    count.setAttribute("aria-expanded", String(open));
-  };
-  count.addEventListener("click", () => {
-    const open = landmarkList.hasAttribute("hidden");
-    setLandmarkListOpen(open);
-    (open ? landmarkList : count).focus({ preventScroll: true });
-  });
-  const dismissOutside = (event: Event): void => {
-    if (landmarkList.hidden || !(event.target instanceof Node)) return;
-    if (!count.contains(event.target) && !landmarkList.contains(event.target)) setLandmarkListOpen(false);
-  };
-  document.addEventListener("pointerdown", dismissOutside);
-  document.addEventListener("focusin", dismissOutside);
-  window.addEventListener("keydown", (event) => {
-    if (landmarkList.hidden || event.code !== "Escape" || event.repeat) return;
-    event.stopImmediatePropagation();
-    setLandmarkListOpen(false);
-    count.focus({ preventScroll: true });
-  }, true);
-  landmarkList.addEventListener("keydown", (event) => event.stopPropagation());
+  tr.append(count);
 
   let renderedLandmarks: readonly string[] | undefined;
   let renderedLandmarkMessages: Messages | undefined;
@@ -220,6 +180,7 @@ export function createHud(container: HTMLElement): Hud {
 
   return {
     actions: tr,
+    landmarkButton: count,
     update(m) {
       const t = m.messages;
       for (const { item, chip, name, stars } of chips) {
@@ -236,15 +197,6 @@ export function createHud(container: HTMLElement): Hud {
         const landmarkCount = m.restoredLandmarks.length;
         setText(countValue, String(landmarkCount));
         count.setAttribute("aria-label", t.landmarksRestored(landmarkCount));
-        setText(landmarkTitle, t.landmarkList.title);
-        setText(landmarkEmpty, t.landmarkList.empty);
-        landmarkEmpty.hidden = landmarkCount > 0;
-        landmarkEntries.hidden = landmarkCount === 0;
-        landmarkEntries.replaceChildren(...m.restoredLandmarks.map((id) => {
-          const item = document.createElement("li");
-          item.textContent = t.landmarkNames[id] ?? id;
-          return item;
-        }));
       }
 
       const showCompass = m.showCompass && m.compass !== null;

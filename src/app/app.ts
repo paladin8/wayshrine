@@ -39,6 +39,7 @@ import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
 import { createMinimap } from "./minimap";
 import { createMonumentUi } from "./monuments-ui";
+import { createNotebook } from "./notebook";
 import { createSettingsStore } from "./settings";
 import { createSettingsPanel } from "./settings-panel";
 
@@ -138,10 +139,22 @@ export function startApp(container: HTMLElement): void {
     language: () => settings.get().language,
   });
   const panel = createSettingsPanel(container, hud.actions, settings);
+  const notebook = createNotebook(container, hud.landmarkButton, {
+    all: world.landmarks.map((region) => region.landmark!.id),
+    restored: () => world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id),
+    debug,
+    language: () => settings.get().language,
+    onTravel: (id) => {
+      const region = world.landmarks.find((r) => r.landmark?.id === id);
+      if (!region || awakening) return;
+      pos = standPoint(region);
+    },
+  });
   /** Dialogs own the keyboard while open. */
-  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBookOpen();
+  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBookOpen() || notebook.isOpen();
   let drawnCollected = state.collected.length;
   let drawnLanguage = settings.get().language;
+  let drawnLandmarks = -1;
   let pos: Point = startPosition(terrain);
   let facing = 0;
   /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
@@ -383,6 +396,11 @@ export function startApp(container: HTMLElement): void {
       drawnCollected = state.collected.length;
       drawnLanguage = prefs.language;
       monumentUi.refresh();
+      notebook.refresh();
+    }
+    if (restoredLandmarks.length !== drawnLandmarks) {
+      drawnLandmarks = restoredLandmarks.length;
+      notebook.refresh();
     }
     const guide = nextShrine(world, state, pos);
     let compass = null;

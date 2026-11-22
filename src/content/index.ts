@@ -1,5 +1,6 @@
 import type { MonumentSpec } from "../world";
 import index from "./text-index.json";
+import notes from "./landmark-notes.json";
 import type { IndexEntry, TextEntry, TextKind } from "./build";
 
 export type { SceneryBiome, Season, TextEntry, TextKind } from "./build";
@@ -23,3 +24,6 @@ export function loadTexts(): Promise<ReadonlyMap<string, TextEntry>> {
 }
 
 export const TEXT_KINDS: readonly TextKind[] = ["haiku", "proverb", "fourCharacter", "idiom"];
+
+/** The notebook's handwritten entry for each landmark, in both languages. */
+export const landmarkNotes: Readonly<Record<string, { readonly en: string; readonly ja: string }>> = notes;

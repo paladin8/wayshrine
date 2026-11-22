@@ -13,7 +13,7 @@ function allText(m: Messages): string[] {
     ...LANDMARKS.map((l) => m.landmarkNames[l.id] ?? ""),
     m.blocked("X", "Y"),
     m.landmarksRestored(7),
-    ...Object.values(m.landmarkList),
+    ...Object.values(m.notebook),
     m.promptRestore,
     m.promptSkip,
     m.compassHere,

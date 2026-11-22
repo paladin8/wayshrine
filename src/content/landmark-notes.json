@@ -1,0 +1,266 @@
+{
+ "fushimi-inari": {
+  "en": "Thousands of vermilion gates, close together, and the path just keeps climbing. Sunlight comes through in stripes. I stopped counting around the third bend.",
+  "ja": "朱色の鳥居が幾重にも続き、道は山へと登っていく。木漏れ日が縞になって落ちる。三つ目の曲がり角で数えるのをやめた。"
+ },
+ "kinkaku-ji": {
+  "en": "The gold pavilion sits on its pond like it weighs nothing. The water doubles it, so there are two. I stood a long time at the edge.",
+  "ja": "金色の楼閣が池に浮かぶように建っている。水面にもう一つ映って、二つになった。しばらく池のふちに立っていた。"
+ },
+ "todai-ji-daibutsu": {
+  "en": "The Buddha is so large the hall seems built around him, and it was. His hand alone is bigger than I am. Deer waited outside, unimpressed.",
+  "ja": "大仏は大きすぎて、堂のほうが彼に合わせて建てられたようだ。手のひらだけで私より大きい。外では鹿が平然と待っていた。"
+ },
+ "itsukushima-torii": {
+  "en": "At high tide the great gate stands in the sea. The deer here walk along the shore as if they own it. Red against grey water.",
+  "ja": "満潮のとき、大鳥居は海の中に立つ。ここの鹿は我が物顔で波打ち際を歩く。灰色の水に朱が映える。"
+ },
+ "himeji-castle": {
+  "en": "White walls, layered roofs, and the stone sloping up beneath them. People call it the White Heron. I can see why: it looks about to lift off.",
+  "ja": "白い壁、重なる屋根、その下に反り上がる石垣。白鷺城と呼ばれる理由がわかる。今にも飛び立ちそうだ。"
+ },
+ "kiyomizu-dera": {
+  "en": "The wide wooden stage hangs out over the slope, held up by tall posts and no nails. Below, the maples go on forever.",
+  "ja": "広い木の舞台が斜面にせり出し、高い柱に支えられている。釘は使われていない。眼下には楓がどこまでも続く。"
+ },
+ "meoto-iwa": {
+  "en": "Two rocks in the sea, bound by a heavy rope: a married couple, they say. The waves keep coming and the knot keeps holding.",
+  "ja": "海に立つ二つの岩を太い縄が結ぶ。夫婦岩という。波は寄せ続け、結び目は解けない。"
+ },
+ "enoshima-lighthouse": {
+  "en": "A glass tower on a small island, lit at night like a candle. The causeway to reach it is the best part of the walk.",
+  "ja": "小さな島に立つガラスの塔。夜は蝋燭のように灯る。そこへ渡る道がいちばんいい散歩道だ。"
+ },
+ "shirakawa-go": {
+  "en": "Steep thatched roofs, folded like hands in prayer. Snow lies thick on them, and the smoke from the hearths rises quietly.",
+  "ja": "祈る手のように合わさった急勾配の茅葺き屋根。厚い雪をかぶり、囲炉裏の煙が静かに昇る。"
+ },
+ "matsumoto-castle": {
+  "en": "A black castle on flat ground, with a red bridge over the moat. It looks stern, but the swans on the water do not seem to mind.",
+  "ja": "平地に建つ黒い城、堀に架かる赤い橋。厳めしいが、水面の白鳥は気にしていないようだ。"
+ },
+ "hirosaki-castle": {
+  "en": "A small keep with a great deal of snow around it. In spring this is the place for cherry blossoms; now, just quiet.",
+  "ja": "雪にすっぽり囲まれた小さな天守。春なら桜の名所だが、いまはただ静かだ。"
+ },
+ "zao-juhyo": {
+  "en": "The trees are frozen into shapes: monsters, someone said. Wind blows and the ice creaks. I kept my scarf up and kept looking.",
+  "ja": "木々が凍りつき、怪物のような形になっている。風が吹くと氷がきしむ。マフラーを引き上げて、見入ってしまった。"
+ },
+ "kenroku-en": {
+  "en": "Ropes fan out from the pine trunks to hold up the branches under the snow. Even the way they protect the trees is beautiful.",
+  "ja": "松の幹から縄が傘のように張られ、雪の重みから枝を守っている。守り方までが美しい。"
+ },
+ "mount-fuji": {
+  "en": "Through the pagoda, over the rooftops, there it is: a perfect cone. Every photo I take looks like a postcard, and still I take more.",
+  "ja": "塔の向こう、屋根の向こうに、完璧な円錐形が見える。どれを撮っても絵はがきのようで、それでも撮ってしまう。"
+ },
+ "nikko-toshogu": {
+  "en": "Carvings on every beam, gold on everything. Three monkeys, a sleeping cat. It is almost too much, and then you notice how much care it took.",
+  "ja": "梁という梁に彫刻、あらゆるものに金。三猿に眠り猫。やりすぎにも見えるが、そこに込められた手間に気づく。"
+ },
+ "kegon-falls": {
+  "en": "The whole river drops nearly a hundred metres in a single sheet. I could feel the mist on my face from the platform.",
+  "ja": "川がまるごと一枚の帯になって百メートル近く落ちる。展望台まで霧のしぶきが届いた。"
+ },
+ "kappa-bashi": {
+  "en": "A little bridge over water so clear it looks like air. The peaks are behind it. I walked slowly, to make the walk last.",
+  "ja": "空気のように澄んだ水に架かる小さな橋。背後には峰々。少しでも長く歩けるように、ゆっくり渡った。"
+ },
+ "tateyama-kurobe": {
+  "en": "A road cut through the snow, with walls taller than a bus on both sides. Blue light at the bottom, and a very strange quiet.",
+  "ja": "雪を切り開いた道の両側に、バスより高い雪の壁。底には青い光、そして不思議な静けさ。"
+ },
+ "koyasan-okunoin": {
+  "en": "An old cedar road lined with moss-covered stones, tens of thousands of them. Nobody speaks loudly here. Incense, and the sound of my steps.",
+  "ja": "苔むした石塔が何万基も並ぶ杉の古道。ここでは誰も大声を出さない。お香の匂いと、自分の足音。"
+ },
+ "yoshino-yama": {
+  "en": "Cherry trees up the whole mountain, planted by pilgrims over centuries. The blossoms arrive in waves, from the bottom to the top.",
+  "ja": "山じゅうが桜。何世紀もかけて参拝者が植えてきたという。花は麓から頂へ、波のように咲き上がる。"
+ },
+ "kushiro-shitsugen": {
+  "en": "Flat reeds to the horizon, and the long call of cranes. I stood very still, and one walked past close enough to hear its feet.",
+  "ja": "地平線まで続く平らな葦原、鶴の長い鳴き声。じっと立っていたら、足音が聞こえるほど近くを一羽が通った。"
+ },
+ "oze": {
+  "en": "A plank path through the marsh, a little over the water. Cotton grass, mountains reflected. I kept to the boards and the boards kept to the marsh.",
+  "ja": "湿原の上を渡る木道。ワタスゲ、水に映る山々。板の上を歩き、板は湿原に寄り添っていた。"
+ },
+ "yanagawa": {
+  "en": "A boatman poles us along the canal beneath willows. He sings a little, between bridges. We duck, he does not need to.",
+  "ja": "船頭さんが柳の下の掘割を棹で進む。橋と橋のあいだで少し歌う。私たちは頭を下げ、彼はその必要がない。"
+ },
+ "kurashiki-bikan": {
+  "en": "White storehouses with black tile, the canal slow and green, willows leaning in. Everything is reflected twice.",
+  "ja": "黒瓦の白い蔵、ゆっくり流れる緑の運河、しだれる柳。すべてが二重に映っている。"
+ },
+ "byodo-in": {
+  "en": "The Phoenix Hall opens its wings over the pond. I knew it from a coin, but the coin did not have the water, or the stillness.",
+  "ja": "鳳凰堂が池の上に翼を広げている。硬貨で見知っていたが、水も静けさも硬貨にはなかった。"
+ },
+ "senso-ji": {
+  "en": "A huge red lantern at the gate, and then the long street of snacks. Smoke from the incense, and the pagoda rising behind it all.",
+  "ja": "門に巨大な赤提灯、そこから続く食べ歩きの参道。線香の煙、そのうしろにそびえる五重塔。"
+ },
+ "kamakura-daibutsu": {
+  "en": "The bronze Buddha sits outdoors, with nothing over him. The hall was washed away long ago. He seems fine with the weather.",
+  "ja": "青銅の大仏は屋根もなく外に座っている。堂はとうの昔に流された。天気のことは気にしていないらしい。"
+ },
+ "tokyo-tower": {
+  "en": "Red and white lattice, rising above everything around it. At night it glows orange. It looks like it was drawn with a very steady hand.",
+  "ja": "赤と白の格子が街並みの上にそびえる。夜はオレンジ色に光る。迷いのない手で描かれたようだ。"
+ },
+ "osaka-castle": {
+  "en": "The keep sits on enormous stone walls, with a wide moat all around. Gold tigers on the roof. The stones are the real story.",
+  "ja": "巨大な石垣の上に天守、周りには広い堀。屋根には金の虎。ほんとうに見るべきは石垣だ。"
+ },
+ "horyu-ji": {
+  "en": "The oldest wooden buildings in the world, they say. The pagoda leans into its centuries gracefully. The wood is dark and warm to look at.",
+  "ja": "世界最古の木造建築という。五重塔は何世紀もの時をしなやかに受け止めている。黒ずんだ木が温かく見える。"
+ },
+ "jomon-sugi": {
+  "en": "A cedar that may be thousands of years old. Its trunk is wider than the path. I put my hand on it for a moment, and felt small, in a good way.",
+  "ja": "数千年を生きたかもしれない杉。幹は道幅より太い。しばらく手を当てて、いい意味で小さくなった気がした。"
+ },
+ "shiratani-unsuikyo": {
+  "en": "Moss on everything: the stones, the roots, the fallen trunks. Green light, soft ground, a faint smell of rain. It feels like a forest in a film.",
+  "ja": "石も根も倒木も苔に覆われている。緑の光、やわらかな地面、かすかな雨の匂い。映画に出てくる森のようだ。"
+ },
+ "arashiyama": {
+  "en": "Bamboo on both sides, so tall the light turns green. When the wind comes, the whole grove speaks.",
+  "ja": "両側に竹、あまりに高くて光が緑に染まる。風が来ると、林ぜんたいが語り出す。"
+ },
+ "nachi-falls": {
+  "en": "A tall, thin waterfall with a red pagoda standing in front of it. The shrine feels older than anything written about it. I climbed the steps slowly.",
+  "ja": "細く高い滝と、その前に立つ朱塗りの塔。どんな記録よりも古い場所のように感じる。石段をゆっくり登った。"
+ },
+ "meiji-jingu": {
+  "en": "A huge wooden torii at the edge of a planted forest, in the middle of the city. The noise stops after a few steps. Gravel underfoot.",
+  "ja": "都会の真ん中、人の手で育てられた森の入口に大きな木の鳥居。数歩進むと騒音が消える。足もとには砂利。"
+ },
+ "ise-jingu": {
+  "en": "Plain wood, a thatched roof, nothing painted. It is rebuilt every twenty years, so it is old and new at once. Cedars hold it in.",
+  "ja": "白木に茅葺き、彩色は一切ない。二十年ごとに建て替えられ、古くて新しい。杉が周りを抱いている。"
+ },
+ "izumo-taisha": {
+  "en": "A rope as thick as a tree hangs at the hall. People throw coins and try to make them stick. Many gods are said to gather here in autumn.",
+  "ja": "社殿には木ほどの太さの大注連縄。人々が硬貨を投げて挟まるか試す。秋には八百万の神々が集うという。"
+ },
+ "takachiho": {
+  "en": "A narrow gorge of dark stone, and a waterfall at its end. Boats cross the green water below. I stayed to watch the oars.",
+  "ja": "黒い岩の細い峡谷、その奥に滝。下の緑の水面を小舟が渡る。櫂の動きをずっと眺めていた。"
+ },
+ "iya-kazurabashi": {
+  "en": "A bridge made of vines, over a gorge. The gaps between the planks are big enough to see the river through. I held on, and then I let go. Almost.",
+  "ja": "谷に架かる蔓の橋。板の隙間から川が見えるほど広い。しっかりつかまり、それから手を離した。ほとんど。"
+ },
+ "ginkaku-ji": {
+  "en": "The silver pavilion was never covered in silver, and it doesn't matter. The sand garden is combed into waves, a small mountain in the middle.",
+  "ja": "銀閣は銀を貼られたことがないが、それでいい。砂庭は波形に整えられ、中央に小さな山。"
+ },
+ "ryoan-ji": {
+  "en": "Fifteen stones in raked gravel, and from wherever you sit one is hidden. I sat a good while. I still do not know what it means; I think that is the point.",
+  "ja": "白砂に十五の石。どこに座っても一つは隠れる。長く座った。意味はまだわからない。それでいいのだと思う。"
+ },
+ "sakurajima": {
+  "en": "Across the bay, a volcano breathes out a grey plume. Ash falls softly on the cars. People here carry on as if it were weather.",
+  "ja": "湾の向こうで火山が灰色の煙を吐く。車の上に灰が静かに降る。ここの人々には、それが天気のようなものらしい。"
+ },
+ "mount-aso": {
+  "en": "A caldera so large there are towns inside it. Grass, cattle, and in the middle, a crater that smells of sulphur.",
+  "ja": "町がまるごと入るほど大きなカルデラ。草原と牛、その真ん中に硫黄の匂いのする火口。"
+ },
+ "beppu-hells": {
+  "en": "Pools of hot water in blue, red, even milky white. They are too hot to touch, and every one of them is beautiful. Steam in every direction.",
+  "ja": "青、赤、乳白色の熱い池。どれも熱くて触れないし、どれも美しい。どちらを向いても湯けむり。"
+ },
+ "owakudani": {
+  "en": "Steam from the ground, yellow rock, and the smell of eggs. They boil them in the vents and they turn black. I ate one. It is said to add seven years.",
+  "ja": "地面から噴き出す蒸気、黄色い岩、卵の匂い。噴気で茹でた卵は黒くなる。一つ食べた。寿命が七年延びるという。"
+ },
+ "kumamoto-castle": {
+  "en": "Black walls, and the stone beneath them curving like a fan, steeper as it climbs. It was built so that no one could climb it.",
+  "ja": "黒い壁、その下で扇のように反り上がる石垣、上へ行くほど急になる。誰も登れないように造られたという。"
+ },
+ "dazaifu": {
+  "en": "A drum bridge over the pond, and plum trees in front of the shrine. Students come to ask for exam luck. I made a small wish of my own.",
+  "ja": "池に架かる太鼓橋、社殿の前の梅の木。受験生が合格祈願に訪れる。私もささやかな願いごとをした。"
+ },
+ "dogo-onsen": {
+  "en": "An old wooden bathhouse with tiers of roofs and a lantern at the top. The steam smells of cedar. The oldest in Japan, so they say.",
+  "ja": "段々の屋根、頂に灯りのある古い木造の湯屋。蒸気は杉の香り。日本最古といわれる。"
+ },
+ "kintaikyo": {
+  "en": "Five wooden arches over a wide river, each one curving higher than the last. It looks like a rainbow somebody carved.",
+  "ja": "広い川に架かる五連の木のアーチ。どれも次のものより高く反る。誰かが彫った虹のようだ。"
+ },
+ "gunkanjima": {
+  "en": "A small island of concrete towers, empty now, with the windows gone. Wind and waves do the talking. It looks like a ship that stopped.",
+  "ja": "コンクリートの塔が並ぶ小さな島。いまは無人で、窓もない。語るのは風と波だけ。止まってしまった船のようだ。"
+ },
+ "naruto": {
+  "en": "Under the bridge the sea turns on itself, roaring and spinning. From the walkway you can look straight down into it. My knees noticed.",
+  "ja": "橋の下で海がうなりをあげて渦を巻く。通路から真下の渦をのぞける。膝が気づいていた。"
+ },
+ "shuri-castle": {
+  "en": "A red hall with gold dragons, built a little differently from any other castle in Japan. It faces the sea and a different history.",
+  "ja": "金の龍をあしらった赤い正殿。日本のほかの城とは少し違う造り。海に面し、違う歴史を背負っている。"
+ },
+ "taketomi": {
+  "en": "Red tile roofs, low walls of coral, white sand in the streets. An ox cart passes slowly, the driver playing the sanshin. Nobody hurries here.",
+  "ja": "赤瓦の屋根、低いサンゴの石垣、白砂の道。水牛車がゆっくり通り、御者が三線を弾く。誰も急がない。"
+ },
+ "matsushima": {
+  "en": "Hundreds of small islands, pine trees on each, scattered across the bay. A poet could not find words for it, the story goes.",
+  "ja": "湾に散らばる数百の小島、それぞれに松。詩人が言葉を失ったという話が伝わる。"
+ },
+ "amanohashidate": {
+  "en": "A thin sandbar of pines across the bay. Some people look at it upside down, between their legs, and say it looks like a bridge to heaven. I tried.",
+  "ja": "湾を横切る松の細い砂州。股のぞきをすると天に架かる橋に見えるという。私もやってみた。"
+ },
+ "tottori-dunes": {
+  "en": "Dunes the colour of sand, running all the way down to the sea. Footprints on the ridge, and wind rubbing them away.",
+  "ja": "砂色の砂丘が海まで続く。尾根に足跡、それを風が消していく。"
+ },
+ "shiretoko": {
+  "en": "The land narrows into a peninsula, and the forest comes right to the water. Lakes in the trees, a bear somewhere. I kept my voice down.",
+  "ja": "陸地が細くなって半島になり、森が水際まで来る。木々の中の湖、どこかに熊。声を小さくして歩いた。"
+ },
+ "otaru-canal": {
+  "en": "A stone canal lined with old warehouses and gas lamps. At dusk the lamps come on, and the water holds the light.",
+  "ja": "古い倉庫とガス灯が並ぶ石造りの運河。夕暮れに灯りがともり、水面が光を抱く。"
+ },
+ "goryokaku": {
+  "en": "A fort in the shape of a five-pointed star, seen best from above. Whoever drew it was thinking about cannons, and about being looked at.",
+  "ja": "五つの角を持つ星形の城郭。上から見るのがいちばんいい。設計した人は、大砲と、見られることを考えていた。"
+ },
+ "blue-pond": {
+  "en": "A pond of a blue that looks wrong, with bare larch trunks standing up from it. The colour changes with the light. I came back twice.",
+  "ja": "不思議なほど青い池から、葉のない落葉松の幹が立つ。光で色が変わる。二度、見に戻った。"
+ },
+ "furano": {
+  "en": "Stripes of purple lavender over the hills, and the smell reaches you before the view does. Bees, in a hum.",
+  "ja": "丘に紫のラベンダーの縞。景色より先に香りが届く。蜂が低くうなっている。"
+ },
+ "ouchi-juku": {
+  "en": "A single street of thatched houses, in snow. Buckwheat noodles served with a leek instead of chopsticks, which is harder than it sounds.",
+  "ja": "雪の中、茅葺きの家が並ぶ一本の通り。そばは箸の代わりに長ねぎで食べる。見た目よりむずかしい。"
+ },
+ "ginzan-onsen": {
+  "en": "Wooden inns on both sides of a river, with gas lamps lit in the snow. It looks like a painting someone left out in the weather.",
+  "ja": "川の両岸に木造の旅館、雪の中でガス灯がともる。雨ざらしに置かれた絵のようだ。"
+ },
+ "chuson-ji": {
+  "en": "A tiny golden hall, protected inside a larger one. It is small and shining and has lasted nine hundred years. Cedars all round.",
+  "ja": "もっと大きな建物の中で守られている、小さな金色堂。小さく輝き、九百年もちこたえている。まわりは杉。"
+ },
+ "yamadera": {
+  "en": "A thousand steps up, with halls built right into the cliff. At the top the valley opens out. Cicadas, and then silence.",
+  "ja": "千段の石段を登ると、崖にはめ込まれたような堂。頂上で谷が開ける。蝉の声、それから静寂。"
+ },
+ "snow-monkeys": {
+  "en": "Monkeys sit in a hot spring with snow on their heads and their eyes closed. They are the only ones here who know how to relax.",
+  "ja": "頭に雪をのせた猿たちが、目を閉じて温泉につかっている。ここでくつろぎ方を心得ているのは彼らだけだ。"
+ }
+}

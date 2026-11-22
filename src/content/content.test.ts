@@ -73,3 +73,17 @@ describe("landmark haiku placement", () => {
     }
   });
 });
+
+describe("landmark notebook notes", () => {
+  it("has a note in both languages for every landmark, short enough to fit a page", async () => {
+    const { landmarkNotes } = await import("./index");
+    const { LANDMARK_SPECS } = await import("../world");
+    expect(Object.keys(landmarkNotes).sort()).toEqual(LANDMARK_SPECS.map((l) => l.id).sort());
+    for (const [id, note] of Object.entries(landmarkNotes)) {
+      expect(note.en.length, id).toBeGreaterThan(40);
+      expect(note.en.length, id).toBeLessThanOrEqual(190);
+      expect(note.ja.length, id).toBeGreaterThan(15);
+      expect(note.ja.length, id).toBeLessThanOrEqual(90);
+    }
+  });
+});

@@ -21,7 +21,17 @@ export interface Messages {
   /** Display names of the landmarks, by id. */
   readonly landmarkNames: Readonly<Record<string, string>>;
   readonly landmarksRestored: (count: number) => string;
-  readonly landmarkList: { readonly title: string; readonly empty: string };
+  /** The travel notebook that lists restored landmarks. */
+  readonly notebook: {
+    readonly title: string;
+    readonly empty: string;
+    readonly travel: string;
+    /** Debug only: marks a landmark the player has not restored yet. */
+    readonly locked: string;
+    readonly prev: string;
+    readonly next: string;
+    readonly close: string;
+  };
   readonly promptRestore: string;
   readonly promptSkip: string;
   readonly compassHere: string;

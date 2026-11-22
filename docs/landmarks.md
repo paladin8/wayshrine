@@ -4,7 +4,7 @@ Landmarks are hand-crafted places emblematic of Japan, one per special region, b
 
 Sixty-six are planned, in nine **acts**. An act is a band: its landmarks sit in a ring farther from the start than the act before, on a bearing that is rotated per seed, so the world grows outward in a spiral rather than along a chain. Geography is loose: an act's biome is the main constraint, and real-world location only decides order within it.
 
-Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for seven; the rest use the placeholder. The looks of the later biomes are still placeholders too. ## Models
+Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for eight; the rest use the placeholder. The looks of the later biomes are still placeholders too. ## Models
 
 A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one unit = one world unit), centred on the region's site and sitting on its flat plateau. Without a file, the landmark shows a plain placeholder. Conventions the loader relies on:
 
@@ -15,7 +15,7 @@ A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one
 - **Walkable surfaces.** Anything the player climbs (steps, platforms, bridges) is not terrain: register it in the generator as a floor, `(x0, x1, y0, y1, top)`, so the ground grid includes it, and keep solids to what stands above the floor (the generator takes geometry in a band 0.35 to 1.6 above the local ground; up-facing hill triangles are ignored). Leave a clear arrival spot at `stand`. Landmarks can be activated anywhere on their footprint and up to 3.5 units beyond each edge.
 - Without a sidecar, the landmark gets a flat plateau and one solid disc.
 
-Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii, himeji-castle, kiyomizu-dera, meoto-iwa. Everything else uses the placeholder.
+Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii, himeji-castle, kiyomizu-dera, meoto-iwa, enoshima-lighthouse. Everything else uses the placeholder.
 
 ## Abilities
 
@@ -122,3 +122,7 @@ Left out on purpose:
 - The later biomes (marsh, dark forest, volcanic ground, open sea, dunes) and their abilities exist in the code with placeholder looks: a palette colour, a height profile and existing props. Each still needs its own props and mood (reeds and still water for marsh, a darker light and a lantern glow for forest, steam and ash for volcanic ground, waves for the sea), and each ability needs a visual on the player (geta, lantern, ash sandals, ship).
 - The names are in `src/app/i18n/` (`landmarkNames`, English and Japanese, all 66, from the table above; used as the images' alt text). On screen they are the pre-rendered brush images in `public/images/landmark-names/` (made by `scripts/landmark-names.py`): the vertical Japanese name starts fading in 1.7 s before the restoration wave ends. In English, the translation appears below it. The names stay visible through the 3.5 s pause and fade out as the camera returns. A line of text for each landmark is still to do.
 - Haiku are linked to the landmark they are about by `landmark` in `content/haiku-scenery.json` (nine so far, from Bashō; the poems are in `content/source/landmark-haiku.json`). The link reaches the text index and `planMonuments` pins the poem's monument in that landmark's region (clear of the footprint, counting towards the region's two stones), whatever the region's biome. Only a haiku's `landmark` tag decides this; its `biome` tag is then ignored.
+
+## The travel notebook
+
+The landmark counter at the top right opens a travel notebook: a two-page spread with a diary-style entry (`src/content/landmark-notes.json`, English and Japanese, one per landmark) for each restored landmark, two entries to a page, in the order of the list above. Each entry has a "Travel there" button that moves the player to the landmark's stand point (not while a restoration is playing). Left and right arrows turn pages; Esc closes it. With `?debug` every landmark is listed, the unrestored ones grayed out, and travel works for all of them. A pencil sketch beside each entry is left for later.
