@@ -88,7 +88,7 @@ function pickBiome(rng: Rng, d: number): Biome {
  * The macro structure of a world: a pure function of the seed.
  * Regions are memoised, so repeated lookups are cheap.
  */
-export function createWorld(seed: string, layout: LandmarkLayout = "close"): World {
+export function createWorld(seed: string, layout: LandmarkLayout = "graded"): World {
   const root = createRng(seed);
   const cache = new Map<string, Region>();
   const ambientCache = new Map<string, Biome>();

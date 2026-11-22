@@ -172,7 +172,7 @@ export function standPoint(region: Region): Point {
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;
-export type LandmarkLayout = "spread" | "compact" | "close";
+export type LandmarkLayout = "spread" | "compact" | "close" | "graded";
 
 /** Keep the previous layout reproducible for saves that address landmarks by region ID. */
 const LANDMARK_SPACING = {
@@ -190,8 +190,15 @@ const GOLDEN_ANGLE = 2.399963;
 /** Half-width of the arc an act's landmarks are spread over, radians. */
 const ARC = 1.6;
 
+/**
+ * The "graded" layout: the disc that holds `n` landmarks has radius START + SCALE * n^EXPONENT. An exponent
+ * above 1/2 (even density) makes the density fall with distance, so the middle is denser and the outskirts sparser.
+ */
+const GRADED = { start: 2.0, scale: 0.8, exponent: 0.72 } as const;
+
 /** Radius (in regions) of the disc that holds `n` landmarks at the target density, beyond the empty start. */
-export function ringRadius(n: number, layout: LandmarkLayout = "close"): number {
+export function ringRadius(n: number, layout: LandmarkLayout = "graded"): number {
+  if (layout === "graded") return GRADED.start + GRADED.scale * n ** GRADED.exponent;
   const { area, start } = LANDMARK_SPACING[layout];
   return start + Math.sqrt((area * n) / Math.PI);
 }
@@ -210,7 +217,7 @@ export function ringRadius(n: number, layout: LandmarkLayout = "close"): number 
 export function planLandmarks(
   seed: string,
   ambient: (rx: number, rz: number) => Biome,
-  layout: LandmarkLayout = "close",
+  layout: LandmarkLayout = "graded",
 ): ReadonlyMap<string, Landmark> {
   const rng = createRng(seed).fork("landmarks");
   const phase = rng.range(0, Math.PI * 2);
