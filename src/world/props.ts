@@ -62,7 +62,12 @@ const SCATTER: Readonly<Record<Biome, ReadonlyArray<readonly [PropKind, number]>
 const LANTERN_RADIUS = 2.0;
 const LANTERN_ANGLES = [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4] as const;
 
-const cache = new WeakMap<Terrain, { cluster: ReturnType<typeof createNoise> }>();
+interface ScatterFields {
+  readonly groves: ReturnType<typeof createNoise>;
+  readonly drifts: ReturnType<typeof createNoise>;
+  readonly profiles: Map<string, readonly [number, number, number]>;
+}
+const cache = new WeakMap<Terrain, ScatterFields>();
 
 /**
  * All props within a chunk: a pure function of (seed, chunk coordinates),
@@ -78,7 +83,11 @@ export function propsInChunk(
   const world = terrain.world;
   let shared = cache.get(terrain);
   if (!shared) {
-    shared = { cluster: createNoise(`${world.seed}:clusters`) };
+    shared = {
+      groves: createNoise(`${world.seed}:groves`),
+      drifts: createNoise(`${world.seed}:scenery-drifts`),
+      profiles: new Map(),
+    };
     cache.set(terrain, shared);
   }
   const rng = createRng(world.seed).fork(`props:${cx},${cz}`);
@@ -93,21 +102,36 @@ export function propsInChunk(
       if (table.length === 0) continue;
       const x = tx + 0.15 + rng.next() * 0.7;
       const z = tz + 0.15 + rng.next() * 0.7;
-      const scale = 0.8 + rng.next() * 0.5;
+      const size = rng.next();
       const rotation = rng.next() * Math.PI * 2;
       const variant = rng.next();
       let roll = rng.next();
 
       const region = world.regionAt(x, z);
-      const clear = plateauDistance(region, x, z) > 0.4;
+      const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;
       if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius)) continue;
 
-      // Forests and meadows come in clumps rather than an even sprinkle.
-      const c = shared.cluster(x * 0.07, z * 0.07);
-      const density = c * c * 3;
+      let profile = shared.profiles.get(region.id);
+      if (!profile) {
+        const local = createRng(world.seed).fork(`scenery:${region.id}`);
+        profile = [local.range(0.45, 1.5), local.range(0.55, 1.75), local.range(0.5, 1.6)];
+        shared.profiles.set(region.id, profile);
+      }
+      const canopy = shared.groves(x / 11, z / 11) * 0.8 + shared.groves(x / 4, z / 4) * 0.2;
+      const drift = shared.drifts(x / 8, z / 8);
+      const groveDensity = 0.15 + Math.max(0, (canopy - 0.32) / 0.68) ** 2 * 3.8 * profile[0];
+      const bloomDensity = 0.12 + Math.max(0, (drift - 0.34) / 0.66) ** 2 * 4.2 * profile[1];
+      const stoneDensity = 0.23 + drift ** 3 * 2.8 * profile[2];
       for (const [kind, chance] of table) {
+        const woody = kind === "tree" || kind === "pine" || kind === "bush";
+        const density = woody ? groveDensity : kind === "flower" ? bloomDensity : stoneDensity;
         if (roll < chance * density) {
+          const scale = kind === "tree" || kind === "pine"
+            ? 0.65 + 1.85 * size ** 2.8
+            : kind === "rock" || kind === "crag"
+              ? 0.6 + 1.95 * size ** 3
+              : 0.65 + 0.95 * size;
           props.push({ kind, x, y: terrain.groundAt(x, z), z, scale, rotation, variant, regionId: tile.regionId });
           break;
         }

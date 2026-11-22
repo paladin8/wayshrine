@@ -11,30 +11,36 @@ const STONE = 0xb9b4ac;
 
 /** Part lists are built once per kind and variant bucket, then reused for every instance. */
 const FLOWER_COLORS = [palette.blossom, palette.cream, palette.red] as const;
+const FLOWER_STEMS = [[-0.13, 0.07, 0.23], [0.07, -0.10, 0.32], [0.15, 0.14, 0.20]] as const;
 
 function partsFor(kind: PropKind, variant: number): Part[] {
   switch (kind) {
-    case "tree":
-      return variant < 0.5
-        ? [
-            { geometry: cylinder(0.07, 0.1, 0.5, 5), color: palette.wood, matrix: at(0, 0.25, 0) },
-            { geometry: cone(0.45, 1.0, 6), color: LEAF, matrix: at(0, 0.95, 0) },
-          ]
-        : [
-            { geometry: cylinder(0.07, 0.1, 0.55, 5), color: palette.wood, matrix: at(0, 0.27, 0) },
-            { geometry: ico(), color: LEAF, matrix: at(0, 0.85, 0, 0.45, 0.4, 0.45) },
-          ];
-    case "bush":
-      return [{ geometry: ico(), color: LEAF, matrix: at(0, 0.15, 0, 0.28, 0.2, 0.28) }];
-    case "flower":
-      return [
-        { geometry: cylinder(0.015, 0.015, 0.25, 3), color: LEAF, matrix: at(0, 0.12, 0) },
-        {
-          geometry: ico(),
-          color: FLOWER_COLORS[Math.floor(variant * 3) % 3]!,
-          matrix: at(0, 0.27, 0, 0.07, 0.05, 0.07),
-        },
+    case "tree": {
+      const trunk: Part = { geometry: cylinder(0.07, 0.11, 0.66, 5), color: palette.wood, matrix: at(0, 0.33, 0) };
+      const crowns: Part[][] = [
+        [{ geometry: cone(0.47, 1.14, 6), color: LEAF, matrix: at(0, 1.01, 0) }],
+        [{ geometry: ico(), color: 0x6a9f52, matrix: at(0, 0.86, 0, 0.56, 0.4, 0.46) }],
+        [
+          { geometry: ico(), color: 0x528448, matrix: at(-0.20, 0.91, 0.05, 0.39, 0.44, 0.36) },
+          { geometry: ico(), color: 0x70a256, matrix: at(0.23, 1.04, -0.05, 0.42, 0.50, 0.4) },
+        ],
+        [
+          { geometry: ico(), color: 0x779a54, matrix: at(0.03, 0.71, 0, 0.66, 0.31, 0.52) },
+          { geometry: ico(), color: 0x88a55e, matrix: at(0.08, 0.94, 0.05, 0.42, 0.24, 0.36) },
+        ],
       ];
+      return [trunk, ...crowns[variant]!];
+    }
+    case "bush":
+      return [
+        { geometry: ico(), color: LEAF, matrix: at(-0.12, 0.18, 0, 0.29, 0.22, 0.25) },
+        { geometry: ico(), color: 0x739e57, matrix: at(0.16, 0.11, 0.08, 0.22, 0.16, 0.20) },
+      ];
+    case "flower":
+      return FLOWER_STEMS.flatMap(([x, z, h], i) => [
+        { geometry: cylinder(0.014, 0.016, h, 3), color: LEAF, matrix: at(x, h / 2, z) },
+        { geometry: ico(), color: FLOWER_COLORS[(variant + Number(i === 2)) % FLOWER_COLORS.length]!, matrix: at(x, h, z, 0.095, 0.055, 0.095) },
+      ]);
     case "pine":
       return [
         { geometry: cylinder(0.07, 0.09, 0.4, 5), color: palette.wood, matrix: at(0, 0.2, 0) },
@@ -61,11 +67,11 @@ function partsFor(kind: PropKind, variant: number): Part[] {
 
 const partCache = new Map<string, Part[]>();
 function cachedParts(kind: PropKind, variant: number): Part[] {
-  const bucket = kind === "tree" ? (variant < 0.5 ? 0 : 1) : kind === "flower" ? Math.floor(variant * 3) % 3 : 0;
+  const bucket = kind === "tree" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
   const key = `${kind}:${bucket}`;
   let parts = partCache.get(key);
   if (!parts) {
-    parts = partsFor(kind, variant);
+    parts = partsFor(kind, bucket);
     partCache.set(key, parts);
   }
   return parts;
@@ -84,7 +90,10 @@ const SWAY_HEIGHT: Partial<Record<PropKind, number>> = {
 
 function addProp(builder: VitalityBuilder, p: Prop): void {
   const height = SWAY_HEIGHT[p.kind];
-  const motion = height ? { sway: { baseY: p.y, height: height * p.scale } } : undefined;
+  const motion = height ? {
+    sway: { baseY: p.y, height: height * p.scale },
+    bloomBase: p.kind === "flower" ? p.y : undefined,
+  } : undefined;
   place.compose(
     new THREE.Vector3(p.x, p.y, p.z),
     new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotation),

@@ -87,7 +87,12 @@ function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, 
     if (Math.hypot(dx, dz) < MONUMENT_SHRINE_CLEARANCE) return false;
     if (landmark && Math.max(Math.abs(dx), Math.abs(dz)) < LANDMARK_MONUMENT_CLEARANCE) return false;
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) return false;
-    return world.regionAt(p.x, p.z) === region && terrain.tileAtPoint(p.x, p.z).biome === region.biome;
+    if (world.regionAt(p.x, p.z) !== region || terrain.tileAtPoint(p.x, p.z).biome !== region.biome) return false;
+    // The site bisector is only an approximation once the edges are bent.
+    for (const [x, z] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+      if (world.regionAt(p.x + x * MONUMENT_EDGE_MARGIN, p.z + z * MONUMENT_EDGE_MARGIN) !== region) return false;
+    }
+    return true;
   };
   for (let attempt = 0; attempt < 60; attempt++) {
     const a = rng.range(0, Math.PI * 2);

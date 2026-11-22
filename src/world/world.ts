@@ -1,6 +1,6 @@
-import { createRng, type Rng } from "../core";
+import { createNoise, createRng, type Rng } from "../core";
 import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
-import { HOME_RADIUS, planLandmarks, type Landmark, type LandmarkLayout } from "./landmarks";
+import { footprintHalf, HOME_RADIUS, LANDMARK_REACH_MARGIN, planLandmarks, type Landmark, type LandmarkLayout } from "./landmarks";
 import type { Biome } from "./terrain";
 
 /** A region is the area energised by one shrine. Regions tile the infinite plane. */
@@ -21,7 +21,7 @@ export interface World {
   readonly seed: string;
   region(rx: number, rz: number): Region;
   regionById(id: string): Region;
-  /** The region containing a world-space point (nearest site). */
+  /** The region containing a world-space point, with gently bent boundaries. */
   regionAt(x: number, z: number): Region;
   /** Landmark regions, in landmark order. */
   readonly landmarks: readonly Region[];
@@ -92,6 +92,14 @@ export function createWorld(seed: string, layout: LandmarkLayout = "close"): Wor
   const root = createRng(seed);
   const cache = new Map<string, Region>();
   const ambientCache = new Map<string, Biome>();
+  const bendX = createNoise(`${seed}:region-bend-x`);
+  const bendZ = createNoise(`${seed}:region-bend-z`);
+  const ripple = createNoise(`${seed}:region-edge-detail`);
+
+  /** Broad bends vary the area of each cell, with a shorter ripple along its edge. */
+  function bend(x: number, z: number, noise: ReturnType<typeof createNoise>, offset: number): number {
+    return (noise(x / 39, z / 39) - 0.5) * 9 + (ripple(x / 15 + offset, z / 15) - 0.5) * 3;
+  }
 
   /** The loose grid of cluster sites: one per `CLUSTER_SPACING` square, jittered within it. */
   const clusterSites = new Map<string, { x: number; z: number; biome: Biome }>();
@@ -175,8 +183,10 @@ export function createWorld(seed: string, layout: LandmarkLayout = "close"): Wor
   }
 
   function regionAt(x: number, z: number): Region {
-    const cx = Math.floor(x / REGION_SIZE);
-    const cz = Math.floor(z / REGION_SIZE);
+    const warpedX = x + bend(x, z, bendX, 0);
+    const warpedZ = z + bend(x, z, bendZ, 91);
+    const cx = Math.floor(warpedX / REGION_SIZE);
+    const cz = Math.floor(warpedZ / REGION_SIZE);
     let best = region(cx, cz);
     let bestDist = Infinity;
     // The nearest site is always within the 3x3 neighbourhood, because sites
@@ -184,7 +194,15 @@ export function createWorld(seed: string, layout: LandmarkLayout = "close"): Wor
     for (let dz = -1; dz <= 1; dz++) {
       for (let dx = -1; dx <= 1; dx++) {
         const r = region(cx + dx, cz + dz);
-        const d = (r.site.x - x) ** 2 + (r.site.z - z) ** 2;
+        const sx = Math.abs(r.shrine.x - x);
+        const sz = Math.abs(r.shrine.z - z);
+        // Keep each saved shrine and its approach in the same region.
+        if (r.landmark) {
+          if (Math.max(sx, sz) <= footprintHalf(r.landmark) + LANDMARK_REACH_MARGIN) return r;
+        } else if (sx * sx + sz * sz <= 16) {
+          return r;
+        }
+        const d = (r.site.x - warpedX) ** 2 + (r.site.z - warpedZ) ** 2;
         if (d < bestDist) {
           best = r;
           bestDist = d;

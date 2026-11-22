@@ -7,6 +7,7 @@ export const enum Kind {
   Snow,
   Spark,
   Front,
+  Ash,
 }
 
 const VERTEX = `
@@ -133,6 +134,7 @@ export class ParticleLayer {
 export function stepParticle(p: Particle, dt: number): boolean {
   p.age += dt;
   if (p.age >= p.maxAge) return false;
+  const breeze = 0.22 + 1.1 * Math.max(0, Math.sin(p.phase + p.age * 0.72)) ** 3;
   switch (p.kind) {
     case Kind.Firefly:
       p.x += Math.cos(p.phase + p.age * 0.7) * 0.4 * dt;
@@ -141,15 +143,20 @@ export function stepParticle(p: Particle, dt: number): boolean {
       break;
     case Kind.Petal:
       p.y -= 0.35 * dt;
-      p.x += (Math.sin(p.age * 1.3 + p.phase) * 0.5 + 0.35) * dt;
+      p.x += (Math.sin(p.age * 1.3 + p.phase) * 0.5 + breeze) * dt;
       p.z += Math.cos(p.age * 1.1 + p.phase) * 0.3 * dt;
       if (p.y <= p.ground + 0.05) return false;
       break;
     case Kind.Snow:
       p.y -= 0.9 * dt;
-      p.x += Math.sin(p.age * 0.9 + p.phase) * 0.25 * dt;
+      p.x += (Math.sin(p.age * 0.9 + p.phase) * 0.25 + breeze * 0.38) * dt;
       p.z += Math.cos(p.age * 0.8 + p.phase) * 0.2 * dt;
       if (p.y <= p.ground + 0.05) return false;
+      break;
+    case Kind.Ash:
+      p.y += p.vy * dt;
+      p.x += breeze * dt;
+      p.z += Math.cos(p.age + p.phase) * 0.37 * dt;
       break;
     case Kind.Spark:
     case Kind.Front:

@@ -1,4 +1,4 @@
-import { createNoise } from "../core";
+import { createNoise, createRng } from "../core";
 import { groundHeight, groundOf } from "./landmark-ground";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import { isWater, type Biome } from "./terrain";
@@ -33,6 +33,8 @@ export interface Tile {
   /** Height of the tile's top surface. */
   readonly height: number;
   readonly regionId: string;
+  /** Light shallows over the submerged edge of an islet. */
+  readonly shoal?: number;
   /**
    * On a landmark's slope: the tile is drawn as a smooth surface through its
    * `corners` rather than as a flat-topped column, so the slope isn't stepped.
@@ -78,29 +80,73 @@ const quantize = (v: number, step: number): number => Math.round(v / step) * ste
 export function createTerrain(world: World): Terrain {
   const broad = createNoise(`${world.seed}:broad`);
   const fine = createNoise(`${world.seed}:fine`);
+  const relief = createNoise(`${world.seed}:landforms`);
+  const coast = createNoise(`${world.seed}:coast`);
+  const root = createRng(world.seed).fork("islets");
+  type Islet = { x: number; z: number; width: number; depth: number; rise: number };
+  const islets = new WeakMap<Region, Islet[]>();
+
+  function islandsOf(region: Region): Islet[] {
+    const cached = islets.get(region);
+    if (cached) return cached;
+    const islands: Islet[] = [];
+    islets.set(region, islands);
+    if (region.landmark) return islands;
+    const rng = root.fork(region.id);
+    const count = rng.next() < 0.25 ? 2 : 1;
+    for (let i = 0; i < 10 && islands.length < count; i++) {
+      const angle = rng.range(0, Math.PI * 2);
+      const distance = rng.range(13, 24);
+      const x = region.site.x + Math.cos(angle) * distance;
+      const z = region.site.z + Math.sin(angle) * distance;
+      const width = rng.range(4.5, 8);
+      const depth = rng.range(3.5, 6.5);
+      const rise = rng.range(0.9, 1.8);
+      if (Math.hypot(x - region.shrine.x, z - region.shrine.z) < 12) continue;
+      if (islands.some((other) => Math.hypot(x - other.x, z - other.z) < 13)) continue;
+      const points = [[x, z], [x - width - 2, z], [x + width + 2, z], [x, z - depth - 2], [x, z + depth + 2]] as const;
+      if (points.some(([px, pz]) => world.regionAt(px, pz) !== region)) continue;
+      islands.push({ x, z, width, depth, rise });
+    }
+    return islands;
+  }
+
+  function islandRelief(region: Region, x: number, z: number): number {
+    let h = 0;
+    for (const island of islandsOf(region)) {
+      const distance = Math.hypot((x - island.x) / island.width, (z - island.z) / island.depth);
+      if (distance > 1.2) continue;
+      const roughness = (coast(x / 4, z / 4) - 0.5) * 0.32;
+      h = Math.max(h, island.rise * Math.max(0, 1.14 + roughness - distance));
+    }
+    return h;
+  }
 
   /** Height of the natural ground of a biome, before any plateau. */
   function natural(x: number, z: number, biome: Biome): number {
-    const n = broad(x * 0.1, z * 0.1) * 0.7 + fine(x * 0.4, z * 0.4) * 0.3;
+    const n = broad(x * 0.1, z * 0.1) * 0.76 + fine(x * 0.4, z * 0.4) * 0.24;
+    const contour = relief(x / 23, z / 23);
+    const rise = Math.max(0, (contour - 0.53) / 0.47) ** 1.35;
+    const hollow = Math.max(0, (0.4 - contour) / 0.4);
     switch (biome) {
       case "water":
         return 0.4;
       case "meadow":
-        return 1 + quantize(n * 0.5, 0.25);
+        return 0.95 + quantize(n * 0.22 + rise * 1.75 - hollow * 0.54, 0.22);
       case "snow":
-        return 1.2 + quantize(n * 0.9, 0.3);
+        return 1.15 + quantize(n * 0.5 + rise * 2.6 - hollow * 0.48, 0.3);
       case "mountain":
-        return 1.6 + quantize(n ** 1.5 * 3.6, 0.6);
+        return 1.5 + quantize(n ** 1.7 * 2.4 + rise * 4.4, 0.4);
       case "sea":
         return 0.25;
       case "marsh":
-        return 0.8 + quantize(n * 0.3, 0.1);
+        return 0.78 + quantize(n * 0.24 + rise * 0.36 - hollow * 0.36, 0.12);
       case "forest":
-        return 1.2 + quantize(n * 0.6, 0.2);
+        return 1.05 + quantize(n * 0.46 + rise * 2 - hollow * 0.6, 0.22);
       case "volcanic":
-        return 1.5 + quantize(Math.abs(n) * 2.4, 0.4);
+        return 1.45 + quantize(n * 1.25 + rise * 4.8, 0.38);
       case "dunes":
-        return 1.1 + quantize(n * 1.1, 0.2);
+        return 0.94 + quantize(n * 0.44 + rise * 2.2 - hollow * 0.45, 0.2);
     }
   }
 
@@ -120,6 +166,7 @@ export function createTerrain(world: World): Terrain {
     let height: number;
     let skirt = false;
     let shore = false;
+    let shoal = 0;
     if (onPlateau) {
       if (model?.terrainSurface) {
         height = plateauBase(region);
@@ -143,15 +190,26 @@ export function createTerrain(world: World): Terrain {
         }
       }
       skirt = !isWater(biome);
+    } else if (isWater(biome)) {
+      height = PLATEAU_HEIGHT[biome];
+      const rise = Math.max(islandRelief(region, x, z), !model ? Math.max(0, 0.72 - away * 0.25) : 0);
+      if (rise > 0.24) {
+        height += rise;
+        biome = "meadow";
+        skirt = true;
+      } else if (rise > 0.03) {
+        shore = true;
+        shoal = rise / 0.24;
+      }
     } else {
       height = natural(x, z, biome);
     }
-    return { x, z, region, biome, height, skirt, shore };
+    return { region, biome, height, skirt, shore, shoal };
   }
 
   function tileAt(tx: number, tz: number): Tile {
-    const { region, biome, height, skirt } = sample(tx, tz);
-    return { biome, height, regionId: region.id, skirt };
+    const { region, biome, height, skirt, shoal } = sample(tx, tz);
+    return { biome, height, regionId: region.id, skirt, shoal };
   }
 
   /**

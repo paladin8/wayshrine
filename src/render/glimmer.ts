@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Monument } from "../world";
+import { monumentGlowHeight } from "./monument-mesh";
 import { Kind, ParticleLayer } from "./particles";
 
 /** Per monument: one soft halo and several rising motes. */
@@ -48,7 +49,7 @@ export function createGlimmer(scene: THREE.Scene): Glimmer {
           p.age = 0.5;
           p.x = m.x;
           p.z = m.z;
-          p.y = m.y + 2.3 + Math.sin(clock * 1.1 + m.variant * 6) * 0.12;
+          p.y = m.y + monumentGlowHeight(m) + Math.sin(clock * 1.1 + m.variant * 6) * 0.12;
           p.size = slot === 0 ? 120 + 18 * pulse : slot === 1 ? 56 + 6 * pulse : 28 + 4 * pulse;
           p.alpha = life * (slot === 0 ? 0.75 + 0.15 * pulse : 1);
           return;
@@ -61,7 +62,7 @@ export function createGlimmer(scene: THREE.Scene): Glimmer {
         p.age = 0.5;
         p.x = m.x + Math.cos(angle) * 0.75;
         p.z = m.z + Math.sin(angle) * 0.75;
-        p.y = m.y + 1.5 + Math.sin(angle * 2 + m.variant * 6) * 0.25;
+        p.y = m.y + monumentGlowHeight(m) - 0.8 + Math.sin(angle * 2 + m.variant * 6) * 0.25;
         const twinkle = Math.max(0, Math.sin(clock * 2.4 + k * 1.7));
         const base = 12 + 6 * twinkle;
         const c = layer3 === 0 ? DEEP : layer3 === 1 ? GLIMMER : CORE;

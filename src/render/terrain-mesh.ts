@@ -21,7 +21,8 @@ const SIDE_SHADE = 0.8;
 function tileColor(tx: number, tz: number, tile: Tile): THREE.Color {
   const jitter = (((tx * 73856093) ^ (tz * 19349663)) & 7) / 7;
   const c = new THREE.Color(BIOME_COLOR[tile.biome]);
-  const heightLift = isWater(tile.biome) ? 0 : (tile.height - 1) * 0.04;
+  if (tile.shoal) c.lerp(new THREE.Color(0x8bc4b1), tile.shoal * 0.56);
+  const heightLift = isWater(tile.biome) ? 0 : Math.min(0.10, (tile.height - 1) * 0.04);
   return c.offsetHSL(0, 0, (jitter - 0.5) * 0.05 + heightLift);
 }
 
@@ -57,6 +58,9 @@ export function buildTerrainChunk(
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
       const tile = terrain.tileAt(tx, tz);
       const top = tileColor(tx, tz, tile);
+      if (tile.biome === "meadow" && isWater(terrain.world.regionById(tile.regionId).biome)) {
+        top.lerp(new THREE.Color(palette.sand), Math.max(0, 1.05 - tile.height) * 1.3);
+      }
       const side = top.clone().multiplyScalar(SIDE_SHADE);
       const c = terrain.corners(tx, tz);
       builder.addTriangles(

@@ -2,10 +2,12 @@ import * as THREE from "three";
 import { frontRadius } from "../game";
 import type { Point, Terrain } from "../world";
 import { Kind, ParticleLayer, stepParticle, type Particle } from "./particles";
+import { createWildlife } from "./wildlife";
 
 const FIREFLIES = 110;
 const PETALS = 80;
 const SNOW = 170;
+const ASH_PARTICLES = 28;
 const SPARKS = 60;
 const FRONT_SPARKS = 170;
 /** Particles live within this distance of the camera, growing as the camera pulls back. */
@@ -21,6 +23,7 @@ const FIREFLY = colour(0xe6f7a0);
 const PETAL = colour(0xf6c4d0);
 const SNOWFLAKE = colour(0xd9e6ef);
 const GOLD = colour(0xffe08a);
+const ASH = colour(0xc7a49c);
 
 export interface AmbientView {
   /** Where the camera is looking. */
@@ -51,8 +54,9 @@ export function createAmbient(
   pixelScale: () => number,
 ): Ambient {
   const glow = new ParticleLayer(FIREFLIES + SPARKS + FRONT_SPARKS, true);
-  const soft = new ParticleLayer(PETALS + SNOW, false);
-  scene.add(glow.points, soft.points);
+  const soft = new ParticleLayer(PETALS + SNOW + ASH_PARTICLES, false);
+  const wildlife = createWildlife(terrain, lifeAtPoint);
+  scene.add(glow.points, soft.points, wildlife.root);
   const world = terrain.world;
 
   const spawn = (p: Particle, kind: Kind, x: number, z: number, y: number, ground: number): Particle => {
@@ -76,6 +80,7 @@ export function createAmbient(
     readonly firefly: number;
     readonly petal: number;
     readonly snow: number;
+    readonly ash: number;
   }
 
   /** Tries once to start an ambient particle at a random spot; the biome there decides what kind. */
@@ -86,7 +91,7 @@ export function createAmbient(
     const z = focus.z + Math.sin(angle) * r;
     if (Math.random() >= lifeAtPoint(x, z)) return;
     const tile = terrain.tileAtPoint(x, z);
-    if (tile.biome === "meadow") {
+    if (tile.biome === "meadow" || tile.biome === "forest" || tile.biome === "marsh") {
       const wantFirefly = Math.random() < 0.55;
       if (wantFirefly && room.firefly >= 0) {
         const p = spawn(glow.particles[room.firefly]!, Kind.Firefly, x, z, tile.height + 0.9, tile.height);
@@ -101,6 +106,11 @@ export function createAmbient(
       const p = spawn(soft.particles[room.snow]!, Kind.Snow, x, z, tile.height + rand(3, 6), tile.height);
       p.maxAge = 12;
       paint(p, SNOWFLAKE, rand(3, 5), 0.95);
+    } else if (tile.biome === "volcanic" && room.ash >= 0) {
+      const p = spawn(soft.particles[room.ash]!, Kind.Ash, x, z, tile.height + 0.2, tile.height);
+      p.vy = rand(0.23, 0.8);
+      p.maxAge = rand(3, 6);
+      paint(p, ASH, rand(7, 16), rand(0.35, 0.65));
     }
   }
 
@@ -161,9 +171,11 @@ export function createAmbient(
   const front = group(glow, FIREFLIES + SPARKS, FIREFLIES + SPARKS + FRONT_SPARKS);
   const petals = group(soft, 0, PETALS);
   const snow = group(soft, PETALS, PETALS + SNOW);
+  const ash = group(soft, PETALS + SNOW, soft.particles.length);
 
   return {
     update(dt, view) {
+      wildlife.update(dt, view.focus, view.zoom);
       const radius = AREA_RADIUS * (1 + view.zoom * 1.4);
       for (const layer of [glow, soft]) {
         for (const p of layer.particles) {
@@ -180,6 +192,7 @@ export function createAmbient(
           firefly: fireflies.active() < FIREFLIES * share ? fireflies.free() : -1,
           petal: petals.active() < PETALS * share ? petals.free() : -1,
           snow: snow.active() < SNOW * share ? snow.free() : -1,
+          ash: ash.free(),
         });
       }
       if (Math.random() < dt * 14 && sparks.active() < SPARKS) spawnSparks(view.focus, sparks.free());
@@ -192,7 +205,8 @@ export function createAmbient(
       soft.flush(scale);
     },
     dispose() {
-      scene.remove(glow.points, soft.points);
+      scene.remove(glow.points, soft.points, wildlife.root);
+      wildlife.dispose();
       glow.dispose();
       soft.dispose();
     },

@@ -46,7 +46,7 @@ lifeMaterial.onBeforeCompile = (shader) => {
       "#include <common>",
       `#include <common>
 attribute float aLife;
-attribute vec2 aMotion;
+attribute vec3 aMotion;
 uniform float uTime;`,
     )
     .replace(
@@ -54,11 +54,14 @@ uniform float uTime;`,
       `#include <begin_vertex>
 vec4 lifeWorld = modelMatrix * vec4(position, 1.0);
 float lifePhase = lifeWorld.x * 0.31 + lifeWorld.z * 0.23;
-float wind = sin(uTime * 1.7 + lifePhase) + 0.5 * sin(uTime * 2.9 + lifePhase * 1.7);
-transformed.x += wind * 0.07 * aMotion.x * aLife;
-transformed.z += wind * 0.045 * aMotion.x * aLife;
-float ripple = sin(uTime * 2.2 + lifeWorld.x * 0.9 + lifeWorld.z * 0.6) * 0.5 + 0.5;
-transformed.y += ripple * 0.05 * aMotion.y * aLife;`,
+float gust = pow(0.5 + 0.5 * sin(uTime * 0.72 + lifeWorld.x * 0.071 - lifeWorld.z * 0.095), 4.0);
+float wind = sin(uTime * 1.7 + lifePhase) + 0.45 * sin(uTime * 2.9 - lifePhase * 1.7);
+transformed.x += wind * (0.035 + 0.115 * gust) * aMotion.x * aLife;
+transformed.z += cos(uTime * 1.3 + lifePhase * 0.8) * (0.025 + 0.10 * gust) * aMotion.x * aLife;
+float swell = sin(uTime * 1.6 + lifeWorld.x * 0.51 - lifeWorld.z * 0.36);
+float ripple = cos(uTime * 2.65 + lifeWorld.z * 0.96 + lifeWorld.x * 0.29);
+transformed.y += (swell * (0.023 + 0.037 * gust) + ripple * 0.022) * aMotion.y * aLife;
+transformed.y -= aMotion.z * (1.0 - smoothstep(0.17, 0.82, aLife));`,
     );
 };
 lifeMaterial.customProgramCacheKey = () => "wayshrine-life";
@@ -71,6 +74,8 @@ export interface Motion {
   readonly sway?: { readonly baseY: number; readonly height: number };
   /** The triangles are a water surface. */
   readonly water?: boolean;
+  /** Plants that grow above this height as the land wakes. */
+  readonly bloomBase?: number;
 }
 
 /**
@@ -110,7 +115,8 @@ export class VitalityBuilder {
       this.dead.push(dc.r, dc.g, dc.b);
       this.distance.push(Math.hypot(x - site.x, z - site.z));
       const sway = motion?.sway ? Math.min(1, Math.max(0, (y - motion.sway.baseY) / motion.sway.height)) ** 1.5 : 0;
-      this.motion.push(sway, motion?.water ? 1 : 0);
+      const bloom = motion?.bloomBase === undefined ? 0 : Math.max(0, y - motion.bloomBase + 0.10);
+      this.motion.push(sway, motion?.water ? 1 : 0, bloom);
       this.vertexRegion.push(region);
     }
   }
@@ -130,7 +136,7 @@ export class VitalityBuilder {
     const life = new Float32Array(count);
     const lifeAttr = new THREE.BufferAttribute(life, 1).setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute("aLife", lifeAttr);
-    geometry.setAttribute("aMotion", new THREE.Float32BufferAttribute(this.motion, 2));
+    geometry.setAttribute("aMotion", new THREE.Float32BufferAttribute(this.motion, 3));
     geometry.computeVertexNormals();
 
     const mesh = new THREE.Mesh(geometry, lifeMaterial);
