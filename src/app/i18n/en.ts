@@ -1,17 +1,33 @@
 import type { Messages } from "./messages";
 
 export const en: Messages = {
-  capability: { boat: "Boat", snowshoes: "Snowshoes", climbing: "Climbing gear" },
-  plannedGear: { geta: "Geta", lantern: "Lantern", ashSandals: "Ash sandals", ship: "Ship" },
-  plannedGearHeading: "Planned gear",
+  capability: {
+    boat: "Boat",
+    snowshoes: "Snowshoes",
+    climbing: "Climbing gear",
+    geta: "Geta",
+    lantern: "Lantern",
+    ashSandals: "Ash sandals",
+    ship: "Ship",
+  },
+  farSight: "Far sight",
   gearRequirement(stars, status) {
     switch (status) {
       case "locked": return `Requires ${stars} stars`;
       case "unlocked": return `Unlocked at ${stars} stars`;
-      case "planned": return `Planned unlock at ${stars} stars`;
     }
   },
-  terrain: { meadow: "meadow", water: "water", snow: "snow", mountain: "mountains" },
+  terrain: {
+    meadow: "meadow",
+    water: "water",
+    snow: "snow",
+    mountain: "mountains",
+    marsh: "marsh",
+    forest: "dark forest",
+    volcanic: "volcanic ground",
+    sea: "open sea",
+    dunes: "dunes",
+  },
   blocked: (capability, terrain) => `You need the ${capability.toLowerCase()} to cross ${terrain}.`,
   landmarkNames: {
     "fushimi-inari": "Fushimi Inari",

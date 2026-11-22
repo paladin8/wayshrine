@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAPABILITIES, CAPABILITY_THRESHOLDS, createWorld } from "../world";
+import { CAPABILITIES, CAPABILITY_THRESHOLDS, FAR_SIGHT_STARS, createWorld } from "../world";
 import {
   landmarksRestored,
   canEnter,
@@ -162,6 +162,14 @@ describe("landmark map reveals", () => {
     state = revealLandmarks(unrestoreShrine(state, landmark(4)), world);
     expect([...state.revealedLandmarks]).toEqual([name(2)]);
     expect(resetShrines(state).revealedLandmarks.size).toBe(0);
+  });
+
+  it("far sight marks every remaining landmark once enough are restored, and not before", () => {
+    const before = revealLandmarks(withLandmarks(FAR_SIGHT_STARS - 1), world);
+    expect(before.revealedLandmarks.size).toBe(0);
+    const after = revealLandmarks(withLandmarks(FAR_SIGHT_STARS), world);
+    expect(after.revealedLandmarks.size).toBe(world.landmarks.length - FAR_SIGHT_STARS);
+    for (const r of world.landmarks.slice(FAR_SIGHT_STARS)) expect(isLandmarkRevealed(after, r)).toBe(true);
   });
 
   it("drops surplus reveals when a shrine is un-restored or an older save already has too many", () => {

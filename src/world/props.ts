@@ -40,7 +40,22 @@ const SCATTER: Readonly<Record<Biome, ReadonlyArray<readonly [PropKind, number]>
     ["rock", 0.06],
     ["crag", 0.03],
   ],
+  marsh: [
+    ["bush", 0.09],
+    ["flower", 0.03],
+    ["rock", 0.01],
+  ],
+  forest: [
+    ["tree", 0.1],
+    ["bush", 0.04],
+  ],
+  volcanic: [
+    ["rock", 0.05],
+    ["crag", 0.04],
+  ],
+  dunes: [["rock", 0.008]],
   water: [],
+  sea: [],
 };
 
 /** Stone lanterns ring each shrine, on the diagonals clear of the gate. */

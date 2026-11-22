@@ -1,4 +1,4 @@
-import { capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
+import { FAR_SIGHT_STARS, capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
 
 /**
  * Everything the player has changed about the world. A save is the world seed
@@ -45,7 +45,7 @@ export function isLandmarkRevealed(state: GameState, region: Region): boolean {
   return region.landmark !== null && state.revealedLandmarks.has(region.landmark.id);
 }
 
-/** Keep one marker per five ordinary shrine restorations, with restored landmarks using that budget first. */
+/** Keep one marker per five ordinary shrine restorations, with restored landmarks using that budget first; far sight marks them all. */
 export function revealLandmarks(state: GameState, world: World): GameState {
   const unrestored = new Set<string>();
   for (const region of world.landmarks) {
@@ -53,7 +53,8 @@ export function revealLandmarks(state: GameState, world: World): GameState {
   }
   const restored = world.landmarks.length - unrestored.size;
   const ordinaryShrines = state.restored.size - restored + state.shrineCredits;
-  const goldStars = Math.max(0, Math.floor(ordinaryShrines / SHRINES_PER_REVEAL) - restored);
+  // Far sight: once enough landmarks are restored, every remaining one is marked.
+  const goldStars = restored >= FAR_SIGHT_STARS ? unrestored.size : Math.max(0, Math.floor(ordinaryShrines / SHRINES_PER_REVEAL) - restored);
 
   // Keep existing gold stars where possible, then fill any remaining slots in landmark order.
   const revealedLandmarks = new Set<string>();

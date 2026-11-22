@@ -36,7 +36,7 @@ describe("content", () => {
     const listed = new Set(
       [...readFileSync(new URL("../../docs/landmarks.md", import.meta.url), "utf8").matchAll(/^\| \d+ \|[^|]*\| ([a-z0-9-]+) \|/gm)].map((m) => m[1]),
     );
-    expect(listed.size).toBe(50);
+    expect(listed.size).toBe(66);
     const linked = built.index.flatMap((e) => (e.landmark ? [e.landmark] : []));
     expect(linked.length).toBe(9);
     for (const id of linked) expect(listed).toContain(id);

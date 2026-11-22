@@ -1,6 +1,6 @@
 # Wayshrine
 
-An open-ended, non-combat exploration game in a low-poly isometric style. Walk an endless procedural world of dead, grey lands; restore each region's shrine and the land around it comes alive. Each restoration unlocks the means to cross terrain that was closed to you (boat, snowshoes, climbing gear) and uncovers more of an older, more advanced civilisation that the shrines once powered.
+An open-ended, non-combat exploration game in a low-poly isometric style. Walk an endless procedural world of dead, grey lands; restore each region's shrine and the land around it comes alive. Each restoration unlocks the means to cross terrain that was closed to you (boat, snowshoes, climbing gear, geta, lantern, ash sandals, ship) and uncovers more of an older, more advanced civilisation that the shrines once powered.
 
 Three.js + TypeScript + Vite. Runs in the browser.
 

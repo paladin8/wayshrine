@@ -4,7 +4,7 @@ Landmarks are hand-crafted places emblematic of Japan, one per special region, b
 
 Sixty-six are planned, in nine **acts**. An act is a band: its landmarks sit in a ring farther from the start than the act before, on a bearing that is rotated per seed, so the world grows outward in a spiral rather than along a chain. Geography is loose: an act's biome is the main constraint, and real-world location only decides order within it.
 
-Status: acts I to IV (landmarks 1 to 20) are in the code, because their biomes and abilities exist. Acts V to IX need new biomes and abilities first (below). ## Models
+Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for three; the rest use the placeholder. The looks of the later biomes are still placeholders too. ## Models
 
 A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one unit = one world unit), centred on the region's site and sitting on its flat plateau. Without a file, the landmark shows a plain placeholder. Conventions the loader relies on:
 
@@ -24,12 +24,13 @@ Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu. Everything else uses the pla
 | Boat | 3 landmarks | water | in code |
 | Snowshoes | 8 | snow | in code |
 | Climbing gear | 13 | mountain | in code |
-| Geta | 20 | marsh | planned |
-| Lantern | 30 | dark forest | planned |
-| Ash sandals | 41 | volcanic ground | planned |
-| Ship | 49 | open sea | planned |
+| Geta | 20 | marsh | in code |
+| Lantern | 30 | dark forest | in code |
+| Ash sandals | 41 | volcanic ground | in code |
+| Ship | 49 | open sea | in code |
+| Far sight | 56 | nothing: marks every remaining landmark on the map | in code |
 
-Each threshold sits at the end of an act, so an act's landmarks never need the ability they unlock. The HUD shows every threshold in stars. Gear for future acts appears under Planned gear.
+Each threshold sits at the end of an act, so an act's landmarks never need the ability they unlock. The HUD shows every threshold in stars. Far sight opens no terrain, so it never constrains placement.
 
 ## The list
 
@@ -118,6 +119,6 @@ Left out on purpose:
 
 ## Open questions
 
-- Acts V to IX each need a biome with its own palette, props and traversal rule, and the matching ability; these should be designed together. Tottori's dunes are a one-off biome (walkable sand, no ability).
-- The names are in `src/app/i18n/` (`landmarkNames`, English and Japanese, all fifty, from the table above; used as the images' alt text). On screen they are the pre-rendered brush images in `public/images/landmark-names/` (made by `scripts/landmark-names.py`): the vertical Japanese name starts fading in 1.7 s before the restoration wave ends. In English, the translation appears below it. The names stay visible through the 3.5 s pause and fade out as the camera returns. A line of text for each landmark is still to do.
+- The later biomes (marsh, dark forest, volcanic ground, open sea, dunes) and their abilities exist in the code with placeholder looks: a palette colour, a height profile and existing props. Each still needs its own props and mood (reeds and still water for marsh, a darker light and a lantern glow for forest, steam and ash for volcanic ground, waves for the sea), and each ability needs a visual on the player (geta, lantern, ash sandals, ship).
+- The names are in `src/app/i18n/` (`landmarkNames`, English and Japanese, all 66, from the table above; used as the images' alt text). On screen they are the pre-rendered brush images in `public/images/landmark-names/` (made by `scripts/landmark-names.py`): the vertical Japanese name starts fading in 1.7 s before the restoration wave ends. In English, the translation appears below it. The names stay visible through the 3.5 s pause and fade out as the camera returns. A line of text for each landmark is still to do.
 - Haiku are linked to the landmark they are about by `landmark` in `content/haiku-scenery.json` (nine so far, from Bashō; the poems are in `content/source/landmark-haiku.json`). The link reaches the text index but does not yet change placement: placing a linked monument near its landmark is still to do.

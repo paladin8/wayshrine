@@ -1,7 +1,7 @@
 import { createNoise } from "../core";
 import { groundHeight, groundOf } from "./landmark-ground";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
-import type { Biome } from "./terrain";
+import { isWater, type Biome } from "./terrain";
 import type { Region, World } from "./world";
 
 /** Tiles are 1x1 world units; chunks are CHUNK_SIZE x CHUNK_SIZE tiles. */
@@ -22,7 +22,7 @@ export function plateauDistance(region: Region, x: number, z: number): number {
 
 /** The height a region's plateau stands at: where a crafted model's origin sits. */
 export function plateauBase(region: Region): number {
-  return PLATEAU_HEIGHT[region.biome === "water" ? "meadow" : region.biome];
+  return PLATEAU_HEIGHT[isWater(region.biome) ? "meadow" : region.biome];
 }
 
 /** Terrain under a landmark's model sits this far below the model's own ground, so the model is never z-fought. */
@@ -66,6 +66,11 @@ const PLATEAU_HEIGHT: Readonly<Record<Biome, number>> = {
   water: 0.4,
   snow: 1.2,
   mountain: 2.2,
+  marsh: 0.9,
+  forest: 1.2,
+  volcanic: 1.8,
+  sea: 0.25,
+  dunes: 1.1,
 };
 
 const quantize = (v: number, step: number): number => Math.round(v / step) * step;
@@ -86,6 +91,16 @@ export function createTerrain(world: World): Terrain {
         return 1.2 + quantize(n * 0.9, 0.3);
       case "mountain":
         return 1.6 + quantize(n ** 1.5 * 3.6, 0.6);
+      case "sea":
+        return 0.25;
+      case "marsh":
+        return 0.8 + quantize(n * 0.3, 0.1);
+      case "forest":
+        return 1.2 + quantize(n * 0.6, 0.2);
+      case "volcanic":
+        return 1.5 + quantize(Math.abs(n) * 2.4, 0.4);
+      case "dunes":
+        return 1.1 + quantize(n * 1.1, 0.2);
     }
   }
 
@@ -99,7 +114,7 @@ export function createTerrain(world: World): Terrain {
     const dx = x - region.shrine.x;
     const dz = z - region.shrine.z;
     // A shrine in a water region stands on an islet, reachable only by boat.
-    let biome: Biome = onPlateau && region.biome === "water" ? "meadow" : region.biome;
+    let biome: Biome = onPlateau && isWater(region.biome) ? "meadow" : region.biome;
     let height: number;
     let skirt = false;
     if (onPlateau) {
@@ -111,8 +126,8 @@ export function createTerrain(world: World): Terrain {
       const edge = plateauBase(region) + (model ? groundHeight(model, dx, dz) : 0);
       height = edge + (natural(x, z, region.biome) - edge) * k;
       // The slope down to water becomes shore, then water.
-      if (region.biome === "water") biome = height > 0.55 ? "meadow" : "water";
-      skirt = biome !== "water";
+      if (isWater(region.biome)) biome = height > 0.55 ? "meadow" : region.biome;
+      skirt = !isWater(biome);
     } else {
       height = natural(x, z, biome);
     }

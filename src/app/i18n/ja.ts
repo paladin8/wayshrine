@@ -1,17 +1,33 @@
 import type { Messages } from "./messages";
 
 export const ja: Messages = {
-  capability: { boat: "ボート", snowshoes: "かんじき", climbing: "登山道具" },
-  plannedGear: { geta: "下駄", lantern: "提灯", ashSandals: "灰よけの草履", ship: "船" },
-  plannedGearHeading: "追加予定の装備",
+  capability: {
+    boat: "ボート",
+    snowshoes: "かんじき",
+    climbing: "登山道具",
+    geta: "下駄",
+    lantern: "提灯",
+    ashSandals: "灰よけの草履",
+    ship: "船",
+  },
+  farSight: "千里眼",
   gearRequirement(stars, status) {
     switch (status) {
       case "locked": return `解放には星${stars}個が必要`;
       case "unlocked": return `星${stars}個で解放済み`;
-      case "planned": return `星${stars}個で解放予定`;
     }
   },
-  terrain: { meadow: "草原", water: "水域", snow: "雪原", mountain: "山岳" },
+  terrain: {
+    meadow: "草原",
+    water: "水域",
+    snow: "雪原",
+    mountain: "山岳",
+    marsh: "湿地",
+    forest: "暗い森",
+    volcanic: "火山地帯",
+    sea: "外海",
+    dunes: "砂丘",
+  },
   blocked: (capability, terrain) => `${terrain}を越えるには${capability}が必要です。`,
   landmarkNames: {
     "fushimi-inari": "伏見稲荷",

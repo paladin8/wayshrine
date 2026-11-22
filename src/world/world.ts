@@ -32,16 +32,44 @@ const SITE_JITTER = 0.2;
 /** The nearest possible cell boundary is 19.2 units from the site, leaving room for the shrine plateau. */
 const SHRINE_OFFSET = 14;
 
-const AMBIENT_BIOME_WEIGHTS: ReadonlyArray<readonly [Biome, number]> = [
+/** The four biomes every region can have, and their weights near the start. */
+const CORE_BIOME_WEIGHTS: ReadonlyArray<readonly [Biome, number]> = [
   ["meadow", 0.4],
   ["water", 0.2],
   ["snow", 0.2],
   ["mountain", 0.2],
 ];
 
-function pickBiome(rng: Rng): Biome {
+/**
+ * The biomes of later acts, as shares of the outer mix. They only appear far from the start:
+ * if they were everywhere, the open meadow the early acts rely on would be too thin to walk across.
+ */
+const OUTER_BIOME_SHARES: ReadonlyArray<readonly [Biome, number]> = [
+  ["marsh", 0.33],
+  ["forest", 0.27],
+  ["volcanic", 0.2],
+  ["sea", 0.2],
+];
+
+/** The outer biomes fade in over `OUTER_FADE` regions starting this far (in regions) from the start. */
+export const OUTER_START = 14;
+const OUTER_FADE = 3;
+/** The share of regions given to the outer biomes once fully faded in. */
+export const OUTER_SHARE = 0.45;
+
+/** Weights for a region at distance `d` (in regions) from the start; they sum to 1. */
+export function ambientWeights(d: number): ReadonlyArray<readonly [Biome, number]> {
+  const f = Math.min(1, Math.max(0, (d - OUTER_START) / OUTER_FADE)) * OUTER_SHARE;
+  if (f === 0) return CORE_BIOME_WEIGHTS;
+  return [
+    ...CORE_BIOME_WEIGHTS.map(([b, w]) => [b, w * (1 - f)] as const),
+    ...OUTER_BIOME_SHARES.map(([b, w]) => [b, w * f] as const),
+  ];
+}
+
+function pickBiome(rng: Rng, d: number): Biome {
   let roll = rng.next();
-  for (const [biome, weight] of AMBIENT_BIOME_WEIGHTS) {
+  for (const [biome, weight] of ambientWeights(d)) {
     if (roll < weight) return biome;
     roll -= weight;
   }
@@ -63,7 +91,7 @@ export function createWorld(seed: string, layout: LandmarkLayout = "compact"): W
     const id = regionId(rx, rz);
     let hit = ambientCache.get(id);
     if (!hit) {
-      hit = pickBiome(root.fork(`biome:${id}`));
+      hit = pickBiome(root.fork(`biome:${id}`), Math.hypot(rx, rz));
       ambientCache.set(id, hit);
     }
     return hit;

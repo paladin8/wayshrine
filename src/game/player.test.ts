@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-    canTraverse,
+  CAPABILITIES,
+  canTraverse,
   capabilitiesForCount,
   landmarksBeforeAct,
   neighborsOf,
@@ -21,7 +22,7 @@ import {
 import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, SHRINE_REACH, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
-const every = new Set<Capability>(["boat", "snowshoes", "climbing"]);
+const every: ReadonlySet<Capability> = new Set(CAPABILITIES);
 
 /** An edge-adjacent meadow and water region whose joining line stays inside the two. */
 function meadowBesideWater(world: World): [Region, Region] {

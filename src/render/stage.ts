@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { lifeAt, vitality, type GameState } from "../game";
-import { CHUNK_SIZE, plateauBase, type MonumentPlan, type Point, type Terrain } from "../world";
+import { CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Point, type Terrain } from "../world";
 import { createAmbient } from "./ambient";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
@@ -284,7 +284,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       glimmer.update(clock, particlePixelScale() * (VIEW_SIZE / viewSize), unread);
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
-      const onWater = tile.biome === "water";
+      const onWater = isWater(tile.biome);
       const groundY = terrain.groundAt(pos.x, pos.z) + (onWater ? 0.05 + Math.sin(clock * 3) * 0.03 : 0);
       playerY += (groundY - playerY) * Math.min(1, dt * 14);
       player.group.position.set(pos.x, playerY, pos.z);

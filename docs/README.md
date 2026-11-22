@@ -12,3 +12,4 @@
   - [0004](decisions/0004-layered-architecture.md) Layered architecture enforced by test
   - [0005](decisions/0005-monuments-and-texts.md) Monuments carry a finite collection of texts
   - [0006](decisions/0006-landmarks-and-progression.md) Landmarks gate abilities
+  - [0007](decisions/0007-later-biomes-and-abilities.md) Later biomes, abilities and the outer mix

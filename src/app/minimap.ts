@@ -14,6 +14,11 @@ const BIOME_HEX: Readonly<Record<Biome, number>> = {
   water: palette.water,
   snow: palette.snow,
   mountain: palette.rock,
+  marsh: palette.marsh,
+  forest: palette.forest,
+  volcanic: palette.ash,
+  sea: palette.sea,
+  dunes: palette.sand,
 };
 
 type RGB = readonly [number, number, number];

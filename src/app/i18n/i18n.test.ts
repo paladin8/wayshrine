@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { BIOMES, CAPABILITIES, LANDMARKS, PLANNED_GEAR } from "../../world";
+import { BIOMES, CAPABILITIES, LANDMARKS } from "../../world";
 import { LOCALES, detectLocale, isLocale, messagesFor, type Messages } from "./index";
 
 /** Every string a catalog yields, including the ones produced by functions. */
 function allText(m: Messages): string[] {
   return [
     ...CAPABILITIES.map((c) => m.capability[c]),
-    ...PLANNED_GEAR.map(({ id }) => m.plannedGear[id]),
-    m.plannedGearHeading,
+    m.farSight,
     m.gearRequirement(3, "locked"),
     m.gearRequirement(3, "unlocked"),
-    m.gearRequirement(20, "planned"),
     ...BIOMES.map((b) => m.terrain[b]),
     ...LANDMARKS.map((l) => m.landmarkNames[l.id] ?? ""),
     m.blocked("X", "Y"),
@@ -56,7 +54,7 @@ describe("i18n", () => {
       expect(m.blocked("qq", "zz")).toContain("qq");
       expect(m.blocked("qq", "zz")).toContain("zz");
       expect(m.landmarksRestored(42)).toContain("42");
-      for (const status of ["locked", "unlocked", "planned"] as const) {
+      for (const status of ["locked", "unlocked"] as const) {
         expect(m.gearRequirement(39, status)).toContain("39");
       }
       expect(m.compassNearest(123)).toContain("123");

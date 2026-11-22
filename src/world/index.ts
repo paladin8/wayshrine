@@ -1,4 +1,4 @@
-export { BIOMES, BIOME_REQUIRES, CAPABILITIES, biomeRequiring, canTraverse } from "./terrain";
+export { BIOMES, BIOME_REQUIRES, CAPABILITIES, biomeRequiring, canTraverse, isWater } from "./terrain";
 export type { Biome, Capability } from "./terrain";
 export { REGION_REACH, REGION_SIZE, neighborsOf, parseRegionId, regionId } from "./coords";
 export type { Point, RegionCoord } from "./coords";
@@ -8,8 +8,7 @@ export { LANDMARK_TOTAL, greedyProgress, reachableRegions } from "./progression"
 export { reachableCoords } from "./reach";
 export {
   CAPABILITY_THRESHOLDS,
-  PLANNED_GEAR,
-  type PlannedGear,
+  FAR_SIGHT_STARS,
   HOME_RADIUS,
   LANDMARK_WINDOW,
   LANDMARK_BLEND,

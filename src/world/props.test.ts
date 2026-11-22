@@ -9,6 +9,11 @@ const ALLOWED: Record<Biome, readonly PropKind[]> = {
   snow: ["pine", "rock", "lantern"],
   mountain: ["rock", "crag", "lantern"],
   water: ["lantern"],
+  marsh: ["bush", "flower", "rock", "lantern"],
+  forest: ["tree", "bush", "lantern"],
+  volcanic: ["rock", "crag", "lantern"],
+  sea: ["lantern"],
+  dunes: ["rock", "lantern"],
 };
 
 describe("propsInChunk", () => {

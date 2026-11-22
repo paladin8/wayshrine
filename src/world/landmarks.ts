@@ -43,26 +43,75 @@ export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
   { id: "tateyama-kurobe", act: 4, biome: "mountain" },
   { id: "koyasan-okunoin", act: 4, biome: "mountain" },
   { id: "yoshino-yama", act: 4, biome: "meadow" },
+  { id: "kushiro-shitsugen", act: 5, biome: "marsh" },
+  { id: "oze", act: 5, biome: "marsh" },
+  { id: "yanagawa", act: 5, biome: "marsh" },
+  { id: "kurashiki-bikan", act: 5, biome: "marsh" },
+  { id: "byodo-in", act: 5, biome: "water" },
+  { id: "senso-ji", act: 5, biome: "meadow" },
+  { id: "kamakura-daibutsu", act: 5, biome: "meadow" },
+  { id: "tokyo-tower", act: 5, biome: "meadow" },
+  { id: "osaka-castle", act: 5, biome: "meadow" },
+  { id: "horyu-ji", act: 5, biome: "meadow" },
+  { id: "jomon-sugi", act: 6, biome: "forest" },
+  { id: "shiratani-unsuikyo", act: 6, biome: "forest" },
+  { id: "arashiyama", act: 6, biome: "forest" },
+  { id: "nachi-falls", act: 6, biome: "forest" },
+  { id: "meiji-jingu", act: 6, biome: "forest" },
+  { id: "ise-jingu", act: 6, biome: "forest" },
+  { id: "izumo-taisha", act: 6, biome: "forest" },
+  { id: "takachiho", act: 6, biome: "forest" },
+  { id: "iya-kazurabashi", act: 6, biome: "forest" },
+  { id: "ginkaku-ji", act: 6, biome: "meadow" },
+  { id: "ryoan-ji", act: 6, biome: "meadow" },
+  { id: "sakurajima", act: 7, biome: "volcanic" },
+  { id: "mount-aso", act: 7, biome: "volcanic" },
+  { id: "beppu-hells", act: 7, biome: "volcanic" },
+  { id: "owakudani", act: 7, biome: "volcanic" },
+  { id: "kumamoto-castle", act: 7, biome: "meadow" },
+  { id: "dazaifu", act: 7, biome: "meadow" },
+  { id: "dogo-onsen", act: 7, biome: "meadow" },
+  { id: "kintaikyo", act: 7, biome: "water" },
+  { id: "gunkanjima", act: 8, biome: "sea" },
+  { id: "naruto", act: 8, biome: "sea" },
+  { id: "shuri-castle", act: 8, biome: "sea" },
+  { id: "taketomi", act: 8, biome: "sea" },
+  { id: "matsushima", act: 8, biome: "sea" },
+  { id: "amanohashidate", act: 8, biome: "sea" },
+  { id: "tottori-dunes", act: 8, biome: "dunes" },
+  { id: "shiretoko", act: 9, biome: "snow" },
+  { id: "otaru-canal", act: 9, biome: "snow" },
+  { id: "goryokaku", act: 9, biome: "snow" },
+  { id: "blue-pond", act: 9, biome: "snow" },
+  { id: "furano", act: 9, biome: "meadow" },
+  { id: "ouchi-juku", act: 9, biome: "snow" },
+  { id: "ginzan-onsen", act: 9, biome: "snow" },
+  { id: "chuson-ji", act: 9, biome: "snow" },
+  { id: "yamadera", act: 9, biome: "snow" },
+  { id: "snow-monkeys", act: 9, biome: "snow" },
 ];
 
 export const LANDMARKS: readonly Landmark[] = LANDMARK_SPECS.map((s, i) => ({ ...s, order: i + 1 }));
 
-/** Landmarks that must be restored before each ability is held. */
+/**
+ * Landmarks that must be restored before each ability is held. Each threshold is the end of an
+ * act (acts hold 3, 5, 5, 7, 10, 11, 8, 7, 10 landmarks), so an act never needs the ability it unlocks.
+ */
 export const CAPABILITY_THRESHOLDS: Readonly<Record<Capability, number>> = {
   boat: 3,
   snowshoes: 8,
   climbing: 13,
+  geta: 20,
+  lantern: 30,
+  ashSandals: 41,
+  ship: 49,
 };
 
-/** Future unlocks listed in the HUD while their terrain and acts are planned. */
-export const PLANNED_GEAR = [
-  { id: "geta", stars: 20 },
-  { id: "lantern", stars: 30 },
-  { id: "ashSandals", stars: 41 },
-  { id: "ship", stars: 49 },
-] as const;
-
-export type PlannedGear = (typeof PLANNED_GEAR)[number]["id"];
+/**
+ * Far sight: at the end of act VIII every unrestored landmark is marked on the map. It opens no
+ * terrain, so it never affects where landmarks can be placed.
+ */
+export const FAR_SIGHT_STARS = 56;
 
 export function capabilitiesForCount(count: number): ReadonlySet<Capability> {
   const held = new Set<Capability>();
@@ -121,7 +170,7 @@ const LANDMARK_SPACING = {
   compact: { area: 14.4, start: 4 },
 } as const;
 /** The planner searches this far (Chebyshev, in regions) for somewhere to put a landmark. */
-export const LANDMARK_WINDOW = 20;
+export const LANDMARK_WINDOW = 28;
 const WINDOW = LANDMARK_WINDOW;
 /** Landmarks keep at least this many regions apart where there is room. */
 const SEPARATION = 2;

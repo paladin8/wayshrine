@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CHUNK_SIZE, type Biome, type Terrain, type Tile } from "../world";
+import { CHUNK_SIZE, isWater, type Biome, type Terrain, type Tile } from "../world";
 import { palette } from "./palette";
 import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
@@ -8,6 +8,11 @@ const BIOME_COLOR: Readonly<Record<Biome, number>> = {
   water: palette.water,
   snow: palette.snow,
   mountain: palette.rock,
+  marsh: palette.marsh,
+  forest: palette.forest,
+  volcanic: palette.ash,
+  sea: palette.sea,
+  dunes: palette.sand,
 };
 
 const SIDE_SHADE = 0.8;
@@ -16,7 +21,7 @@ const SIDE_SHADE = 0.8;
 function tileColor(tx: number, tz: number, tile: Tile): THREE.Color {
   const jitter = (((tx * 73856093) ^ (tz * 19349663)) & 7) / 7;
   const c = new THREE.Color(BIOME_COLOR[tile.biome]);
-  const heightLift = tile.biome === "water" ? 0 : (tile.height - 1) * 0.04;
+  const heightLift = isWater(tile.biome) ? 0 : (tile.height - 1) * 0.04;
   return c.offsetHSL(0, 0, (jitter - 0.5) * 0.05 + heightLift);
 }
 
@@ -58,7 +63,7 @@ export function buildTerrainChunk(
         quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]),
         top,
         tile.regionId,
-        tile.biome === "water" ? { water: true } : undefined,
+        isWater(tile.biome) ? { water: true } : undefined,
       );
 
       // A side face wherever this tile's edge stands above its neighbour's, down to the neighbour's edge.

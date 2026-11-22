@@ -1,4 +1,4 @@
-import { CAPABILITIES, CAPABILITY_THRESHOLDS, PLANNED_GEAR, type Capability } from "../world";
+import { CAPABILITIES, CAPABILITY_THRESHOLDS, FAR_SIGHT_STARS, type Capability } from "../world";
 import type { Messages } from "./i18n";
 import { UI_FONT, setText } from "./style";
 
@@ -66,8 +66,6 @@ const CSS = `
 .hud .gear-stars{padding:1px 5px;border-radius:6px;background:#2a242410;font-size:12px}
 .hud .gear-stars::before{width:11px;height:11px}
 .hud .gear-chip.off .gear-stars::before{background:#88612c}
-.hud .gear-chip.planned{border-style:dashed}
-.hud .gear-planned-heading{grid-column:1/-1;justify-self:start;margin-top:3px;padding:3px 8px;border-radius:999px;background:#fffaf0df;color:#5e5249;font-size:11px}
 .hud .tl{position:absolute;top:14px;left:14px;display:grid;grid-template-columns:repeat(2,max-content);gap:5px}
 @media(max-width:840px){.hud .tl{top:92px}}
 .hud .tr{--actions-top:14px;position:absolute;top:var(--actions-top);right:14px;display:flex;align-items:center;gap:8px}
@@ -106,14 +104,14 @@ export function createHud(container: HTMLElement): Hud {
   root.append(tl, tr, tc, bc);
   container.appendChild(root);
 
-  const gear = CAPABILITIES.map((id) => ({ id, stars: CAPABILITY_THRESHOLDS[id], planned: false as const }));
-  const planned = PLANNED_GEAR.map((item) => ({ ...item, planned: true as const }));
-  const plannedHeading = document.createElement("span");
-  plannedHeading.className = "gear-planned-heading";
-  const chips = [...gear, ...planned].map((item, index) => {
-    if (index === gear.length) tl.appendChild(plannedHeading);
+  // Every ability, then far sight (which opens no terrain) as the last chip.
+  const gear: ReadonlyArray<{ id: Capability | "farSight"; stars: number }> = [
+    ...CAPABILITIES.map((id) => ({ id, stars: CAPABILITY_THRESHOLDS[id] })),
+    { id: "farSight", stars: FAR_SIGHT_STARS },
+  ];
+  const chips = gear.map((item) => {
     const chip = document.createElement("span");
-    chip.className = item.planned ? "chip gear-chip off planned" : "chip gear-chip off";
+    chip.className = "chip gear-chip off";
     const name = document.createElement("span");
     const stars = document.createElement("span");
     stars.className = "star-count gear-stars";
@@ -224,10 +222,10 @@ export function createHud(container: HTMLElement): Hud {
     actions: tr,
     update(m) {
       const t = m.messages;
-      setText(plannedHeading, t.plannedGearHeading);
       for (const { item, chip, name, stars } of chips) {
-        const status = item.planned ? "planned" : m.capabilities.has(item.id) ? "unlocked" : "locked";
-        setText(name, item.planned ? t.plannedGear[item.id] : t.capability[item.id]);
+        const held = item.id === "farSight" ? m.restoredLandmarks.length >= item.stars : m.capabilities.has(item.id);
+        const status = held ? "unlocked" : "locked";
+        setText(name, item.id === "farSight" ? t.farSight : t.capability[item.id]);
         chip.classList.toggle("off", status !== "unlocked");
         const requirement = t.gearRequirement(item.stars, status);
         if (stars.getAttribute("aria-label") !== requirement) stars.setAttribute("aria-label", requirement);

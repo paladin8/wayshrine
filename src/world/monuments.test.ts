@@ -3,7 +3,7 @@ import { createWorld } from "./world";
 import { createTerrain } from "./terrain-grid";
 import { MONUMENT_EDGE_MARGIN, MONUMENT_SHRINE_CLEARANCE, planMonuments, type MonumentSpec } from "./monuments";
 import { reachableRegions } from "./progression";
-import type { Biome } from "./terrain";
+import { CAPABILITIES, type Biome } from "./terrain";
 
 const BIOME_CYCLE: Biome[] = ["water", "meadow", "mountain", "snow"];
 const specs: MonumentSpec[] = Array.from({ length: 1000 }, (_, i) =>
@@ -76,7 +76,7 @@ describe("planMonuments", () => {
 
   it("only uses regions that can be reached by progression", () => {
     const reachable = new Set(
-      reachableRegions(terrain.world, new Set(["boat", "snowshoes", "climbing"]), 30).map((r) => r.id),
+      reachableRegions(terrain.world, new Set(CAPABILITIES), 30).map((r) => r.id),
     );
     for (const m of plan.all) expect(reachable.has(m.regionId)).toBe(true);
   });

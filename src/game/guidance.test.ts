@@ -29,14 +29,14 @@ describe("nextShrine", () => {
         pos = g.region.site;
       }
     }
-  });
+  }, 60_000);
 
   it("is enough on its own: following it collects every capability, on every seed", () => {
     for (let i = 0; i < 12; i++) {
       const world = createWorld(`follow-${i}`);
       let state = newGame(world.seed);
       let pos = world.region(0, 0).site;
-      for (let step = 0; step < 1500; step++) {
+      for (let step = 0; step < 6000; step++) {
         const g = nextShrine(world, state, pos);
         if (!g) break;
         state = restoreShrine(state, g.region);
@@ -50,7 +50,7 @@ describe("nextShrine", () => {
   it("returns null when every reachable shrine is restored", () => {
     const world = createWorld("exhaust");
     let state = newGame(world.seed);
-    for (let i = 0; i < 2000; i++) {
+    for (let i = 0; i < 6000; i++) {
       const g = nextShrine(world, state, { x: 0, z: 0 });
       if (!g) return;
       state = restoreShrine(state, g.region);

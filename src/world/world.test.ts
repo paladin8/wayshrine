@@ -11,7 +11,8 @@ import {
 } from "./landmarks";
 import { greedyProgress, reachableRegions } from "./progression";
 import { CAPABILITIES, canTraverse } from "./terrain";
-import { createWorld } from "./world";
+import { OUTER_SHARE, OUTER_START, ambientWeights, createWorld } from "./world";
+import { BIOMES } from "./terrain";
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -198,10 +199,13 @@ describe("progress guarantees (ADR 0006)", () => {
     for (const seed of SEEDS) {
       const w = createWorld(seed);
       const restored = new Set<string>();
+      // What is reachable only changes when an ability is gained, so search once per ability set.
+      const reachable = new Map<number, ReturnType<typeof reachableRegions>>();
       while (restored.size < LANDMARKS.length) {
-        const open = reachableRegions(w, capabilitiesForCount(restored.size), LANDMARK_WINDOW).filter(
-          (r) => r.landmark && !restored.has(r.id),
-        );
+        const held = capabilitiesForCount(restored.size);
+        let all = reachable.get(held.size);
+        if (!all) reachable.set(held.size, (all = reachableRegions(w, held, LANDMARK_WINDOW)));
+        const open = all.filter((r) => r.landmark && !restored.has(r.id));
         expect(open.length, `${seed} at ${restored.size}`).toBeGreaterThan(0);
         restored.add(open[0]!.id);
       }
@@ -217,5 +221,49 @@ describe("progress guarantees (ADR 0006)", () => {
       gated += w.landmarks.filter((r) => !open.has(r.id)).length;
     }
     expect(gated).toBeGreaterThan(0);
+  });
+});
+
+describe("biome distribution", () => {
+  it("weights always sum to one", () => {
+    for (const d of [0, 5, OUTER_START, OUTER_START + 1.5, 30]) {
+      expect(ambientWeights(d).reduce((p, [, w]) => p + w, 0)).toBeCloseTo(1, 9);
+    }
+  });
+
+  it("keeps the later biomes out of the inner world, so the early acts stay as they were", () => {
+    const outer = new Set(["marsh", "forest", "volcanic", "sea"]);
+    for (const seed of SEEDS.slice(0, 20)) {
+      const w = createWorld(seed);
+      for (let rx = -OUTER_START; rx <= OUTER_START; rx++) {
+        for (let rz = -OUTER_START; rz <= OUTER_START; rz++) {
+          if (Math.hypot(rx, rz) > OUTER_START) continue;
+          const r = w.region(rx, rz);
+          if (!r.landmark) expect(outer.has(r.biome), `${seed} ${r.id}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("fades the later biomes in to their share, and every biome occurs", () => {
+    const seen = new Map<string, number>();
+    let far = 0;
+    for (const seed of SEEDS.slice(0, 20)) {
+      const w = createWorld(seed);
+      for (let rx = -28; rx <= 28; rx++) {
+        for (let rz = -28; rz <= 28; rz++) {
+          const r = w.region(rx, rz);
+          if (r.landmark || Math.hypot(rx, rz) < OUTER_START + 4) continue;
+          far++;
+          seen.set(r.biome, (seen.get(r.biome) ?? 0) + 1);
+        }
+      }
+    }
+    const later = ["marsh", "forest", "volcanic", "sea"].reduce((p, b) => p + (seen.get(b) ?? 0), 0);
+    expect(later / far).toBeGreaterThan(OUTER_SHARE - 0.05);
+    expect(later / far).toBeLessThan(OUTER_SHARE + 0.05);
+    for (const b of BIOMES) if (b !== "dunes") expect(seen.get(b) ?? 0, b).toBeGreaterThan(0);
+    // Dunes exist only as the landmark's own region.
+    expect(seen.get("dunes") ?? 0).toBe(0);
   });
 });

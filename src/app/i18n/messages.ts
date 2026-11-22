@@ -1,5 +1,5 @@
 import type { TextKind } from "../../content";
-import type { Biome, Capability, PlannedGear } from "../../world";
+import type { Biome, Capability } from "../../world";
 
 export const LOCALES = ["en", "ja"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -11,9 +11,9 @@ export type Locale = (typeof LOCALES)[number];
 export interface Messages {
   /** Names of the capabilities the player collects. */
   readonly capability: Readonly<Record<Capability, string>>;
-  readonly plannedGear: Readonly<Record<PlannedGear, string>>;
-  readonly plannedGearHeading: string;
-  readonly gearRequirement: (stars: number, status: "locked" | "unlocked" | "planned") => string;
+  /** The capstone unlock at the end of act VIII: every remaining landmark is marked on the map. */
+  readonly farSight: string;
+  readonly gearRequirement: (stars: number, status: "locked" | "unlocked") => string;
   /** Terrain as it is named when it blocks the way ("to cross ..."). */
   readonly terrain: Readonly<Record<Biome, string>>;
   /** Hint shown when the player walks into terrain they cannot yet cross. */
