@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createWorld } from "./world";
-import { LANDMARK_BLEND, LANDMARK_PLATEAU_RADIUS } from "./landmarks";
-import { groundHeight, groundOf } from "./landmark-ground";
-import { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauBase, plateauDistance } from "./terrain-grid";
+import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
+import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
+import { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, landmarkWaterLevel, plateauBase, plateauDistance } from "./terrain-grid";
 
 describe("terrain", () => {
   it("is deterministic and independent of sampling order", () => {
@@ -53,7 +53,7 @@ describe("terrain", () => {
 });
 
 describe("landmark ground", () => {
-  it("follows the model's own ground inside its footprint, and stays dry", () => {
+  it("follows the model's own ground inside its footprint, dry except for the model's own open water", () => {
     const terrain = createTerrain(createWorld("lm-plateau"));
     for (const region of terrain.world.landmarks) {
       const model = groundOf(region.landmark!.id);
@@ -64,9 +64,38 @@ describe("landmark ground", () => {
         const z = site.z + dz;
         const want = plateauBase(region) + groundHeight(model, dx, dz);
         expect(Math.abs(terrain.groundAt(x, z) - want)).toBeLessThan(0.6);
-        expect(terrain.biomeAt(x, z)).not.toBe("water");
+        const tx = Math.floor(x);
+        const tz = Math.floor(z);
+        const level = landmarkWaterLevel(region.biome);
+        const open = level !== undefined && surfaceHeight(model, tx + 0.5 - site.x, tz + 0.5 - site.z) <= level + 0.01;
+        if (open) expect(terrain.biomeAt(tx, tz)).toBe(region.biome);
+        else expect(terrain.biomeAt(tx, tz)).not.toBe("water");
       }
     }
+  });
+});
+
+describe("landmark open water", () => {
+  it("joins a model that ends in open water to the region's sea, level and sailable", () => {
+    const terrain = createTerrain(createWorld("lm-water"));
+    let checked = 0;
+    for (const region of terrain.world.landmarks) {
+      const model = groundOf(region.landmark!.id);
+      const level = landmarkWaterLevel(region.biome);
+      if (!model || level === undefined || Math.abs(model.ground[0]![0]! - level) > 0.001) continue;
+      checked++;
+      const { site } = region;
+      const sea = plateauBase(region) + level;
+      for (let d = -model.half + 1; d <= model.half - 1; d += 2) {
+        for (const [dx, dz] of [[d, -model.half - 2], [d, model.half + 2], [-model.half - 2, d], [model.half + 2, d], [d, -model.half + 0.6], [-model.half + 0.6, d]]) {
+          const tile = terrain.tileAtPoint(site.x + dx!, site.z + dz!);
+          if (terrain.world.regionById(tile.regionId) !== region) continue;
+          expect(tile.biome).toBe(region.biome);
+          expect(tile.height).toBeCloseTo(sea, 5);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
 
@@ -89,7 +118,7 @@ describe("landmark slopes", () => {
     for (const seed of ["lm-slope-a", "lm-slope-b", "lm-slope-c"]) {
       const terrain = createTerrain(createWorld(seed));
       for (const region of terrain.world.landmarks) {
-        const reach = LANDMARK_PLATEAU_RADIUS + LANDMARK_BLEND + 2;
+        const reach = footprintHalf(region.landmark!) + LANDMARK_BLEND + 2;
         for (let dx = -reach; dx <= reach; dx++) {
           for (let dz = -reach; dz <= reach; dz++) {
             const x = Math.floor(region.site.x + dx);

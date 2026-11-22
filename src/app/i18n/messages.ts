@@ -44,11 +44,12 @@ export interface Messages {
     /** Shown beside a monument in a region that has not been restored: the inscription cannot be read. */
     readonly promptWorn: string;
     readonly kind: Readonly<Record<TextKind, string>>;
-    readonly book: string;
-    readonly bookOpen: string;
+    readonly box: string;
+    readonly boxOpen: string;
     readonly progress: (found: number, total: number) => string;
     readonly empty: string;
-    readonly filterAll: string;
+    readonly newer: string;
+    readonly older: string;
     readonly close: string;
     readonly loading: string;
   };

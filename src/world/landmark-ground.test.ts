@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { LANDMARK_SPECS } from "./landmarks";
+import { LANDMARK_SPECS, MAX_FOOTPRINT_HALF } from "./landmarks";
 import { groundHeight, groundOf } from "./landmark-ground";
+import { landmarkWaterLevel } from "./terrain-grid";
 
 const modelled = LANDMARK_SPECS.filter((l) => groundOf(l.id));
 
@@ -12,18 +13,25 @@ describe("landmark model sidecars", () => {
   for (const spec of modelled) {
     const g = groundOf(spec.id)!;
     describe(spec.id, () => {
+      it("fits its region: footprint no wider than MAX_FOOTPRINT_HALF", () => {
+        expect(g.half).toBeLessThanOrEqual(MAX_FOOTPRINT_HALF + 1e-9);
+      });
+
       it("is a square grid matching its footprint", () => {
         const n = Math.round((2 * g.half) / g.step) + 1;
         expect(g.ground).toHaveLength(n);
         for (const row of g.ground) expect(row).toHaveLength(n);
       });
 
-      it("sits at the base height all round its edge, so the terrain blends from one level", () => {
+      it("sits at one level all round its edge: the base height, or open water in a water region", () => {
+        const water = landmarkWaterLevel(spec.biome);
         for (const grid of [g.ground, g.terrain ?? g.ground]) {
           const n = grid.length;
+          const edge = grid[0]![0]!;
+          const level = water !== undefined && Math.abs(edge - water) < 0.001 ? water : 0;
           for (let i = 0; i < n; i++) {
             for (const v of [grid[0]![i]!, grid[n - 1]![i]!, grid[i]![0]!, grid[i]![n - 1]!]) {
-              expect(Math.abs(v)).toBeLessThan(0.001);
+              expect(Math.abs(v - level)).toBeLessThan(0.001);
             }
           }
         }

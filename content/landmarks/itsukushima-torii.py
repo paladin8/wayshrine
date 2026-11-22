@@ -121,28 +121,31 @@ EXTRA_SOLIDS=[]   # [x, y, r] in Blender coordinates
 # land is an imperfect round back arc of forest with a sand beach, and the shrine's front stands out
 # over an inlet of the sea.
 LV=-0.6; FLOOR=LV-0.5
-IC=(0.2,1.3); IRX,IRY=8.0,7.0
+FH=11.2   # footprint half-width (the sidecar's half): larger than the usual 9.6, for a roomier islet
+IC=(0.0,0.8); IRX,IRY,IP=10.0,9.8,3.2
 def ell_m(x,y):
-    dx=(x-IC[0])/IRX; dy=(y-IC[1])/IRY; th=math.atan2(dy,dx)
-    return math.hypot(dx,dy)/(1+0.06*math.sin(3*th+0.5)+0.04*math.sin(5*th+1.7)+0.025*math.sin(8*th))
+    # a rounded square, so the islet fills the footprint, with a little irregularity in the shoreline
+    dx=abs((x-IC[0])/IRX); dy=abs((y-IC[1])/IRY); th=math.atan2(y-IC[1],x-IC[0])
+    return (dx**IP+dy**IP)**(1/IP)/(1+0.4*(0.06*math.sin(3*th+0.5)+0.04*math.sin(5*th+1.7)+0.025*math.sin(8*th)))
 BC=(-0.9,-2.4); BRX,BRY,BP=5.9,5.6,3.0
 def bay_m(x,y):
     dx=abs((x-BC[0])/BRX); dy=abs((y-BC[1])/BRY); th=math.atan2(y-BC[1],x-BC[0])
     return (dx**BP+dy**BP)**(1/BP)/(1+0.04*math.sin(3*th+0.7)+0.03*math.sin(5*th+2.1))
-def isl_m(x,y): return max(ell_m(x,y),2.0-bay_m(x,y))   # 1 at the shore, below 1 on land
+def front_m(y): return 0.8-(y+4.8)*0.28   # the two arms end level with the torii, so the bay stays open to the sea
+def isl_m(x,y): return max(ell_m(x,y),2.0-bay_m(x,y),front_m(y))   # 1 at the shore, below 1 on land
 def H(x,y):
     m=isl_m(x,y)
     band=1.4*smooth(6.4,8.2,y)
     bump=1.6*math.exp(-((x-4.7)**2+(y-5.5)**2)/4.0)
     land=max(0.0,band,bump)
-    land=(LV+0.1)+(land-(LV+0.1))*smooth(0.98,0.74,m)   # a gentle beach from the shore up to the level ground
+    land=(LV+0.1)+(land-(LV+0.1))*smooth(0.98,0.86,m)   # a short beach from the shore up to the level ground, where the deer roam
     k=smooth(0.98,1.05,m); return land*(1-k)+FLOOR*k
 
-GS=0.8; NG=24
+GS=0.8; NG=int(round(2*FH/GS))
 gv={}
 for j in range(NG+1):
     for i in range(NG+1):
-        x=-9.6+i*GS; y=-9.6+j*GS
+        x=-FH+i*GS; y=-FH+j*GS
         if 0<i<NG and 0<j<NG:
             x+=rng.uniform(-0.22,0.22); y+=rng.uniform(-0.22,0.22)
         gv[(i,j)]=(x,y,H(x,y))
@@ -158,14 +161,14 @@ for j in range(NG):
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
             cx=sum(p[0] for p in P)/3; cy=sum(p[1] for p in P)/3
-            sand=isl_m(cx,cy)>0.8 or (cx>5.0 and cy<1.5 and isl_m(cx,cy)>0.62)
+            sand=isl_m(cx,cy)>0.9 or (cx>5.0 and cy<1.5 and isl_m(cx,cy)>0.8)
             gf.append([gid[k] for k in t3]); gm.append("cream" if sand else "foliage")
 emit(gverts,gf,gm,orient=False)
 # the sea, just under the game's own water tiles: it fills any tile the game keeps as land along the shore
-emit([(-9.6,-9.6,LV-0.04),(9.6,-9.6,LV-0.04),(9.6,9.6,LV-0.04),(-9.6,9.6,LV-0.04)],[[0,1,2,3]],["water"],orient=False)
+emit([(-FH,-FH,LV-0.04),(FH,-FH,LV-0.04),(FH,FH,LV-0.04),(-FH,FH,LV-0.04)],[[0,1,2,3]],["water"],orient=False)
 
 # the landing: a short wooden jetty off the beach, where the boat comes in
-J0=(7.2,0.2); J1=(6.6,-3.2); JD=LV+0.28
+J0=(7.31,-5.4); J1=(7.13,-7.8); JD=LV+0.28   # off the tip of the right arm
 jx,jy=J1[0]-J0[0],J1[1]-J0[1]; JL=math.hypot(jx,jy); jh=math.atan2(jy,jx)
 def jetty_d(x,y):
     t=max(0.0,min(1.0,((x-J0[0])*jx+(y-J0[1])*jy)/(JL*JL)))
@@ -321,7 +324,7 @@ for t in TREES:
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/itsukushima-torii.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
-HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+HALF=FH; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y):
     d,t=jetty_d(x,y)
     if d<0.45 and t>0.0: return JD
@@ -359,7 +362,7 @@ for key,(bv,bf) in B.items():
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=(7.0,0.6)   # the beach by the landing, facing the torii
-STAND=(J0[0]+(J1[0]-J0[0])*0.3,J0[1]+(J1[1]-J0[1])*0.3)   # on the landing
+STAND=(7.5,-4.0)     # the level ground at the head of the landing
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/itsukushima-torii.json"
@@ -517,10 +520,11 @@ def deer(index,home,rot,scale,offset,stop,outbound,returning):
 scene=bpy.context.scene
 scene.render.fps=FPS
 scene.frame_end=DEER_END
-# Separate routes keep the deer on the level ground, clear of the shore, the lanterns and the buildings.
+# The deer walk along the shore of each arm, on the level ground just above the beach, in view of the camera
+# and clear of the trees, the lanterns and the buildings.
 routes=[
-    ((6.6,3.6),2.6,1,None,(7.0,1.8),4,24),
-    ((-6.0,4.8),-2.4,0.92,20,(-5.2,6.0),10,29),
+    ((8.3,-0.2),1.4,1,None,(8.3,-3.0),4,24),
+    ((-8.0,-2.2),-0.6,0.92,20,(-8.0,-4.2),10,29),   # the front of the left arm, clear of the torii from the camera
 ]
 for index,args in enumerate(routes,1):
     deer(index,*args)

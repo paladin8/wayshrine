@@ -92,21 +92,19 @@ const CSS = `
 .nb-entry:nth-child(even) .nb-body{transform:rotate(.2deg)}
 .nb-go{all:unset;box-sizing:border-box;align-self:flex-end;cursor:pointer;margin-top:4px;padding:3px 12px;border:2px solid #b64e3d;border-radius:5px;color:#b64e3d;font:15px ${HAND_EN};letter-spacing:.02em;transform:rotate(-2deg);opacity:.92;transition:background .12s,color .12s}
 .nb-go:lang(ja){font-family:${HAND_JA};font-size:14px}
-.nb-go:hover,.nb-go:focus-visible{background:#b64e3d;color:#fbf3e2}
-.nb-go:focus-visible{outline:2px solid #2b2a4a;outline-offset:2px}
+.nb-go:hover{background:#b64e3d;color:#fbf3e2}
 .nb-entry.locked .nb-name,.nb-entry.locked .nb-alt,.nb-entry.locked .nb-no{color:#8d8a84}
 .nb-entry.locked{filter:grayscale(1);opacity:.62}
 .nb-entry.locked .nb-body{font-style:italic;color:#8d8a84;font-family:${UI_FONT};font-size:13px}
 .nb-entry.locked .nb-go{border-color:#8d8a84;color:#6d6a64}
-.nb-entry.locked .nb-go:hover,.nb-entry.locked .nb-go:focus-visible{background:#6d6a64;color:#fbf3e2}
+.nb-entry.locked .nb-go:hover{background:#6d6a64;color:#fbf3e2}
 .nb-empty{margin:auto 0;text-align:center;padding:0 8%;font-size:calc(var(--lh) * .7);line-height:var(--lh);color:#6a5f55}
 .nb-empty.en{font-family:${HAND_EN}}
 .nb-empty.ja{font-family:${HAND_JA}}
 .nb-title{margin:auto 0;text-align:center;font-weight:400;font-size:clamp(24px,4.4vh,38px);color:#2b2a4a}
 .nb-folio{position:absolute;bottom:clamp(8px,1.8vh,14px);left:0;right:0;text-align:center;font:13px ${HAND_EN};color:#9a8566;font-variant-numeric:tabular-nums}
 .nb-turn,.nb-x{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#2a1a14b8;color:#f1e3c4;font:20px/1 ${UI_FONT};border:1px solid #e2c58f55}
-.nb-turn:hover,.nb-x:hover,.nb-turn:focus-visible,.nb-x:focus-visible{background:#2a1a14}
-.nb-turn:focus-visible,.nb-x:focus-visible{outline:2px solid #f1e3c4;outline-offset:2px}
+.nb-turn:hover,.nb-x:hover{background:#2a1a14}
 .nb-turn[disabled]{opacity:.3;cursor:default}
 .nb-turn{position:absolute;bottom:clamp(6px,1.4vh,12px);z-index:2}
 .nb-turn.prev{left:clamp(8px,2vw,20px)}

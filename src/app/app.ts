@@ -68,7 +68,9 @@ const KEY_RIGHT = ["KeyD", "ArrowRight"];
 const KEY_ACT = ["KeyE", "Space", "Enter"];
 const KEY_MAP = "KeyM";
 const KEY_OVERVIEW = "KeyZ";
-const KEY_BOOK = "KeyB";
+const KEY_RUBBING_BOX = "KeyB";
+/** How close (world units) the player must be to a restored landmark for its name to show again. */
+const LANDMARK_NAME_RANGE = 16;
 const KEY_JOURNAL = "KeyJ";
 const KEY_MUTE = "KeyN";
 /** Debug only. */
@@ -138,6 +140,7 @@ export function startApp(container: HTMLElement): void {
   const monumentUi = createMonumentUi(container, hud.actions, {
     collected: () => state.collected,
     language: () => settings.get().language,
+    sound: (cue) => cues.play(cue),
   });
   const panel = createSettingsPanel(container, hud.actions, settings);
   const notebook = createNotebook(container, hud.landmarkButton, {
@@ -153,10 +156,14 @@ export function startApp(container: HTMLElement): void {
     },
   });
   /** Dialogs own the keyboard while open. */
-  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBookOpen() || notebook.isOpen();
+  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen();
   let drawnCollected = state.collected.length;
   let drawnLanguage = settings.get().language;
   let drawnLandmarks = -1;
+  /** How visible the small name shown near a restored landmark is, 0 to 1. */
+  let nearName = 0;
+  /** The landmark whose name is shown (or fading out) near the player. */
+  let nearNameId: string | null = null;
   let pos: Point = startPosition(terrain);
   let facing = 0;
   /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
@@ -268,6 +275,12 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     music.unlock(); // browsers allow audio only after a user gesture
+    if (e.code === KEY_RUBBING_BOX && !awakening && !e.metaKey && !e.ctrlKey && !e.altKey
+        && (monumentUi.isBoxOpen() || !modalOpen())) {
+      down.clear();
+      monumentUi.toggleBox();
+      return;
+    }
     if (modalOpen()) {
       down.clear(); // a dialog owns the keyboard while it is open
       return;
@@ -277,7 +290,6 @@ export function startApp(container: HTMLElement): void {
     if (e.code === KEY_OVERVIEW && !awakening && overviewTime >= OVERVIEW_SECONDS && !e.metaKey && !e.ctrlKey && !e.altKey) {
       overviewTime = 0;
     }
-    if (e.code === KEY_BOOK && !awakening) monumentUi.toggleBook();
     if (e.code === KEY_JOURNAL && !awakening && !e.metaKey && !e.ctrlKey && !e.altKey) notebook.toggle();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (debug && e.code === KEY_RUBBING) readRubbingHere();
@@ -380,6 +392,15 @@ export function startApp(container: HTMLElement): void {
       // Present from the start (invisible) so its images are loaded before they are needed.
       nameModel = { id: landmark.id, label: t.landmarkNames[landmark.id] ?? landmark.id, opacity: awakening.caption, english: prefs.language === "en" };
     }
+    // After restoration, the name returns, smaller and near the bottom, while the player is close to the landmark.
+    const here = world.regionAt(pos.x, pos.z);
+    const nearLandmark =
+      !awakening && here.landmark && isRestored(state, here) && Math.hypot(pos.x - here.site.x, pos.z - here.site.z) < LANDMARK_NAME_RANGE
+        ? here.landmark.id
+        : null;
+    if (nearLandmark) nearNameId = nearLandmark;
+    nearName += Math.max(-dt / CAPTION_FADE, Math.min(dt / CAPTION_FADE, (nearLandmark ? 1 : 0) - nearName));
+    const nearModel = nearNameId && nearName > 0 ? { id: nearNameId, label: t.landmarkNames[nearNameId] ?? nearNameId, opacity: nearName, english: prefs.language === "en" } : null;
     const needed = blockedBy ? requirementOf(blockedBy) : null;
     const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
     const reach = shrineInReach(terrain, pos);
@@ -419,6 +440,7 @@ export function startApp(container: HTMLElement): void {
       prompt: reading ? null : prompt,
       hint: reading ? null : hint,
       landmarkName: nameModel,
+      nearLandmarkName: nearModel,
       messages: t,
       showCompass: prefs.showCompass,
     });

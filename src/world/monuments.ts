@@ -1,7 +1,7 @@
 import { createRng, type Rng } from "../core";
 import type { Point } from "./coords";
 import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
-import { LANDMARK_MONUMENT_CLEARANCE } from "./landmarks";
+import { monumentClearance } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
@@ -85,7 +85,7 @@ function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, 
     const dx = p.x - shrine.x;
     const dz = p.z - shrine.z;
     if (Math.hypot(dx, dz) < MONUMENT_SHRINE_CLEARANCE) return false;
-    if (landmark && Math.max(Math.abs(dx), Math.abs(dz)) < LANDMARK_MONUMENT_CLEARANCE) return false;
+    if (landmark && Math.max(Math.abs(dx), Math.abs(dz)) < monumentClearance(landmark)) return false;
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) return false;
     if (world.regionAt(p.x, p.z) !== region || terrain.tileAtPoint(p.x, p.z).biome !== region.biome) return false;
     // The site bisector is only an approximation once the edges are bent.
@@ -96,7 +96,7 @@ function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, 
   };
   for (let attempt = 0; attempt < 60; attempt++) {
     const a = rng.range(0, Math.PI * 2);
-    const r = rng.range(landmark ? LANDMARK_MONUMENT_CLEARANCE : 10, maxDistance);
+    const r = rng.range(landmark ? monumentClearance(landmark) : 10, maxDistance);
     const p = { x: site.x + Math.cos(a) * r, z: site.z + Math.sin(a) * r };
     if (fits(p) && edgeMargin(world, region, p.x, p.z) >= MONUMENT_EDGE_MARGIN) return p;
   }

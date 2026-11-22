@@ -22,6 +22,14 @@ if os.environ.get("FI_GROUND"):
     mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=(0.195,0.42,0.15,1)
     p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=(0.195,0.42,0.15,1); p.inputs["Roughness"].default_value=1.0
     gm.materials.append(mat); g=bpy.data.objects.new("PreviewGround",gm); col.objects.link(g)
+if os.environ.get("FI_WATER"):
+    # stand-in for the water region's sea round a model that ends in open water (preview only)
+    wz=float(os.environ["FI_WATER"]); h=40.0
+    wm=bpy.data.meshes.new("PreviewWater")
+    wm.from_pydata([(-h,-h,wz),(h,-h,wz),(h,h,wz),(-h,h,wz)],[],[[0,1,2,3]])
+    mat=bpy.data.materials.new("PreviewWater"); c=(0.05,0.44,0.51,1); mat.diffuse_color=c
+    p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=c; p.inputs["Roughness"].default_value=1.0
+    wm.materials.append(mat); w=bpy.data.objects.new("PreviewWater",wm); col.objects.link(w)
 sun_d=bpy.data.lights.new("PreviewSun",'SUN'); sun_d.energy=float(os.environ.get("FI_SUN","2.2")); sun_d.angle=math.radians(3)
 sun=bpy.data.objects.new("PreviewSun",sun_d); col.objects.link(sun)
 ldir=Vector((0.35,0.55,-0.76)).normalized()

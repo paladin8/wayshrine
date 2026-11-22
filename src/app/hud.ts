@@ -25,6 +25,8 @@ export interface HudModel {
   readonly hint: string | null;
   /** The name of the landmark being restored, or null. */
   readonly landmarkName: LandmarkNameModel | null;
+  /** The small name shown near the bottom while the player is close to a restored landmark, or null. */
+  readonly nearLandmarkName?: LandmarkNameModel | null;
 }
 
 /**
@@ -57,8 +59,8 @@ const CSS = `
 .hud .star-count::before{content:"";width:14px;height:14px;background:#b64e3d;clip-path:polygon(50% 0,64% 34%,100% 38%,74% 62%,81% 100%,50% 82%,19% 100%,26% 62%,0 38%,36% 34%)}
 .hud .hud-action{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:34px;padding:0;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422;color:inherit;font:inherit;cursor:pointer;pointer-events:auto}
 .hud .hud-action:hover,.hud .hud-action[aria-expanded=true]{background:#fffaf0}
-.hud .hud-action:focus-visible,.hud .landmark-count:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 .hud .landmark-count{gap:6px;padding:0 10px;font-variant-numeric:tabular-nums}
+.hud .landmark-book-icon{font-size:17px;line-height:1}
 .hud .gear-stars{padding:1px 5px;border-radius:6px;background:#2a242410;font-size:12px}
 .hud .gear-stars::before{width:11px;height:11px}
 .hud .gear-chip.off .gear-stars::before{background:#88612c}
@@ -79,6 +81,10 @@ const CSS = `
 .hud .lname .en{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(var(--ja-half,120px) + clamp(20px,4vh,44px)))}
 .hud .lname .ja img{max-height:58vh}
 .hud .lname img{display:block;max-width:92vw;filter:drop-shadow(0 0 5px #140c0ccc) drop-shadow(0 2px 3px #140c0c99)}
+.hud .lname.near{inset:auto 0 clamp(64px,10vh,110px) 0;display:flex;flex-direction:column;align-items:center;gap:clamp(4px,1vh,10px);pointer-events:none;--em:clamp(11px,3.4vh,34px)}
+.hud .lname.near::before{display:none}
+.hud .lname.near .ja,.hud .lname.near .en{position:static;transform:none}
+.hud .lname.near .ja img{max-height:30vh}
 .hud .dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:#ffe9a8}
 `;
 
@@ -119,10 +125,14 @@ export function createHud(container: HTMLElement): Hud {
   });
   const count = document.createElement("button");
   count.type = "button";
-  count.className = "hud-action star-count landmark-count";
+  count.className = "hud-action landmark-count";
   count.setAttribute("aria-haspopup", "dialog");
+  const bookIcon = document.createElement("span");
+  bookIcon.className = "landmark-book-icon";
+  bookIcon.setAttribute("aria-hidden", "true");
+  bookIcon.textContent = "📖";
   const countValue = document.createElement("span");
-  count.appendChild(countValue);
+  count.append(bookIcon, countValue);
 
   tr.append(count);
 
@@ -160,6 +170,22 @@ export function createHud(container: HTMLElement): Hud {
   lname.append(jaBox, enBox);
   root.appendChild(lname);
   let shownId: string | null = null;
+
+  // The same name again, smaller and near the bottom, while the player is by a restored landmark.
+  const near = document.createElement("div");
+  near.className = "lname near";
+  near.style.display = "none";
+  const nearJaBox = document.createElement("div");
+  nearJaBox.className = "ja";
+  const nearEnBox = document.createElement("div");
+  nearEnBox.className = "en";
+  const nearJa = document.createElement("img");
+  const nearEn = document.createElement("img");
+  nearJaBox.appendChild(nearJa);
+  nearEnBox.appendChild(nearEn);
+  near.append(nearJaBox, nearEnBox);
+  root.appendChild(near);
+  let nearShownId: string | null = null;
   /** The images were drawn at a fixed glyph size, so every one is scaled by the same factor (relative to `--em`). */
   const GLYPH_PX = 320;
   const sizeToEm = (img: HTMLImageElement): void => {
@@ -176,6 +202,8 @@ export function createHud(container: HTMLElement): Hud {
     placeEnglish();
   };
   enImg.onload = () => sizeToEm(enImg);
+  nearJa.onload = () => sizeToEm(nearJa);
+  nearEn.onload = () => sizeToEm(nearEn);
   window.addEventListener("resize", placeEnglish);
 
   return {
@@ -196,7 +224,8 @@ export function createHud(container: HTMLElement): Hud {
         renderedLandmarkMessages = t;
         const landmarkCount = m.restoredLandmarks.length;
         setText(countValue, String(landmarkCount));
-        count.setAttribute("aria-label", t.landmarksRestored(landmarkCount));
+        count.title = `${t.notebook.title} (J)`;
+        count.setAttribute("aria-label", `${count.title} · ${t.landmarksRestored(landmarkCount)}`);
         count.title = `${t.notebook.title} (J)`;
       }
 
@@ -226,6 +255,24 @@ export function createHud(container: HTMLElement): Hud {
       } else if (lname.style.display !== "none") {
         lname.style.display = "none";
         shownId = null;
+      }
+
+      const nn = m.nearLandmarkName ?? null;
+      if (nn) {
+        if (nn.id !== nearShownId) {
+          nearShownId = nn.id;
+          const base = `${import.meta.env.BASE_URL}images/landmark-names/${nn.id}`;
+          nearJa.src = `${base}.ja.png`;
+          nearEn.src = `${base}.en.png`;
+        }
+        nearJa.alt = nn.label;
+        nearEn.alt = nn.english ? nn.label : "";
+        nearEnBox.style.display = nn.english ? "block" : "none";
+        near.style.display = "flex";
+        near.style.opacity = String(nn.opacity);
+      } else if (near.style.display !== "none") {
+        near.style.display = "none";
+        nearShownId = null;
       }
 
       const text = m.hint ?? m.prompt;

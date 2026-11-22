@@ -3,7 +3,7 @@ import { createWorld } from "./world";
 import { createTerrain } from "./terrain-grid";
 import { MONUMENT_EDGE_MARGIN, MONUMENT_SHRINE_CLEARANCE, planMonuments, type MonumentSpec } from "./monuments";
 import { reachableRegions } from "./progression";
-import { LANDMARK_SPECS, LANDMARK_MONUMENT_CLEARANCE } from "./landmarks";
+import { LANDMARK_SPECS, monumentClearance } from "./landmarks";
 import { CAPABILITIES, type Biome } from "./terrain";
 
 const BIOME_CYCLE: Biome[] = ["water", "meadow", "mountain", "snow"];
@@ -100,7 +100,7 @@ describe("landmark-linked texts", () => {
         expect(m).toBeDefined();
         expect(m?.regionId).toBe(region?.id);
         if (m && region) {
-          expect(Math.max(Math.abs(m.x - region.shrine.x), Math.abs(m.z - region.shrine.z))).toBeGreaterThanOrEqual(LANDMARK_MONUMENT_CLEARANCE);
+          expect(Math.max(Math.abs(m.x - region.shrine.x), Math.abs(m.z - region.shrine.z))).toBeGreaterThanOrEqual(monumentClearance(region.landmark!));
           expect(plan.inRegion(region.id).length).toBeLessThanOrEqual(2);
         }
       }

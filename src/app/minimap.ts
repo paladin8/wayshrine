@@ -99,9 +99,8 @@ const CSS = `
 .map.small{right:14px;bottom:14px}
 .map-zoom{position:fixed;bottom:14px;right:calc(14px + 172px + 8px);width:34px;height:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid #2a242422;background:#fffaf0cc;color:#2a2424;font:600 15px/1 ${UI_FONT};cursor:pointer;pointer-events:auto}
 .map-zoom:hover{background:#fffaf0}
-.map-zoom:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 .map-zoom.alone{right:14px}
-.map.large{pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
+.map.large{z-index:3;pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
 .map canvas.travel{cursor:pointer}
 .map .hint{position:absolute;left:8px;bottom:6px;font:11px ${UI_FONT};color:#f2ede0;opacity:.8}

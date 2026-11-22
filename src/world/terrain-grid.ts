@@ -25,6 +25,15 @@ export function plateauBase(region: Region): number {
   return PLATEAU_HEIGHT[isWater(region.biome) ? "meadow" : region.biome];
 }
 
+/**
+ * In a water region, the height of the region's water relative to the plateau (where a model's origin sits).
+ * A landmark model whose terrain is at or below it there shows the region's own water, which the boat can
+ * sail: such a model can end in open water all round its edge and slot into the sea. Undefined elsewhere.
+ */
+export function landmarkWaterLevel(biome: Biome): number | undefined {
+  return isWater(biome) ? PLATEAU_HEIGHT[biome] - PLATEAU_HEIGHT.meadow : undefined;
+}
+
 /** Terrain under a landmark's model sits this far below the model's own ground, so the model is never z-fought. */
 const MODEL_PAD = 0.6;
 
@@ -161,14 +170,21 @@ export function createTerrain(world: World): Terrain {
     const onPlateau = away <= (model && !model.terrainSurface ? -0.5 : 0);
     const dx = x - region.shrine.x;
     const dz = z - region.shrine.z;
+    // A model's own sea, at the region's water level: open water, the same as around it.
+    const level = landmarkWaterLevel(region.biome);
+    const open =
+      onPlateau && !!model && !model.terrainSurface && level !== undefined && surfaceHeight(model, dx, dz) <= level + 0.01;
     // A shrine in a water region stands on an islet, reachable only by boat.
-    let biome: Biome = onPlateau && isWater(region.biome) ? "meadow" : region.biome;
+    let biome: Biome = onPlateau && isWater(region.biome) && !open ? "meadow" : region.biome;
     let height: number;
     let skirt = false;
     let shore = false;
     let shoal = 0;
     if (onPlateau) {
-      if (model?.terrainSurface) {
+      if (open) {
+        height = natural(x, z, region.biome);
+        shore = true;
+      } else if (model?.terrainSurface) {
         height = plateauBase(region);
         skirt = true;
       } else {

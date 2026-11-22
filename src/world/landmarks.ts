@@ -133,8 +133,6 @@ export function landmarksBeforeAct(act: number): number {
  */
 export const LANDMARK_PLATEAU_RADIUS = 9.7;
 export const LANDMARK_BLEND = 8;
-/** Monuments keep clear of the footprint and its slope (Chebyshev distance from the site). */
-export const LANDMARK_MONUMENT_CLEARANCE = LANDMARK_PLATEAU_RADIUS + LANDMARK_BLEND + 1.5;
 /** A placeholder is one solid disc at the site. */
 export const LANDMARK_SOLID_RADIUS = 3.0;
 /** Activation extends this many units past the edges of the landmark footprint. */
@@ -143,6 +141,18 @@ export const LANDMARK_REACH_MARGIN = 3.5;
 /** Half-width of a landmark's flat or model-shaped footprint. */
 export function footprintHalf(landmark: LandmarkSpec): number {
   return groundOf(landmark.id)?.half ?? LANDMARK_PLATEAU_RADIUS;
+}
+
+/**
+ * The largest footprint half-width a model may use. A landmark stands at its region's site, and the nearest
+ * possible region boundary is REGION_SIZE * (0.5 - SITE_JITTER) = 19.2 units from it, so the footprint and its
+ * slope (LANDMARK_BLEND) still fit inside the region.
+ */
+export const MAX_FOOTPRINT_HALF = 19.2 - LANDMARK_BLEND;
+
+/** Monuments keep clear of a landmark's footprint and its slope (Chebyshev distance from the site). */
+export function monumentClearance(landmark: LandmarkSpec): number {
+  return footprintHalf(landmark) + LANDMARK_BLEND + 1.5;
 }
 
 /** The point the compass aims at, in world space. */

@@ -196,10 +196,10 @@ def ring_r(rings,z):
     return rings[-1][1],rings[-1][2],rings[-1][3]
 
 # the husband rock (tall, a little torii on its peak) and the wife rock, on the diagonal facing the camera
-MX,MY=-4.7,-1.5; FX,FY=-0.5,2.6
+MX,MY=-6.55,-2.28; FX,FY=-2.35,1.82   # both moved out from the islet, along the line from its centre
 MR=[(-1.3,1.75,0,0),(0.4,1.85,0,0),(1.6,1.6,0.1,0),(2.8,1.35,0.15,0.1),(3.9,1.1,0.1,0.15),(4.8,0.82,0.12,0.1),(5.45,0.45,0.1,0.1)]
 FR=[(-1.3,1.3,0,0),(0.5,1.35,0,0),(1.4,1.1,0,0.05),(2.1,0.78,0.05,0.05),(2.55,0.32,0.05,0.05)]
-crag(MX,MY,MR); crag(FX,FY,FR,n=7)
+MRO=crag(MX,MY,MR); FRO=crag(FX,FY,FR,n=7)
 for (x,y,r) in [(MX+1.2,MY-1.3,0.45),(MX-1.5,MY+0.9,0.4),(FX+1.0,FY-0.9,0.32),(MX+0.2,MY-1.9,0.3)]:
     crag(x,y,[(-1.3,r*1.1,0,0),(0.0,r,0,0),(r*0.8,r*0.5,0,0)],n=6)
 # tufts of green and the little torii on the husband rock's peak
@@ -217,12 +217,38 @@ def tube(pts,r,mat,n=5):
         up=Vector((0,0,1)); u=tdir.cross(up).normalized(); v=u.cross(tdir).normalized()
         rings.append([tuple(Vector(p)+r*(math.cos(2*math.pi*k/n)*u+math.sin(2*math.pi*k/n)*v)) for k in range(n)])
     solid(rings,mat)
-def band(cx,cy,r,z0,z1,mat="cream",n=10):
-    solid([ngon(r,z0,n,0,cx,cy),ngon(r,z1,n,0,cx,cy)],mat)
-mr,mox,moy=ring_r(MR,3.3); fr,fox,foy=ring_r(FR,1.75)
-band(MX+mox,MY+moy,mr*1.02+0.04,3.12,3.48); band(FX+fox,FY+foy,fr*1.02+0.04,1.58,1.92)
+def surf_r(rings,z,cx,cy,a):
+    # distance from (cx, cy) to the crag's actual surface at height z, along the direction a
+    zs=[sum(p[2] for p in r)/len(r) for r in rings]
+    k=max(0,min(len(rings)-2,max(i for i in range(len(zs)-1) if zs[i]<=z) if z>=zs[0] else 0))
+    t=max(0.0,min(1.0,(z-zs[k])/(zs[k+1]-zs[k])))
+    poly=[(p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t) for p,q in zip(rings[k],rings[k+1])]
+    dx,dy=math.cos(a),math.sin(a); best=0.0
+    for (x0,y0),(x1,y1) in zip(poly,poly[1:]+poly[:1]):
+        ex,ey=x1-x0,y1-y0; den=dx*ey-dy*ex
+        if abs(den)<1e-9: continue
+        u=((x0-cx)*ey-(y0-cy)*ex)/den; v=((x0-cx)*dy-(y0-cy)*dx)/den
+        if u>0 and -1e-6<=v<=1+1e-6: best=max(best,u)
+    return best
+def band(rings,cx,cy,z0,z1,mat="cream",n=20,pad=0.07):
+    # a rope band hugging the rock: each vertex sits just outside the outermost rock surface around its angle
+    # (sampled either side, and a little above and below), so no bulge pokes through between vertices
+    def r_at(z,a):
+        d=math.pi/n
+        return max(surf_r(rings,zz,cx,cy,aa) for zz in (z-0.1,z,z+0.1) for aa in (a-d,a-d/2,a,a+d/2,a+d))+pad
+    def ring(z):
+        out=[]
+        for i in range(n):
+            a=2*math.pi*i/n; r=r_at(z,a)/math.cos(math.pi/n)   # the chord between vertices stays outside the arc
+            out.append((cx+r*math.cos(a),cy+r*math.sin(a),z))
+        return out
+    solid([ring(z0),ring(z1)],mat)
+_,mox,moy=ring_r(MR,3.3); _,fox,foy=ring_r(FR,1.75)
+MCX,MCY=MX+mox,MY+moy; FCX,FCY=FX+fox,FY+foy
+band(MRO,MCX,MCY,3.12,3.48); band(FRO,FCX,FCY,1.58,1.92)
 dx,dy=FX-MX,FY-MY; L=math.hypot(dx,dy); ux,uy=dx/L,dy/L
-A0=(MX+mox+ux*(mr+0.05),MY+moy+uy*(mr+0.05)); B0=(FX+fox-ux*(fr+0.05),FY+foy-uy*(fr+0.05))
+ra=surf_r(MRO,3.3,MCX,MCY,math.atan2(uy,ux))+0.08; rb=surf_r(FRO,1.75,FCX,FCY,math.atan2(-uy,-ux))+0.08
+A0=(MCX+ux*ra,MCY+uy*ra); B0=(FCX-ux*rb,FCY-uy*rb)
 ROPE=[]
 for k,off in enumerate((-0.2,-0.1,0.0,0.1,0.2)):
     za,zb=3.3+off*0.7,1.75+off*0.6; sag=0.75-0.04*k

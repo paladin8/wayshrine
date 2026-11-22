@@ -28,7 +28,6 @@ const CSS = `
 .sp-lang[aria-pressed=true]{background:#d96b59;border-color:#d96b59;color:#fff}
 .sp-howto p{margin:6px 0;font-size:13px;line-height:1.45}
 .sp-credits{margin:0;font-size:12px;line-height:1.5;opacity:.65}
-.sp-lang:focus-visible,.sp-x:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 `;
 
 function el<K extends keyof HTMLElementTagNameMap>(
