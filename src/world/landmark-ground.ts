@@ -1,5 +1,6 @@
 import fushimiInari from "./landmark-grounds/fushimi-inari.json";
 import kinkakuJi from "./landmark-grounds/kinkaku-ji.json";
+import todaiJiDaibutsu from "./landmark-grounds/todai-ji-daibutsu.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -16,7 +17,7 @@ export interface LandmarkGround {
   readonly ground: ReadonlyArray<readonly number[]>;
   /** Solid discs [x, z, r]: columns, posts, trees, statues. */
   readonly solids: ReadonlyArray<readonly [number, number, number]>;
-  /** Where the shrine is used from, and how close the player must be. */
+  /** Authored approach point and radius. The compass uses the point. */
   readonly interact: readonly [number, number];
   readonly reach: number;
   /** Where the player arrives when travelling here. */
@@ -26,6 +27,7 @@ export interface LandmarkGround {
 const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   "fushimi-inari": fushimiInari as unknown as LandmarkGround,
   "kinkaku-ji": kinkakuJi as unknown as LandmarkGround,
+  "todai-ji-daibutsu": todaiJiDaibutsu as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

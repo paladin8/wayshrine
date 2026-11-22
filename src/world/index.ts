@@ -8,6 +8,8 @@ export { LANDMARK_TOTAL, greedyProgress, reachableRegions } from "./progression"
 export { reachableCoords } from "./reach";
 export {
   CAPABILITY_THRESHOLDS,
+  PLANNED_GEAR,
+  type PlannedGear,
   HOME_RADIUS,
   LANDMARK_WINDOW,
   LANDMARK_BLEND,
@@ -17,7 +19,6 @@ export {
   LANDMARK_SOLID_RADIUS,
   anchorOf,
   footprintHalf,
-  landmarkReach,
   standPoint,
   LANDMARKS,
   LANDMARK_SPECS,

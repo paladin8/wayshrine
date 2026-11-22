@@ -1,4 +1,4 @@
-import { CAPABILITIES, type Capability } from "../world";
+import { CAPABILITIES, CAPABILITY_THRESHOLDS, PLANNED_GEAR, type Capability } from "../world";
 import type { Messages } from "./i18n";
 import { UI_FONT, setText } from "./style";
 
@@ -16,7 +16,7 @@ export interface HudModel {
   /** False hides the next-shrine compass (a player setting). */
   readonly showCompass: boolean;
   readonly capabilities: ReadonlySet<Capability>;
-  readonly restoredLandmarkCount: number;
+  readonly restoredLandmarks: readonly string[];
   /** Direction to the nearest reachable unrestored shrine, or null if none. */
   readonly compass: CompassModel | null;
   /** Interaction prompt at the bottom of the screen, or null. */
@@ -42,15 +42,36 @@ export interface LandmarkNameModel {
 }
 
 export interface Hud {
+  readonly actions: HTMLElement;
   update(model: HudModel): void;
 }
 
 const CSS = `
 .hud{position:fixed;inset:0;pointer-events:none;font:14px/1.3 ${UI_FONT};color:#2a2424}
 .hud .chip{display:inline-block;margin-right:6px;padding:4px 10px;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422}
-.hud .chip.off{opacity:.4}
-.hud .tl{position:absolute;top:14px;left:14px}
-.hud .tr{position:absolute;top:14px;right:14px}
+.hud .gear-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0}
+.hud .gear-chip.off{color:#5e5249;background:#f4ecd8bc}
+.hud .star-count{display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.hud .star-count::before{content:"";width:14px;height:14px;background:#b64e3d;clip-path:polygon(50% 0,64% 34%,100% 38%,74% 62%,81% 100%,50% 82%,19% 100%,26% 62%,0 38%,36% 34%)}
+.hud .hud-action{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:34px;padding:0;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422;color:inherit;font:inherit;cursor:pointer;pointer-events:auto}
+.hud .hud-action:hover,.hud .hud-action[aria-expanded=true]{background:#fffaf0}
+.hud .hud-action:focus-visible,.hud .landmark-list:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
+.hud .landmark-count{gap:6px;padding:0 10px;font-variant-numeric:tabular-nums}
+.hud .landmark-list{position:absolute;top:calc(100% + 8px);right:0;box-sizing:border-box;width:min(280px,calc(100vw - 28px));max-height:min(420px,calc(100dvh - var(--actions-top) - 56px));overflow:auto;margin:0;padding:14px 16px;border:1px solid #2a242433;border-radius:14px;background:#fffaf0;box-shadow:0 8px 24px #0004;pointer-events:auto}
+.hud .landmark-list h2{margin:0 0 7px;font-size:16px}
+.hud .landmark-list p{margin:0;color:#5e5249}
+.hud .landmark-list ul{margin:0;padding:0;list-style:none}
+.hud .landmark-list li{padding:7px 0}
+.hud .landmark-list li+li{border-top:1px solid #2a242422}
+.hud .gear-stars{padding:1px 5px;border-radius:6px;background:#2a242410;font-size:12px}
+.hud .gear-stars::before{width:11px;height:11px}
+.hud .gear-chip.off .gear-stars::before{background:#88612c}
+.hud .gear-chip.planned{border-style:dashed}
+.hud .gear-planned-heading{grid-column:1/-1;justify-self:start;margin-top:3px;padding:3px 8px;border-radius:999px;background:#fffaf0df;color:#5e5249;font-size:11px}
+.hud .tl{position:absolute;top:14px;left:14px;display:grid;grid-template-columns:repeat(2,max-content);gap:5px}
+@media(max-width:840px){.hud .tl{top:92px}}
+.hud .tr{--actions-top:14px;position:absolute;top:var(--actions-top);right:14px;display:flex;align-items:center;gap:8px}
+@media(max-width:600px){.hud .tr{--actions-top:56px}}
 .hud .tc{position:absolute;top:10px;left:50%;transform:translateX(-50%)}
 .hud .bc{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);text-align:center}
 .hud .msg{display:inline-block;padding:8px 16px;border-radius:10px;background:#2a2424dd;color:#f2ede0}
@@ -61,7 +82,7 @@ const CSS = `
 .hud .lname{position:absolute;inset:0;opacity:0;--em:clamp(28px,10vh,100px)}
 .hud .lname::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 34% 52% at 50% 52%,#120c0c8c,#120c0c00)}
 .hud .lname .ja{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-.hud .lname .en{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(var(--ja-half,120px) + 10px))}
+.hud .lname .en{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(var(--ja-half,120px) + clamp(20px,4vh,44px)))}
 .hud .lname .ja img{max-height:58vh}
 .hud .lname img{display:block;max-width:92vw;filter:drop-shadow(0 0 5px #140c0ccc) drop-shadow(0 2px 3px #140c0c99)}
 .hud .dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:#ffe9a8}
@@ -85,16 +106,70 @@ export function createHud(container: HTMLElement): Hud {
   root.append(tl, tr, tc, bc);
   container.appendChild(root);
 
-  const chips = new Map<Capability, HTMLElement>();
-  for (const cap of CAPABILITIES) {
+  const gear = CAPABILITIES.map((id) => ({ id, stars: CAPABILITY_THRESHOLDS[id], planned: false as const }));
+  const planned = PLANNED_GEAR.map((item) => ({ ...item, planned: true as const }));
+  const plannedHeading = document.createElement("span");
+  plannedHeading.className = "gear-planned-heading";
+  const chips = [...gear, ...planned].map((item, index) => {
+    if (index === gear.length) tl.appendChild(plannedHeading);
     const chip = document.createElement("span");
-    chip.className = "chip off";
+    chip.className = item.planned ? "chip gear-chip off planned" : "chip gear-chip off";
+    const name = document.createElement("span");
+    const stars = document.createElement("span");
+    stars.className = "star-count gear-stars";
+    stars.setAttribute("role", "img");
+    stars.textContent = String(item.stars);
+    chip.append(name, stars);
     tl.appendChild(chip);
-    chips.set(cap, chip);
-  }
-  const count = document.createElement("span");
-  count.className = "chip";
-  tr.appendChild(count);
+    return { item, chip, name, stars };
+  });
+  const count = document.createElement("button");
+  count.type = "button";
+  count.className = "hud-action star-count landmark-count";
+  count.setAttribute("aria-controls", "landmark-list");
+  count.setAttribute("aria-expanded", "false");
+  const countValue = document.createElement("span");
+  count.appendChild(countValue);
+
+  const landmarkList = document.createElement("section");
+  landmarkList.id = "landmark-list";
+  landmarkList.className = "landmark-list";
+  landmarkList.hidden = true;
+  landmarkList.tabIndex = -1;
+  landmarkList.setAttribute("aria-labelledby", "landmark-list-title");
+  const landmarkTitle = document.createElement("h2");
+  landmarkTitle.id = "landmark-list-title";
+  const landmarkEmpty = document.createElement("p");
+  const landmarkEntries = document.createElement("ul");
+  landmarkEntries.setAttribute("role", "list");
+  landmarkList.append(landmarkTitle, landmarkEmpty, landmarkEntries);
+  tr.append(count, landmarkList);
+
+  const setLandmarkListOpen = (open: boolean): void => {
+    landmarkList.hidden = !open;
+    count.setAttribute("aria-expanded", String(open));
+  };
+  count.addEventListener("click", () => {
+    const open = landmarkList.hasAttribute("hidden");
+    setLandmarkListOpen(open);
+    (open ? landmarkList : count).focus({ preventScroll: true });
+  });
+  const dismissOutside = (event: Event): void => {
+    if (landmarkList.hidden || !(event.target instanceof Node)) return;
+    if (!count.contains(event.target) && !landmarkList.contains(event.target)) setLandmarkListOpen(false);
+  };
+  document.addEventListener("pointerdown", dismissOutside);
+  document.addEventListener("focusin", dismissOutside);
+  window.addEventListener("keydown", (event) => {
+    if (landmarkList.hidden || event.code !== "Escape" || event.repeat) return;
+    event.stopImmediatePropagation();
+    setLandmarkListOpen(false);
+    count.focus({ preventScroll: true });
+  }, true);
+  landmarkList.addEventListener("keydown", (event) => event.stopPropagation());
+
+  let renderedLandmarks: readonly string[] | undefined;
+  let renderedLandmarkMessages: Messages | undefined;
 
   const compass = document.createElement("div");
   compass.className = "compass";
@@ -135,7 +210,7 @@ export function createHud(container: HTMLElement): Hud {
     img.style.width = "auto";
   };
   const placeEnglish = (): void => {
-    // Sit the English just beneath the Japanese, which stays centred on the screen.
+    // Space the English below the Japanese, which stays centred on the screen.
     lname.style.setProperty("--ja-half", `${jaImg.getBoundingClientRect().height / 2}px`);
   };
   jaImg.onload = () => {
@@ -146,13 +221,33 @@ export function createHud(container: HTMLElement): Hud {
   window.addEventListener("resize", placeEnglish);
 
   return {
+    actions: tr,
     update(m) {
       const t = m.messages;
-      for (const [cap, chip] of chips) {
-        setText(chip, t.capability[cap]);
-        chip.classList.toggle("off", !m.capabilities.has(cap));
+      setText(plannedHeading, t.plannedGearHeading);
+      for (const { item, chip, name, stars } of chips) {
+        const status = item.planned ? "planned" : m.capabilities.has(item.id) ? "unlocked" : "locked";
+        setText(name, item.planned ? t.plannedGear[item.id] : t.capability[item.id]);
+        chip.classList.toggle("off", status !== "unlocked");
+        const requirement = t.gearRequirement(item.stars, status);
+        if (stars.getAttribute("aria-label") !== requirement) stars.setAttribute("aria-label", requirement);
       }
-      setText(count, t.landmarksRestored(m.restoredLandmarkCount));
+      if (renderedLandmarks !== m.restoredLandmarks || renderedLandmarkMessages !== t) {
+        renderedLandmarks = m.restoredLandmarks;
+        renderedLandmarkMessages = t;
+        const landmarkCount = m.restoredLandmarks.length;
+        setText(countValue, String(landmarkCount));
+        count.setAttribute("aria-label", t.landmarksRestored(landmarkCount));
+        setText(landmarkTitle, t.landmarkList.title);
+        setText(landmarkEmpty, t.landmarkList.empty);
+        landmarkEmpty.hidden = landmarkCount > 0;
+        landmarkEntries.hidden = landmarkCount === 0;
+        landmarkEntries.replaceChildren(...m.restoredLandmarks.map((id) => {
+          const item = document.createElement("li");
+          item.textContent = t.landmarkNames[id] ?? id;
+          return item;
+        }));
+      }
 
       const showCompass = m.showCompass && m.compass !== null;
       compass.style.display = showCompass ? "flex" : "none";

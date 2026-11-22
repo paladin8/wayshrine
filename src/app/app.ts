@@ -9,7 +9,6 @@ import {
   discoverNear,
   isLegible,
   isRestored,
-  landmarksRestored,
   monumentInReach,
   movePlayer,
   newGame,
@@ -18,13 +17,13 @@ import {
   resetGame,
   resetShrines,
   restoreShrine,
+  revealLandmarks,
   unrestoreShrine,
   safePosition,
   skipTarget,
   timingOf,
   type AwakeningKind,
   serialize,
-  reachOf,
   shrineInReach,
   startPosition,
   type GameState,
@@ -33,7 +32,7 @@ import {
 import { createCuePlayer, createMusic, trackFor, type CueId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point } from "../world";
+import { capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
@@ -43,6 +42,13 @@ import { createSettingsStore } from "./settings";
 import { createSettingsPanel } from "./settings-panel";
 
 const HINT_SECONDS = 1.5;
+const OVERVIEW_SECONDS = 3;
+const OVERVIEW_FADE_SECONDS = 0.5;
+
+function overviewZoomAt(elapsed: number): number {
+  const t = Math.min(elapsed, OVERVIEW_SECONDS - elapsed, OVERVIEW_FADE_SECONDS) / OVERVIEW_FADE_SECONDS;
+  return t * t * (3 - 2 * t);
+}
 /** Everything that plays for an awakening: the burst at the wave launch and the swell under the whole sequence. */
 const AWAKENING_CUES: Readonly<Record<AwakeningKind, readonly CueId[]>> = {
   shrine: ["awakening-burst", "dawn-reverence"],
@@ -59,15 +65,17 @@ const KEY_LEFT = ["KeyA", "ArrowLeft"];
 const KEY_RIGHT = ["KeyD", "ArrowRight"];
 const KEY_ACT = ["KeyE", "Space", "Enter"];
 const KEY_MAP = "KeyM";
+const KEY_OVERVIEW = "KeyZ";
 const KEY_BOOK = "KeyB";
 const KEY_MUTE = "KeyN";
 /** Debug only. */
 const KEY_UNRESTORE = "KeyU";
 
-function loadGame(seed: string): GameState {
+function loadGame(world: World): GameState {
+  const { seed } = world;
   try {
     const raw = window.localStorage.getItem(`wayshrine:save:${seed}`);
-    if (raw) return deserialize(JSON.parse(raw) as SaveData);
+    if (raw) return deserialize(JSON.parse(raw) as SaveData, world);
   } catch {
     // Unreadable or unavailable storage: start fresh.
   }
@@ -93,7 +101,6 @@ export function startApp(container: HTMLElement): void {
   const monuments = planMonuments(terrain, monumentSpecs);
   const obstacles = createObstacles(terrain, monuments);
   const stage = createStage(container, terrain, monuments);
-  const hud = createHud(container);
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up), (region) => {
     if (awakening) return;
     // Land on the shrine's plateau, within reach of its gate.
@@ -101,6 +108,7 @@ export function startApp(container: HTMLElement): void {
     minimap.toggleExpanded();
   });
 
+  const hud = createHud(container);
   const music = createMusic();
   const cues = createCuePlayer();
   const settings = createSettingsStore(undefined, navigator.languages);
@@ -112,15 +120,15 @@ export function startApp(container: HTMLElement): void {
   };
   applyAudio();
   settings.subscribe(applyAudio);
-  const panel = createSettingsPanel(container, settings);
 
-  let state = loadGame(seed);
-  const monumentUi = createMonumentUi(container, {
+  let state = loadGame(world);
+  const monumentUi = createMonumentUi(container, hud.actions, {
     collected: () => state.collected,
     language: () => settings.get().language,
   });
+  const panel = createSettingsPanel(container, hud.actions, settings);
   /** Dialogs own the keyboard while open. */
-  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isOpen();
+  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBookOpen();
   let drawnCollected = state.collected.length;
   let drawnLanguage = settings.get().language;
   let pos: Point = startPosition(terrain);
@@ -128,11 +136,14 @@ export function startApp(container: HTMLElement): void {
   /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
   let blockedBy: Biome | null = null;
   let hintLeft = 0;
+  let overviewTime = OVERVIEW_SECONDS;
   /** The restoration sequence in progress, if any; `t` is seconds since it began. */
   let awakening: {
     regionId: string;
     kind: AwakeningKind;
     t: number;
+    /** Zoom at activation, so restoring during an overview continues from the current view. */
+    initialZoom: number;
     /** How visible a landmark's name is, 0 to 1; eased so it fades and a skip does not pop it. */
     caption: number;
     /** Set when the sequence is skipped before the name appeared, so it is not shown late. */
@@ -142,7 +153,8 @@ export function startApp(container: HTMLElement): void {
   let fixedDt: number | null = null;
 
   const restore = (id: string): void => {
-    state = restoreShrine(state, world.regionById(id));
+    const region = world.regionById(id);
+    state = revealLandmarks(restoreShrine(state, region), world);
     saveGame(state);
   };
 
@@ -154,7 +166,7 @@ export function startApp(container: HTMLElement): void {
       awakening = null;
       ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
     }
-    state = unrestoreShrine(state, region);
+    state = revealLandmarks(unrestoreShrine(state, region), world);
     saveGame(state);
     // A lost ability may leave the player standing where they can no longer be.
     pos = safePosition(terrain, capabilitiesOf(state, world), pos);
@@ -164,6 +176,7 @@ export function startApp(container: HTMLElement): void {
     const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
       state = next(state);
+      overviewTime = OVERVIEW_SECONDS;
       saveGame(state);
     };
     const actions = {
@@ -208,10 +221,15 @@ export function startApp(container: HTMLElement): void {
     }
     down.add(e.code);
     if (e.code === KEY_MAP) minimap.toggleExpanded();
+    if (e.code === KEY_OVERVIEW && !awakening && overviewTime >= OVERVIEW_SECONDS && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      overviewTime = 0;
+    }
     if (e.code === KEY_BOOK && !awakening) monumentUi.toggleBook();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });
     if (KEY_ACT.includes(e.code)) {
+      if (e.code !== "KeyE" && e.target instanceof HTMLButtonElement) return;
+      if (monumentUi.dismissReading()) return;
       if (awakening) {
         // Once the camera has pulled back, the sequence can be skipped to its end.
         if (awakening.t > timingOf(awakening.kind).zoomOut) {
@@ -224,7 +242,9 @@ export function startApp(container: HTMLElement): void {
         if (region && !isRestored(state, region)) {
           restore(region.id);
           const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
-          awakening = { regionId: region.id, kind, t: 0, caption: 0, captionOff: false };
+          const initialZoom = overviewZoomAt(overviewTime);
+          overviewTime = OVERVIEW_SECONDS;
+          awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false };
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           AWAKENING_CUES[kind].forEach((id) => cues.play(id));
         } else {
@@ -243,13 +263,18 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keyup", (e) => down.delete(e.code));
   window.addEventListener("blur", () => down.clear());
 
+  let lastRestored: GameState["restored"] | undefined;
+  let restoredLandmarks: readonly string[] = [];
   let last = performance.now();
   const frame = (now: number): void => {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
     last = now;
 
-    const restoredLandmarkCount = landmarksRestored(state, world);
-    const caps = capabilitiesForCount(restoredLandmarkCount);
+    if (lastRestored !== state.restored) {
+      lastRestored = state.restored;
+      restoredLandmarks = world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id);
+    }
+    const caps = capabilitiesForCount(restoredLandmarks.length);
     // Losing a capability (a reset, an old save) must never strand the player.
     pos = clearOfObstacles(terrain, caps, obstacles, safePosition(terrain, caps, pos));
     const seen = discoverNear(state, world, pos);
@@ -261,6 +286,7 @@ export function startApp(container: HTMLElement): void {
     const right = live ? any(KEY_RIGHT) - any(KEY_LEFT) : 0;
     const up = live ? any(KEY_UP) - any(KEY_DOWN) : 0;
     if (!awakening && (right !== 0 || up !== 0)) {
+      monumentUi.dismissReading();
       const dir = stage.groundDirection(right, up);
       const moved = movePlayer(pos, dir, dt, terrain, caps, obstacles);
       pos = moved.pos;
@@ -272,19 +298,25 @@ export function startApp(container: HTMLElement): void {
     }
     hintLeft = Math.max(0, hintLeft - dt);
     if (hintLeft === 0) blockedBy = null;
+    overviewTime = Math.min(OVERVIEW_SECONDS, overviewTime + dt);
 
     let scene: { regionId: string; progress: number; zoom: number } | undefined;
     if (awakening) {
       awakening.t += dt;
       const f = awakeningFrame(awakening.t, awakening.kind);
       if (f.done) awakening = null;
-      else scene = { regionId: awakening.regionId, progress: f.progress, zoom: f.zoom };
+      else {
+        const zoom = awakening.t < timingOf(awakening.kind).zoomOut
+          ? awakening.initialZoom + (1 - awakening.initialZoom) * f.zoom
+          : f.zoom;
+        scene = { regionId: awakening.regionId, progress: f.progress, zoom };
+      }
     }
 
     const prefs = settings.get();
     const t = messagesFor(prefs.language);
 
-    // A landmark's name is overlaid late in its restoration, once the region has been seen.
+    // A landmark's name begins to appear as the wave finishes.
     let nameModel: { id: string; label: string; opacity: number; english: boolean } | null = null;
     if (awakening?.kind === "landmark") {
       const landmark = world.regionById(awakening.regionId).landmark!;
@@ -318,14 +350,15 @@ export function startApp(container: HTMLElement): void {
     let compass = null;
     if (guide) {
       const s = stage.screenDirection(guide.dx, guide.dz);
-      compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: guide.distance <= reachOf(guide.region) };
+      compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: reach?.id === guide.region.id };
     }
+    const reading = monumentUi.isReading();
     hud.update({
       capabilities: caps,
-      restoredLandmarkCount,
+      restoredLandmarks,
       compass,
-      prompt,
-      hint,
+      prompt: reading ? null : prompt,
+      hint: reading ? null : hint,
       landmarkName: nameModel,
       messages: t,
       showCompass: prefs.showCompass,
@@ -338,7 +371,7 @@ export function startApp(container: HTMLElement): void {
     music.setDuck(ALL_AWAKENING_CUES.some((id) => cues.playing().includes(id)) ? SWELL_DUCK : 1);
     music.update(dt);
 
-    stage.render(dt, { player: pos, facing, state, awakening: scene });
+    stage.render(dt, { player: pos, facing, state, overviewZoom: overviewZoomAt(overviewTime), awakening: scene });
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

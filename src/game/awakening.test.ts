@@ -8,7 +8,7 @@ import {
   awakeningFrame,
   awakeningTotal,
   captionTarget,
-  CAPTION_DELAY,
+  CAPTION_LEAD,
   skipTarget,
   timingOf,
   type AwakeningKind,
@@ -107,11 +107,11 @@ describe("awakening timeline", () => {
     }
   });
 
-  it("shows a landmark's name only late in its pause, after the region has been seen, and never for a shrine", () => {
+  it("starts a landmark's name as the wave finishes and keeps it through the pause", () => {
     const t = timingOf("landmark");
     const holdStart = t.zoomOut + t.wave;
-    expect(captionTarget(holdStart + CAPTION_DELAY - 0.01, "landmark")).toBe(0);
-    expect(captionTarget(holdStart + CAPTION_DELAY, "landmark")).toBe(1);
+    expect(captionTarget(holdStart - CAPTION_LEAD - 0.01, "landmark")).toBe(0);
+    expect(captionTarget(holdStart - CAPTION_LEAD, "landmark")).toBe(1);
     expect(captionTarget(holdStart + t.hold - 0.01, "landmark")).toBe(1);
     expect(captionTarget(holdStart + t.hold, "landmark")).toBe(0); // the camera is returning
     expect(captionTarget(0, "landmark")).toBe(0);
@@ -119,7 +119,8 @@ describe("awakening timeline", () => {
   });
 
   it("leaves the player time to read the name before the camera returns", () => {
-    expect(AWAKENING_LANDMARK.hold - CAPTION_DELAY).toBeGreaterThanOrEqual(3.5);
-    expect(CAPTION_DELAY).toBeGreaterThanOrEqual(1);
+    expect(AWAKENING_LANDMARK.zoomOut + AWAKENING_LANDMARK.wave - CAPTION_LEAD).toBeCloseTo(10.3);
+    expect(awakeningTotal("landmark")).toBeCloseTo(17.1);
+    expect(AWAKENING_LANDMARK.hold + CAPTION_LEAD).toBeGreaterThanOrEqual(4);
   });
 });

@@ -34,9 +34,9 @@ const COUNT_WEIGHTS = [0.2, 0.55, 0.25] as const;
 
 /** Monuments keep this far from every region boundary, so the wave and fog treat them as inside. */
 export const MONUMENT_EDGE_MARGIN = 5;
-/** And this far from the shrine, which has its own plateau and lanterns. */
-const SHRINE_CLEARANCE = 10;
-const MAX_SHRINE_DISTANCE = 42;
+/** Keep a walk between the shrine and a stone, even when the shrine is away from the site. */
+export const MONUMENT_SHRINE_CLEARANCE = 18;
+const MAX_SITE_DISTANCE = 42;
 const PAIR_SEPARATION = 16;
 /** Props are cleared from this radius around a monument. */
 export const MONUMENT_CLEARING = 1.8;
@@ -76,34 +76,36 @@ function edgeMargin(world: World, region: Region, x: number, z: number): number 
   return margin;
 }
 
-function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, avoid: Point | null): Point {
-  const valid = (p: Point, margin: number): boolean => {
-    if (world.regionAt(p.x, p.z) !== region) return false;
-    if (region.landmark && Math.max(Math.abs(p.x - region.site.x), Math.abs(p.z - region.site.z)) < LANDMARK_MONUMENT_CLEARANCE) {
-      return false; // the landmark, its plateau and its slope
-    }
-    if (terrain.tileAtPoint(p.x, p.z).biome !== region.biome) return false;
+function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, avoid: Point | null): Point | null {
+  const { site, shrine, landmark } = region;
+  const maxDistance = MAX_SITE_DISTANCE + (landmark ? 6 : 0);
+  const fits = (p: Point): boolean => {
+    const dx = p.x - shrine.x;
+    const dz = p.z - shrine.z;
+    if (Math.hypot(dx, dz) < MONUMENT_SHRINE_CLEARANCE) return false;
+    if (landmark && Math.max(Math.abs(dx), Math.abs(dz)) < LANDMARK_MONUMENT_CLEARANCE) return false;
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) return false;
-    return edgeMargin(world, region, p.x, p.z) >= margin;
+    return world.regionAt(p.x, p.z) === region && terrain.tileAtPoint(p.x, p.z).biome === region.biome;
   };
   for (let attempt = 0; attempt < 60; attempt++) {
     const a = rng.range(0, Math.PI * 2);
-    const r = rng.range(region.landmark ? LANDMARK_MONUMENT_CLEARANCE : SHRINE_CLEARANCE, MAX_SHRINE_DISTANCE + (region.landmark ? 6 : 0));
-    const p = { x: region.site.x + Math.cos(a) * r, z: region.site.z + Math.sin(a) * r };
-    if (valid(p, MONUMENT_EDGE_MARGIN)) return p;
+    const r = rng.range(landmark ? LANDMARK_MONUMENT_CLEARANCE : 10, maxDistance);
+    const p = { x: site.x + Math.cos(a) * r, z: site.z + Math.sin(a) * r };
+    if (fits(p) && edgeMargin(world, region, p.x, p.z) >= MONUMENT_EDGE_MARGIN) return p;
   }
-  // Squeezed regions: take the direction with the most room, close to the shrine.
-  const near = region.landmark ? LANDMARK_MONUMENT_CLEARANCE + 2 : 12;
-  let best: Point = { x: region.site.x + near, z: region.site.z };
-  let bestMargin = -Infinity;
-  for (let i = 0; i < 64; i++) {
-    const a = (i / 64) * Math.PI * 2;
-    const p = { x: region.site.x + Math.cos(a) * near, z: region.site.z + Math.sin(a) * near };
-    if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) continue;
-    const m = edgeMargin(world, region, p.x, p.z);
-    if (m > bestMargin) {
-      bestMargin = m;
-      best = p;
+  // Search all sides of a squeezed region instead of giving up the clearance.
+  let best: Point | null = null;
+  let bestMargin = MONUMENT_EDGE_MARGIN;
+  for (let dz = -maxDistance; dz <= maxDistance; dz += 2) {
+    for (let dx = -maxDistance; dx <= maxDistance; dx += 2) {
+      if (Math.hypot(dx, dz) > maxDistance) continue;
+      const p = { x: site.x + dx, z: site.z + dz };
+      if (!fits(p)) continue;
+      const margin = edgeMargin(world, region, p.x, p.z);
+      if (margin >= bestMargin) {
+        best = p;
+        bestMargin = margin;
+      }
     }
   }
   return best;
@@ -135,14 +137,22 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
   const world = terrain.world;
   const root = createRng(world.seed).fork("monuments");
 
-  // 1. Slots: (region, index), ring by ring until there are enough.
-  const slots: Array<{ region: Region; index: number }> = [];
+  // 1. Find valid slots ring by ring. A cramped region can hold fewer stones.
+  type Slot = { region: Region; position: Point; rotation: number; variant: number };
+  const slots: Slot[] = [];
   for (let r = 0; slots.length < specs.length; r++) {
-    const ringSlots: Array<{ region: Region; index: number }> = [];
+    const ringSlots: Slot[] = [];
     for (const [rx, rz] of ring(r)) {
       const region = world.region(rx, rz);
       const n = countFor(root.fork(`count:${region.id}`));
-      for (let index = 0; index < n; index++) ringSlots.push({ region, index });
+      let previous: Point | null = null;
+      for (let index = 0; index < n; index++) {
+        const rng = root.fork(`pos:${region.id}:${index}`);
+        const position = pickPosition(world, terrain, region, rng, previous);
+        if (!position) break;
+        ringSlots.push({ region, position, rotation: rng.range(-0.5, 0.5), variant: rng.next() });
+        previous = position;
+      }
     }
     const room = specs.length - slots.length;
     if (ringSlots.length > room) {
@@ -182,22 +192,17 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
     assigned[slot] = rest[k] as MonumentSpec;
   });
 
-  // 3. Positions.
-  const placed = new Map<string, Point>();
-  const all: Monument[] = slots.map(({ region, index }, i) => {
+  const all: Monument[] = slots.map(({ region, position, rotation, variant }, i) => {
     const spec = assigned[i] as MonumentSpec;
-    const rng = root.fork(`pos:${region.id}:${index}`);
-    const p = pickPosition(world, terrain, region, rng, placed.get(region.id) ?? null);
-    placed.set(region.id, p);
     return {
       id: spec.id,
       kind: spec.kind,
-      x: p.x,
-      z: p.z,
-      y: terrain.tileAtPoint(p.x, p.z).height,
+      x: position.x,
+      z: position.z,
+      y: terrain.tileAtPoint(position.x, position.z).height,
       regionId: region.id,
-      rotation: rng.range(-0.5, 0.5),
-      variant: rng.next(),
+      rotation,
+      variant,
     };
   });
 

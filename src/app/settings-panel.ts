@@ -9,8 +9,7 @@ export interface SettingsPanel {
 }
 
 const CSS = `
-.gear{position:fixed;top:52px;right:14px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;padding:0;border-radius:50%;background:#fffaf0cc;border:1px solid #2a242422;font-size:18px;line-height:1;color:#2a2424;cursor:pointer;pointer-events:auto}
-.gear:hover{background:#fffaf0}
+.hud .gear{width:34px;font-size:18px;line-height:1}
 .sp-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#2a242455;pointer-events:auto;font:14px/1.4 ${UI_FONT};color:#2a2424}
 .sp-overlay.open{display:flex}
 .sp-card{width:min(380px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:18px 20px 20px;border-radius:16px;background:#fffaf0;border:1px solid #2a242433;box-shadow:0 8px 32px #0005;outline:none}
@@ -28,7 +27,7 @@ const CSS = `
 .sp-lang{all:unset;cursor:pointer;flex:1;text-align:center;padding:7px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .sp-lang[aria-pressed=true]{background:#d96b59;border-color:#d96b59;color:#fff}
 .sp-credits{margin:0;font-size:12px;line-height:1.5;opacity:.65}
-.sp-lang:focus-visible,.sp-x:focus-visible,.gear:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
+.sp-lang:focus-visible,.sp-x:focus-visible{outline:2px solid #d96b59;outline-offset:2px}
 `;
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -43,12 +42,12 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 /** The settings dialog and its gear button. All changes go through the store. */
-export function createSettingsPanel(container: HTMLElement, store: SettingsStore): SettingsPanel {
+export function createSettingsPanel(container: HTMLElement, actions: HTMLElement, store: SettingsStore): SettingsPanel {
   const style = document.createElement("style");
   style.textContent = CSS;
   document.head.appendChild(style);
 
-  const gear = el("button", "gear", container);
+  const gear = el("button", "hud-action gear", actions);
   gear.type = "button";
   gear.textContent = "⚙";
 

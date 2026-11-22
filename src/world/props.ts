@@ -101,18 +101,18 @@ export function propsInChunk(
     }
   }
 
-  // Lanterns for every shrine whose site falls in this chunk.
+  // Lanterns for every shrine whose lanterns fall in this chunk.
   const rxMin = Math.floor(x0 / REGION_SIZE) - 1;
   const rxMax = Math.floor((x0 + CHUNK_SIZE) / REGION_SIZE) + 1;
   const rzMin = Math.floor(z0 / REGION_SIZE) - 1;
   const rzMax = Math.floor((z0 + CHUNK_SIZE) / REGION_SIZE) + 1;
   for (let rz = rzMin; rz <= rzMax; rz++) {
     for (let rx = rxMin; rx <= rxMax; rx++) {
-      const { site, id, landmark } = world.region(rx, rz);
+      const { shrine, id, landmark } = world.region(rx, rz);
       if (landmark) continue; // the landmark is the shrine, and has no lanterns
       for (const a of LANTERN_ANGLES) {
-        const x = site.x + Math.cos(a) * LANTERN_RADIUS;
-        const z = site.z + Math.sin(a) * LANTERN_RADIUS;
+        const x = shrine.x + Math.cos(a) * LANTERN_RADIUS;
+        const z = shrine.z + Math.sin(a) * LANTERN_RADIUS;
         if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
         props.push({ kind: "lantern", x, y: terrain.tileAtPoint(x, z).height, z, scale: 1, rotation: a, variant: 0.5, regionId: id });
       }

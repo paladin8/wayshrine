@@ -37,6 +37,25 @@ describe("createWorld", () => {
     }
   });
 
+  it("varies shrine placement within regions while leaving room for the plateau", () => {
+    for (const seed of SEEDS.slice(0, 10)) {
+      const world = createWorld(seed);
+      let spread = 0;
+      for (let rx = -5; rx <= 5; rx++) {
+        for (let rz = -5; rz <= 5; rz++) {
+          const region = world.region(rx, rz);
+          const { shrine, site } = region;
+          if (region.landmark || region.id === "0,0") expect(shrine).toEqual(site);
+          else spread = Math.max(spread, Math.hypot(shrine.x - site.x, shrine.z - site.z));
+          for (const [dx, dz] of [[0, 0], [4, 0], [-4, 0], [0, 4], [0, -4]]) {
+            expect(world.regionAt(shrine.x + dx, shrine.z + dz)).toBe(region);
+          }
+        }
+      }
+      expect(spread).toBeGreaterThan(12);
+    }
+  });
+
   it("looks regions up by id", () => {
     const w = createWorld("ids");
     expect(w.regionById("-2,5")).toBe(w.region(-2, 5));
@@ -57,7 +76,7 @@ describe("createWorld", () => {
 });
 
 describe("region reach", () => {
-  it("never extends farther from its shrine than REGION_REACH", () => {
+  it("never extends farther from its Voronoi site than REGION_REACH", () => {
     for (const seed of SEEDS.slice(0, 40)) {
       const w = createWorld(seed);
       for (let x = -150; x < 150; x += 3) {

@@ -65,21 +65,21 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
     const rzMax = Math.floor(((cz + 1) * CHUNK_SIZE) / REGION_SIZE) + 1;
     for (let rz = rzMin; rz <= rzMax; rz++) {
       for (let rx = rxMin; rx <= rxMax; rx++) {
-        const { site, landmark } = world.region(rx, rz);
+        const { shrine, landmark } = world.region(rx, rz);
         if (landmark) {
           // The landmark is the shrine: no gate pillars. A crafted model brings its own solids.
           const model = groundOf(landmark.id);
           if (!model) {
-            if (inside(site.x, site.z)) list.push({ x: site.x, z: site.z, r: LANDMARK_SOLID_RADIUS });
+            if (inside(shrine.x, shrine.z)) list.push({ x: shrine.x, z: shrine.z, r: LANDMARK_SOLID_RADIUS });
           } else {
             for (const [sx, sz, r] of model.solids) {
-              if (inside(site.x + sx, site.z + sz)) list.push({ x: site.x + sx, z: site.z + sz, r });
+              if (inside(shrine.x + sx, shrine.z + sz)) list.push({ x: shrine.x + sx, z: shrine.z + sz, r });
             }
           }
           continue;
         }
         for (const dx of [-SHRINE_PILLAR_OFFSET, SHRINE_PILLAR_OFFSET]) {
-          if (inside(site.x + dx, site.z)) list.push({ x: site.x + dx, z: site.z, r: SHRINE_PILLAR_RADIUS });
+          if (inside(shrine.x + dx, shrine.z)) list.push({ x: shrine.x + dx, z: shrine.z, r: SHRINE_PILLAR_RADIUS });
         }
       }
     }

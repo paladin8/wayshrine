@@ -8,21 +8,22 @@ export {
   discoverNear,
   isCollected,
   isExplored,
+  isLandmarkRevealed,
   isRestored,
   newGame,
   resetGame,
   resetShrines,
   restoreShrine,
+  revealLandmarks,
   unrestoreShrine,
   serialize,
   vitality,
 } from "./state";
-export type { GameState, SaveData, SaveV1, SaveV2, SaveV3 } from "./state";
+export type { GameState, SaveData, SaveV1, SaveV2, SaveV3, SaveV4 } from "./state";
 export {
   PLAYER_RADIUS,
   PLAYER_SPEED,
   SHRINE_REACH,
-  reachOf,
   blockerAt,
   clearOfObstacles,
   movePlayer,
@@ -38,7 +39,7 @@ export {
   AWAKENING,
   AWAKENING_LANDMARK,
   AWAKENING_TOTAL,
-  CAPTION_DELAY,
+  CAPTION_LEAD,
   CAPTION_FADE,
   SWELL_CREST,
   SWELL_CRESTS,

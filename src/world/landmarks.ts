@@ -6,8 +6,8 @@ import type { Region } from "./world";
 
 /**
  * Landmarks: hand-crafted places emblematic of Japan, one per special region.
- * Restoring them, not shrines, unlocks abilities (ADR 0006). The full list of
- * fifty is in docs/landmarks.md; the code holds the acts whose biomes exist.
+ * Restoring them, not shrines, unlocks abilities (ADR 0006). The full list is
+ * in docs/landmarks.md; the code holds the acts whose biomes exist.
  */
 export interface LandmarkSpec {
   readonly id: string;
@@ -54,6 +54,16 @@ export const CAPABILITY_THRESHOLDS: Readonly<Record<Capability, number>> = {
   climbing: 13,
 };
 
+/** Future unlocks listed in the HUD while their terrain and acts are planned. */
+export const PLANNED_GEAR = [
+  { id: "geta", stars: 20 },
+  { id: "lantern", stars: 30 },
+  { id: "ashSandals", stars: 41 },
+  { id: "ship", stars: 49 },
+] as const;
+
+export type PlannedGear = (typeof PLANNED_GEAR)[number]["id"];
+
 export function capabilitiesForCount(count: number): ReadonlySet<Capability> {
   const held = new Set<Capability>();
   for (const [cap, need] of Object.entries(CAPABILITY_THRESHOLDS) as Array<[Capability, number]>) {
@@ -76,8 +86,9 @@ export const LANDMARK_PLATEAU_RADIUS = 9.7;
 export const LANDMARK_BLEND = 8;
 /** Monuments keep clear of the footprint and its slope (Chebyshev distance from the site). */
 export const LANDMARK_MONUMENT_CLEARANCE = LANDMARK_PLATEAU_RADIUS + LANDMARK_BLEND + 1.5;
-/** A placeholder is one solid disc at the site, used from just outside it. */
+/** A placeholder is one solid disc at the site. */
 export const LANDMARK_SOLID_RADIUS = 3.0;
+/** Activation extends this many units past the edges of the landmark footprint. */
 export const LANDMARK_REACH_MARGIN = 3.5;
 
 /** Half-width of a landmark's flat or model-shaped footprint. */
@@ -85,30 +96,30 @@ export function footprintHalf(landmark: LandmarkSpec): number {
   return groundOf(landmark.id)?.half ?? LANDMARK_PLATEAU_RADIUS;
 }
 
-/** The point a landmark is used from, in world space. */
+/** The point the compass aims at, in world space. */
 export function anchorOf(region: Region): Point {
   const g = region.landmark ? groundOf(region.landmark.id) : undefined;
-  return g ? { x: region.site.x + g.interact[0], z: region.site.z + g.interact[1] } : region.site;
-}
-
-/** How close to its anchor the player must be to use a landmark. */
-export function landmarkReach(landmark: LandmarkSpec): number {
-  return groundOf(landmark.id)?.reach ?? LANDMARK_SOLID_RADIUS + LANDMARK_REACH_MARGIN;
+  return g ? { x: region.shrine.x + g.interact[0], z: region.shrine.z + g.interact[1] } : region.shrine;
 }
 
 /** Where the player arrives when travelling to a region: free ground beside its shrine or landmark. */
 export function standPoint(region: Region): Point {
-  if (!region.landmark) return { x: region.site.x, z: region.site.z + 2 };
+  if (!region.landmark) return { x: region.shrine.x, z: region.shrine.z + 2 };
   const g = groundOf(region.landmark.id);
   return g
-    ? { x: region.site.x + g.stand[0], z: region.site.z + g.stand[1] }
-    : { x: region.site.x, z: region.site.z + LANDMARK_SOLID_RADIUS + 1.5 };
+    ? { x: region.shrine.x + g.stand[0], z: region.shrine.z + g.stand[1] }
+    : { x: region.shrine.x, z: region.shrine.z + LANDMARK_SOLID_RADIUS + 1.5 };
 }
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;
-/** Region-grid area per landmark: itself plus about seventeen shrines. */
-const AREA_PER_LANDMARK = 18;
+export type LandmarkLayout = "spread" | "compact";
+
+/** Keep the previous layout reproducible for saves that address landmarks by region ID. */
+const LANDMARK_SPACING = {
+  spread: { area: 18, start: 5 },
+  compact: { area: 14.4, start: 4 },
+} as const;
 /** The planner searches this far (Chebyshev, in regions) for somewhere to put a landmark. */
 export const LANDMARK_WINDOW = 20;
 const WINDOW = LANDMARK_WINDOW;
@@ -118,12 +129,10 @@ const GOLDEN_ANGLE = 2.399963;
 /** Half-width of the arc an act's landmarks are spread over, radians. */
 const ARC = 1.6;
 
-/** The first landmark is at least this many regions out, so the player passes several shrines before finding one. */
-const START_RADIUS = 5;
-
 /** Radius (in regions) of the disc that holds `n` landmarks at the target density, beyond the empty start. */
-export function ringRadius(n: number): number {
-  return START_RADIUS + Math.sqrt((AREA_PER_LANDMARK * n) / Math.PI);
+export function ringRadius(n: number, layout: LandmarkLayout = "compact"): number {
+  const { area, start } = LANDMARK_SPACING[layout];
+  return start + Math.sqrt((area * n) / Math.PI);
 }
 
 /**
@@ -140,6 +149,7 @@ export function ringRadius(n: number): number {
 export function planLandmarks(
   seed: string,
   ambient: (rx: number, rz: number) => Biome,
+  layout: LandmarkLayout = "compact",
 ): ReadonlyMap<string, Landmark> {
   const rng = createRng(seed).fork("landmarks");
   const phase = rng.range(0, Math.PI * 2);
@@ -196,8 +206,8 @@ export function planLandmarks(
     const before = landmarksBeforeAct(act);
     const caps = actCaps.get(act)!;
     const seen = flood(caps);
-    const lo = ringRadius(before);
-    const hi = ringRadius(before + members.length);
+    const lo = ringRadius(before, layout);
+    const hi = ringRadius(before + members.length, layout);
     const bearing = phase + act * GOLDEN_ANGLE;
     members.forEach((landmark, i) => {
       if (!canTraverse(landmark.biome, caps)) throw new Error(`${landmark.id} needs more than act ${act} holds`);

@@ -36,10 +36,10 @@ describe("terrain", () => {
       for (let rz = -3; rz <= 3; rz++) {
         const region = world.region(rx, rz);
         if (region.landmark) continue;
-        const { site, biome } = region;
-        const centre = terrain.tileAtPoint(site.x, site.z);
+        const { shrine, biome } = region;
+        const centre = terrain.tileAtPoint(shrine.x, shrine.z);
         expect(centre.biome).toBe(biome === "water" ? "meadow" : biome);
-        const edge = terrain.tileAtPoint(site.x + PLATEAU_RADIUS - 0.6, site.z);
+        const edge = terrain.tileAtPoint(shrine.x + PLATEAU_RADIUS - 0.8, shrine.z);
         expect(edge.height).toBe(centre.height);
       }
     }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createWorld } from "./world";
 import { createTerrain } from "./terrain-grid";
-import { MONUMENT_EDGE_MARGIN, planMonuments, type MonumentSpec } from "./monuments";
+import { MONUMENT_EDGE_MARGIN, MONUMENT_SHRINE_CLEARANCE, planMonuments, type MonumentSpec } from "./monuments";
 import { reachableRegions } from "./progression";
 import type { Biome } from "./terrain";
 
@@ -37,12 +37,12 @@ describe("planMonuments", () => {
     }
   });
 
-  it("keeps each inside its own region, clear of the boundary and on matching ground", () => {
+  it("keeps each clear of the shrine and boundary and on matching ground", () => {
     const world = terrain.world;
     for (const m of plan.all) {
       const region = world.regionAt(m.x, m.z);
       expect(region.id).toBe(m.regionId);
-      expect(Math.hypot(m.x - region.site.x, m.z - region.site.z)).toBeGreaterThan(8);
+      expect(Math.hypot(m.x - region.shrine.x, m.z - region.shrine.z)).toBeGreaterThanOrEqual(MONUMENT_SHRINE_CLEARANCE);
       expect(terrain.tileAtPoint(m.x, m.z).biome).toBe(region.biome);
       // Margin to the nearest rival site, as the placement measures it.
       let margin = Infinity;
@@ -56,7 +56,7 @@ describe("planMonuments", () => {
           );
         }
       }
-      expect(margin).toBeGreaterThanOrEqual(MONUMENT_EDGE_MARGIN - 1.5);
+      expect(margin).toBeGreaterThanOrEqual(MONUMENT_EDGE_MARGIN);
     }
   });
 

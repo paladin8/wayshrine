@@ -1,4 +1,4 @@
-import { isExplored, isRestored, type GameState } from "../game";
+import { isExplored, isLandmarkRevealed, isRestored, type GameState } from "../game";
 import { palette } from "../render";
 import { REGION_SIZE, type Biome, type Monument, type Point, type Region, type World } from "../world";
 import { UI_FONT, setText } from "./style";
@@ -36,6 +36,16 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
   ctx.fillStyle = restored ? "#d96b59" : "#ffd23f";
   ctx.fill();
   ctx.strokeStyle = restored ? "#ffe9a8" : "#2a2424";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawShrineDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, restored: boolean): void {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = restored ? "#d96b59" : "#2a2424";
+  ctx.fill();
+  ctx.strokeStyle = restored ? "#ffe9a8" : "#cfc8b8";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
@@ -78,7 +88,7 @@ const CSS = `
 
 /**
  * A region-level map. The corner map follows the player; the expanded map fits
- * everything explored so far. It is drawn in screen orientation (the same
+ * explored regions and revealed landmarks. It is drawn in screen orientation (the same
  * rotated view as the game), and unexplored regions stay fogged.
  */
 export function createMinimap(
@@ -122,6 +132,7 @@ export function createMinimap(
 
   function draw(input: MapInput, size: number, block: number): void {
     const { pos, state, target } = input;
+    const markedLandmarks = world.landmarks.filter((region) => isLandmarkRevealed(state, region) || isRestored(state, region));
     // View: centre (ground point) and scale (world units per pixel).
     let centre: Point = pos;
     let scale = SMALL_SCALE;
@@ -134,7 +145,10 @@ export function createMinimap(
         minV = Math.min(minV, v); maxV = Math.max(maxV, v);
       };
       include(pos);
-      for (const id of state.explored) include(world.regionById(id).site);
+      for (const id of state.explored) include(world.regionById(id).shrine);
+      for (const landmark of markedLandmarks) {
+        if (!state.explored.has(landmark.id)) include(landmark.shrine);
+      }
       const span = Math.max(maxU - minU, maxV - minV) + REGION_SIZE * 1.6;
       scale = Math.max(span / size, 1.2);
       const u = (minU + maxU) / 2;
@@ -198,30 +212,19 @@ export function createMinimap(
     waypoints = [];
     for (const id of state.explored) {
       const r = world.regionById(id);
-      const [x, y] = project(r.site);
+      if (r.landmark) continue; // landmark markers are drawn below
+      const [x, y] = project(r.shrine);
       if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
       if (expanded && (input.travelToAny || isRestored(state, r))) waypoints.push({ x, y, region: r });
-      if (r.landmark) continue; // drawn as a star below
-      ctx.beginPath();
-      ctx.arc(x, y, dotR, 0, Math.PI * 2);
-      if (isRestored(state, r)) {
-        ctx.fillStyle = "#d96b59";
-        ctx.fill();
-        ctx.strokeStyle = "#ffe9a8";
-      } else {
-        ctx.fillStyle = "#2a2424";
-        ctx.fill();
-        ctx.strokeStyle = "#cfc8b8";
-      }
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      drawShrineDot(ctx, x, y, dotR, isRestored(state, r));
     }
-    // Draw landmark stars inside the view, including landmarks in unexplored regions.
     const starR = expanded ? 9 : 7;
-    for (const r of world.landmarks) {
-      const [x, y] = project(r.site);
+    for (const r of markedLandmarks) {
+      const [x, y] = project(r.shrine);
       if (x < -starR || y < -starR || x > size + starR || y > size + starR) continue;
-      drawStar(ctx, x, y, starR, isRestored(state, r));
+      const restored = isRestored(state, r);
+      if (expanded && (restored || (input.travelToAny && isExplored(state, r)))) waypoints.push({ x, y, region: r });
+      drawStar(ctx, x, y, starR, restored);
     }
     // Debug: monuments in restored regions as diamonds, bright until read.
     for (const m of input.monuments ?? []) {
@@ -251,8 +254,8 @@ export function createMinimap(
         ctx.stroke();
       }
     }
-    if (target) {
-      const [x, y] = project(target.site);
+    if (target && (!target.landmark || isLandmarkRevealed(state, target))) {
+      const [x, y] = project(target.shrine);
       ctx.beginPath();
       ctx.arc(x, y, dotR + 4, 0, Math.PI * 2);
       ctx.strokeStyle = "#ffe9a8";
@@ -324,14 +327,12 @@ export function createMinimap(
       const key = [
         expanded,
         size,
-        input.state.restored.size,
-        input.state.explored.size,
-        input.state.collected.length,
+        input.travelToAny ?? false,
         input.monuments?.length ?? 0,
         input.target?.id ?? "",
       ].join("|");
       const moved = Math.hypot(input.pos.x - lastPos.x, input.pos.z - lastPos.z);
-      if (key === lastKey && moved < 2) return;
+      if (key === lastKey && lastInput?.state === input.state && moved < 2) return;
       lastKey = key;
       lastPos = input.pos;
       lastInput = input;

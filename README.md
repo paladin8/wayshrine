@@ -12,6 +12,8 @@ npm run dev        # http://localhost:5173  (?seed=anything picks the world)
 npm run check      # typecheck + tests + production build
 ```
 
+Press **Z** for a brief wide view while exploring.
+
 ## Where to look
 
 | You want to… | Read |

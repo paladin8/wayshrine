@@ -6,7 +6,8 @@ The source code is licensed under the Apache License, Version 2.0 (see LICENSE).
 The collection of Japanese texts in content/ and src/content/ is NOT covered by
 the Apache License. See content/LICENSE.md.
 
-The landmark name images in public/images/landmark-names are lettered in Yuji Syuku
-(Copyright 2021 The Yuji Project Authors, https://github.com/Kinutafontfactory/Yuji) and Kaushan Script
-(by the Kaushan Script Project Authors), both used under the SIL Open Font License 1.1.
-The images are not covered by the Apache License.
+The landmark name images in public/images/landmark-names and the in-game rubbings
+use Yuji Syuku (Copyright 2021 The Yuji Project Authors, https://github.com/Kinutafontfactory/Yuji)
+and Kaushan Script (by the Kaushan Script Project Authors). The fonts are distributed under
+the SIL Open Font License 1.1 in public/fonts/OFL.txt. The landmark name images are not
+covered by the Apache License.

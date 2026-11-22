@@ -1,6 +1,6 @@
 import { createRng, type Rng } from "../core";
 import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
-import { HOME_RADIUS, planLandmarks, type Landmark } from "./landmarks";
+import { HOME_RADIUS, planLandmarks, type Landmark, type LandmarkLayout } from "./landmarks";
 import type { Biome } from "./terrain";
 
 /** A region is the area energised by one shrine. Regions tile the infinite plane. */
@@ -8,8 +8,10 @@ export interface Region {
   /** "rx,rz" */
   readonly id: string;
   readonly coord: RegionCoord;
-  /** Shrine location, and the region's Voronoi site. */
+  /** The region's Voronoi site. */
   readonly site: Point;
+  /** The physical shrine and origin of the restoration wave. */
+  readonly shrine: Point;
   readonly biome: Biome;
   /** The landmark this region is built around, or null for an ordinary region. */
   readonly landmark: Landmark | null;
@@ -27,6 +29,8 @@ export interface World {
 
 /** Sites are jittered up to this fraction of REGION_SIZE from their cell centre. */
 const SITE_JITTER = 0.2;
+/** The nearest possible cell boundary is 19.2 units from the site, leaving room for the shrine plateau. */
+const SHRINE_OFFSET = 14;
 
 const AMBIENT_BIOME_WEIGHTS: ReadonlyArray<readonly [Biome, number]> = [
   ["meadow", 0.4],
@@ -48,7 +52,7 @@ function pickBiome(rng: Rng): Biome {
  * The macro structure of a world: a pure function of the seed.
  * Regions are memoised, so repeated lookups are cheap.
  */
-export function createWorld(seed: string): World {
+export function createWorld(seed: string, layout: LandmarkLayout = "compact"): World {
   const root = createRng(seed);
   const cache = new Map<string, Region>();
   const ambientCache = new Map<string, Biome>();
@@ -66,7 +70,8 @@ export function createWorld(seed: string): World {
   }
 
   let plan: ReadonlyMap<string, Landmark> | null = null;
-  const landmarkAt = (id: string): Landmark | null => (plan ??= planLandmarks(seed, ambient)).get(id) ?? null;
+  const landmarkPlan = (): ReadonlyMap<string, Landmark> => (plan ??= planLandmarks(seed, ambient, layout));
+  const landmarkAt = (id: string): Landmark | null => landmarkPlan().get(id) ?? null;
 
   function region(rx: number, rz: number): Region {
     const id = regionId(rx, rz);
@@ -79,10 +84,18 @@ export function createWorld(seed: string): World {
       z: (rz + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
     };
     const landmark = landmarkAt(id);
+    let shrine = site;
+    if (!landmark && (rx !== 0 || rz !== 0)) {
+      const placement = rng.fork("shrine");
+      const angle = placement.range(0, Math.PI * 2);
+      const radius = SHRINE_OFFSET * Math.sqrt(placement.next());
+      shrine = { x: site.x + Math.cos(angle) * radius, z: site.z + Math.sin(angle) * radius };
+    }
     const made: Region = {
       id,
       coord: { rx, rz },
       site,
+      shrine,
       biome: landmark ? landmark.biome : ambient(rx, rz),
       landmark,
     };
@@ -122,7 +135,7 @@ export function createWorld(seed: string): World {
     regionAt,
     regionById,
     get landmarks() {
-      landmarkRegions ??= [...(plan ??= planLandmarks(seed, ambient)).entries()]
+      landmarkRegions ??= [...landmarkPlan().entries()]
         .sort((a, b) => a[1].order - b[1].order)
         .map(([id]) => regionById(id));
       return landmarkRegions;

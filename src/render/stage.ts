@@ -39,6 +39,8 @@ export interface StageView {
   /** Heading in radians about the vertical axis. */
   readonly facing: number;
   readonly state: GameState;
+  /** Optional camera pull-back centred on the player, from 0 to 1. */
+  readonly overviewZoom?: number;
   /**
    * Present while a shrine is being restored. The camera pulls back and centres
    * on the shrine, and the region's restoration is drawn at `progress` instead of
@@ -164,8 +166,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
         if (shrines.has(region.id)) continue;
         const shrine = region.landmark ? buildLandmark(region.landmark.id) : buildShrine();
         // A landmark model's origin sits at its plateau's base height; its own ground rises from there.
-        const ground = region.landmark ? plateauBase(region) : terrain.tileAtPoint(region.site.x, region.site.z).height;
-        shrine.group.position.set(region.site.x, ground, region.site.z);
+        const ground = region.landmark ? plateauBase(region) : terrain.tileAtPoint(region.shrine.x, region.shrine.z).height;
+        shrine.group.position.set(region.shrine.x, ground, region.shrine.z);
         shrine.setVitality(shownProgress(region.id));
         shrines.set(region.id, shrine);
         scene.add(shrine.group);
@@ -202,22 +204,18 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
 
   function lifeAtPoint(x: number, z: number): number {
     const region = world.regionAt(x, z);
-    return lifeAt(shownProgress(region.id), Math.hypot(x - region.site.x, z - region.site.z));
+    return lifeAt(shownProgress(region.id), Math.hypot(x - region.shrine.x, z - region.shrine.z));
   }
 
-  const ambient = createAmbient(
-    scene,
-    terrain,
-    lifeAtPoint,
-    () => renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720)),
-  );
+  const particlePixelScale = (): number =>
+    renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720));
+  const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
 
   const glimmer = createGlimmer(scene);
 
-  function applyZoom(zoom: number): void {
+  function applyZoom(zoom: number, size: number): void {
     if (zoom === appliedZoom) return;
     appliedZoom = zoom;
-    const size = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
     camera.left = (-size * aspect) / 2;
     camera.right = (size * aspect) / 2;
     camera.top = size / 2;
@@ -248,12 +246,13 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       const awakening = view.awakening ?? null;
       awakeningRegion = awakening?.regionId ?? null;
       awakeningProgress = awakening?.progress ?? 0;
-      const zoom = awakening?.zoom ?? 0;
+      const zoom = awakening?.zoom ?? view.overviewZoom ?? 0;
+      const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       const pos = view.player;
       setLifeTime(clock);
 
       // The camera follows the player, or the shrine being restored.
-      const focus = awakening ? world.regionById(awakening.regionId).site : pos;
+      const focus = awakening ? world.regionById(awakening.regionId).shrine : pos;
       if (!targetReady) {
         target.set(focus.x, 1, focus.z);
         targetReady = true;
@@ -274,14 +273,15 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
         awakening: awakening ? { regionId: awakening.regionId, progress: awakening.progress } : null,
       });
 
-      // Glimmer over unread monuments in restored regions, only those near enough to be on screen.
-      const unread = awakening
-        ? []
-        : monuments
-            .near(centre.x, centre.z, GLIMMER_RADIUS)
-            .filter((m) => view.state.restored.has(m.regionId) && !view.state.collected.includes(m.id))
-            .slice(0, 8);
-      glimmer.update(clock, renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720)), unread, (m) => m.y);
+      // During the wide shot, let the restoration wave light the stones in that region.
+      const candidates = awakening
+        ? monuments.inRegion(awakening.regionId)
+        : monuments.near(centre.x, centre.z, GLIMMER_RADIUS * (viewSize / VIEW_SIZE));
+      const unread = candidates
+        .filter((m) => view.state.restored.has(m.regionId) && !view.state.collected.includes(m.id))
+        .map((monument) => ({ monument, life: lifeAtPoint(monument.x, monument.z) }))
+        .filter(({ life }) => life > 0);
+      glimmer.update(clock, particlePixelScale() * (VIEW_SIZE / viewSize), unread);
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       const onWater = tile.biome === "water";
@@ -291,7 +291,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       player.group.rotation.y = view.facing;
       player.setBoat(onWater);
 
-      applyZoom(zoom);
+      applyZoom(zoom, viewSize);
       camera.position.copy(target).add(offset);
       camera.lookAt(target);
       sun.position.set(target.x - 14, 28, target.z + 11);

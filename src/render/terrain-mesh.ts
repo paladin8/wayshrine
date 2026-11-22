@@ -45,7 +45,7 @@ export function buildTerrainChunk(
   cz: number,
   vitalityOf: (regionId: string) => number,
 ): VitalityMesh {
-  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).site);
+  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {

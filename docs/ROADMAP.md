@@ -9,14 +9,14 @@
 - **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap and compass toggles), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, first track in all biomes, volume/mute controls.
 - **Landmarks (structure):** 20 landmarks in four acts (meadow, shore, snow, mountain) placed in outward ring bands; abilities unlock at 3, 8 and 13 restored landmarks instead of at shrines; wide plateau and solid placeholder model per landmark; compass points at the next reachable landmark. See ADR 0006 and `docs/landmarks.md`.
-- **Guidance:** compass to the nearest reachable unrestored landmark (then shrine), exploration tracking, corner map and expanded map (M), debug reset tools.
+- **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at five ordinary shrines per star and reduced by restored landmarks, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Scenery:** biome-specific props with clustering, lantern rings at shrines, shared dead-to-alive colour system.
 - **Awakening swell:** one-shot cue player, music ducking under it, background music halved.
 - **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.
 - **Vertical slice:** streamed tile terrain per biome, WASD player gated by capabilities, shrines that go from dead to alive (animated vitality), HUD, localStorage saves, `?debug` hooks.
 
 ## Next
-0. Landmarks: shrines as beacons that reveal landmarks (map markers, screen-edge glow), compass to revealed landmarks, skyline peek for tall landmarks, new biomes and abilities for acts V to IX, landmark names in the UI.
+0. Landmarks: screen-edge glow and compass guidance for revealed landmarks, skyline peek for tall landmarks, new biomes and abilities for acts V to IX, landmark names in the UI.
 1. Real scenery for the haiku (ponds, bridges, fields) from the tags in `content/haiku-scenery.json`; tie the book to technological advancement; biome edge shapes.
 2. Unlock feedback: capability pickup moment, boat/snowshoes/climbing visuals on the player.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).

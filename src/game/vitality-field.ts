@@ -8,10 +8,8 @@
 export const FRONT_WIDTH = 5;
 
 /**
- * The distance the energy is timed to cover. Region edges are 47 tiles from the shrine
- * typically (55.6 at the very farthest, 99% of tiles within 44 to 47), so the front is
- * sized to just past that rather than to REGION_REACH, the loose upper bound; sizing it
- * to the bound would have the region visibly finished well before progress reaches 1.
+ * Timed extent of the visible front, in world units. It covers a typical region.
+ * The final settle also lights distant edges, including those farther from an offset shrine.
  */
 export const WAVE_EXTENT = 52;
 

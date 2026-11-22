@@ -4,7 +4,8 @@ import {
   capabilitiesForCount,
   landmarksBeforeAct,
   neighborsOf,
-  anchorOf,
+  footprintHalf,
+  LANDMARK_REACH_MARGIN,
   createObstacles,
   planMonuments,
   standPoint,
@@ -17,7 +18,7 @@ import {
   type Terrain,
   type World,
 } from "../world";
-import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, reachOf, shrineInReach, startPosition } from "./player";
+import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, SHRINE_REACH, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
 const every = new Set<Capability>(["boat", "snowshoes", "climbing"]);
@@ -188,41 +189,37 @@ describe("landmark as shrine", () => {
   const terrain = createTerrain(createWorld("lm-reach"));
   const obstacles = createObstacles(terrain, planMonuments(terrain, []));
 
-  it("is used from its anchor, not from far away", () => {
+  it("covers every landmark's footprint, including corners and the approach on all sides", () => {
     for (const region of terrain.world.landmarks) {
-      const at = anchorOf(region);
-      expect(shrineInReach(terrain, at)).toBe(region);
-      expect(shrineInReach(terrain, { x: at.x + reachOf(region) + 4, z: at.z })).not.toBe(region);
+      const { x, z } = region.shrine;
+      const half = footprintHalf(region.landmark!);
+      const inside = half + LANDMARK_REACH_MARGIN - 0.1;
+      for (const dx of [-inside, 0, inside]) {
+        for (const dz of [-inside, 0, inside]) {
+          expect(shrineInReach(terrain, { x: x + dx, z: z + dz })).toBe(region);
+        }
+      }
+      const outside = half + LANDMARK_REACH_MARGIN + 0.1;
+      expect(shrineInReach(terrain, { x: x + outside, z })).toBeNull();
     }
   });
 
-  it("can be walked to from where travel arrives, through its collision", () => {
-    // Flood-fill the footprint at 0.2 resolution with the player's radius around every solid.
+  it("allows activation from each landmark's travel arrival spot", () => {
     for (const region of terrain.world.landmarks) {
       const start = standPoint(region);
       expect(blockerAt(terrain, every, start.x, start.z)).toBeNull();
-      const free = (x: number, z: number): boolean =>
-        obstacles.near(x, z, PLAYER_RADIUS).every((o) => Math.hypot(o.x - x, o.z - z) >= o.r + PLAYER_RADIUS);
-      expect(free(start.x, start.z), `${region.landmark!.id} arrival`).toBe(true);
-      const res = 0.2;
-      const key = (x: number, z: number): string => `${Math.round(x / res)},${Math.round(z / res)}`;
-      const seen = new Set([key(start.x, start.z)]);
-      const stack: Point[] = [start];
-      const at = anchorOf(region);
-      let arrived = false;
-      while (stack.length && !arrived) {
-        const p = stack.pop()!;
-        if (Math.hypot(p.x - at.x, p.z - at.z) <= reachOf(region)) arrived = true;
-        for (const [dx, dz] of [[res, 0], [-res, 0], [0, res], [0, -res]] as const) {
-          const n = { x: p.x + dx, z: p.z + dz };
-          if (Math.abs(n.x - region.site.x) > 24 || Math.abs(n.z - region.site.z) > 24) continue;
-          const k = key(n.x, n.z);
-          if (seen.has(k) || blockerAt(terrain, every, n.x, n.z) !== null || !free(n.x, n.z)) continue;
-          seen.add(k);
-          stack.push(n);
-        }
-      }
-      expect(arrived, `${region.landmark!.id} reachable on foot`).toBe(true);
+      const free = obstacles.near(start.x, start.z, PLAYER_RADIUS).every(
+        (o) => Math.hypot(start.x - o.x, start.z - o.z) >= o.r + PLAYER_RADIUS,
+      );
+      expect(free, `${region.landmark!.id} arrival`).toBe(true);
+      expect(shrineInReach(terrain, start)).toBe(region);
     }
-  }, 120_000);
+  });
+
+  it("keeps the usual activation radius for ordinary shrines", () => {
+    const region = terrain.world.region(0, 0);
+    const { x, z } = region.shrine;
+    expect(shrineInReach(terrain, { x: x + SHRINE_REACH - 0.1, z })).toBe(region);
+    expect(shrineInReach(terrain, { x: x + SHRINE_REACH + 0.1, z })).toBeNull();
+  });
 });

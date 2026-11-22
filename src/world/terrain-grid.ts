@@ -15,8 +15,8 @@ export const PLATEAU_RADIUS = 2.5;
  * the plateau. Round around a shrine, a wider square around a landmark.
  */
 export function plateauDistance(region: Region, x: number, z: number): number {
-  const dx = x - region.site.x;
-  const dz = z - region.site.z;
+  const dx = x - region.shrine.x;
+  const dz = z - region.shrine.z;
   return region.landmark ? Math.max(Math.abs(dx), Math.abs(dz)) - footprintHalf(region.landmark) : Math.hypot(dx, dz) - PLATEAU_RADIUS;
 }
 
@@ -96,8 +96,8 @@ export function createTerrain(world: World): Terrain {
     const away = plateauDistance(region, x, z);
     const onPlateau = away <= 0;
     const model = region.landmark ? groundOf(region.landmark.id) : undefined;
-    const dx = x - region.site.x;
-    const dz = z - region.site.z;
+    const dx = x - region.shrine.x;
+    const dz = z - region.shrine.z;
     // A shrine in a water region stands on an islet, reachable only by boat.
     let biome: Biome = onPlateau && region.biome === "water" ? "meadow" : region.biome;
     let height: number;
@@ -160,7 +160,7 @@ export function createTerrain(world: World): Terrain {
       const region = world.regionAt(x, z);
       const model = region.landmark ? groundOf(region.landmark.id) : undefined;
       if (model && plateauDistance(region, x, z) <= 0) {
-        return plateauBase(region) + groundHeight(model, x - region.site.x, z - region.site.z);
+        return plateauBase(region) + groundHeight(model, x - region.shrine.x, z - region.shrine.z);
       }
       const tx = Math.floor(x);
       const tz = Math.floor(z);

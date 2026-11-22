@@ -2,7 +2,9 @@ import {
   BIOME_REQUIRES,
   anchorOf,
   canTraverse,
-  landmarkReach,
+  LANDMARK_REACH_MARGIN,
+  plateauDistance,
+  standPoint,
   type Biome,
   type Capability,
   type Obstacles,
@@ -21,8 +23,7 @@ const MAX_STEP = 0.25;
 
 /** Where a new player stands: beside the first shrine, on its plateau. */
 export function startPosition(terrain: Terrain): Point {
-  const site = terrain.world.region(0, 0).site;
-  return { x: site.x, z: site.z + 2 };
+  return standPoint(terrain.world.region(0, 0));
 }
 
 /** The biome that blocks standing at (x, z), or null if the spot is free. */
@@ -123,16 +124,14 @@ export function movePlayer(
   return { pos: { x, z }, blockedBy };
 }
 
-/** How close to its anchor the player must be to use a region's shrine or landmark. */
-export function reachOf(region: Region): number {
-  return region.landmark ? landmarkReach(region.landmark) : SHRINE_REACH;
-}
-
-/** The shrine the player is close enough to use, if any. */
+/** The shrine or landmark the player is close enough to use, if any. */
 export function shrineInReach(terrain: Terrain, pos: Point): Region | null {
-  const r = terrain.world.regionAt(pos.x, pos.z);
-  const at = anchorOf(r);
-  return Math.hypot(at.x - pos.x, at.z - pos.z) <= reachOf(r) ? r : null;
+  const region = terrain.world.regionAt(pos.x, pos.z);
+  if (region.landmark) {
+    return plateauDistance(region, pos.x, pos.z) <= LANDMARK_REACH_MARGIN ? region : null;
+  }
+  const at = anchorOf(region);
+  return Math.hypot(at.x - pos.x, at.z - pos.z) <= SHRINE_REACH ? region : null;
 }
 
 /** The capability needed to cross a biome, for messages. */

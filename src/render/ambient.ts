@@ -111,17 +111,17 @@ export function createAmbient(
     for (let dz = -1; dz <= 1; dz++) {
       for (let dx = -1; dx <= 1; dx++) {
         const region = world.region(here.rx + dx, here.rz + dz);
-        if (lifeAtPoint(region.site.x, region.site.z) > 0.3) lit.push(region);
+        if (lifeAtPoint(region.shrine.x, region.shrine.z) > 0.3) lit.push(region);
       }
     }
     if (lit.length === 0 || glowFreeSparks < 0) return;
     const region = lit[Math.floor(Math.random() * lit.length)]!;
-    const ground = terrain.tileAtPoint(region.site.x, region.site.z).height;
+    const ground = terrain.tileAtPoint(region.shrine.x, region.shrine.z).height;
     const p = spawn(
       glow.particles[glowFreeSparks]!,
       Kind.Spark,
-      region.site.x + rand(-0.6, 0.6),
-      region.site.z + rand(-0.6, 0.6),
+      region.shrine.x + rand(-0.6, 0.6),
+      region.shrine.z + rand(-0.6, 0.6),
       ground + 1.3 + rand(0, 0.4),
       ground,
     );
@@ -135,8 +135,8 @@ export function createAmbient(
     if (radius === null || glowFreeFront < 0) return;
     const region = world.regionById(awakening.regionId);
     const angle = rand(0, Math.PI * 2);
-    const x = region.site.x + Math.cos(angle) * radius;
-    const z = region.site.z + Math.sin(angle) * radius;
+    const x = region.shrine.x + Math.cos(angle) * radius;
+    const z = region.shrine.z + Math.sin(angle) * radius;
     if (world.regionAt(x, z).id !== region.id) return;
     const ground = terrain.tileAtPoint(x, z).height;
     const p = spawn(glow.particles[glowFreeFront]!, Kind.Front, x, z, ground + 0.2, ground);

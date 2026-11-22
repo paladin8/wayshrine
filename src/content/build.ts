@@ -14,6 +14,7 @@ export interface SourceEntry {
   japanese: string;
   english: string;
   author?: string;
+  author_ja?: string;
 }
 
 export interface SourceFile {
@@ -61,12 +62,6 @@ const KIND: Record<SourceEntry["type"], TextKind> = {
   proverb: "proverb",
   four_character_idiom: "fourCharacter",
   idiom: "idiom",
-};
-
-const POETS: Record<string, { en: string; ja: string }> = {
-  "Matsuo Bashō": { en: "Matsuo Bashō", ja: "松尾芭蕉" },
-  "Yosa Buson": { en: "Yosa Buson", ja: "与謝蕪村" },
-  "Kobayashi Issa": { en: "Kobayashi Issa", ja: "小林一茶" },
 };
 
 /**
@@ -385,9 +380,10 @@ export function buildContent(
     const en = (overrides[e.id] ?? e.english).replace(/\besp\./g, "especially").trim();
     const entry: TextEntry = { id: e.id, kind, ja: e.japanese.trim(), en };
     if (kind === "haiku") {
-      const poet = e.author ? POETS[e.author] : undefined;
-      if (!poet) throw new Error(`haiku ${e.id} has an unknown poet: ${String(e.author)}`);
-      entry.by = poet;
+      const author = e.author?.trim();
+      const authorJa = e.author_ja?.trim();
+      if (!author || !authorJa) throw new Error(`haiku ${e.id} needs an author in English and Japanese`);
+      entry.by = { en: author, ja: authorJa };
       const l = lines[e.id];
       if (!l || l.length !== 3 || l.join("") !== entry.ja) throw new Error(`haiku ${e.id} needs three lines that join to its text`);
       entry.lines = [l[0] as string, l[1] as string, l[2] as string];

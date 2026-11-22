@@ -111,7 +111,7 @@ export function buildPropChunk(
   vitalityOf: (regionId: string) => number,
   monuments: readonly Monument[] = [],
 ): VitalityMesh | null {
-  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).site);
+  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
   const clearings = monuments.map((m) => ({ x: m.x, z: m.z, radius: MONUMENT_CLEARING }));
   for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p);
   for (const m of monuments) {

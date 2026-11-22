@@ -36,10 +36,10 @@ describe("createObstacles", () => {
   it("makes trees and shrine pillars solid but not flowers", () => {
     const tree = propsInChunk(terrain, 0, 0).find((p) => p.kind === "tree");
     if (tree) expect(obstacles.near(tree.x, tree.z, 0).length).toBeGreaterThan(0);
-    const site = terrain.world.region(0, 0).site;
-    expect(obstacles.near(site.x + 0.9, site.z, 0).length).toBeGreaterThan(0);
+    const shrine = terrain.world.region(1, 0).shrine;
+    expect(obstacles.near(shrine.x + 0.9, shrine.z, 0).length).toBeGreaterThan(0);
     // The gap between the pillars stays open to the player.
-    expect(obstacles.near(site.x, site.z, PLAYER).length).toBe(0);
+    expect(obstacles.near(shrine.x, shrine.z, PLAYER).length).toBe(0);
   });
 
   it("makes every monument solid", () => {

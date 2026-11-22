@@ -42,7 +42,7 @@ describe("propsInChunk", () => {
         for (const p of propsInChunk(terrain, cx, cz)) {
           if (p.kind === "lantern") continue;
           const r = terrain.world.regionAt(p.x, p.z);
-          expect(Math.hypot(p.x - r.site.x, p.z - r.site.z)).toBeGreaterThan(PLATEAU_RADIUS);
+          expect(Math.hypot(p.x - r.shrine.x, p.z - r.shrine.z)).toBeGreaterThan(PLATEAU_RADIUS);
         }
       }
     }
@@ -52,10 +52,10 @@ describe("propsInChunk", () => {
     const world = terrain.world;
     for (let rx = -2; rx <= 2; rx++) {
       for (let rz = -2; rz <= 2; rz++) {
-        const { site, id, landmark } = world.region(rx, rz);
+        const { shrine, id, landmark } = world.region(rx, rz);
         let count = 0;
-        for (let cx = Math.floor(site.x / CHUNK_SIZE) - 1; cx <= Math.floor(site.x / CHUNK_SIZE) + 1; cx++) {
-          for (let cz = Math.floor(site.z / CHUNK_SIZE) - 1; cz <= Math.floor(site.z / CHUNK_SIZE) + 1; cz++) {
+        for (let cx = Math.floor(shrine.x / CHUNK_SIZE) - 1; cx <= Math.floor(shrine.x / CHUNK_SIZE) + 1; cx++) {
+          for (let cz = Math.floor(shrine.z / CHUNK_SIZE) - 1; cz <= Math.floor(shrine.z / CHUNK_SIZE) + 1; cz++) {
             count += propsInChunk(terrain, cx, cz).filter((p) => p.kind === "lantern" && p.regionId === id).length;
           }
         }
