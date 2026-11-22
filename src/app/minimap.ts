@@ -91,6 +91,7 @@ interface Waypoint {
 export interface Minimap {
   update(input: MapInput): void;
   toggleExpanded(): void;
+  isExpanded(): boolean;
 }
 
 const CSS = `
@@ -296,7 +297,7 @@ export function createMinimap(
       const [x, y] = project(r.shrine);
       if (x < -starR || y < -starR || x > size + starR || y > size + starR) continue;
       const restored = isRestored(state, r);
-      if (expanded && (restored || (input.travelToAny && isExplored(state, r)))) waypoints.push({ x, y, region: r });
+      if (expanded && (restored || input.travelToAny)) waypoints.push({ x, y, region: r });
       drawStar(ctx, x, y, starR, restored);
     }
     // Debug: monuments in restored regions as diamonds, bright until read.
@@ -384,6 +385,7 @@ export function createMinimap(
   });
 
   return {
+    isExpanded: () => expanded,
     toggleExpanded() {
       if (!shown) return; // the key does nothing while the map is hidden
       expanded = !expanded;

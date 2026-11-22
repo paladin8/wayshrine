@@ -5,6 +5,7 @@ import {
   capabilitiesOf,
   clearOfObstacles,
   collectMonument,
+  isCollected,
   deserialize,
   discoverNear,
   isLegible,
@@ -70,6 +71,7 @@ const KEY_BOOK = "KeyB";
 const KEY_MUTE = "KeyN";
 /** Debug only. */
 const KEY_UNRESTORE = "KeyU";
+const KEY_RUBBING = "KeyR";
 
 function loadGame(world: World): GameState {
   const { seed } = world;
@@ -176,6 +178,12 @@ export function startApp(container: HTMLElement): void {
     monumentUi.read(id);
   };
 
+  /** Debug: reads the first rubbing in the player's region that is not yet in the book. */
+  const readRubbingHere = (): void => {
+    const next = monuments.inRegion(world.regionAt(pos.x, pos.z).id).find((m) => !isCollected(state, m.id));
+    if (next) readMonument(next.id);
+  };
+
   /** Debug: un-restores the shrine or landmark within reach, else the one whose region the player is in. */
   const unrestoreHere = (): void => {
     const region = shrineInReach(terrain, pos) ?? world.regionAt(pos.x, pos.z);
@@ -212,6 +220,7 @@ export function startApp(container: HTMLElement): void {
         reset(resetGame);
         pos = startPosition(terrain);
       },
+      readRubbing: readRubbingHere,
       goToTarget: () => {
         const g = nextShrine(world, state, pos);
         if (g) pos = standPoint(g.region);
@@ -227,6 +236,17 @@ export function startApp(container: HTMLElement): void {
   const fit = (): void => stage.resize(window.innerWidth, window.innerHeight);
   window.addEventListener("resize", fit);
   fit();
+
+  // Escape closes the expanded map before it can open the settings.
+  window.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.code !== "Escape" || !minimap.isExpanded() || panel.isOpen()) return;
+      e.stopImmediatePropagation();
+      if (!e.repeat) minimap.toggleExpanded();
+    },
+    true,
+  );
 
   const down = new Set<string>();
   const any = (codes: readonly string[]): number => (codes.some((c) => down.has(c)) ? 1 : 0);
@@ -244,6 +264,7 @@ export function startApp(container: HTMLElement): void {
     }
     if (e.code === KEY_BOOK && !awakening) monumentUi.toggleBook();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
+    if (debug && e.code === KEY_RUBBING) readRubbingHere();
     if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });
     if (KEY_ACT.includes(e.code)) {
       if (e.code !== "KeyE" && e.target instanceof HTMLButtonElement) return;

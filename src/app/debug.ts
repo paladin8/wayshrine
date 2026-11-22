@@ -5,6 +5,7 @@ export interface DebugActions {
   readonly resetShrines: () => void;
   readonly resetAll: () => void;
   readonly goToTarget: () => void;
+  readonly readRubbing: () => void;
 }
 
 export function createDebugPanel(container: HTMLElement, actions: DebugActions): void {
@@ -31,6 +32,7 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions):
   add("Un-restore here (U)", actions.unrestoreHere);
   add("Reset shrines", actions.resetShrines);
   add("Reset everything", actions.resetAll);
+  add("Read a rubbing (R)", actions.readRubbing);
   add("Go to nearest shrine", actions.goToTarget);
   container.appendChild(panel);
 }
