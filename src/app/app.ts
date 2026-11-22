@@ -32,7 +32,7 @@ import {
 import { createCuePlayer, createMusic, trackFor, type CueId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Point, type World } from "../world";
+import { capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Obstacles, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
@@ -99,8 +99,15 @@ export function startApp(container: HTMLElement): void {
   const terrain = createTerrain(world);
   const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
-  const obstacles = createObstacles(terrain, monuments);
+  const sceneryObstacles = createObstacles(terrain, monuments);
   const stage = createStage(container, terrain, monuments);
+  const obstacles: Obstacles = {
+    near(x, z, reach) {
+      const nearby = sceneryObstacles.near(x, z, reach);
+      stage.appendObstaclesNear(x, z, reach, nearby);
+      return nearby;
+    },
+  };
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up), (region) => {
     if (awakening) return;
     // Land on the shrine's plateau, within reach of its gate.
@@ -158,6 +165,15 @@ export function startApp(container: HTMLElement): void {
     saveGame(state);
   };
 
+  const readMonument = (id: string): void => {
+    const collected = collectMonument(state, id);
+    if (collected !== state) {
+      state = revealLandmarks(collected, world);
+      saveGame(state);
+    }
+    monumentUi.read(id);
+  };
+
   /** Debug: un-restores the shrine or landmark within reach, else the one whose region the player is in. */
   const unrestoreHere = (): void => {
     const region = shrineInReach(terrain, pos) ?? world.regionAt(pos.x, pos.z);
@@ -175,7 +191,7 @@ export function startApp(container: HTMLElement): void {
   if (params.has("debug")) {
     const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
-      state = next(state);
+      state = revealLandmarks(next(state), world);
       overviewTime = OVERVIEW_SECONDS;
       saveGame(state);
     };
@@ -202,7 +218,7 @@ export function startApp(container: HTMLElement): void {
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument: (id: string) => { state = collectMonument(state, id); saveGame(state); monumentUi.read(id); }, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
     });
   }
 
@@ -250,9 +266,7 @@ export function startApp(container: HTMLElement): void {
         } else {
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
-            state = collectMonument(state, stone.id);
-            saveGame(state);
-            monumentUi.read(stone.id);
+            readMonument(stone.id);
             cues.play("monument-read");
           }
         }
@@ -269,6 +283,7 @@ export function startApp(container: HTMLElement): void {
   const frame = (now: number): void => {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
     last = now;
+    stage.tick(dt);
 
     if (lastRestored !== state.restored) {
       lastRestored = state.restored;

@@ -9,7 +9,7 @@
 - **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap and compass toggles), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, first track in all biomes, volume/mute controls.
 - **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 13, 20, 30, 41 and 49 restored landmarks instead of at shrines, and far sight at 56; marsh, dark forest, volcanic, sea and dune biomes fade in beyond 14 regions; wide plateau and solid placeholder model per landmark; compass points at the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
-- **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at five ordinary shrines per star and reduced by restored landmarks, exploration tracking, corner map and expanded map (M), and debug reset tools.
+- **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in order of distance from the start, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Scenery:** biome-specific props with clustering, lantern rings at shrines, shared dead-to-alive colour system.
 - **Awakening swell:** one-shot cue player, music ducking under it, background music halved.
 - **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.

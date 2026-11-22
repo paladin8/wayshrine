@@ -104,7 +104,7 @@ describe("game state", () => {
     expect(loaded.explored).toEqual(new Set(["0,0"]));
     expect(capabilitiesOf(loaded, world).has("boat")).toBe(true);
     expect(isRestored(loaded, replaced)).toBe(false);
-    expect(loaded.revealedLandmarks).toEqual(new Set([world.landmarks[3]!.landmark!.id]));
+    expect(loaded.revealedLandmarks.size).toBe(0);
     expect(deserialize(serialize(loaded))).toEqual(loaded);
   });
 
@@ -138,30 +138,32 @@ describe("exploration", () => {
 });
 
 describe("landmark map reveals", () => {
-  it("uses one slot per restored landmark before revealing unrestored landmarks", () => {
-    let state = discoverNear(withLandmarks(1), world, landmark(1).shrine);
-    expect(isLandmarkRevealed(state, landmark(0))).toBe(false);
-    expect(isLandmarkRevealed(state, landmark(1))).toBe(false);
+  const start = world.region(0, 0).site;
+  const central = [...world.landmarks].sort((a, b) =>
+    Math.hypot(a.site.x - start.x, a.site.z - start.z) - Math.hypot(b.site.x - start.x, b.site.z - start.z));
+  const names = (from: number, to: number) => central.slice(from, to).map((region) => region.landmark!.id);
+  const rubbings = (count: number) => Array.from({ length: count }, (_, i) => `rubbing-${i}`);
 
-    for (let i = 1; i <= 15; i++) {
-      state = revealLandmarks(restoreShrine(state, world.region(30 + i, 0)), world);
-      expect(state.revealedLandmarks.size).toBe(Math.max(0, Math.floor(i / 5) - 1));
+  it("reveals a central landmark for every seven unique rubbings after accounting for restored landmarks", () => {
+    let state = restoreShrine(newGame(world.seed), central[0]!);
+    state = discoverNear(state, world, central[1]!.shrine);
+    expect(isLandmarkRevealed(state, central[0]!)).toBe(false);
+    expect(isLandmarkRevealed(state, central[1]!)).toBe(false);
+
+    for (const [i, id] of rubbings(21).entries()) {
+      state = revealLandmarks(collectMonument(state, id), world);
+      expect(state.revealedLandmarks.size).toBe(Math.max(0, Math.floor((i + 1) / 7) - 1));
     }
-    const name = (i: number) => landmark(i).landmark!.id;
-    expect([...state.revealedLandmarks]).toEqual([name(1), name(2)]);
+    expect([...state.revealedLandmarks]).toEqual(names(1, 3));
+    expect(revealLandmarks(collectMonument(state, "rubbing-0"), world)).toBe(state);
 
-    const restoredRevealed = restoreShrine(state, landmark(1));
-    state = revealLandmarks(restoredRevealed, world);
-    expect([...state.revealedLandmarks]).toEqual([name(2)]);
-    expect(deserialize(serialize(restoredRevealed), world)).toEqual(state);
-
-    state = revealLandmarks(restoreShrine(state, landmark(4)), world);
+    state = revealLandmarks(restoreShrine(state, central[1]!), world);
+    expect([...state.revealedLandmarks]).toEqual(names(2, 3));
+    state = revealLandmarks(restoreShrine(state, central[4]!), world);
     expect(state.revealedLandmarks.size).toBe(0);
-    expect(landmarksRestored(state, world)).toBe(3);
-
-    state = revealLandmarks(unrestoreShrine(state, landmark(4)), world);
-    expect([...state.revealedLandmarks]).toEqual([name(2)]);
-    expect(resetShrines(state).revealedLandmarks.size).toBe(0);
+    state = revealLandmarks(unrestoreShrine(state, central[4]!), world);
+    expect([...state.revealedLandmarks]).toEqual(names(2, 3));
+    expect([...revealLandmarks(resetShrines(state), world).revealedLandmarks]).toEqual(names(0, 3));
   });
 
   it("far sight marks every remaining landmark once enough are restored, and not before", () => {
@@ -172,14 +174,21 @@ describe("landmark map reveals", () => {
     for (const r of world.landmarks.slice(FAR_SIGHT_STARS)) expect(isLandmarkRevealed(after, r)).toBe(true);
   });
 
-  it("drops surplus reveals when a shrine is un-restored or an older save already has too many", () => {
-    const shrines = Array.from({ length: 10 }, (_, i) => world.region(30 + i, 0));
-    const revealed = revealLandmarks(shrines.reduce(restoreShrine, newGame(world.seed)), world);
-    expect(revealed.revealedLandmarks.size).toBe(2);
-    const undidShrine = unrestoreShrine(revealed, shrines[0]!);
-    const expected = new Set([landmark(0).landmark!.id]);
-    expect(revealLandmarks(undidShrine, world).revealedLandmarks).toEqual(expected);
-    expect(deserialize(serialize(undidShrine), world).revealedLandmarks).toEqual(expected);
+  it("recalculates old markers from collected rubbings and actual distance to the start", () => {
+    const saved = {
+      ...serialize(newGame(world.seed)),
+      restored: Array.from({ length: 20 }, (_, i) => world.region(40, i).id),
+      shrineCredits: 10,
+      revealedLandmarks: [central.at(-1)!.landmark!.id],
+    };
+    expect(deserialize(saved, world).revealedLandmarks.size).toBe(0);
+    const collected = rubbings(7);
+    const loaded = deserialize({ ...saved, collected }, world);
+    expect([...loaded.revealedLandmarks]).toEqual(names(0, 1));
+    expect([...deserialize({ v: 3, seed: world.seed, restored: [], explored: [], collected }, world).revealedLandmarks])
+      .toEqual(names(0, 1));
+    const reversedWorld = { ...world, landmarks: [...world.landmarks].reverse() };
+    expect([...deserialize({ ...saved, collected }, reversedWorld).revealedLandmarks]).toEqual(names(0, 1));
   });
 });
 

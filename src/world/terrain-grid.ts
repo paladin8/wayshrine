@@ -118,12 +118,17 @@ export function createTerrain(world: World): Terrain {
     let height: number;
     let skirt = false;
     if (onPlateau) {
-      height = model ? plateauBase(region) + groundHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
+      if (model?.terrainSurface) {
+        height = plateauBase(region);
+        skirt = true;
+      } else {
+        height = model ? plateauBase(region) + groundHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
+      }
     } else if (region.landmark && away < LANDMARK_BLEND) {
       // Ease from the footprint's edge height to natural ground, so it never stands as a wall.
       const t = away / LANDMARK_BLEND;
       const k = t * t * (3 - 2 * t);
-      const edge = plateauBase(region) + (model ? groundHeight(model, dx, dz) : 0);
+      const edge = plateauBase(region) + (model && !model.terrainSurface ? groundHeight(model, dx, dz) : 0);
       height = edge + (natural(x, z, region.biome) - edge) * k;
       // The slope down to water becomes shore, then water.
       if (isWater(region.biome)) biome = height > 0.55 ? "meadow" : region.biome;

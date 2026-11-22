@@ -12,7 +12,7 @@ export interface GameState {
   readonly explored: ReadonlySet<string>;
   /** Unrestored landmark IDs currently shown as gold stars. */
   readonly revealedLandmarks: ReadonlySet<string>;
-  /** Restored ordinary shrines replaced by landmarks when an older save was loaded. */
+  /** Legacy count of ordinary shrines replaced by landmarks during save migration. */
   readonly shrineCredits: number;
   /** Ids of the texts whose monuments the player has read, in the order found. */
   readonly collected: readonly string[];
@@ -20,7 +20,7 @@ export interface GameState {
 
 /** A region counts as seen when the player is within this distance of its shrine. */
 export const DISCOVER_RADIUS = 40;
-const SHRINES_PER_REVEAL = 5;
+const RUBBINGS_PER_REVEAL = 7;
 
 export function newGame(seed: string): GameState {
   return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [] };
@@ -45,23 +45,19 @@ export function isLandmarkRevealed(state: GameState, region: Region): boolean {
   return region.landmark !== null && state.revealedLandmarks.has(region.landmark.id);
 }
 
-/** Keep one marker per five ordinary shrine restorations, with restored landmarks using that budget first; far sight marks them all. */
+/** Spend one slot per restored landmark, then mark the unrestored landmarks nearest the start; far sight marks them all. */
 export function revealLandmarks(state: GameState, world: World): GameState {
-  const unrestored = new Set<string>();
-  for (const region of world.landmarks) {
-    if (!isRestored(state, region)) unrestored.add(region.landmark!.id);
-  }
-  const restored = world.landmarks.length - unrestored.size;
-  const ordinaryShrines = state.restored.size - restored + state.shrineCredits;
-  // Far sight: once enough landmarks are restored, every remaining one is marked.
-  const goldStars = restored >= FAR_SIGHT_STARS ? unrestored.size : Math.max(0, Math.floor(ordinaryShrines / SHRINES_PER_REVEAL) - restored);
-
-  // Keep existing gold stars where possible, then fill any remaining slots in landmark order.
-  const revealedLandmarks = new Set<string>();
-  for (const id of [...state.revealedLandmarks, ...unrestored]) {
-    if (revealedLandmarks.size >= goldStars) break;
-    if (unrestored.has(id)) revealedLandmarks.add(id);
-  }
+  const unrestored = world.landmarks.filter((region) => !isRestored(state, region));
+  const restored = world.landmarks.length - unrestored.length;
+  const goldStars =
+    restored >= FAR_SIGHT_STARS ? unrestored.length : Math.max(0, Math.floor(state.collected.length / RUBBINGS_PER_REVEAL) - restored);
+  const start = world.region(0, 0).site;
+  const distance = (region: Region): number => Math.hypot(region.site.x - start.x, region.site.z - start.z);
+  const revealedLandmarks = new Set(
+    unrestored.sort((a, b) => distance(a) - distance(b))
+      .slice(0, goldStars)
+      .map((region) => region.landmark!.id),
+  );
   if (
     revealedLandmarks.size === state.revealedLandmarks.size &&
     [...revealedLandmarks].every((id) => state.revealedLandmarks.has(id))
@@ -193,11 +189,9 @@ export function deserialize(data: SaveData, world?: World): GameState {
   const current = world?.seed === seed ? world : createWorld(seed);
   if (v === 4) {
     const shrineCredits = Number.isSafeInteger(data.shrineCredits) ? Math.max(0, data.shrineCredits) : 0;
-    return revealLandmarks({
-      ...state, revealedLandmarks: new Set(data.revealedLandmarks), shrineCredits,
-    }, current);
+    return revealLandmarks({ ...state, shrineCredits }, current);
   }
-  if (state.restored.size === 0) return state;
+  if (state.restored.size === 0) return revealLandmarks(state, current);
   const previous = createWorld(seed, "spread");
   const currentLandmarks = new Map(current.landmarks.map((region) => [region.landmark!.id, region.id]));
   const previousLandmarks = new Map(previous.landmarks.map((region) => [region.id, region.landmark!.id]));
@@ -209,7 +203,7 @@ export function deserialize(data: SaveData, world?: World): GameState {
       const moved = currentLandmarks.get(landmark);
       if (moved !== undefined) restored.add(moved);
     } else if (current.regionById(id).landmark) {
-      // The old ordinary shrine still counts toward reveals, but the new landmark needs restoration.
+      // Keep the legacy shrine count without restoring the landmark now at that site.
       shrineCredits++;
     } else {
       restored.add(id);

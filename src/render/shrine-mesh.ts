@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { lifeAt } from "../game";
+import type { Obstacle } from "../world";
 import { palette } from "./palette";
 
 const DEAD_RED = new THREE.Color(0x77716e);
@@ -9,7 +10,9 @@ export interface ShrineMesh {
   readonly group: THREE.Group;
   /** Restoration progress: 0 is dead and grey with the orb dark; 1 is restored and glowing. */
   setVitality(progress: number): void;
-  /** Animates the orb. */
+  /** Append colliders attached to the current model pose. */
+  appendObstaclesNear?(x: number, z: number, reach: number, out: Obstacle[]): void;
+  /** Animates the shrine or landmark. */
   tick(seconds: number): void;
 }
 

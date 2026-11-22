@@ -71,6 +71,20 @@ describe("landmark ground", () => {
 });
 
 describe("landmark slopes", () => {
+  it("joins the Nara Buddha grounds to the nearby terrain at shared corners", () => {
+    const terrain = createTerrain(createWorld("wayshrine"));
+    const region = terrain.world.landmarks.find((r) => r.landmark?.id === "todai-ji-daibutsu")!;
+    const model = groundOf(region.landmark!.id)!;
+    const tx = Math.floor(region.site.x + model.half + 0.5);
+    const tz = Math.floor(region.site.z);
+    expect(terrain.tileAt(tx - 1, tz).skirt).toBe(true);
+    expect(terrain.tileAt(tx, tz).skirt).toBe(true);
+    const inside = terrain.corners(tx - 1, tz);
+    const outside = terrain.corners(tx, tz);
+    expect([inside[1], inside[3]]).toEqual([outside[0], outside[2]]);
+    expect(Math.min(...inside, ...outside)).toBeGreaterThan(plateauBase(region) - 0.1);
+  });
+
   it("ease down from the plateau in small steps, never a wall", () => {
     for (const seed of ["lm-slope-a", "lm-slope-b", "lm-slope-c"]) {
       const terrain = createTerrain(createWorld(seed));

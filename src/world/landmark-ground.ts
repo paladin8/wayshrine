@@ -1,6 +1,7 @@
 import fushimiInari from "./landmark-grounds/fushimi-inari.json";
 import kinkakuJi from "./landmark-grounds/kinkaku-ji.json";
 import todaiJiDaibutsu from "./landmark-grounds/todai-ji-daibutsu.json";
+import itsukushimaTorii from "./landmark-grounds/itsukushima-torii.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -15,6 +16,8 @@ export interface LandmarkGround {
   readonly step: number;
   /** Walkable surface height, indexed [z][x] from (-half, -half). */
   readonly ground: ReadonlyArray<readonly number[]>;
+  /** The terrain provides the visible ground beneath the model. */
+  readonly terrainSurface?: boolean;
   /** Solid discs [x, z, r]: columns, posts, trees, statues. */
   readonly solids: ReadonlyArray<readonly [number, number, number]>;
   /** Authored approach point and radius. The compass uses the point. */
@@ -28,6 +31,7 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   "fushimi-inari": fushimiInari as unknown as LandmarkGround,
   "kinkaku-ji": kinkakuJi as unknown as LandmarkGround,
   "todai-ji-daibutsu": todaiJiDaibutsu as unknown as LandmarkGround,
+  "itsukushima-torii": itsukushimaTorii as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

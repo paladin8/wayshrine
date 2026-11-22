@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { lifeAt, vitality, type GameState } from "../game";
-import { CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Point, type Terrain } from "../world";
+import { CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Point, type Terrain } from "../world";
 import { createAmbient } from "./ambient";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
@@ -65,6 +65,9 @@ export interface Stage {
   /** The inverse: a ground-space offset as screen-space (right, up) components. */
   screenDirection(dx: number, dz: number): { right: number; up: number };
   resize(widthPixels: number, heightPixels: number): void;
+  /** Advances model poses before movement queries their collision. */
+  tick(dtSeconds: number): void;
+  appendObstaclesNear(x: number, z: number, reach: number, out: Obstacle[]): void;
   render(dtSeconds: number, view: StageView): void;
 }
 
@@ -240,8 +243,14 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       renderer.setSize(w, h);
       appliedZoom = -1;
     },
-    render(dt, view) {
+    tick(dt) {
       clock += dt;
+      for (const shrine of shrines.values()) shrine.tick(clock);
+    },
+    appendObstaclesNear(x, z, reach, out) {
+      for (const shrine of shrines.values()) shrine.appendObstaclesNear?.(x, z, reach, out);
+    },
+    render(dt, view) {
       state = view.state;
       const awakening = view.awakening ?? null;
       awakeningRegion = awakening?.regionId ?? null;
@@ -266,7 +275,6 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       streamChunks(centre, zoom);
       streamShrines(centre);
       updateProgress(dt);
-      for (const shrine of shrines.values()) shrine.tick(clock);
       ambient.update(dt, {
         focus: centre,
         zoom,

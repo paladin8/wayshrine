@@ -15,7 +15,7 @@ A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one
 - **Walkable surfaces.** Anything the player climbs (steps, platforms, bridges) is not terrain: register it in the generator as a floor, `(x0, x1, y0, y1, top)`, so the ground grid includes it, and keep solids to what stands above the floor (the generator takes geometry in a band 0.35 to 1.6 above the local ground; up-facing hill triangles are ignored). Leave a clear arrival spot at `stand`. Landmarks can be activated anywhere on their footprint and up to 3.5 units beyond each edge.
 - Without a sidecar, the landmark gets a flat plateau and one solid disc.
 
-Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu. Everything else uses the placeholder.
+Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii. Everything else uses the placeholder.
 
 ## Abilities
 

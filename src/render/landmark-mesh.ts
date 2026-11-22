@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { lifeAt } from "../game";
+import type { Obstacle } from "../world";
 import type { ShrineMesh } from "./shrine-mesh";
 import { palette } from "./palette";
 import { deadOf } from "./vitality-mesh";
@@ -18,7 +19,7 @@ const files = new Map<string, Promise<ArrayBuffer | null>>();
 function fetchModel(id: string): Promise<ArrayBuffer | null> {
   let hit = files.get(id);
   if (!hit) {
-    hit = fetch(modelUrl(id))
+    hit = fetch(modelUrl(id), { cache: "no-cache" })
       .then(async (r) => {
         if (!r.ok) return null;
         const buffer = await r.arrayBuffer();
@@ -41,14 +42,25 @@ interface Tinted {
   readonly glows: boolean;
 }
 
+interface ModelCollider {
+  readonly node: THREE.Object3D;
+  readonly radius: number;
+  readonly halfLength: number;
+}
+
 /**
  * Applies a crafted model: every material fades from a desaturated dead colour
  * to its authored one with the region's life (as props do), and `glow_*`
  * parts light up and flare while it wakes.
  */
-function adopt(root: THREE.Object3D): { tinted: Tinted[] } {
+function adopt(root: THREE.Object3D): { tinted: Tinted[]; colliders: ModelCollider[] } {
   const tinted = new Map<THREE.Material, Tinted>();
+  const colliders: ModelCollider[] = [];
   root.traverse((o) => {
+    const { collisionRadius, collisionHalfLength } = o.userData;
+    if (typeof collisionRadius === "number" && collisionRadius > 0 && typeof collisionHalfLength === "number") {
+      colliders.push({ node: o, radius: collisionRadius, halfLength: collisionHalfLength });
+    }
     if (!(o instanceof THREE.Mesh)) return;
     o.castShadow = true;
     o.receiveShadow = true;
@@ -60,7 +72,7 @@ function adopt(root: THREE.Object3D): { tinted: Tinted[] } {
     if (glows) material.emissive = material.color.clone();
     tinted.set(material, { material, alive: material.color.clone(), dead: deadOf(material.color), glows });
   });
-  return { tinted: [...tinted.values()] };
+  return { tinted: [...tinted.values()], colliders };
 }
 
 /**
@@ -73,8 +85,11 @@ export function buildLandmark(id: string): ShrineMesh {
   const group = new THREE.Group();
   const stand = buildPlaceholder();
   group.add(stand.group);
-  let model: { tinted: Tinted[] } | null = null;
+  let model: ReturnType<typeof adopt> | null = null;
+  const scratch = new THREE.Vector3();
   let progress = 0;
+  let mixer: THREE.AnimationMixer | null = null;
+  let animationStart: number | null = null;
 
   const apply = (): void => {
     const v = lifeAt(progress, 0);
@@ -98,6 +113,11 @@ export function buildLandmark(id: string): ShrineMesh {
         group.remove(stand.group);
         group.add(gltf.scene);
         model = adopt(gltf.scene);
+        if (gltf.animations.length) {
+          mixer = new THREE.AnimationMixer(gltf.scene);
+          for (const clip of gltf.animations) mixer.clipAction(clip).play();
+          mixer.setTime(0);
+        }
         apply();
       },
       () => undefined,
@@ -106,12 +126,34 @@ export function buildLandmark(id: string): ShrineMesh {
 
   return {
     group,
+    appendObstaclesNear(x, z, reach, out: Obstacle[]) {
+      if (!model) return;
+      for (const { node, radius, halfLength } of model.colliders) {
+        node.updateWorldMatrix(true, false);
+        const r = radius * scratch.setFromMatrixScale(node.matrixWorld).x;
+        // Overlapping discs follow the length and heading of the deer.
+        for (const dx of [-halfLength, 0, halfLength]) {
+          scratch.set(dx, 0, 0).applyMatrix4(node.matrixWorld);
+          if (Math.hypot(x - scratch.x, z - scratch.z) <= reach + r) {
+            out.push({ x: scratch.x, z: scratch.z, r });
+          }
+        }
+      }
+    },
     setVitality(p) {
       progress = p;
       apply();
     },
     tick(seconds) {
       if (!model) stand.tick(seconds);
+      if (!mixer) return;
+      if (progress >= 1) {
+        animationStart ??= seconds;
+        mixer.setTime(seconds - animationStart);
+      } else if (animationStart !== null) {
+        animationStart = null;
+        mixer.setTime(0);
+      }
     },
   };
 }
