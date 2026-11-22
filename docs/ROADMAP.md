@@ -26,6 +26,12 @@
 6. **Livelier world.** Many more animals, and eventually people. Rare compared with the scenery, but common enough to keep the player interested. Open question whether they need custom models or can reuse a small set.
 7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, climbing gear and the rest) given the same treatment.
 8. **Footsteps.** Moving across different terrain should make different sounds.
+9. **Terrain variety.** More diversity in the world and the terrain, to reward exploring. Starting points:
+   - Bridges, both the brown wooden arched kind and the vermilion kind famous in Japan, plus plain plank bridges and stepping stones.
+   - Rivers and streams, waterfalls, hot-spring pools with steam, and terraced rice paddies.
+   - Roadside things: torii lines, stone lanterns along paths, jizo statues, small tea houses and farmsteads, stone steps.
+   - Landforms: cliffs, caves, mountain passes, and bamboo or cherry groves as set pieces.
+   - Open design question: whether bridges only decorate water that is already crossable or can open new routes. Anything that changes reachability must keep the no-soft-lock property tests passing, and probably needs an ADR.
 
 ## Known gaps
 - Landmarks use one placeholder model; ordinary regions differ only by biome.
