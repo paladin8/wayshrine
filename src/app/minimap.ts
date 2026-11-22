@@ -5,11 +5,11 @@ import { UI_FONT, setText } from "./style";
 const SMALL_SIZE = 168;
 /** World units per map pixel in the corner map: about five regions across. */
 const SMALL_SCALE = 2;
-/** The expanded map never starts further out than this (world units per pixel), so it stays a readable size however far the player has explored. */
-const MAX_FIT_SCALE = 2.5;
+/** The expanded map opens at this zoom (world units per pixel): centred on what is explored when that fits, else on the player. */
+const MAX_FIT_SCALE = 1;
 /** Zooming out past these hides detail: first the (debug) monuments, then the ordinary shrines. Landmark stars always stay. */
-const HIDE_MONUMENTS_SCALE = 1.6;
-const HIDE_SHRINES_SCALE = 3.5;
+const HIDE_MONUMENTS_SCALE = 1.5;
+const HIDE_SHRINES_SCALE = 2.5;
 const FOG = [0x3a, 0x34, 0x34] as const;
 const DEAD_GREY = [0x8c, 0x8c, 0x88] as const;
 /** How far an unrestored region is drained toward grey: enough to read as asleep, not enough to lose its biome. */
@@ -59,7 +59,7 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 function drawShrineDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, restored: boolean): void {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = restored ? "#d96b59" : "#2a2424";
+  ctx.fillStyle = restored ? "#d96b59" : "#7a726a";
   ctx.fill();
   if (restored) return;
   ctx.strokeStyle = "#cfc8b8";
@@ -238,7 +238,7 @@ export function createMinimap(
         if (!state.explored.has(landmark.id)) include(landmark.shrine);
       }
       const span = Math.max(maxU - minU, maxV - minV) + REGION_SIZE * 1.6;
-      let fitScale = Math.max(span / size, 1.2);
+      let fitScale = Math.max(span / size, MAX_FIT_SCALE);
       let fitU = (minU + maxU) / 2;
       let fitV = (minV + maxV) / 2;
       if (fitScale > MAX_FIT_SCALE) {
@@ -409,7 +409,7 @@ export function createMinimap(
     const box = canvas.getBoundingClientRect();
     return [((e.clientX - box.left) / box.width) * canvas.width, ((e.clientY - box.top) / box.height) * canvas.height];
   };
-  const maxScale = (): number => Math.max(view.fitScale * 2.5, MAX_FIT_SCALE * 3);
+  const maxScale = (): number => Math.max(view.fitScale * 2.5, 6);
   const setView = (u: number, v: number, scale: number): void => {
     const clamped = Math.max(0.25, Math.min(maxScale(), scale));
     panU = u - view.fitU;
