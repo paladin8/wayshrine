@@ -27,7 +27,7 @@ export interface HudModel {
   readonly landmarkName: LandmarkNameModel | null;
   /** The small name shown near the bottom while the player is close to a restored landmark, or null. */
   readonly nearLandmarkName?: LandmarkNameModel | null;
-  readonly boatReveal: Locale | null;
+  readonly gearReveal: { readonly gear: keyof Messages["gearReveal"]; readonly locale: Locale } | null;
 }
 
 /**
@@ -55,6 +55,7 @@ const CSS = `
 .hud{position:fixed;inset:0;pointer-events:none;font:14px/1.3 ${UI_FONT};color:#2a2424}
 .hud .chip{display:inline-block;margin-right:6px;padding:4px 10px;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422}
 .hud .gear-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0}
+.hud .gear-chip[hidden]{display:none}
 .hud .gear-chip.off{color:#5e5249;background:#f4ecd8bc}
 .hud .star-count{display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
 .hud .star-count::before{content:"";width:14px;height:14px;background:#b64e3d;clip-path:polygon(50% 0,64% 34%,100% 38%,74% 62%,81% 100%,50% 82%,19% 100%,26% 62%,0 38%,36% 34%)}
@@ -86,12 +87,12 @@ const CSS = `
 .hud .lname.near::before{display:none}
 .hud .lname.near .ja,.hud .lname.near .en{position:static;transform:none}
 .hud .lname.near .ja img{max-height:30vh}
-.hud .boat-reveal{position:absolute;bottom:clamp(76px,15vh,132px);left:50%;transform:translateX(-50%);box-sizing:border-box;width:max-content;max-width:calc(100vw - 38px);padding:12px 20px 14px;text-align:center;border:1px solid #e6c68a85;border-radius:4px;background:#332419ee;color:#fff4d5;box-shadow:0 7px 21px #19100973}
-.hud .boat-reveal strong{display:block;margin-bottom:4px;font:400 25px/1.15 "Kaushan Script",cursive;color:#ffdfa3}
-.hud .boat-reveal:lang(ja) strong{font-family:"Yuji Syuku",serif}
-.hud .boat-reveal:not([hidden]){animation:boat-reveal .25s ease-out}
-@keyframes boat-reveal{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
-@media(prefers-reduced-motion:reduce){.hud .boat-reveal:not([hidden]){animation:none}}
+.hud .gear-reveal{position:absolute;bottom:clamp(76px,15vh,132px);left:50%;transform:translateX(-50%);box-sizing:border-box;width:max-content;max-width:calc(100vw - 38px);padding:12px 20px 14px;text-align:center;border:1px solid #e6c68a85;border-radius:4px;background:#332419ee;color:#fff4d5;box-shadow:0 7px 21px #19100973}
+.hud .gear-reveal strong{display:block;margin-bottom:4px;font:400 25px/1.15 "Kaushan Script",cursive;color:#ffdfa3}
+.hud .gear-reveal:lang(ja) strong{font-family:"Yuji Syuku",serif}
+.hud .gear-reveal:not([hidden]){animation:gear-reveal .25s ease-out}
+@keyframes gear-reveal{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+@media(prefers-reduced-motion:reduce){.hud .gear-reveal:not([hidden]){animation:none}}
 .hud .dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:#ffe9a8}
 `;
 
@@ -121,6 +122,7 @@ export function createHud(container: HTMLElement): Hud {
   const chips = gear.map((item) => {
     const chip = document.createElement("span");
     chip.className = "chip gear-chip off";
+    chip.hidden = true;
     const name = document.createElement("span");
     const stars = document.createElement("span");
     stars.className = "star-count gear-stars";
@@ -193,14 +195,14 @@ export function createHud(container: HTMLElement): Hud {
   near.append(nearJaBox, nearEnBox);
   root.appendChild(near);
   let nearShownId: string | null = null;
-  const boat = document.createElement("div");
-  boat.className = "boat-reveal";
-  boat.hidden = true;
-  boat.setAttribute("role", "status");
-  const boatTitle = document.createElement("strong");
-  const boatHint = document.createElement("span");
-  boat.append(boatTitle, boatHint);
-  root.append(boat);
+  const gearReveal = document.createElement("div");
+  gearReveal.className = "gear-reveal";
+  gearReveal.hidden = true;
+  gearReveal.setAttribute("role", "status");
+  const gearTitle = document.createElement("strong");
+  const gearHint = document.createElement("span");
+  gearReveal.append(gearTitle, gearHint);
+  root.append(gearReveal);
   /** The images were drawn at a fixed glyph size, so every one is scaled by the same factor (relative to `--em`). */
   const GLYPH_PX = 320;
   const sizeToEm = (img: HTMLImageElement): void => {
@@ -226,14 +228,19 @@ export function createHud(container: HTMLElement): Hud {
     landmarkButton: count,
     update(m) {
       const t = m.messages;
-      if (m.boatReveal) {
-        boat.lang = m.boatReveal;
-        setText(boatTitle, t.boatReveal.title);
-        setText(boatHint, t.boatReveal.hint);
+      if (m.gearReveal) {
+        gearReveal.lang = m.gearReveal.locale;
+        const message = t.gearReveal[m.gearReveal.gear];
+        setText(gearTitle, message.title);
+        setText(gearHint, message.hint);
       }
-      boat.hidden = m.boatReveal === null;
+      gearReveal.hidden = m.gearReveal === null;
+      let showedNext = false;
       for (const { item, chip, name, stars } of chips) {
         const held = item.id === "farSight" ? m.restoredLandmarks.length >= item.stars : m.capabilities.has(item.id);
+        chip.hidden = !held && showedNext;
+        if (chip.hidden) continue;
+        if (!held) showedNext = true;
         const status = held ? "unlocked" : "locked";
         setText(name, item.id === "farSight" ? t.farSight : t.capability[item.id]);
         chip.classList.toggle("off", status !== "unlocked");

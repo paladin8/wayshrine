@@ -8,6 +8,7 @@ const TAU = Math.PI * 2;
 
 interface Animal {
   readonly group: THREE.Group;
+  readonly body: THREE.Mesh;
   readonly parts: readonly THREE.Mesh[];
   x: number;
   z: number;
@@ -32,6 +33,7 @@ export function createWildlife(terrain: Terrain, lifeAtPoint: (x: number, z: num
   const heron = new THREE.MeshStandardMaterial({ color: 0xe5dfca, flatShading: true, side: THREE.DoubleSide });
   const swallow = new THREE.MeshStandardMaterial({ color: 0x495550, flatShading: true, side: THREE.DoubleSide });
   const carp = new THREE.MeshStandardMaterial({ color: 0xdc9b63, flatShading: true });
+  const blueback = new THREE.MeshStandardMaterial({ color: 0x809eaa, flatShading: true });
   const silver = new THREE.MeshStandardMaterial({ color: 0xb8d8c9, flatShading: true });
 
   function animal(fish: boolean, index: number): Animal {
@@ -58,7 +60,7 @@ export function createWildlife(terrain: Terrain, lifeAtPoint: (x: number, z: num
     }
     group.visible = false;
     root.add(group);
-    return { group, parts, x: 0, y: 0, z: 0, age: 0, duration: 0, phase: 0, radius: 0, direction: 1 };
+    return { group, body, parts, x: 0, y: 0, z: 0, age: 0, duration: 0, phase: 0, radius: 0, direction: 1 };
   }
 
   const birds = Array.from({ length: BIRDS }, (_, i) => animal(false, i));
@@ -91,7 +93,14 @@ export function createWildlife(terrain: Terrain, lifeAtPoint: (x: number, z: num
       if (!swimming && tile.biome === "volcanic") continue;
       const phase = rng.range(0, TAU);
       for (let j = 0; j < Math.min(free.length, swimming ? 3 : 2); j++) {
-        start(free[j]!, x + j * 0.8, tile.height, z - j * 0.65, swimming, phase + j * 0.6);
+        const a = free[j]!;
+        if (swimming) {
+          const material = tile.biome === "sea" ? blueback : j === 0 ? carp : silver;
+          a.body.material = material;
+          a.parts[0]!.material = material;
+          a.body.scale.z = tile.biome === "sea" ? 0.36 : 0.28;
+        }
+        start(a, x + j * 0.8, tile.height, z - j * 0.65, swimming, phase + j * 0.6);
       }
       return;
     }
@@ -139,7 +148,7 @@ export function createWildlife(terrain: Terrain, lifeAtPoint: (x: number, z: num
     dispose() {
       bodyGeometry.dispose();
       wingGeometry.dispose();
-      for (const material of [heron, swallow, carp, silver]) material.dispose();
+      for (const material of [heron, swallow, carp, silver, blueback]) material.dispose();
     },
   };
 }

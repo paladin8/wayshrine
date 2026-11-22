@@ -5,7 +5,7 @@
  * draws whatever frame it describes.
  */
 export interface AwakeningTiming {
-  /** Camera pulls back; nothing has changed yet. */
+  /** Time before the wave starts; the camera begins pulling back immediately. */
   readonly zoomOut: number;
   /** Energy sweeps from the shrine to the edge of the region. */
   readonly wave: number;
@@ -35,6 +35,10 @@ export const AWAKENING_LANDMARK: AwakeningTiming = {
   hold: 3.5,
   zoomIn: 1.6,
 };
+
+/** A closer landmark shot settles partway through the early wave. */
+const LANDMARK_PULLBACK_SECONDS = 3.2;
+const LANDMARK_PEAK_ZOOM = 0.48;
 
 /** A landmark's name starts fading in this many seconds before the wave ends. */
 export const CAPTION_LEAD = 1.7;
@@ -88,16 +92,30 @@ const ease = (t: number): number => t * t * (3 - 2 * t);
 /** Eases in gently but keeps moving at the end, so the front does not crawl through the last stretch. */
 const sweep = (u: number): number => 0.5 * u + 0.5 * ease(u);
 
-export function awakeningFrame(t: number, kind: AwakeningKind = "shrine"): AwakeningFrame {
+interface AwakeningCamera {
+  readonly initialZoom?: number;
+  /** If the pullback was skipped, return from the camera's current framing. */
+  readonly returnZoom?: number;
+}
+
+export function awakeningFrame(
+  t: number,
+  kind: AwakeningKind = "shrine",
+  { initialZoom = 0, returnZoom }: AwakeningCamera = {},
+): AwakeningFrame {
   const timing = timingOf(kind);
   const waveStart = timing.zoomOut;
   const holdStart = waveStart + timing.wave;
   const zoomInStart = holdStart + timing.hold;
   if (t >= awakeningTotal(kind)) return { progress: 1, zoom: 0, done: true };
-  if (t < waveStart) return { progress: 0, zoom: ease(clamp01(t / timing.zoomOut)), done: false };
-  if (t < holdStart) return { progress: sweep(clamp01((t - waveStart) / timing.wave)), zoom: 1, done: false };
-  if (t < zoomInStart) return { progress: 1, zoom: 1, done: false };
-  return { progress: 1, zoom: 1 - ease(clamp01((t - zoomInStart) / timing.zoomIn)), done: false };
+
+  const peakZoom = kind === "landmark" ? LANDMARK_PEAK_ZOOM : 1;
+  const pullback = kind === "landmark" ? LANDMARK_PULLBACK_SECONDS : timing.zoomOut;
+  const zoom = t < zoomInStart
+    ? initialZoom + (peakZoom - initialZoom) * ease(clamp01(t / pullback))
+    : (returnZoom ?? peakZoom) * (1 - ease(clamp01((t - zoomInStart) / timing.zoomIn)));
+  const progress = sweep(clamp01((t - waveStart) / timing.wave));
+  return { progress, zoom, done: false };
 }
 
 /** The time to jump to when the player skips ahead: the region is energised, the camera returns. */

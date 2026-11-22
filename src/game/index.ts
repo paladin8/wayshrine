@@ -13,6 +13,7 @@ export {
   isRestored,
   newGame,
   recordBoatLaunch,
+  recordSnowshoeUse,
   resetGame,
   resetShrines,
   restoreShrine,

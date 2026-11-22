@@ -172,9 +172,6 @@ gv={}
 for j in range(NG+1):
     for i in range(NG+1):
         x=-9.6+i*GS; y=-9.6+j*GS
-        s_=abs(x)+abs(y)
-        if s_>18.0:
-            e=(s_-18.0)/2; x-=math.copysign(e,x); y-=math.copysign(e,y)
         gv[(i,j)]=(x,y,H(x,y))
 gverts=[]; gid={}
 for k,v in gv.items(): gid[k]=len(gverts); gverts.append(v)
@@ -190,8 +187,8 @@ for j in range(NG):
             gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.02 else "snow")
 emit(gverts,gf,gm,orient=False)
 def octo(z,h=9.6,ch=1.2):
-    a=h-ch
-    return [(-a,-h,z),(a,-h,z),(h,-a,z),(h,a,z),(a,h,z),(-a,h,z),(-h,a,z),(-h,-a,z)]
+    # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
+    return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)
 # moat water, and stone revetments along its outer banks
 emit([(MS[0],MS[2],WATER_Z),(MS[1],MS[2],WATER_Z),(MS[1],MS[3],WATER_Z),(MS[0],MS[3],WATER_Z)],[[0,1,2,3]],["water"],orient=False)

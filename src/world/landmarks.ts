@@ -1,5 +1,5 @@
 import { createRng } from "../core";
-import { regionId, type Point, type RegionCoord } from "./coords";
+import { REGION_SIZE, regionId, type Point, type RegionCoord } from "./coords";
 import { groundOf } from "./landmark-ground";
 import { canTraverse, type Biome, type Capability } from "./terrain";
 import type { Region } from "./world";
@@ -144,11 +144,12 @@ export function footprintHalf(landmark: LandmarkSpec): number {
 }
 
 /**
- * The largest footprint half-width a model may use. A landmark stands at its region's site, and the nearest
- * possible region boundary is REGION_SIZE * (0.5 - SITE_JITTER) = 19.2 units from it, so the footprint and its
- * slope (LANDMARK_BLEND) still fit inside the region.
+ * The largest footprint half-width a model may use. A landmark stands at its cell's centre and its region claims
+ * the footprint plus its slope (LANDMARK_BLEND). Landmarks are at least REGION_SIZE apart (64, even when adjacent),
+ * and a neighbour's shrine is at least REGION_SIZE * (1 - SITE_JITTER) - SHRINE_OFFSET = 37.2 away, so a claim of
+ * up to REGION_SIZE / 2 overlaps neither another landmark's nor a shrine's plateau.
  */
-export const MAX_FOOTPRINT_HALF = 19.2 - LANDMARK_BLEND;
+export const MAX_FOOTPRINT_HALF = REGION_SIZE / 2 - LANDMARK_BLEND;
 
 /** Monuments keep clear of a landmark's footprint and its slope (Chebyshev distance from the site). */
 export function monumentClearance(landmark: LandmarkSpec): number {

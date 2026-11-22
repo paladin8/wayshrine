@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { CHUNK_SIZE, MONUMENT_CLEARING, propsInChunk, type Monument, type Prop, type PropKind, type Terrain } from "../world";
+import { CHUNK_SIZE, MONUMENT_CLEARING, propsInChunk, type Biome, type Monument, type Prop, type PropKind, type Terrain } from "../world";
+import { biomePropLook, biomePropParts } from "./biome-props";
 import { addMonument } from "./monument-mesh";
 import { palette } from "./palette";
 import { at, box, cone, cylinder, ico, type Part } from "./shapes";
@@ -66,12 +67,12 @@ function partsFor(kind: PropKind, variant: number): Part[] {
 }
 
 const partCache = new Map<string, Part[]>();
-function cachedParts(kind: PropKind, variant: number): Part[] {
-  const bucket = kind === "tree" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
-  const key = `${kind}:${bucket}`;
+function cachedParts(kind: PropKind, look: string, variant: number): Part[] {
+  const bucket = look !== kind || kind === "tree" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
+  const key = `${look}:${bucket}`;
   let parts = partCache.get(key);
   if (!parts) {
-    parts = partsFor(kind, bucket);
+    parts = biomePropParts(look, bucket) ?? partsFor(kind, bucket);
     partCache.set(key, parts);
   }
   return parts;
@@ -88,8 +89,9 @@ const SWAY_HEIGHT: Partial<Record<PropKind, number>> = {
   pine: 1.7,
 };
 
-function addProp(builder: VitalityBuilder, p: Prop): void {
-  const height = SWAY_HEIGHT[p.kind];
+function addProp(builder: VitalityBuilder, p: Prop, biome: Biome): void {
+  const look = biomePropLook(biome, p.kind);
+  const height = look === "cedar" ? 4.2 : look === "cattail" ? 1 : SWAY_HEIGHT[p.kind];
   const motion = height ? {
     sway: { baseY: p.y, height: height * p.scale },
     bloomBase: p.kind === "flower" ? p.y : undefined,
@@ -99,7 +101,7 @@ function addProp(builder: VitalityBuilder, p: Prop): void {
     new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotation),
     new THREE.Vector3(p.scale, p.scale, p.scale),
   );
-  for (const part of cachedParts(p.kind, p.variant)) {
+  for (const part of cachedParts(p.kind, look, p.variant)) {
     const geo = part.geometry.index ? part.geometry.toNonIndexed() : part.geometry.clone();
     instance.multiplyMatrices(place, part.matrix);
     geo.applyMatrix4(instance);
@@ -122,7 +124,7 @@ export function buildPropChunk(
 ): VitalityMesh | null {
   const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
   const clearings = monuments.map((m) => ({ x: m.x, z: m.z, radius: MONUMENT_CLEARING }));
-  for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p);
+  for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p, terrain.world.regionById(p.regionId).biome);
   for (const m of monuments) {
     if (Math.floor(m.x / CHUNK_SIZE) === cx && Math.floor(m.z / CHUNK_SIZE) === cz) addMonument(builder, m);
   }

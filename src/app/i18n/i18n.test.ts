@@ -14,7 +14,7 @@ function allText(m: Messages): string[] {
     m.blocked("X", "Y"),
     m.landmarksRestored(7),
     ...Object.values(m.notebook),
-    ...Object.values(m.boatReveal),
+    ...Object.values(m.gearReveal).flatMap(Object.values),
     m.promptRestore,
     m.promptRestoreLandmark,
     m.promptSkip,

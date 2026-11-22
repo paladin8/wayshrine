@@ -10,6 +10,9 @@ import horyuJi from "./landmark-grounds/horyu-ji.json";
 import hirosakiCastle from "./landmark-grounds/hirosaki-castle.json";
 import shirakawaGo from "./landmark-grounds/shirakawa-go.json";
 import matsumotoCastle from "./landmark-grounds/matsumoto-castle.json";
+import zaoJuhyo from "./landmark-grounds/zao-juhyo.json";
+import kenrokuEn from "./landmark-grounds/kenroku-en.json";
+import mountFuji from "./landmark-grounds/mount-fuji.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -53,6 +56,9 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   "hirosaki-castle": hirosakiCastle as unknown as LandmarkGround,
   "shirakawa-go": shirakawaGo as unknown as LandmarkGround,
   "matsumoto-castle": matsumotoCastle as unknown as LandmarkGround,
+  "zao-juhyo": zaoJuhyo as unknown as LandmarkGround,
+  "kenroku-en": kenrokuEn as unknown as LandmarkGround,
+  "mount-fuji": mountFuji as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

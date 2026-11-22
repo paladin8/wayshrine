@@ -20,6 +20,7 @@ import {
   onWater,
   planBoatLaunch,
   recordBoatLaunch,
+  recordSnowshoeUse,
   nextShrine,
   requirementOf,
   resetGame,
@@ -38,13 +39,13 @@ import {
   type GameState,
   type SaveData,
 } from "../game";
-import { createCuePlayer, createMusic, MUSIC_SETS, musicSetFor, type CueId, type MusicSet } from "../audio";
+import { createCuePlayer, createMusic, MUSIC_SETS, musicSetFor, type CueId, type MusicSet, type TrackId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
 import { CAPABILITY_THRESHOLDS, capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
-import { messagesFor } from "./i18n";
+import { messagesFor, type Messages } from "./i18n";
 import { createMinimap } from "./minimap";
 import { createMonumentUi } from "./monuments-ui";
 import { createNotebook } from "./notebook";
@@ -54,11 +55,13 @@ import { createSettingsPanel } from "./settings-panel";
 const HINT_SECONDS = 1.5;
 const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   meadow: "walk-meadow",
+  snow: "walk-snow",
   water: "row-water",
 };
 const MOVEMENT_FADE_IN = 0.65;
 const MOVEMENT_FADE_OUT = 0.85;
-const BOAT_REVEAL_SECONDS = 3;
+type GearReveal = keyof Messages["gearReveal"];
+const GEAR_REVEAL_SECONDS = 3;
 const OVERVIEW_SECONDS = 3;
 const OVERVIEW_FADE_SECONDS = 0.5;
 
@@ -67,17 +70,26 @@ function overviewZoomAt(elapsed: number): number {
   return t * t * (3 - 2 * t);
 }
 const AWAKENING_BURST = "awakening-burst";
-const ALL_AWAKENING_CUES: readonly CueId[] = [
-  AWAKENING_BURST,
-  ...MUSIC_SETS.flatMap(({ awakening }) => [awakening.shrine, awakening.landmark]),
-];
+const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
+  shrine: "dawn-reverence",
+  landmark: "radiant-arrival",
+};
+const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS)] as const;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
-const VOYAGE_DUCK = 0.16;
+const GEAR_MUSIC_DUCK = 0.16;
 // The supplied cue has a long decay. Bring the new score up while the tail is still audible.
 const VOYAGE_RELEASE_START = 3.3;
 const VOYAGE_RELEASE_SECONDS = 3.2;
+const SNOWSHOE_RELEASE_START = 4;
+const SNOWSHOE_RELEASE_SECONDS = 3.2;
+
+function gearMusicDuck(elapsed: number | null, start: number, duration: number): number {
+  if (elapsed === null) return 1;
+  const release = Math.min(1, Math.max(0, (elapsed - start) / duration));
+  return GEAR_MUSIC_DUCK + (1 - GEAR_MUSIC_DUCK) * release;
+}
 
 const KEY_UP = ["KeyW", "ArrowUp"];
 const KEY_DOWN = ["KeyS", "ArrowDown"];
@@ -206,39 +218,51 @@ export function startApp(container: HTMLElement): void {
     t: number;
     /** Zoom at activation, so restoring during an overview continues from the current view. */
     initialZoom: number;
+    returnZoom?: number;
     /** How visible a landmark's name is, 0 to 1; eased so it fades and a skip does not pop it. */
     caption: number;
     /** Set when the sequence is skipped before the name appeared, so it is not shown late. */
     captionOff: boolean;
-    readonly unlocksBoat: boolean;
-    readonly musicSet: MusicSet;
+    readonly unlocksGear: GearReveal | null;
+    readonly backgroundTrack: TrackId;
   } | null = null;
-  let boatRevealLeft = 0;
+  let gearReveal: { gear: GearReveal; left: number } | null = null;
   let boatVoyage: { readonly path: BoatLaunch; readonly preview: boolean; t: number } | null = null;
   // A debug voyage gives temporary water access, without writing that voyage to the save.
   let boatTrial = false;
-  const momentBusy = (): boolean => awakening !== null || boatRevealLeft > 0 || boatVoyage !== null;
+  let snowshoeMusicPreview = false;
+  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial;
-    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch);
+    const afterSnow = snowshoeMusicPreview || (!boatTrial && state.snowshoesUsed);
+    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow);
   };
 
   const startVoyage = (path: BoatLaunch, preview = false): void => {
     // If this save is already on the later score, let the debug run fade back to theme one first.
-    const lead = preview && debugMusicIndex < 0 && music.status().track === musicSetFor(true).background ? -3.1 : 0;
+    const playing = music.status().track;
+    const lead = preview && debugMusicIndex < 0 && playing && playing !== musicSetFor(false, false).background ? -3.1 : 0;
     boatVoyage = { path, preview, t: lead };
     pos = path.from;
     facing = path.facing;
     overviewTime = OVERVIEW_SECONDS;
+    snowshoeMusicPreview = false;
+    cues.stop("first-snowshoe", 0.25);
     if (lead === 0) cues.play("first-voyage");
   };
 
-  const stopBoatMoments = (): void => {
-    boatRevealLeft = 0;
+  const stopGearMoments = (): void => {
+    gearReveal = null;
     boatVoyage = null;
     boatTrial = false;
+    snowshoeMusicPreview = false;
     cues.stop("first-voyage", 0.25);
+    cues.stop("first-snowshoe", 0.25);
+  };
+  const playSnowshoeCue = (): void => {
+    cues.stop("first-voyage", 0.25);
+    cues.play("first-snowshoe");
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
@@ -289,7 +313,7 @@ export function startApp(container: HTMLElement): void {
     const beginPreview = (): void => {
       awakening = null;
       ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.25));
-      stopBoatMoments();
+      stopGearMoments();
       overviewTime = OVERVIEW_SECONDS;
       panel.close();
       notebook.close();
@@ -298,9 +322,9 @@ export function startApp(container: HTMLElement): void {
       if (minimap.isExpanded()) minimap.toggleExpanded();
       music.unlock();
     };
-    const previewBoatUnlock = (): void => {
+    const previewGearUnlock = (gear: GearReveal): void => {
       beginPreview();
-      boatRevealLeft = BOAT_REVEAL_SECONDS;
+      gearReveal = { gear, left: GEAR_REVEAL_SECONDS };
     };
     const previewFirstVoyage = (): void => {
       const caps = new Set<Capability>(["boat"]);
@@ -329,7 +353,7 @@ export function startApp(container: HTMLElement): void {
 
     const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
-      stopBoatMoments();
+      stopGearMoments();
       state = revealLandmarks(next(state), world);
       overviewTime = OVERVIEW_SECONDS;
       saveGame(state);
@@ -351,8 +375,14 @@ export function startApp(container: HTMLElement): void {
       },
       readRubbing: readRubbingHere,
       goToTarget: goToNextShrine,
-      previewBoatUnlock,
+      previewBoatUnlock: () => previewGearUnlock("boat"),
+      previewSnowshoeUnlock: () => previewGearUnlock("snowshoes"),
       previewFirstVoyage,
+      previewSnowshoeMusic: () => {
+        beginPreview();
+        snowshoeMusicPreview = true;
+        playSnowshoeCue();
+      },
       cycleMusic: () => {
         music.unlock();
         debugMusicIndex = debugMusicIndex + 1 < MUSIC_SETS.length ? debugMusicIndex + 1 : -1;
@@ -362,7 +392,7 @@ export function startApp(container: HTMLElement): void {
     debugPanel = createDebugPanel(container, actions, () => down.clear());
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => { stopBoatMoments(); pos = { x, z }; }, restore, ...actions },
+      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => { stopGearMoments(); pos = { x, z }; }, restore, ...actions },
     });
   }
 
@@ -411,24 +441,30 @@ export function startApp(container: HTMLElement): void {
       if (awakening) {
         // Once the camera has pulled back, the sequence can be skipped to its end.
         if (awakening.t > timingOf(awakening.kind).zoomOut) {
-          awakening.t = skipTarget(awakening.t, awakening.kind);
+          const target = skipTarget(awakening.t, awakening.kind);
+          if (target > awakening.t) {
+            awakening.returnZoom = awakeningFrame(awakening.t, awakening.kind, awakening).zoom;
+            awakening.t = target;
+          }
           cues.stop(AWAKENING_BURST, SWELL_SKIP_FADE);
-          cues.stop(awakening.musicSet.awakening[awakening.kind], SWELL_SKIP_FADE);
+          cues.stop(AWAKENING_SWELLS[awakening.kind], SWELL_SKIP_FADE);
           if (awakening.caption < 0.05) awakening.captionOff = true;
         }
       } else if (!momentBusy()) {
         const region = shrineInReach(terrain, pos);
         if (region && !isRestored(state, region)) {
-          const unlocksBoat = region.landmark !== null && landmarksRestored(state, world) === CAPABILITY_THRESHOLDS.boat - 1;
           restore(region.id);
           const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
+          const count = kind === "landmark" ? landmarksRestored(state, world) : 0;
+          const unlocksGear = count === CAPABILITY_THRESHOLDS.boat ? "boat"
+            : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes" : null;
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
-          const musicSet = selectedMusicSet();
-          awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false, unlocksBoat, musicSet };
+          const backgroundTrack = selectedMusicSet().background;
+          awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false, unlocksGear, backgroundTrack };
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           cues.play(AWAKENING_BURST);
-          cues.play(musicSet.awakening[kind]);
+          cues.play(AWAKENING_SWELLS[kind]);
         } else {
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
@@ -488,6 +524,10 @@ export function startApp(container: HTMLElement): void {
       facing = Math.atan2(dir.x, dir.z);
       if (caps.has("boat") && !state.boatLaunched && !boatTrial && !onWater(terrain, from) && onWater(terrain, pos)) {
         startVoyage(planBoatLaunch(terrain, caps, obstacles, from, pos));
+      } else if (moving && caps.has("snowshoes") && !state.snowshoesUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "snow") {
+        state = recordSnowshoeUse(state);
+        saveGame(state);
+        playSnowshoeCue();
       }
       if (moved.blockedBy) {
         blockedBy = moved.blockedBy;
@@ -515,20 +555,20 @@ export function startApp(container: HTMLElement): void {
         }
       }
     }
-    boatRevealLeft = Math.max(0, boatRevealLeft - dt);
+    if (gearReveal) {
+      gearReveal.left -= dt;
+      if (gearReveal.left <= 0) gearReveal = null;
+    }
 
     let scene: { regionId: string; progress: number; zoom: number } | undefined;
     if (awakening) {
       awakening.t += dt;
-      const f = awakeningFrame(awakening.t, awakening.kind);
+      const f = awakeningFrame(awakening.t, awakening.kind, awakening);
       if (f.done) {
-        if (awakening.unlocksBoat) boatRevealLeft = BOAT_REVEAL_SECONDS;
+        if (awakening.unlocksGear) gearReveal = { gear: awakening.unlocksGear, left: GEAR_REVEAL_SECONDS };
         awakening = null;
       } else {
-        const zoom = awakening.t < timingOf(awakening.kind).zoomOut
-          ? awakening.initialZoom + (1 - awakening.initialZoom) * f.zoom
-          : f.zoom;
-        scene = { regionId: awakening.regionId, progress: f.progress, zoom };
+        scene = { regionId: awakening.regionId, progress: f.progress, zoom: f.zoom };
       }
     }
 
@@ -596,7 +636,7 @@ export function startApp(container: HTMLElement): void {
       compass,
       prompt: reading ? null : prompt,
       hint: reading || momentBusy() ? null : hint,
-      boatReveal: boatRevealLeft > 0 ? prefs.language : null,
+      gearReveal: gearReveal && { gear: gearReveal.gear, locale: prefs.language },
       landmarkName: nameModel,
       nearLandmarkName: nearModel,
       messages: t,
@@ -604,8 +644,9 @@ export function startApp(container: HTMLElement): void {
     });
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
-    // Finish a restoration in the set it started in, even if debug changes the next set.
-    music.setTrack((awakening?.musicSet ?? selectedMusicSet()).background);
+    if (snowshoeMusicPreview && cues.elapsed("first-snowshoe") === null) snowshoeMusicPreview = false;
+    // Keep the background steady through a restoration if debug selects another track.
+    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background);
     const nextMovementCue = moving && !voyageFrame
       ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
       : undefined;
@@ -616,10 +657,12 @@ export function startApp(container: HTMLElement): void {
     }
     cues.update(dt);
     const audible = cues.playing();
-    const voyageTime = cues.elapsed("first-voyage");
-    const release = voyageTime === null ? 1 : Math.min(1, Math.max(0, (voyageTime - VOYAGE_RELEASE_START) / VOYAGE_RELEASE_SECONDS));
-    const voyageDuck = VOYAGE_DUCK + (1 - VOYAGE_DUCK) * release;
-    music.setDuck(ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : voyageDuck);
+    const swellDuck = ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : 1;
+    music.setDuck(Math.min(
+      swellDuck,
+      gearMusicDuck(cues.elapsed("first-voyage"), VOYAGE_RELEASE_START, VOYAGE_RELEASE_SECONDS),
+      gearMusicDuck(cues.elapsed("first-snowshoe"), SNOWSHOE_RELEASE_START, SNOWSHOE_RELEASE_SECONDS),
+    ));
     music.update(dt);
 
     stage.render(dt, {

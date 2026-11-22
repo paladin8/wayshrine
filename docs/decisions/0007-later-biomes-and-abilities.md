@@ -11,7 +11,7 @@ Status: accepted. Extends [0006](0006-landmarks-and-progression.md).
 | marsh | geta | 20 | V | low, wet ground; props are reeds and bushes |
 | forest | lantern | 30 | VI | the dark forest: dense trees |
 | volcanic | ash sandals | 41 | VII | basalt and ash, rock and crags |
-| sea | ship | 49 | VIII | like water, deeper; a shrine stands on an islet |
+| sea | ship | 49 | VIII | deeper water; an ordinary shrine can be restored from the ship |
 | dunes | nothing | | VIII | sand; only ever a landmark's own region (Tottori) |
 
 - **Far sight.** At 56 restored landmarks (the end of act VIII) every unrestored landmark is marked on the map. It opens no terrain, so the planner is unaffected. Travel from the expanded map to restored shrines already exists and is not gated.

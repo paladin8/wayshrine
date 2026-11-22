@@ -1,6 +1,6 @@
 import { createNoise, createRng, type Rng } from "../core";
 import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
-import { footprintHalf, HOME_RADIUS, LANDMARK_REACH_MARGIN, planLandmarks, type Landmark, type LandmarkLayout } from "./landmarks";
+import { footprintHalf, HOME_RADIUS, LANDMARK_BLEND, LANDMARK_REACH_MARGIN, planLandmarks, type Landmark, type LandmarkLayout } from "./landmarks";
 import type { Biome } from "./terrain";
 
 /** A region is the area energised by one shrine. Regions tile the infinite plane. */
@@ -158,11 +158,13 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
     if (hit) return hit;
     const rng = root.fork(`region:${id}`);
     const jitter = SITE_JITTER * REGION_SIZE;
-    const site: Point = {
+    const jittered: Point = {
       x: (rx + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
       z: (rz + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
     };
     const landmark = landmarkAt(id);
+    // A landmark stands at its cell's centre, so its region has room for a large footprint (MAX_FOOTPRINT_HALF).
+    const site: Point = landmark ? { x: (rx + 0.5) * REGION_SIZE, z: (rz + 0.5) * REGION_SIZE } : jittered;
     let shrine = site;
     if (!landmark && (rx !== 0 || rz !== 0)) {
       const placement = rng.fork("shrine");
@@ -196,9 +198,10 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
         const r = region(cx + dx, cz + dz);
         const sx = Math.abs(r.shrine.x - x);
         const sz = Math.abs(r.shrine.z - z);
-        // Keep each saved shrine and its approach in the same region.
+        // Keep each saved shrine and its approach in the same region; a landmark's region holds its whole
+        // footprint and the slope round it, so the slope never meets another region's ground.
         if (r.landmark) {
-          if (Math.max(sx, sz) <= footprintHalf(r.landmark) + LANDMARK_REACH_MARGIN) return r;
+          if (Math.max(sx, sz) <= footprintHalf(r.landmark) + Math.max(LANDMARK_BLEND, LANDMARK_REACH_MARGIN)) return r;
         } else if (sx * sx + sz * sz <= 16) {
           return r;
         }

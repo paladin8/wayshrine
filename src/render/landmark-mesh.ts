@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { lifeAt } from "../game";
 import type { Obstacle } from "../world";
+import { appendAnimalObstacles } from "./animal-collision";
+import { createAnimalModels, type AnimalModel } from "./animal-models";
 import type { ShrineMesh } from "./shrine-mesh";
 import { palette } from "./palette";
 import { deadOf } from "./vitality-mesh";
@@ -53,12 +55,12 @@ interface ModelCollider {
  * to its authored one with the region's life (as props do), and `glow_*`
  * parts light up and flare while it wakes.
  */
-function adopt(root: THREE.Object3D): { tinted: Tinted[]; colliders: ModelCollider[] } {
+function adopt(root: THREE.Object3D, replaced: ReadonlySet<THREE.Object3D>): { tinted: Tinted[]; colliders: ModelCollider[] } {
   const tinted = new Map<THREE.Material, Tinted>();
   const colliders: ModelCollider[] = [];
   root.traverse((o) => {
     const { collisionRadius, collisionHalfLength } = o.userData;
-    if (typeof collisionRadius === "number" && collisionRadius > 0 && typeof collisionHalfLength === "number") {
+    if (!replaced.has(o) && typeof collisionRadius === "number" && collisionRadius > 0 && typeof collisionHalfLength === "number") {
       colliders.push({ node: o, radius: collisionRadius, halfLength: collisionHalfLength });
     }
     if (!(o instanceof THREE.Mesh)) return;
@@ -73,6 +75,52 @@ function adopt(root: THREE.Object3D): { tinted: Tinted[]; colliders: ModelCollid
     tinted.set(material, { material, alive: material.color.clone(), dead: deadOf(material.color), glows });
   });
   return { tinted: [...tinted.values()], colliders };
+}
+
+const SHARED_DEER_LANDMARKS = new Set(["todai-ji-daibutsu", "itsukushima-torii"]);
+
+interface LandmarkDeer {
+  readonly anchor: THREE.Object3D;
+  readonly model: AnimalModel;
+  readonly previous: THREE.Vector3;
+  phase: number;
+}
+
+/** Retain the exported paths while replacing the visible actors. */
+function replaceLandmarkDeer(root: THREE.Object3D) {
+  const anchors: THREE.Object3D[] = [];
+  root.traverse(node => {
+    if (/^deer_\d+$/.test(node.name) && typeof node.userData.collisionRadius === "number") anchors.push(node);
+  });
+  const retiredTracks = new Set<string>();
+  if (!anchors.length) return { deer: [], retiredTracks };
+  const models = createAnimalModels();
+  const deer: LandmarkDeer[] = anchors.map((anchor, i) => {
+    for (const child of [...anchor.children]) {
+      child.traverse(node => {
+        retiredTracks.add(node.name);
+        retiredTracks.add(node.uuid);
+      });
+      anchor.remove(child);
+    }
+    const model = models.build("deer", i === 0);
+    // Blender's authored paths point along local X. The shared model faces local Z.
+    model.group.rotation.y = Math.PI / 2;
+    anchor.add(model.group);
+    return { anchor, model, previous: anchor.position.clone(), phase: 0 };
+  });
+  return { deer, retiredTracks };
+}
+
+function poseLandmarkDeer(deer: readonly LandmarkDeer[], time: number, dt: number): void {
+  deer.forEach((animal, index) => {
+    const { position, scale } = animal.anchor;
+    const travel = dt > 0 ? Math.hypot(position.x - animal.previous.x, position.z - animal.previous.z) : 0;
+    const gait = dt > 0 ? Math.min(1, travel / (dt * 1.15)) : 0;
+    animal.phase = dt > 0 ? animal.phase + travel * 2 * Math.PI / (0.64 * scale.x) : 0;
+    animal.model.pose(time + index * 2.1, gait, animal.phase);
+    animal.previous.copy(position);
+  });
 }
 
 /**
@@ -90,6 +138,8 @@ export function buildLandmark(id: string): ShrineMesh {
   let progress = 0;
   let mixer: THREE.AnimationMixer | null = null;
   let animationStart: number | null = null;
+  let lastAnimationTime = 0;
+  let deer: readonly LandmarkDeer[] = [];
 
   const apply = (): void => {
     const v = lifeAt(progress, 0);
@@ -112,11 +162,23 @@ export function buildLandmark(id: string): ShrineMesh {
         if (!group.parent) return;
         group.remove(stand.group);
         group.add(gltf.scene);
-        model = adopt(gltf.scene);
+        const replacement = SHARED_DEER_LANDMARKS.has(id) ? replaceLandmarkDeer(gltf.scene) : null;
+        deer = replacement?.deer ?? [];
+        model = adopt(gltf.scene, new Set(deer.map(animal => animal.anchor)));
         if (gltf.animations.length) {
           mixer = new THREE.AnimationMixer(gltf.scene);
-          for (const clip of gltf.animations) mixer.clipAction(clip).play();
+          for (const clip of gltf.animations) {
+            if (!replacement) {
+              mixer.clipAction(clip).play();
+              continue;
+            }
+            const tracks = clip.tracks.filter(track =>
+              !replacement.retiredTracks.has(THREE.PropertyBinding.parseTrackName(track.name).nodeName),
+            );
+            if (tracks.length) mixer.clipAction(new THREE.AnimationClip(clip.name, clip.duration, tracks, clip.blendMode)).play();
+          }
           mixer.setTime(0);
+          poseLandmarkDeer(deer, 0, 0);
         }
         apply();
       },
@@ -128,10 +190,11 @@ export function buildLandmark(id: string): ShrineMesh {
     group,
     appendObstaclesNear(x, z, reach, out: Obstacle[]) {
       if (!model) return;
+      for (const animal of deer) appendAnimalObstacles(animal.model.group, "deer", x, z, reach, out);
       for (const { node, radius, halfLength } of model.colliders) {
         node.updateWorldMatrix(true, false);
         const r = radius * scratch.setFromMatrixScale(node.matrixWorld).x;
-        // Overlapping discs follow the length and heading of the deer.
+        // Use the axis specified by the authored collider.
         for (const dx of [-halfLength, 0, halfLength]) {
           scratch.set(dx, 0, 0).applyMatrix4(node.matrixWorld);
           if (Math.hypot(x - scratch.x, z - scratch.z) <= reach + r) {
@@ -149,10 +212,15 @@ export function buildLandmark(id: string): ShrineMesh {
       if (!mixer) return;
       if (progress >= 1) {
         animationStart ??= seconds;
-        mixer.setTime(seconds - animationStart);
+        const time = seconds - animationStart;
+        mixer.setTime(time);
+        poseLandmarkDeer(deer, time, time - lastAnimationTime);
+        lastAnimationTime = time;
       } else if (animationStart !== null) {
         animationStart = null;
+        lastAnimationTime = 0;
         mixer.setTime(0);
+        poseLandmarkDeer(deer, 0, 0);
       }
     },
   };

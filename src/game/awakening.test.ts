@@ -82,10 +82,46 @@ describe("awakening timeline", () => {
 
   it("times a landmark's own timeline: its frames, its skip target, its end", () => {
     const t = timingOf("landmark");
-    expect(awakeningFrame(t.zoomOut + t.wave + t.hold / 2, "landmark")).toMatchObject({ progress: 1, zoom: 1 });
+    const hold = awakeningFrame(t.zoomOut + t.wave + t.hold / 2, "landmark");
+    expect(hold).toMatchObject({ progress: 1, done: false });
+    expect(hold.zoom).toBeLessThan(0.6);
     expect(awakeningFrame(awakeningTotal("landmark"), "landmark").done).toBe(true);
     expect(awakeningFrame(awakeningTotal("shrine") + 0.1, "landmark").done).toBe(false);
     expect(skipTarget(2, "landmark")).toBe(t.zoomOut + t.wave + t.hold);
+  });
+
+  it("pulls back more slowly for a closer landmark shot while the wave starts", () => {
+    const atLaunch = awakeningFrame(AWAKENING_LANDMARK.zoomOut, "landmark");
+    const earlyWave = awakeningFrame(2.5, "landmark");
+    const settled = awakeningFrame(3.5, "landmark");
+    expect(atLaunch.progress).toBe(0);
+    expect(earlyWave.progress).toBeGreaterThan(0);
+    expect(earlyWave.zoom).toBeGreaterThan(atLaunch.zoom);
+    expect(earlyWave.zoom).toBeLessThan(settled.zoom);
+    expect(settled.zoom).toBeGreaterThan(0.4);
+    expect(settled.zoom).toBeLessThan(0.6);
+  });
+
+  it("eases into a landmark shot from the current overview zoom", () => {
+    const overview = 0.9;
+    const start = awakeningFrame(0, "landmark", { initialZoom: overview });
+    const waveStart = awakeningFrame(AWAKENING_LANDMARK.zoomOut, "landmark", { initialZoom: overview });
+    const afterLaunch = awakeningFrame(AWAKENING_LANDMARK.zoomOut + 0.001, "landmark", { initialZoom: overview });
+    const settled = awakeningFrame(3.5, "landmark", { initialZoom: overview });
+    expect(start.zoom).toBe(overview);
+    expect(waveStart.zoom).toBeLessThan(overview);
+    expect(waveStart.zoom).toBeGreaterThan(settled.zoom);
+    expect(afterLaunch.zoom).toBeCloseTo(waveStart.zoom, 3);
+  });
+
+  it("returns smoothly when a landmark pullback is skipped early", () => {
+    const t = 1.35;
+    const current = awakeningFrame(t, "landmark").zoom;
+    const skip = skipTarget(t, "landmark");
+    const returning = { returnZoom: current };
+    expect(awakeningFrame(skip, "landmark", returning)).toMatchObject({ progress: 1, zoom: current });
+    expect(awakeningFrame(skip + 0.5, "landmark", returning).zoom).toBeLessThan(current);
+    expect(awakeningFrame(awakeningTotal("landmark"), "landmark", returning).zoom).toBe(0);
   });
 
   it("finishes the energy just before the swell crests", () => {

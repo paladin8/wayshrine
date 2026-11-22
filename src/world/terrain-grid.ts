@@ -9,6 +9,9 @@ export const CHUNK_SIZE = 16;
 
 /** Within this distance of a shrine the ground is flat, so the shrine has a base. */
 export const PLATEAU_RADIUS = 2.5;
+/** Keep the gate above the nearby slope, then blend its terrace into the hill. */
+const SHRINE_SURVEY_RADIUS = 6.75;
+const SHRINE_APPROACH = 8;
 
 /**
  * Distance from a point to the edge of its region's flat plateau; negative on
@@ -111,7 +114,9 @@ export function createTerrain(world: World): Terrain {
       const width = rng.range(4.5, 8);
       const depth = rng.range(3.5, 6.5);
       const rise = rng.range(0.9, 1.8);
-      if (Math.hypot(x - region.shrine.x, z - region.shrine.z) < 12) continue;
+      // Leave room to bring a boat alongside the shrine from any direction.
+      const islandClearance = Math.max(12, 5.5 + 1.2 * Math.max(width, depth));
+      if (Math.hypot(x - region.shrine.x, z - region.shrine.z) < islandClearance) continue;
       if (islands.some((other) => Math.hypot(x - other.x, z - other.z) < 13)) continue;
       const points = [[x, z], [x - width - 2, z], [x + width + 2, z], [x, z - depth - 2], [x, z + depth + 2]] as const;
       if (points.some(([px, pz]) => world.regionAt(px, pz) !== region)) continue;
@@ -159,6 +164,28 @@ export function createTerrain(world: World): Terrain {
     }
   }
 
+  const shrineTerraces = new WeakMap<Region, number>();
+
+  function shrineTerrace(region: Region): number {
+    const cached = shrineTerraces.get(region);
+    if (cached !== undefined) return cached;
+    const { x, z } = region.shrine;
+    let height = plateauBase(region);
+    // Use tile centres, the same points sampled to build surrounding terrain.
+    for (let tz = Math.floor(z - SHRINE_SURVEY_RADIUS); tz <= Math.floor(z + SHRINE_SURVEY_RADIUS); tz++) {
+      for (let tx = Math.floor(x - SHRINE_SURVEY_RADIUS); tx <= Math.floor(x + SHRINE_SURVEY_RADIUS); tx++) {
+        const px = tx + 0.5;
+        const pz = tz + 0.5;
+        if ((px - x) ** 2 + (pz - z) ** 2 > SHRINE_SURVEY_RADIUS ** 2) continue;
+        const biome = world.regionAt(px, pz).biome;
+        if (!isWater(biome)) height = Math.max(height, natural(px, pz, biome));
+      }
+    }
+    height += 0.06;
+    shrineTerraces.set(region, height);
+    return height;
+  }
+
   function sample(tx: number, tz: number) {
     const x = tx + 0.5;
     const z = tz + 0.5;
@@ -167,20 +194,28 @@ export function createTerrain(world: World): Terrain {
     const model = region.landmark ? groundOf(region.landmark.id) : undefined;
     // Terrain sunk under a model's own ground must lie wholly inside its footprint: a tile straddling the edge
     // would leave a trench between the model and the lawn, so it belongs to the blend instead.
-    const onPlateau = away <= (model && !model.terrainSurface ? -0.5 : 0);
+    const water = isWater(region.biome);
+    const onPlateau = (!water || region.landmark !== null) && away <= (model && !model.terrainSurface ? -0.5 : 0);
     const dx = x - region.shrine.x;
     const dz = z - region.shrine.z;
     // A model's own sea, at the region's water level: open water, the same as around it.
     const level = landmarkWaterLevel(region.biome);
     const open =
       onPlateau && !!model && !model.terrainSurface && level !== undefined && surfaceHeight(model, dx, dz) <= level + 0.01;
-    // A shrine in a water region stands on an islet, reachable only by boat.
-    let biome: Biome = onPlateau && isWater(region.biome) && !open ? "meadow" : region.biome;
+    // Ordinary water shrines sit on the surface. Only landmark footprints can make dry land here.
+    let biome: Biome = onPlateau && water && !open ? "meadow" : region.biome;
     let height: number;
     let skirt = false;
     let shore = false;
     let shoal = 0;
-    if (onPlateau) {
+    const landShrine = !region.landmark && !water;
+    if (landShrine && away < SHRINE_APPROACH) {
+      const base = shrineTerrace(region);
+      const t = Math.max(0, away / SHRINE_APPROACH);
+      const k = t * t * (3 - 2 * t);
+      height = base + (natural(x, z, biome) - base) * k;
+      skirt = !onPlateau;
+    } else if (onPlateau) {
       if (open) {
         height = natural(x, z, region.biome);
         shore = true;
@@ -208,7 +243,8 @@ export function createTerrain(world: World): Terrain {
       skirt = !isWater(biome);
     } else if (isWater(biome)) {
       height = PLATEAU_HEIGHT[biome];
-      const rise = Math.max(islandRelief(region, x, z), !model ? Math.max(0, 0.72 - away * 0.25) : 0);
+      const landmarkRim = region.landmark && !model ? Math.max(0, 0.72 - away * 0.25) : 0;
+      const rise = Math.max(islandRelief(region, x, z), landmarkRim);
       if (rise > 0.24) {
         height += rise;
         biome = "meadow";
@@ -220,7 +256,7 @@ export function createTerrain(world: World): Terrain {
     } else {
       height = natural(x, z, biome);
     }
-    return { region, biome, height, skirt, shore, shoal };
+    return { region, biome, height, skirt, shore, shoal, terrace: landShrine && onPlateau };
   }
 
   function tileAt(tx: number, tz: number): Tile {
@@ -239,6 +275,7 @@ export function createTerrain(world: World): Terrain {
     let shore = Infinity;
     for (const [dx, dz] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
       const t = sample(cx + dx, cz + dz);
+      if (t.terrace) return t.height;
       if (t.skirt) {
         sum += t.height;
         n++;

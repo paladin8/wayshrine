@@ -1,7 +1,7 @@
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
 import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
-import type { Biome } from "./terrain";
+import { isWater, type Biome } from "./terrain";
 
 export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern"] as const;
 export type PropKind = (typeof PROP_KINDS)[number];
@@ -140,20 +140,20 @@ export function propsInChunk(
     }
   }
 
-  // Lanterns for every shrine whose lanterns fall in this chunk.
+  // Freestanding lanterns for land shrines whose lanterns fall in this chunk.
   const rxMin = Math.floor(x0 / REGION_SIZE) - 1;
   const rxMax = Math.floor((x0 + CHUNK_SIZE) / REGION_SIZE) + 1;
   const rzMin = Math.floor(z0 / REGION_SIZE) - 1;
   const rzMax = Math.floor((z0 + CHUNK_SIZE) / REGION_SIZE) + 1;
   for (let rz = rzMin; rz <= rzMax; rz++) {
     for (let rx = rxMin; rx <= rxMax; rx++) {
-      const { shrine, id, landmark } = world.region(rx, rz);
-      if (landmark) continue; // the landmark is the shrine, and has no lanterns
+      const { shrine, id, landmark, biome } = world.region(rx, rz);
+      if (landmark || isWater(biome)) continue;
       for (const a of LANTERN_ANGLES) {
         const x = shrine.x + Math.cos(a) * LANTERN_RADIUS;
         const z = shrine.z + Math.sin(a) * LANTERN_RADIUS;
         if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
-        props.push({ kind: "lantern", x, y: terrain.tileAtPoint(x, z).height, z, scale: 1, rotation: a, variant: 0.5, regionId: id });
+        props.push({ kind: "lantern", x, y: terrain.groundAt(x, z), z, scale: 1, rotation: a, variant: 0.5, regionId: id });
       }
     }
   }

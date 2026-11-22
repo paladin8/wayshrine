@@ -107,7 +107,10 @@ export const en: Messages = {
     next: "Next page",
     close: "Close",
   },
-  boatReveal: { title: "Boat unlocked", hint: "Walk into the water to launch." },
+  gearReveal: {
+    boat: { title: "Boat unlocked", hint: "Walk into the water to launch." },
+    snowshoes: { title: "Snowshoes unlocked", hint: "Walk onto snow to use them." },
+  },
   promptRestore: "Press E to restore the shrine",
   promptRestoreLandmark: "Press E to restore the landmark",
   promptSkip: "Press E to skip",

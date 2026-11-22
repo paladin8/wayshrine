@@ -107,7 +107,10 @@ export const ja: Messages = {
     next: "次のページ",
     close: "閉じる",
   },
-  boatReveal: { title: "小舟を手に入れた", hint: "水辺から水に入ると、舟に乗れます。" },
+  gearReveal: {
+    boat: { title: "小舟を手に入れた", hint: "水辺から水に入ると、舟に乗れます。" },
+    snowshoes: { title: "かんじきを手に入れた", hint: "雪の上を歩くと、かんじきを使えます。" },
+  },
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",
   promptSkip: "Eキーでスキップ",

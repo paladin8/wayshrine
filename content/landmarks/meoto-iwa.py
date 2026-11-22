@@ -119,7 +119,7 @@ EXTRA_SOLIDS=[]
 # region's water level (landmarkWaterLevel in terrain-grid.ts), so the model slots into the game's water.
 # The land carries the shrine and a promenade facing the rocks, which stand in the sea off its shore.
 LV=-0.6; FLOOR=LV-0.5
-IC=(4.2,3.4); IRX,IRY=4.5,5.0
+IC=(4.2,3.0); IRX,IRY=4.5,4.6   # keeps the outer 1.2 of the footprint open water
 def isl_m(x,y):
     dx=(x-IC[0])/IRX; dy=(y-IC[1])/IRY; th=math.atan2(dy,dx)
     return math.hypot(dx,dy)/(1+0.07*math.sin(3*th+0.4)+0.05*math.sin(5*th+1.3)+0.03*math.sin(8*th+0.2))

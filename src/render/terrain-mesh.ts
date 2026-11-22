@@ -1,30 +1,8 @@
-import * as THREE from "three";
-import { CHUNK_SIZE, isWater, type Biome, type Terrain, type Tile } from "../world";
-import { palette } from "./palette";
+import { CHUNK_SIZE, type Terrain } from "../world";
+import { biomeArt } from "./biome-art";
 import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
-const BIOME_COLOR: Readonly<Record<Biome, number>> = {
-  meadow: palette.grass,
-  water: palette.water,
-  snow: palette.snow,
-  mountain: palette.rock,
-  marsh: palette.marsh,
-  forest: palette.forest,
-  volcanic: palette.ash,
-  sea: palette.sea,
-  dunes: palette.sand,
-};
-
 const SIDE_SHADE = 0.8;
-
-/** Per-tile lightness variation so flat colour still reads as facets. */
-function tileColor(tx: number, tz: number, tile: Tile): THREE.Color {
-  const jitter = (((tx * 73856093) ^ (tz * 19349663)) & 7) / 7;
-  const c = new THREE.Color(BIOME_COLOR[tile.biome]);
-  if (tile.shoal) c.lerp(new THREE.Color(0x8bc4b1), tile.shoal * 0.56);
-  const heightLift = isWater(tile.biome) ? 0 : Math.min(0.10, (tile.height - 1) * 0.04);
-  return c.offsetHSL(0, 0, (jitter - 0.5) * 0.05 + heightLift);
-}
 
 type V = readonly [number, number, number];
 
@@ -52,22 +30,20 @@ export function buildTerrainChunk(
   vitalityOf: (regionId: string) => number,
 ): VitalityMesh {
   const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
+  const art = biomeArt(terrain);
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
       const tile = terrain.tileAt(tx, tz);
-      const top = tileColor(tx, tz, tile);
-      if (tile.biome === "meadow" && isWater(terrain.world.regionById(tile.regionId).biome)) {
-        top.lerp(new THREE.Color(palette.sand), Math.max(0, 1.05 - tile.height) * 1.3);
-      }
+      const top = art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
       const side = top.clone().multiplyScalar(SIDE_SHADE);
       const c = terrain.corners(tx, tz);
       builder.addTriangles(
         quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]),
         top,
         tile.regionId,
-        isWater(tile.biome) ? { water: true } : undefined,
+        tile.biome === "water" || tile.biome === "sea" ? { water: tile.biome } : undefined,
       );
 
       // A side face wherever this tile's edge stands above its neighbour's, down to the neighbour's edge.

@@ -232,6 +232,25 @@ describe("landmark as shrine", () => {
     }
   });
 
+  it("allows a boat to reach and activate the lake and sea shrines from the water", () => {
+    const terrain = createTerrain(createWorld("wayshrine"));
+    const solids = createObstacles(terrain, planMonuments(terrain, []));
+    for (const [rx, rz, biome, cap] of [[-6, -9, "water", "boat"], [18, 2, "sea", "ship"]] as const) {
+      const region = terrain.world.region(rx, rz);
+      const { x, z } = region.shrine;
+      const start = { x, z: z + 5 };
+      const caps = new Set<Capability>([cap]);
+      expect(shrineInReach(terrain, start)).toBeNull();
+      expect(blockerAt(terrain, none, start.x, start.z)).toBe(biome);
+      const arrived = movePlayer(start, { x: 0, z: -1 }, 5 / PLAYER_SPEED, terrain, caps, solids);
+      expect(arrived.blockedBy).toBeNull();
+      expect(shrineInReach(terrain, arrived.pos)).toBe(region);
+      expect(terrain.tileAtPoint(arrived.pos.x, arrived.pos.z).biome).toBe(biome);
+      if (biome === "water") expect(arrived.pos.z).toBeGreaterThan(z + 1.2);
+      else expect(arrived.pos.z).toBeCloseTo(z);
+    }
+  });
+
   it("keeps the usual activation radius for ordinary shrines", () => {
     const region = terrain.world.region(0, 0);
     const { x, z } = region.shrine;

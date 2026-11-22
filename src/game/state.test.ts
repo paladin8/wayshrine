@@ -12,6 +12,7 @@ import {
   isLandmarkRevealed,
   isRestored,
   newGame,
+  recordSnowshoeUse,
   resetGame,
   resetShrines,
   restoreShrine,
@@ -73,6 +74,18 @@ describe("game state", () => {
     const loaded = deserialize(JSON.parse(JSON.stringify(serialize(s))));
     expect(loaded.seed).toBe(s.seed);
     expect([...loaded.restored].sort()).toEqual([...s.restored].sort());
+  });
+
+  it("records snowshoe first use once, survives reload, and defaults old saves to unused", () => {
+    const original = withLandmarks(CAPABILITY_THRESHOLDS.snowshoes);
+    expect(original.snowshoesUsed).toBe(false);
+    const used = recordSnowshoeUse(original);
+    expect(recordSnowshoeUse(used)).toBe(used);
+    const { snowshoesUsed: _absent, ...old } = serialize(used);
+    expect(deserialize(old, world).snowshoesUsed).toBe(false);
+    expect(deserialize(serialize(used), world).snowshoesUsed).toBe(true);
+    expect(resetShrines(used).snowshoesUsed).toBe(false);
+    expect(resetGame(used).snowshoesUsed).toBe(false);
   });
 
   it("rejects unknown save versions", () => {

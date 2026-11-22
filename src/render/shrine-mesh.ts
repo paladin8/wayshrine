@@ -1,10 +1,10 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { lifeAt } from "../game";
-import type { Obstacle } from "../world";
+import type { Biome, Obstacle } from "../world";
 import { palette } from "./palette";
-
-const DEAD_RED = new THREE.Color(0x77716e);
-const DEAD_ROOF = new THREE.Color(0x4a4644);
+import { modelShrine } from "./shrine-styles";
+import { deadOf } from "./vitality-mesh";
 
 export interface ShrineMesh {
   readonly group: THREE.Group;
@@ -16,44 +16,74 @@ export interface ShrineMesh {
   tick(seconds: number): void;
 }
 
-/** A small torii-style shrine with a floating orb of energy. */
-export function buildShrine(): ShrineMesh {
+/** A biome-specific gate with a floating orb. All static parts use one vertex-coloured mesh. */
+export function buildShrine(biome: Biome): ShrineMesh {
   const group = new THREE.Group();
-  const redMat = new THREE.MeshStandardMaterial({ color: palette.red, flatShading: true });
-  const roofMat = new THREE.MeshStandardMaterial({ color: palette.roof, flatShading: true });
-  const stoneMat = new THREE.MeshStandardMaterial({ color: palette.rock, flatShading: true });
+  group.name = `${biome} shrine`;
+  const pieces: THREE.BufferGeometry[] = [];
+  const dormant: number[] = [];
+  const xAxis = new THREE.Vector3(1, 0, 0);
+
+  const piece = (geo: THREE.BufferGeometry, hex: number, x: number, y: number, z: number): void => {
+    geo.translate(x, y, z);
+    const color = new THREE.Color(hex);
+    const dead = deadOf(color);
+    const count = geo.getAttribute("position").count;
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      color.toArray(colors, i * 3);
+      dormant.push(dead.r, dead.g, dead.b);
+    }
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    pieces.push(geo);
+  };
+
+  modelShrine(biome, {
+    box(w, h, d, color, x, y, z, pitch = 0) {
+      piece(new THREE.BoxGeometry(w, h, d).rotateX(pitch), color, x, y, z);
+    },
+    round(top, bottom, h, sides, color, x, y, z) {
+      piece(new THREE.CylinderGeometry(top, bottom, h, sides), color, x, y, z);
+    },
+    timber(start, end, w, d, color) {
+      const a = new THREE.Vector3(...start);
+      const b = new THREE.Vector3(...end);
+      const direction = b.clone().sub(a);
+      const geo = new THREE.BoxGeometry(direction.length(), w, d);
+      geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(xAxis, direction.normalize()));
+      const centre = a.lerp(b, 0.5);
+      piece(geo, color, centre.x, centre.y, centre.z);
+    },
+  });
+
+  const geometry = mergeGeometries(pieces);
+  for (const part of pieces) part.dispose();
+  const gate = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }));
+  gate.castShadow = true;
+  gate.receiveShadow = true;
+  group.add(gate);
+  const colors = geometry.getAttribute("color") as THREE.BufferAttribute;
+  colors.setUsage(THREE.DynamicDrawUsage);
+  const restored = colors.array.slice();
+
   const orbMat = new THREE.MeshStandardMaterial({
     color: palette.cream,
     emissive: palette.glow,
     emissiveIntensity: 0,
     flatShading: true,
   });
-
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number): THREE.Mesh => {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x, y, z);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    group.add(m);
-    return m;
-  };
-
-  add(new THREE.CylinderGeometry(1.5, 1.7, 0.2, 8), stoneMat, 0, 0.1, 0);
-  for (const x of [-0.9, 0.9]) add(new THREE.CylinderGeometry(0.14, 0.17, 2.4, 6), redMat, x, 1.4, 0);
-  add(new THREE.BoxGeometry(2.4, 0.16, 0.2), redMat, 0, 2.1, 0);
-  add(new THREE.BoxGeometry(3.0, 0.22, 0.4), roofMat, 0, 2.7, 0);
-  const orb = add(new THREE.IcosahedronGeometry(0.32, 0), orbMat, 0, 1.4, 0);
+  const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 0), orbMat);
+  orb.position.y = 1.4;
+  orb.castShadow = true;
+  group.add(orb);
 
   let vitality = 0;
-  const alive = new THREE.Color(palette.red);
-  const aliveRoof = new THREE.Color(palette.roof);
-
   const setVitality = (progress: number): void => {
     // The shrine sits at the centre of the field, so it wakes first.
     const v = lifeAt(progress, 0);
     vitality = v;
-    redMat.color.copy(DEAD_RED).lerp(alive, v);
-    roofMat.color.copy(DEAD_ROOF).lerp(aliveRoof, v);
+    for (let i = 0; i < restored.length; i++) colors.array[i] = THREE.MathUtils.lerp(dormant[i]!, restored[i]!, v);
+    colors.needsUpdate = true;
     // While the energy is being released the orb flares, then settles.
     const flare = progress > 0 && progress < 0.35 ? Math.sin((progress / 0.35) * Math.PI) : 0;
     orbMat.emissiveIntensity = 1.2 * v + 3.2 * flare;

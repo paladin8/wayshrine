@@ -127,8 +127,8 @@ H=lambda x,y: 0.0   # everything outside the pond sits on flat ground
 
 # base slab sides (top at z=0, 1 unit below ground); the top surface is the garden grid
 def octo(z,h=9.6,ch=1.2):
-    a=h-ch
-    return [(-a,-h,z),(a,-h,z),(h,-a,z),(h,a,z),(a,h,z),(-a,h,z),(-h,a,z),(-h,-a,z)]
+    # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
+    return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)
 
 # garden ground: jittered low-poly grid, flat at z=0, dipping to the pond bed
@@ -139,9 +139,6 @@ for j in range(NG+1):
         x=-9.6+i*GS; y=-9.6+j*GS
         if 0<i<NG and 0<j<NG:
             x+=rng.uniform(-0.22,0.22); y+=rng.uniform(-0.22,0.22)
-        s=abs(x)+abs(y)
-        if s>18.0:
-            e=(s-18.0)/2; x-=math.copysign(e,x); y-=math.copysign(e,y)
         gv[(i,j)]=(x,y,ground(x,y))
 gverts=[]; gid={}
 for k,v in gv.items(): gid[k]=len(gverts); gverts.append(v)

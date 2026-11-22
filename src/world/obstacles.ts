@@ -31,7 +31,7 @@ const PROP_RADIUS: Partial<Record<PropKind, number>> = {
 };
 
 /** The two pillars of a shrine's torii, either side of its centre; the gap between them stays open. */
-const SHRINE_PILLAR_OFFSET = 0.9;
+export const SHRINE_PILLAR_OFFSET = 0.9;
 const SHRINE_PILLAR_RADIUS = 0.22;
 const MONUMENT_RADIUS = 0.65;
 const MAX_RADIUS = LANDMARK_SOLID_RADIUS;
@@ -65,7 +65,7 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
     const rzMax = Math.floor(((cz + 1) * CHUNK_SIZE) / REGION_SIZE) + 1;
     for (let rz = rzMin; rz <= rzMax; rz++) {
       for (let rx = rxMin; rx <= rxMax; rx++) {
-        const { shrine, landmark } = world.region(rx, rz);
+        const { shrine, landmark, biome } = world.region(rx, rz);
         if (landmark) {
           // The landmark is the shrine: no gate pillars. A crafted model brings its own solids.
           const model = groundOf(landmark.id);
@@ -75,6 +75,13 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
             for (const [sx, sz, r] of model.solids) {
               if (inside(shrine.x + sx, shrine.z + sz)) list.push({ x: shrine.x + sx, z: shrine.z + sz, r });
             }
+          }
+          continue;
+        }
+        if (biome === "water") {
+          // Three overlapping discs keep the boat beside the lake shrine's dock.
+          for (const dx of [-0.68, 0, 0.68]) {
+            if (inside(shrine.x + dx, shrine.z + 0.12)) list.push({ x: shrine.x + dx, z: shrine.z + 0.12, r: 0.91 });
           }
           continue;
         }

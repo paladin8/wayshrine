@@ -18,6 +18,7 @@ export interface GameState {
   readonly collected: readonly string[];
   /** The first boat launch ceremony has been completed in this save. */
   readonly boatLaunched: boolean;
+  readonly snowshoesUsed: boolean;
 }
 
 /** A region counts as seen when the player is within this distance of its shrine. */
@@ -27,7 +28,7 @@ export const REVEAL_DISTANCE = 28;
 const RUBBINGS_PER_REVEAL = 7;
 
 export function newGame(seed: string): GameState {
-  return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [], boatLaunched: false };
+  return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [], boatLaunched: false, snowshoesUsed: false };
 }
 
 /** Restores a region's shrine. Restoring twice has no further effect. */
@@ -115,6 +116,11 @@ export function recordBoatLaunch(state: GameState): GameState {
   return state.boatLaunched ? state : { ...state, boatLaunched: true };
 }
 
+/** Records the first step with snowshoes. */
+export function recordSnowshoeUse(state: GameState): GameState {
+  return state.snowshoesUsed ? state : { ...state, snowshoesUsed: true };
+}
+
 /** Un-restores one shrine or landmark. For debugging. */
 export function unrestoreShrine(state: GameState, region: Region): GameState {
   if (!state.restored.has(region.id)) return state;
@@ -125,8 +131,8 @@ export function unrestoreShrine(state: GameState, region: Region): GameState {
 
 /** Un-restores every shrine, keeping what has been explored. For debugging. */
 export function resetShrines(state: GameState): GameState {
-  if (state.restored.size === 0 && state.revealedLandmarks.size === 0 && state.shrineCredits === 0 && !state.boatLaunched) return state;
-  return { ...state, restored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, boatLaunched: false };
+  if (state.restored.size === 0 && state.revealedLandmarks.size === 0 && state.shrineCredits === 0 && !state.boatLaunched && !state.snowshoesUsed) return state;
+  return { ...state, restored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, boatLaunched: false, snowshoesUsed: false };
 }
 
 /** Back to a brand-new game on the same seed. For debugging. */
@@ -179,6 +185,7 @@ export interface SaveV3 {
 
 export interface SaveV4 extends Omit<SaveV3, "v"> {
   readonly boatLaunched?: boolean;
+  readonly snowshoesUsed?: boolean;
   readonly v: 4;
   readonly revealedLandmarks: readonly string[];
   readonly shrineCredits: number;
@@ -196,6 +203,7 @@ export function serialize(state: GameState): SaveV4 {
     revealedLandmarks: [...state.revealedLandmarks],
     shrineCredits: state.shrineCredits,
     boatLaunched: state.boatLaunched,
+    snowshoesUsed: state.snowshoesUsed,
   };
 }
 
@@ -211,7 +219,12 @@ export function deserialize(data: SaveData, world?: World): GameState {
   const current = world?.seed === seed ? world : createWorld(seed);
   if (v === 4) {
     const shrineCredits = Number.isSafeInteger(data.shrineCredits) ? Math.max(0, data.shrineCredits) : 0;
-    return revealLandmarks({ ...state, shrineCredits, boatLaunched: data.boatLaunched === true }, current);
+    return revealLandmarks({
+      ...state,
+      shrineCredits,
+      boatLaunched: data.boatLaunched === true,
+      snowshoesUsed: data.snowshoesUsed === true,
+    }, current);
   }
   if (state.restored.size === 0) return revealLandmarks(state, current);
   const previous = createWorld(seed, "spread");

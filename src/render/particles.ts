@@ -8,6 +8,8 @@ export const enum Kind {
   Spark,
   Front,
   Ash,
+  Mist,
+  Spray,
 }
 
 const VERTEX = `
@@ -116,7 +118,7 @@ export class ParticleLayer {
       this.colors[i * 4 + 1] = p.g;
       this.colors[i * 4 + 2] = p.b;
       this.colors[i * 4 + 3] = Math.max(0, a);
-      this.sizes[i] = p.size;
+      this.sizes[i] = p.size * (p.kind === Kind.Mist ? 0.8 + t * 0.8 : 1);
     }
     const g = this.points.geometry;
     g.getAttribute("position").needsUpdate = true;
@@ -155,8 +157,20 @@ export function stepParticle(p: Particle, dt: number): boolean {
       break;
     case Kind.Ash:
       p.y += p.vy * dt;
-      p.x += breeze * dt;
-      p.z += Math.cos(p.age + p.phase) * 0.37 * dt;
+      p.x += (0.19 + breeze * 0.8) * dt;
+      p.z -= (0.13 + Math.cos(p.age + p.phase) * 0.28) * dt;
+      break;
+    case Kind.Mist:
+      p.x += (0.31 + Math.cos(p.phase) * 0.16) * dt;
+      p.z += Math.sin(p.phase + p.age * 0.38) * 0.13 * dt;
+      p.y += p.vy * dt;
+      break;
+    case Kind.Spray:
+      p.x += Math.cos(p.phase) * 1.5 * dt;
+      p.z += Math.sin(p.phase) * 1.5 * dt;
+      p.y += p.vy * dt;
+      p.vy -= 2.1 * dt;
+      if (p.y < p.ground) return false;
       break;
     case Kind.Spark:
     case Kind.Front:

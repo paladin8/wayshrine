@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createWorld } from "./world";
 import { PLATEAU_RADIUS, CHUNK_SIZE, createTerrain } from "./terrain-grid";
 import { propsInChunk, type PropKind } from "./props";
-import type { Biome } from "./terrain";
+import { isWater, type Biome } from "./terrain";
 
 const ALLOWED: Record<Biome, readonly PropKind[]> = {
   meadow: ["tree", "bush", "flower", "lantern"],
@@ -53,19 +53,22 @@ describe("propsInChunk", () => {
     }
   });
 
-  it("places four lanterns around every shrine, and none at a landmark", () => {
+  it("places freestanding lanterns around ordinary land shrines only", () => {
+    const terrain = createTerrain(createWorld("wayshrine"));
     const world = terrain.world;
-    for (let rx = -2; rx <= 2; rx++) {
-      for (let rz = -2; rz <= 2; rz++) {
-        const { shrine, id, landmark } = world.region(rx, rz);
-        let count = 0;
-        for (let cx = Math.floor(shrine.x / CHUNK_SIZE) - 1; cx <= Math.floor(shrine.x / CHUNK_SIZE) + 1; cx++) {
-          for (let cz = Math.floor(shrine.z / CHUNK_SIZE) - 1; cz <= Math.floor(shrine.z / CHUNK_SIZE) + 1; cz++) {
-            count += propsInChunk(terrain, cx, cz).filter((p) => p.kind === "lantern" && p.regionId === id).length;
-          }
+    const regions = [
+      ...Array.from({ length: 25 }, (_, i) => world.region(Math.floor(i / 5) - 2, i % 5 - 2)),
+      world.region(-6, -9),
+      world.region(18, 2),
+    ];
+    for (const { shrine, id, landmark, biome } of regions) {
+      let count = 0;
+      for (let cx = Math.floor(shrine.x / CHUNK_SIZE) - 1; cx <= Math.floor(shrine.x / CHUNK_SIZE) + 1; cx++) {
+        for (let cz = Math.floor(shrine.z / CHUNK_SIZE) - 1; cz <= Math.floor(shrine.z / CHUNK_SIZE) + 1; cz++) {
+          count += propsInChunk(terrain, cx, cz).filter((p) => p.kind === "lantern" && p.regionId === id).length;
         }
-        expect(count).toBe(landmark ? 0 : 4);
       }
+      expect(count).toBe(landmark || isWater(biome) ? 0 : 4);
     }
   });
 

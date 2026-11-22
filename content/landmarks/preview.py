@@ -6,7 +6,8 @@ from mathutils import Vector, Euler
 D=os.path.dirname(bpy.data.filepath)
 sc=bpy.context.scene
 col=bpy.data.collections.new("preview_rig"); sc.collection.children.link(col)
-cam_d=bpy.data.cameras.new("PreviewCam"); cam_d.type='ORTHO'; cam_d.ortho_scale=16.0; cam_d.sensor_fit='VERTICAL'
+cam_d=bpy.data.cameras.new("PreviewCam"); cam_d.type='ORTHO'; cam_d.ortho_scale=float(os.environ.get("FI_ORTHO","16.0"));   # FI_ORTHO for an overview of a large footprint
+cam_d.sensor_fit='VERTICAL'
 cam_d.clip_start=0.1; cam_d.clip_end=300
 cam=bpy.data.objects.new("PreviewCam",cam_d); col.objects.link(cam)
 cam.rotation_euler=Euler((math.radians(54.7),0,math.radians(45)),'XYZ')
@@ -17,9 +18,9 @@ cam.location=up*VCENTER - fwd*60
 sc.camera=cam
 if os.environ.get("FI_GROUND"):
     # stand-in for the game's terrain under terrainSurface models (preview only; the .blend is not saved)
-    gm=bpy.data.meshes.new("PreviewGround"); h=9.8
+    gm=bpy.data.meshes.new("PreviewGround"); h=float(os.environ.get("FI_HALF","9.6"))+0.2   # FI_HALF for a larger footprint
     gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
-    gc={"snow":(0.88,0.91,0.93,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow for a snow region
+    gc={"snow":(0.88,0.91,0.93,1),"mountain":(0.235,0.22,0.22,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow|mountain for those regions
     mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=gc
     p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=gc; p.inputs["Roughness"].default_value=1.0
     gm.materials.append(mat); g=bpy.data.objects.new("PreviewGround",gm); col.objects.link(g)

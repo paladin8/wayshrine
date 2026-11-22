@@ -9,7 +9,7 @@
 - `?debug` exposes `window.wayshrine.music.status()`.
 
 ## Cues
-`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). The awakening swells duck the music to 4%, and the first-voyage ceremony ducks it to 16%.
+`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). The awakening swells duck the music to 4%, and gear first-use cues duck it to 16%.
 
 | Cue id | File | Notes |
 | --- | --- | --- |
@@ -22,27 +22,28 @@ Sync rule: cues are all started when the awakening starts (the burst is padded t
 
 ## Movement sounds
 
-Meadow steps and lake rowing loop while the player moves on the corresponding terrain. The loops play at about one-third gain, fade in over 0.65 s, and fade out over 0.85 s on stop or when changing surfaces. They stay quiet during the first-voyage ceremony. They use the sound-effects slider and mute setting. Other biomes have no movement clips yet.
+Meadow steps, snow footsteps, and lake rowing loop while the player moves on the corresponding terrain. The loops play at about one-third gain, fade in over 0.65 s, and fade out over 0.85 s on stop or when changing surfaces. They stay quiet during the first-voyage ceremony. They use the sound-effects slider and mute setting. Other biomes have no movement clips yet.
 
-The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3` and `sound_of_water_light_#1-1795381169811.mp3`. The game assets are trimmed, gain-matched WAVs with short edge fades in `public/audio/cues/`.
+The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `footsteps_in_snow_#1-1795389766172.mp3`, and `sound_of_water_light_#1-1795381169811.mp3`. The game assets are trimmed, gain-matched WAVs with short edge fades in `public/audio/cues/`.
 
 ## Music sets
 
-| Background | Tonal center | Shrine swell | Landmark swell |
-| --- | --- | --- | --- |
-| Homeward Breeze | D | `dawn-reverence` | `radiant-arrival` |
-| Waves Beyond the Headlands | A | `dawn-reverence-a` | `radiant-arrival-a` |
+All background tracks use **Dawn Reverence** for shrines and **Radiant Arrival** for landmarks, with the same awakening burst.
 
-The A variants are rendered as stereo WAVs in `public/audio/cues/`. Each is shifted down five semitones and keeps the original length and crest timing. Both sets use the same awakening burst.
-
-In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), and **Waves** (Waves Beyond the Headlands). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows the first voyage and the saved launch flag.
+In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), and **Snowline** (Snowline Walk). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
 
 ## Boat prototype
 
-The score stays on **Homeward Breeze** after earning the boat. The first boarding plays **Crossing at Dawn** (`public/audio/cues/crossing-at-dawn.mp3`, supplied by the project owner, 10 s). As the skiff pushes off, the background crossfades to **Waves Beyond the Headlands** under the cue. The second theme comes up during the quiet tail, from 3.3 to 6.5 s, and persists in the save once the launch finishes. Click **…** in the debug box to open **Gear acquisition**. Choosing either preview closes the dialog before it starts.
+The score stays on **Homeward Breeze** after earning the boat. The first boarding plays **Crossing at Dawn** (`public/audio/cues/crossing-at-dawn.mp3`, supplied by the project owner, 10 s). As the skiff pushes off, the background crossfades to **Waves Beyond the Headlands** under the cue. The second theme comes up during the quiet tail, from 3.3 to 6.5 s, and persists in the save once the launch finishes. Click **…** in the debug box to open **Gear acquisition**. Choosing a preview closes the dialog before it starts.
+
+## First snowshoe use
+
+The first moving step on snow after earning snowshoes plays **Trail Through Fresh Snow** (`public/audio/cues/trail-through-fresh-snow.mp3`, supplied by the project owner, 10 s). **Snowline Walk** starts crossfading underneath it. The duck releases from 4.0 to 7.2 s of cue playback, as the cue tails off. The first step is saved immediately, and Snowline remains the background theme on reload or after leaving snow.
+
+In **Gear acquisition**, **Preview snowshoe music** auditions the transition without updating the save. In Auto, the normal score returns when the preview cue ends. Choose **Snowline** in the music selector to keep auditioning the background track.
 
 ## Code
-- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched)`, the set selection for each stage.
+- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
 - `src/app/settings.ts`, `src/app/settings-panel.ts`: persisted settings and the dialog that edits them.
 
@@ -53,16 +54,17 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | --- | --- | --- |
 | `homeward-breeze` | `homeward-breeze.mp3` | Pastoral background track made by the project owner with ElevenLabs Music (plan tier and licence terms to be confirmed before release; see the Project doc `music-generation-plan`). 3:00, 192 kbps stereo MP3, about -15 LUFS integrated, true peak -1.1 dBFS. Starts with about 1.5 s near-silence and ends on a roughly 6 s fade-out. Used before the first voyage. |
 | `waves-beyond-the-headlands` | `waves-beyond-the-headlands.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Plays after the first departure. |
+| `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
 
 Record the origin and licence of each track here when it is added.
 
 ## Adding a track
 1. Put the file in `public/audio/music/`.
 2. Add its id to `TRACK_IDS` and its URL to `TRACKS`.
-3. Add a `MUSIC_SETS` entry pairing the track with its shrine and landmark cues, then choose when to use it in `musicSetFor`.
+3. Add a `MUSIC_SETS` entry for the track, then choose when to use it in `musicSetFor`.
 4. Note it in the table above.
 
 ## Plan
 Pre-rendered tracks per biome and phase in a shared tonal palette, not generative synthesis. The production plan, tool research and prompts live in the Wayshrine Project doc `music-generation-plan`. Planned post-processing: loudness normalisation, silence trimming, loop crossfades and ogg/mp3 encoding.
 
-Landmarks have their own timeline (`AWAKENING_LANDMARK` in `game/awakening.ts`), timed to `radiant-arrival` by the same rule: its crest is at `SWELL_CRESTS.landmark` (10.0 s in the file, heard about `SWELL_LAG` later), so the wave takes 10.8 s and ends at 12.0 s, a typical far edge is lit at about 10.5 s, and the hold is 3.5 s (to 15.5 s). The landmark name starts fading in at 10.3 s, `CAPTION_LEAD` (1.7 s) before the wave ends, and fades out as the camera returns. Ordinary shrines keep the 8.8 s wave and now hold for 1.5 s (it was 3 s); only landmarks keep the long pause. `awakening.test.ts` checks both timelines against their crests.
+Landmarks have their own timeline (`AWAKENING_LANDMARK` in `game/awakening.ts`), timed to `radiant-arrival` by the same rule: its crest is at `SWELL_CRESTS.landmark` (10.0 s in the file, heard about `SWELL_LAG` later), so the wave takes 10.8 s and ends at 12.0 s. The closer landmark framing settles over the first 3.2 s, overlapping the beginning of the wave. A typical far edge is lit at about 10.5 s, and the hold is 3.5 s (to 15.5 s). The landmark name starts fading in at 10.3 s, `CAPTION_LEAD` (1.7 s) before the wave ends, and fades out as the camera returns. Ordinary shrines keep the 8.8 s wave and now hold for 1.5 s (it was 3 s); only landmarks keep the long pause. `awakening.test.ts` checks both timelines against their crests.

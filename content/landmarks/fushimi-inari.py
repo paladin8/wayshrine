@@ -128,8 +128,6 @@ for j in range(NY):
             x+=rng.uniform(-0.25,0.25); y+=rng.uniform(-0.22,0.22)
             jz=rng.uniform(-0.12,0.12)
         else: jz=0.0
-        if abs(x)+y>18.0:
-            e=(abs(x)+y-18.0)/2; x-=math.copysign(e,x); y-=e
         gv[(i,j)]=(x,y,Ha(x,y)+(jz if math.hypot(x-SHX,y-SHY)>2.8 else 0.0))
 verts=[]; vid={}
 for key,v in gv.items(): vid[key]=len(verts); verts.append(v)
@@ -163,8 +161,8 @@ H=Hm
 
 # base slab: top at z=0, sides 1 unit below ground
 def octo(z,h=9.6,ch=1.2):
-    a=h-ch
-    return [(-a,-h,z),(a,-h,z),(h,-a,z),(h,a,z),(a,h,z),(-a,h,z),(-h,a,z),(-h,-a,z)]
+    # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
+    return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt="foliage")
 
 # forecourt, steps, gate platform

@@ -1,4 +1,5 @@
 import { monumentsAroundChunk, type MonumentPlan, type Terrain } from "../world";
+import { buildBiomeDetails } from "./biome-details";
 import { buildPropChunk } from "./prop-mesh";
 import { buildTerrainChunk } from "./terrain-mesh";
 import { combine, type VitalityMesh } from "./vitality-mesh";
@@ -12,7 +13,10 @@ export function buildChunk(
   monuments: MonumentPlan,
 ): VitalityMesh {
   const parts = [buildTerrainChunk(terrain, cx, cz, vitalityOf)];
-  const props = buildPropChunk(terrain, cx, cz, vitalityOf, monumentsAroundChunk(monuments, cx, cz));
+  const nearby = monumentsAroundChunk(monuments, cx, cz);
+  const props = buildPropChunk(terrain, cx, cz, vitalityOf, nearby);
   if (props) parts.push(props);
+  const details = buildBiomeDetails(terrain, cx, cz, vitalityOf, nearby);
+  if (details) parts.push(details);
   return combine(parts);
 }

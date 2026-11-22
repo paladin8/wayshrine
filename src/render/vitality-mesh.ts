@@ -58,9 +58,10 @@ float gust = pow(0.5 + 0.5 * sin(uTime * 0.72 + lifeWorld.x * 0.071 - lifeWorld.
 float wind = sin(uTime * 1.7 + lifePhase) + 0.45 * sin(uTime * 2.9 - lifePhase * 1.7);
 transformed.x += wind * (0.035 + 0.115 * gust) * aMotion.x * aLife;
 transformed.z += cos(uTime * 1.3 + lifePhase * 0.8) * (0.025 + 0.10 * gust) * aMotion.x * aLife;
-float swell = sin(uTime * 1.6 + lifeWorld.x * 0.51 - lifeWorld.z * 0.36);
+float ocean = step(1.5, aMotion.y);
+float swell = sin(uTime * mix(1.6, 1.05, ocean) + lifeWorld.x * mix(0.51, 0.33, ocean) - lifeWorld.z * 0.36);
 float ripple = cos(uTime * 2.65 + lifeWorld.z * 0.96 + lifeWorld.x * 0.29);
-transformed.y += (swell * (0.023 + 0.037 * gust) + ripple * 0.022) * aMotion.y * aLife;
+transformed.y += (swell * (0.022 + 0.037 * gust + ocean * 0.054) + ripple * mix(0.018, 0.01, ocean)) * step(0.5, aMotion.y) * aLife;
 transformed.y -= aMotion.z * (1.0 - smoothstep(0.17, 0.82, aLife));`,
     );
 };
@@ -73,7 +74,7 @@ export interface Motion {
   /** Vertices sway more the higher they are above `baseY`, reaching full sway at `height`. */
   readonly sway?: { readonly baseY: number; readonly height: number };
   /** The triangles are a water surface. */
-  readonly water?: boolean;
+  readonly water?: "water" | "sea";
   /** Plants that grow above this height as the land wakes. */
   readonly bloomBase?: number;
 }
@@ -116,7 +117,7 @@ export class VitalityBuilder {
       this.distance.push(Math.hypot(x - site.x, z - site.z));
       const sway = motion?.sway ? Math.min(1, Math.max(0, (y - motion.sway.baseY) / motion.sway.height)) ** 1.5 : 0;
       const bloom = motion?.bloomBase === undefined ? 0 : Math.max(0, y - motion.bloomBase + 0.10);
-      this.motion.push(sway, motion?.water ? 1 : 0, bloom);
+      this.motion.push(sway, motion?.water === "sea" ? 2 : Number(motion?.water === "water"), bloom);
       this.vertexRegion.push(region);
     }
   }

@@ -14,7 +14,7 @@ describe("terrain", () => {
     expect(b.tileAt(10, 20)).toEqual(first);
   });
 
-  it("agrees with its region's biome, apart from shrine islets", () => {
+  it("agrees with its region's biome, apart from islands", () => {
     const terrain = createTerrain(createWorld("biomes"));
     for (let tx = -80; tx < 80; tx += 3) {
       for (let tz = -80; tz < 80; tz += 3) {
@@ -29,7 +29,7 @@ describe("terrain", () => {
     }
   });
 
-  it("puts every shrine on flat, dry-or-region-native ground", () => {
+  it("puts ordinary shrines on a level surface in their biome", () => {
     const world = createWorld("plateaus");
     const terrain = createTerrain(world);
     for (let rx = -3; rx <= 3; rx++) {
@@ -38,9 +38,47 @@ describe("terrain", () => {
         if (region.landmark) continue;
         const { shrine, biome } = region;
         const centre = terrain.tileAtPoint(shrine.x, shrine.z);
-        expect(centre.biome).toBe(biome === "water" ? "meadow" : biome);
+        expect(centre.biome).toBe(biome);
         const edge = terrain.tileAtPoint(shrine.x + PLATEAU_RADIUS - 0.8, shrine.z);
         expect(edge.height).toBe(centre.height);
+      }
+    }
+  });
+
+  it("raises steep land shrines to the surrounding grade and eases into the approach", () => {
+    const terrain = createTerrain(createWorld("wayshrine"));
+    for (const [rx, rz] of [[-5, 5], [4, 17], [-4, -7], [-13, 10], [-14, 15]] as const) {
+      const region = terrain.world.region(rx, rz);
+      const { x, z } = region.shrine;
+      const base = terrain.groundAt(x, z);
+      expect(base).toBeGreaterThan(plateauBase(region) + 0.5);
+      for (let i = 0; i < 16; i++) {
+        const angle = i * Math.PI / 8;
+        let previous = base;
+        for (let distance = 1; distance <= 6; distance++) {
+          const px = x + Math.cos(angle) * distance;
+          const pz = z + Math.sin(angle) * distance;
+          if (terrain.world.regionAt(px, pz) !== region) continue;
+          const height = terrain.groundAt(px, pz);
+          expect(height, `${region.id} at distance ${distance}`).toBeLessThanOrEqual(base + 0.001);
+          expect(Math.abs(height - previous), `${region.id} at distance ${distance}`).toBeLessThan(0.95);
+          previous = height;
+        }
+      }
+    }
+  });
+
+  it("keeps a clear water approach around ordinary lake and sea shrines", () => {
+    const terrain = createTerrain(createWorld("wayshrine"));
+    for (const [rx, rz, biome, height] of [[-6, -9, "water", 0.4], [18, 2, "sea", 0.25]] as const) {
+      const region = terrain.world.region(rx, rz);
+      expect(region.landmark).toBeNull();
+      expect(region.biome).toBe(biome);
+      for (let z = -5; z <= 5; z++) {
+        for (let x = -5; x <= 5; x++) {
+          if (Math.hypot(x, z) > 5) continue;
+          expect(terrain.tileAtPoint(region.shrine.x + x, region.shrine.z + z)).toMatchObject({ biome, height });
+        }
       }
     }
   });

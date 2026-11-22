@@ -2,12 +2,14 @@ import * as THREE from "three";
 import { lifeAt, vitality, type boatLaunchFrame, type GameState } from "../game";
 import { CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Point, type Terrain } from "../world";
 import { createAmbient } from "./ambient";
+import { lightBiome } from "./biome-light";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import { buildPlayer } from "./player-mesh";
 import { buildLandmark } from "./landmark-mesh";
+import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
 import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
 
@@ -92,7 +94,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
   let heightPixels = 720;
   let appliedZoom = -1;
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc4a8, 1.4));
+  const fill = new THREE.HemisphereLight(0xffffff, 0xcfc4a8, 1.4);
+  scene.add(fill);
   const sun = new THREE.DirectionalLight(0xffffff, 2.4);
   sun.castShadow = true;
   sun.shadow.normalBias = 0.04; // stops shadow acne on large flat model surfaces
@@ -169,7 +172,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
         const region = world.region(here.rx + dx, here.rz + dz);
         keep.add(region.id);
         if (shrines.has(region.id)) continue;
-        const shrine = region.landmark ? buildLandmark(region.landmark.id) : buildShrine();
+        const shrine = region.landmark ? buildLandmark(region.landmark.id) : buildShrine(region.biome);
         // A landmark model's origin sits at its plateau's base height; its own ground rises from there.
         const ground = region.landmark ? plateauBase(region) : terrain.tileAtPoint(region.shrine.x, region.shrine.z).height;
         shrine.group.position.set(region.shrine.x, ground, region.shrine.z);
@@ -215,6 +218,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
   const particlePixelScale = (): number =>
     renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720));
   const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
+  const sightings = createLargeWildlife(terrain, lifeAtPoint);
+  scene.add(sightings.root);
 
   const glimmer = createGlimmer(scene);
 
@@ -248,9 +253,14 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
     tick(dt) {
       clock += dt;
       for (const shrine of shrines.values()) shrine.tick(clock);
+      if (state && targetReady) {
+        // Solve player motion against the animal poses that this frame will draw.
+        sightings.update(dt, target, Math.max(0, appliedZoom));
+      }
     },
     appendObstaclesNear(x, z, reach, out) {
       for (const shrine of shrines.values()) shrine.appendObstaclesNear?.(x, z, reach, out);
+      sightings.appendObstaclesNear(x, z, reach, out);
     },
     render(dt, view) {
       state = view.state;
@@ -264,12 +274,14 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
 
       // The camera follows the player, or the shrine being restored.
       const focus = awakening ? world.regionById(awakening.regionId).shrine : pos;
+      const elevation = terrain.groundAt(focus.x, focus.z);
       if (!targetReady) {
-        target.set(focus.x, 1, focus.z);
+        target.set(focus.x, elevation, focus.z);
         targetReady = true;
       } else {
         const k = Math.min(1, dt * (awakening ? 3 : 6));
         target.x += (focus.x - target.x) * k;
+        target.y += (elevation - target.y) * k;
         target.z += (focus.z - target.z) * k;
       }
       const centre = { x: target.x, z: target.z };
@@ -294,6 +306,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       glimmer.update(clock, particlePixelScale() * (VIEW_SIZE / viewSize), unread);
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
+      lightBiome(sun, fill, tile.biome, dt);
       const onWater = isWater(tile.biome);
       const voyage = view.voyage;
       const seated = voyage?.seated ?? Number(onWater);
@@ -312,8 +325,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       applyZoom(zoom, viewSize);
       camera.position.copy(target).add(offset);
       camera.lookAt(target);
-      sun.position.set(target.x - 14, 28, target.z + 11);
-      sun.target.position.set(target.x, 0, target.z);
+      sun.position.set(target.x - 14, target.y + 27, target.z + 11);
+      sun.target.position.set(target.x, target.y - 1, target.z);
       sun.target.updateMatrixWorld();
       renderer.render(scene, camera);
     },

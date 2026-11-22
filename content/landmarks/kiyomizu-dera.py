@@ -125,8 +125,8 @@ def H(x,y):
     return PLAT*smooth(-2.2,2.2,y+0.04*x)*(1-0.7*smooth(6.6,9.6,x))*edge_k(x,y,2.4)   # eases to 0 at the footprint edge
 
 def octo(z,h=9.6,ch=1.2):
-    a=h-ch
-    return [(-a,-h,z),(a,-h,z),(h,-a,z),(h,a,z),(a,h,z),(-a,h,z),(-h,a,z),(-h,-a,z)]
+    # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
+    return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)
 GS=0.8; NG=24
 gv={}
@@ -135,9 +135,6 @@ for j in range(NG+1):
         x=-9.6+i*GS; y=-9.6+j*GS
         if 0<i<NG and 0<j<NG:
             x+=rng.uniform(-0.22,0.22); y+=rng.uniform(-0.22,0.22)
-        s=abs(x)+abs(y)
-        if s>18.0:
-            e=(s-18.0)/2; x-=math.copysign(e,x); y-=math.copysign(e,y)
         z=H(x,y)
         if 0<i<NG and 0<j<NG and 0.3<z<PLAT-0.3: z+=rng.uniform(-0.12,0.12)
         gv[(i,j)]=(x,y,z)
