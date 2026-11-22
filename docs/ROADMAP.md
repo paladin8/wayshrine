@@ -13,14 +13,19 @@
 - **Scenery:** biome-specific props with clustering, lantern rings at shrines, shared dead-to-alive colour system.
 - **Awakening swell:** one-shot cue player, music ducking under it, background music halved.
 - **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.
+- **Travel journal:** the landmark counter (or J) opens a notebook with a handwritten entry per restored landmark, two to a page, with a button to travel back; cover-opening and page-turn animations and sounds. With `?debug` all landmarks are listed and travel works for all of them. A pencil sketch per entry is still to do.
 - **Vertical slice:** streamed tile terrain per biome, WASD player gated by capabilities, shrines that go from dead to alive (animated vitality), HUD, localStorage saves, `?debug` hooks.
 
 ## Next
 0. Landmarks: screen-edge glow and compass guidance for revealed landmarks, skyline peek for tall landmarks, real looks, props and player visuals for the later biomes and abilities (placeholders now), more landmark models.
 1. Real scenery for the haiku (ponds, bridges, fields) from the tags in `content/haiku-scenery.json`; tie the book to technological advancement; biome edge shapes.
-2. Unlock feedback: capability pickup moment, boat/snowshoes/climbing visuals on the player.
+2. **Ability acquisition.** Handle the moment an ability is gained (pickup feedback, replacing the placeholder). The background music and the shrine-activation music should change at each ability acquisition, so each stage of the game sounds different. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.
+5. **Technology thread.** Work out how it fits in. The long-term aim is skyscrapers and a shinkansen, but they have to arrive in a way that feels natural, not as a jump. Related: item 3 and tying the book to technological advancement (item 1). Open question; needs a design pass before any building.
+6. **Livelier world.** Many more animals, and eventually people. Rare compared with the scenery, but common enough to keep the player interested. Open question whether they need custom models or can reuse a small set.
+7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, climbing gear and the rest) given the same treatment.
+8. **Footsteps.** Moving across different terrain should make different sounds.
 
 ## Known gaps
 - Landmarks use one placeholder model; ordinary regions differ only by biome.
