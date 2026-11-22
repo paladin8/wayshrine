@@ -67,6 +67,14 @@ export function ambientWeights(d: number): ReadonlyArray<readonly [Biome, number
   ];
 }
 
+/**
+ * Biomes come in patches: regions belong to the nearest of a loose grid of cluster sites, and a
+ * cluster takes one biome, so a few neighbouring regions share terrain and form a natural wall.
+ * `CLUSTER_NOISE` of regions ignore their cluster, which keeps the patch edges ragged.
+ */
+export const CLUSTER_SPACING = 3;
+export const CLUSTER_NOISE = 0.1;
+
 function pickBiome(rng: Rng, d: number): Biome {
   let roll = rng.next();
   for (const [biome, weight] of ambientWeights(d)) {
@@ -80,10 +88,44 @@ function pickBiome(rng: Rng, d: number): Biome {
  * The macro structure of a world: a pure function of the seed.
  * Regions are memoised, so repeated lookups are cheap.
  */
-export function createWorld(seed: string, layout: LandmarkLayout = "compact"): World {
+export function createWorld(seed: string, layout: LandmarkLayout = "close"): World {
   const root = createRng(seed);
   const cache = new Map<string, Region>();
   const ambientCache = new Map<string, Biome>();
+
+  /** The loose grid of cluster sites: one per `CLUSTER_SPACING` square, jittered within it. */
+  const clusterSites = new Map<string, { x: number; z: number; biome: Biome }>();
+  function clusterSite(cx: number, cz: number): { x: number; z: number; biome: Biome } {
+    const id = `${cx},${cz}`;
+    let site = clusterSites.get(id);
+    if (!site) {
+      const rng = root.fork(`cluster:${id}`);
+      const x = (cx + rng.next()) * CLUSTER_SPACING;
+      const z = (cz + rng.next()) * CLUSTER_SPACING;
+      site = { x, z, biome: pickBiome(rng, Math.hypot(x, z)) };
+      clusterSites.set(id, site);
+    }
+    return site;
+  }
+
+  /** The biome of the cluster that a region falls in. */
+  function clusterBiome(rx: number, rz: number): Biome {
+    const cx = Math.floor(rx / CLUSTER_SPACING);
+    const cz = Math.floor(rz / CLUSTER_SPACING);
+    let best = clusterSite(cx, cz);
+    let bestD = Infinity;
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const s = clusterSite(cx + dx, cz + dz);
+        const d = Math.hypot(rx + 0.5 - s.x, rz + 0.5 - s.z);
+        if (d < bestD) {
+          best = s;
+          bestD = d;
+        }
+      }
+    }
+    return best.biome;
+  }
 
   /** A region's biome before landmarks are placed. The start is always open meadow. */
   function ambient(rx: number, rz: number): Biome {
@@ -91,7 +133,8 @@ export function createWorld(seed: string, layout: LandmarkLayout = "compact"): W
     const id = regionId(rx, rz);
     let hit = ambientCache.get(id);
     if (!hit) {
-      hit = pickBiome(root.fork(`biome:${id}`), Math.hypot(rx, rz));
+      const own = root.fork(`biome:${id}`);
+      hit = own.next() < CLUSTER_NOISE ? pickBiome(own, Math.hypot(rx, rz)) : clusterBiome(rx, rz);
       ambientCache.set(id, hit);
     }
     return hit;

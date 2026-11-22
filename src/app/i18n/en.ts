@@ -104,6 +104,7 @@ export const en: Messages = {
   compassHere: "Shrine here",
   compassNearest: (distance) => `Nearest shrine · ${distance}`,
   map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel" },
+  mapNeeds: (gear) => `needs ${gear.toLowerCase()}`,
   monuments: {
     promptRead: "Press E to read the stone",
     promptWorn: "The inscription has worn away. Restore this land to read it.",

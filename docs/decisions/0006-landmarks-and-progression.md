@@ -5,7 +5,7 @@ Status: accepted. Supersedes [0003](0003-progression-spine.md).
 
 **Decision.**
 - Abilities unlock at **counts of restored landmarks** (boat 3, snowshoes 8, climbing 13, then the later ones in [0007](0007-later-biomes-and-abilities.md)). Ordinary shrines restore a region. Restored landmarks always have red minimap stars. With N restored ordinary shrines and M restored landmarks, the map shows up to `max(0, floor(N / 5) - M)` gold stars for unrestored landmarks.
-- Landmarks are placed in **acts**, each a ring band whose radius follows the target density (about fourteen regions of area per landmark over the full disc), on a per-act bearing rotated by seed, so growth is radial from the start rather than a chain. The world remains infinite; regions beyond the landmarks are generic.
+- Landmarks are placed in **acts**, each a ring band whose radius follows the target density (about nine regions of area per landmark over the full disc, see [0008](0008-clustered-biomes-and-closer-landmarks.md)), on a per-act bearing rotated by seed, so growth is radial from the start rather than a chain. The world remains infinite; regions beyond the landmarks are generic.
 - Landmarks are not gated by order. A landmark region has a fixed biome, and the planner only chooses regions the player can already walk to with the abilities held when the act begins, and rejects a placement that would cut off an earlier landmark.
 - A landmark **is** its region's shrine: it stands at the site, with no torii or lanterns, and is restored by walking up to it like any shrine.
 - The start region and everything within `HOME_RADIUS` regions of it are meadow.

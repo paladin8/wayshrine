@@ -1,6 +1,5 @@
-import { isExplored, isLandmarkRevealed, isRestored, type GameState } from "../game";
-import { palette } from "../render";
-import { REGION_SIZE, type Biome, type Monument, type Point, type Region, type World } from "../world";
+import { capabilitiesOf, isExplored, isLandmarkRevealed, isRestored, type GameState } from "../game";
+import { BIOMES, BIOME_REQUIRES, REGION_SIZE, canTraverse, type Biome, type Capability, type Monument, type Point, type Region, type World } from "../world";
 import { UI_FONT, setText } from "./style";
 
 const SMALL_SIZE = 168;
@@ -8,17 +7,23 @@ const SMALL_SIZE = 168;
 const SMALL_SCALE = 2;
 const FOG = [0x3a, 0x34, 0x34] as const;
 const DEAD_GREY = [0x8c, 0x8c, 0x88] as const;
+/** How far an unrestored region is drained toward grey: enough to read as asleep, not enough to lose its biome. */
+const DEAD_DRAIN = 0.4;
 
+/**
+ * The map's own biome colours, chosen to tell the biomes apart at a glance (they differ from the
+ * game's palette, where marsh and meadow, or water and sea, are close).
+ */
 const BIOME_HEX: Readonly<Record<Biome, number>> = {
-  meadow: palette.grass,
-  water: palette.water,
-  snow: palette.snow,
-  mountain: palette.rock,
-  marsh: palette.marsh,
-  forest: palette.forest,
-  volcanic: palette.ash,
-  sea: palette.sea,
-  dunes: palette.sand,
+  meadow: 0x84b567,
+  water: 0x3fb2bd,
+  snow: 0xf1f4f6,
+  mountain: 0x9c8f86,
+  marsh: 0xb5b04a,
+  forest: 0x2c6b45,
+  volcanic: 0xa5503a,
+  sea: 0x24509a,
+  dunes: 0xe6c987,
 };
 
 type RGB = readonly [number, number, number];
@@ -68,6 +73,12 @@ export interface MapInput {
   readonly travelToAny?: boolean;
   /** The corner hint, in the player's language. */
   readonly labels: { readonly expand: string; readonly close: string; readonly travel: string };
+  /** Names for the legend of the expanded map, in the player's language. */
+  readonly names: {
+    readonly terrain: Readonly<Record<Biome, string>>;
+    readonly capability: Readonly<Record<Capability, string>>;
+    readonly needs: (gear: string) => string;
+  };
 }
 
 /** A shrine the player can travel to from the expanded map, in canvas pixels. */
@@ -89,6 +100,12 @@ const CSS = `
 .map canvas{display:block}
 .map canvas.travel{cursor:pointer}
 .map .hint{position:absolute;left:8px;bottom:6px;font:11px ${UI_FONT};color:#f2ede0;opacity:.8}
+.map .legend{position:absolute;left:10px;top:10px;display:none;flex-direction:column;gap:4px;padding:8px 10px;border-radius:10px;background:#2a2424d9;font:12px ${UI_FONT};color:#f2ede0;pointer-events:none}
+.map.large .legend{display:flex}
+.map .legend div{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.map .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #fffaf099}
+.map .legend .sw.blocked{background-image:repeating-linear-gradient(45deg,#0000 0 3px,#2a2424b3 3px 5px)}
+.map .legend .need{opacity:.75}
 `;
 
 /**
@@ -114,7 +131,9 @@ export function createMinimap(
   const ctx = canvas.getContext("2d")!;
   const hint = document.createElement("div");
   hint.className = "hint";
-  frame.append(canvas, hint);
+  const legend = document.createElement("div");
+  legend.className = "legend";
+  frame.append(canvas, legend, hint);
   container.appendChild(frame);
 
   let shown = true;
@@ -132,11 +151,43 @@ export function createMinimap(
   const regionRgb = (r: Region, state: GameState): RGB => {
     if (!isExplored(state, r)) return FOG;
     const alive = rgb(BIOME_HEX[r.biome]);
-    return isRestored(state, r) ? alive : mix(alive, DEAD_GREY, 0.8);
+    return isRestored(state, r) ? alive : mix(alive, DEAD_GREY, DEAD_DRAIN);
   };
+
+  /** The legend: each biome seen so far, and the gear a blocked one needs. Rebuilt only when it changes. */
+  let legendKey = "";
+  function updateLegend(input: MapInput): void {
+    const caps = capabilitiesOf(input.state, world);
+    const seen = new Set<Biome>(["meadow"]);
+    for (const id of input.state.explored) seen.add(world.regionById(id).biome);
+    const rows = BIOMES.filter((b) => seen.has(b)).map((b) => ({ b, blocked: !canTraverse(b, caps) }));
+    const key = [...rows.map((r) => `${r.b}${r.blocked ? "!" : ""}`), input.names.terrain.meadow, input.names.needs("")].join("|");
+    if (key === legendKey) return;
+    legendKey = key;
+    legend.replaceChildren(
+      ...rows.map(({ b, blocked }) => {
+        const row = document.createElement("div");
+        const swatch = document.createElement("span");
+        swatch.className = blocked ? "sw blocked" : "sw";
+        swatch.style.backgroundColor = `#${BIOME_HEX[b].toString(16).padStart(6, "0")}`;
+        const name = document.createElement("span");
+        name.textContent = input.names.terrain[b];
+        row.append(swatch, name);
+        const gear = BIOME_REQUIRES[b];
+        if (blocked && gear) {
+          const need = document.createElement("span");
+          need.className = "need";
+          need.textContent = input.names.needs(input.names.capability[gear]);
+          row.append(need);
+        }
+        return row;
+      }),
+    );
+  }
 
   function draw(input: MapInput, size: number, block: number): void {
     const { pos, state, target } = input;
+    const caps = capabilitiesOf(state, world);
     const markedLandmarks = world.landmarks.filter((region) => isLandmarkRevealed(state, region) || isRestored(state, region));
     // View: centre (ground point) and scale (world units per pixel).
     let centre: Point = pos;
@@ -178,10 +229,12 @@ export function createMinimap(
           c = regionRgb(r, state);
           colours.set(r.id, c);
         }
+        // Ground the player cannot cross yet is hatched, so a wall reads as a wall.
+        const hatch = isExplored(state, r) && !canTraverse(r.biome, caps) && (i + j) % 4 === 0 ? 0.62 : 1;
         const k = (j * n + i) * 4;
-        image.data[k] = c[0];
-        image.data[k + 1] = c[1];
-        image.data[k + 2] = c[2];
+        image.data[k] = c[0] * hatch;
+        image.data[k + 1] = c[1] * hatch;
+        image.data[k + 2] = c[2] * hatch;
         image.data[k + 3] = 255;
       }
     }
@@ -329,6 +382,7 @@ export function createMinimap(
       if (!shown) return;
       setText(hint, expanded ? `${input.labels.close} · ${input.labels.travel}` : input.labels.expand);
       const size = expanded ? Math.max(240, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.78)) : SMALL_SIZE;
+      if (expanded) updateLegend(input);
       const key = [
         expanded,
         size,
@@ -337,7 +391,7 @@ export function createMinimap(
         input.target?.id ?? "",
       ].join("|");
       const moved = Math.hypot(input.pos.x - lastPos.x, input.pos.z - lastPos.z);
-      if (key === lastKey && lastInput?.state === input.state && moved < 2) return;
+      if (key === lastKey && lastInput?.state === input.state && lastInput.names.terrain === input.names.terrain && moved < 2) return;
       lastKey = key;
       lastPos = input.pos;
       lastInput = input;

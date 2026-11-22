@@ -105,20 +105,32 @@ describe("player movement", () => {
  * The region-level proof in world.test.ts cannot see narrow gaps or islets.
  */
 describe("tile-level progression", () => {
-  function reachable(terrain: Terrain, caps: ReadonlySet<Capability>, from: Point, to: Point): boolean {
-    const margin = 256;
-    const x0 = Math.floor(Math.min(from.x, to.x)) - margin;
-    const z0 = Math.floor(Math.min(from.z, to.z)) - margin;
-    const w = Math.ceil(Math.abs(from.x - to.x)) + 2 * margin + 1;
-    const h = Math.ceil(Math.abs(from.z - to.z)) + 2 * margin + 1;
+  /**
+   * Floods the walkable tiles from `from` and reports which of `targets` it reached. The search box
+   * extends `margin` tiles past the targets, enough for the detours around patches of blocking terrain.
+   */
+  function reachableAmong(terrain: Terrain, caps: ReadonlySet<Capability>, from: Point, targets: Point[]): boolean[] {
+    const margin = 640;
+    const xs = [from.x, ...targets.map((t) => t.x)];
+    const zs = [from.z, ...targets.map((t) => t.z)];
+    const x0 = Math.floor(Math.min(...xs)) - margin;
+    const z0 = Math.floor(Math.min(...zs)) - margin;
+    const w = Math.ceil(Math.max(...xs)) - x0 + margin + 1;
+    const h = Math.ceil(Math.max(...zs)) - z0 + margin + 1;
     const seen = new Uint8Array(w * h);
     const idx = (tx: number, tz: number) => (tz - z0) * w + (tx - x0);
-    const goal = idx(Math.floor(to.x), Math.floor(to.z));
+    const goals = new Map(targets.map((t, i) => [idx(Math.floor(t.x), Math.floor(t.z)), i]));
+    const found = targets.map(() => false);
+    let left = goals.size;
     const queue: number[] = [idx(Math.floor(from.x), Math.floor(from.z))];
     seen[queue[0]!] = 1;
-    for (let i = 0; i < queue.length; i++) {
+    for (let i = 0; i < queue.length && left > 0; i++) {
       const cur = queue[i]!;
-      if (cur === goal) return true;
+      const goal = goals.get(cur);
+      if (goal !== undefined && !found[goal]) {
+        found[goal] = true;
+        left--;
+      }
       const tx = x0 + (cur % w);
       const tz = z0 + Math.floor(cur / w);
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
@@ -131,19 +143,22 @@ describe("tile-level progression", () => {
         queue.push(n);
       }
     }
-    return false;
+    return found;
   }
 
   it("reaches every landmark with only the abilities held when its act begins", () => {
     for (const seed of ["tile-a", "tile-b"]) {
       const terrain = createTerrain(createWorld(seed));
       const start = startPosition(terrain);
-      for (const region of terrain.world.landmarks) {
-        const caps = capabilitiesForCount(landmarksBeforeAct(region.landmark!.act));
-        expect(reachable(terrain, caps, start, region.site), `${seed} -> ${region.landmark!.id}`).toBe(true);
+      const acts = [...new Set(terrain.world.landmarks.map((r) => r.landmark!.act))];
+      for (const act of acts) {
+        const regions = terrain.world.landmarks.filter((r) => r.landmark!.act === act);
+        const caps = capabilitiesForCount(landmarksBeforeAct(act));
+        const ok = reachableAmong(terrain, caps, start, regions.map((r) => r.site));
+        regions.forEach((r, i) => expect(ok[i], `${seed} -> ${r.landmark!.id}`).toBe(true));
       }
     }
-  }, 240_000);
+  }, 600_000);
 
   it("cannot reach a later act without its ability (gates are real here)", () => {
     // Guard on the test itself: some landmark must be out of reach with no abilities,
@@ -151,7 +166,7 @@ describe("tile-level progression", () => {
     const terrain = createTerrain(createWorld("tile-a"));
     const start = startPosition(terrain);
     const act2 = terrain.world.landmarks.find((r) => r.landmark!.act === 2 && r.biome === "water")!;
-    expect(reachable(terrain, none, start, act2.site)).toBe(false);
+    expect(reachableAmong(terrain, none, start, [act2.site])[0]).toBe(false);
   }, 60_000);
 });
 

@@ -13,3 +13,4 @@
   - [0005](decisions/0005-monuments-and-texts.md) Monuments carry a finite collection of texts
   - [0006](decisions/0006-landmarks-and-progression.md) Landmarks gate abilities
   - [0007](decisions/0007-later-biomes-and-abilities.md) Later biomes, abilities and the outer mix
+  - [0008](decisions/0008-clustered-biomes-and-closer-landmarks.md) Clustered biomes and closer landmarks

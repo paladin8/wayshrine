@@ -27,6 +27,8 @@ export interface Messages {
   readonly compassHere: string;
   readonly compassNearest: (distance: number) => string;
   readonly map: { readonly expand: string; readonly close: string; readonly travel: string };
+  /** The map legend's note beside a biome the player cannot cross yet, e.g. "needs Geta". */
+  readonly mapNeeds: (gear: string) => string;
   readonly monuments: {
     readonly promptRead: string;
     /** Shown beside a monument in a region that has not been restored: the inscription cannot be read. */

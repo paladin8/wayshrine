@@ -162,12 +162,14 @@ export function standPoint(region: Region): Point {
 
 /** Regions within this many region-widths of the origin are always meadow, so the start is open. */
 export const HOME_RADIUS = 2;
-export type LandmarkLayout = "spread" | "compact";
+export type LandmarkLayout = "spread" | "compact" | "close";
 
 /** Keep the previous layout reproducible for saves that address landmarks by region ID. */
 const LANDMARK_SPACING = {
   spread: { area: 18, start: 5 },
   compact: { area: 14.4, start: 4 },
+  /** Radii 20% under "compact" (area scales with the square of the radius). */
+  close: { area: 9.216, start: 3.2 },
 } as const;
 /** The planner searches this far (Chebyshev, in regions) for somewhere to put a landmark. */
 export const LANDMARK_WINDOW = 28;
@@ -179,7 +181,7 @@ const GOLDEN_ANGLE = 2.399963;
 const ARC = 1.6;
 
 /** Radius (in regions) of the disc that holds `n` landmarks at the target density, beyond the empty start. */
-export function ringRadius(n: number, layout: LandmarkLayout = "compact"): number {
+export function ringRadius(n: number, layout: LandmarkLayout = "close"): number {
   const { area, start } = LANDMARK_SPACING[layout];
   return start + Math.sqrt((area * n) / Math.PI);
 }
@@ -198,7 +200,7 @@ export function ringRadius(n: number, layout: LandmarkLayout = "compact"): numbe
 export function planLandmarks(
   seed: string,
   ambient: (rx: number, rz: number) => Biome,
-  layout: LandmarkLayout = "compact",
+  layout: LandmarkLayout = "close",
 ): ReadonlyMap<string, Landmark> {
   const rng = createRng(seed).fork("landmarks");
   const phase = rng.range(0, Math.PI * 2);

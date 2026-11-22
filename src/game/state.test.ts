@@ -20,6 +20,7 @@ import {
   serialize,
   vitality,
   DISCOVER_RADIUS,
+  REVEAL_DISTANCE,
 } from "./state";
 
 const world = createWorld("game-tests");
@@ -125,10 +126,26 @@ describe("exploration", () => {
     const start = world.region(0, 0);
     const s = discoverNear(newGame(world.seed), world, start.site);
     for (const r of [world.region(1, 0), world.region(-1, 0), world.region(0, 1), world.region(0, -1)]) {
-      const near = Math.hypot(r.shrine.x - start.site.x, r.shrine.z - start.site.z) <= DISCOVER_RADIUS;
-      expect(isExplored(s, r)).toBe(near);
+      if (Math.hypot(r.shrine.x - start.site.x, r.shrine.z - start.site.z) <= DISCOVER_RADIUS) expect(isExplored(s, r)).toBe(true);
     }
     expect(isExplored(s, world.region(5, 5))).toBe(false);
+  });
+
+  it("reveals a neighbour as the player nears its edge, and not from farther back", () => {
+    const a = world.region(0, 0);
+    const b = world.region(1, 0);
+    const along = (t: number) => ({ x: a.site.x + (b.site.x - a.site.x) * t, z: a.site.z + (b.site.z - a.site.z) * t });
+    // Walk from a's site toward b's to the first point that lies in b: the boundary.
+    let t = 0;
+    while (world.regionAt(along(t).x, along(t).z).id === a.id) t += 0.002;
+    const unit = Math.hypot(b.site.x - a.site.x, b.site.z - a.site.z);
+    const back = (distance: number) => along(t - distance / unit);
+    expect(isExplored(discoverNear(newGame(world.seed), world, back(REVEAL_DISTANCE - 4)), b)).toBe(true);
+    // From well inside a, with b's shrine out of sight, b stays hidden.
+    const far = back(REVEAL_DISTANCE + 20);
+    if (world.regionAt(far.x, far.z).id === a.id && Math.hypot(b.shrine.x - far.x, b.shrine.z - far.z) > DISCOVER_RADIUS) {
+      expect(isExplored(discoverNear(newGame(world.seed), world, far), b)).toBe(false);
+    }
   });
 
   it("returns the same state when nothing is new", () => {

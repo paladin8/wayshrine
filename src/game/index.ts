@@ -1,5 +1,6 @@
 export {
   DISCOVER_RADIUS,
+  REVEAL_DISTANCE,
   canEnter,
   capabilitiesOf,
   landmarksRestored,

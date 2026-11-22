@@ -378,7 +378,7 @@ export function startApp(container: HTMLElement): void {
       messages: t,
       showCompass: prefs.showCompass,
     });
-    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, monuments: debug ? monuments.all : undefined, travelToAny: debug });
+    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
     cues.update(dt);

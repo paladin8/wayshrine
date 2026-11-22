@@ -11,7 +11,7 @@ import {
 } from "./landmarks";
 import { greedyProgress, reachableRegions } from "./progression";
 import { CAPABILITIES, canTraverse } from "./terrain";
-import { OUTER_SHARE, OUTER_START, ambientWeights, createWorld } from "./world";
+import { CLUSTER_SPACING, OUTER_SHARE, OUTER_START, ambientWeights, createWorld } from "./world";
 import { BIOMES } from "./terrain";
 
 vi.setConfig({ testTimeout: 60_000 });
@@ -232,17 +232,39 @@ describe("biome distribution", () => {
   });
 
   it("keeps the later biomes out of the inner world, so the early acts stay as they were", () => {
+    // A cluster takes its biome from its site's distance, and reaches about a cluster's width either side.
+    const inner = OUTER_START - CLUSTER_SPACING;
     const outer = new Set(["marsh", "forest", "volcanic", "sea"]);
     for (const seed of SEEDS.slice(0, 20)) {
       const w = createWorld(seed);
-      for (let rx = -OUTER_START; rx <= OUTER_START; rx++) {
-        for (let rz = -OUTER_START; rz <= OUTER_START; rz++) {
-          if (Math.hypot(rx, rz) > OUTER_START) continue;
+      for (let rx = -inner; rx <= inner; rx++) {
+        for (let rz = -inner; rz <= inner; rz++) {
+          if (Math.hypot(rx, rz) > inner) continue;
           const r = w.region(rx, rz);
           if (!r.landmark) expect(outer.has(r.biome), `${seed} ${r.id}`).toBe(false);
         }
       }
     }
+  });
+
+  it("forms patches: neighbouring regions share a biome far more often than chance", () => {
+    // With independent regions and the core weights, about 28% of neighbouring pairs would match.
+    let same = 0;
+    let pairs = 0;
+    for (const seed of SEEDS.slice(0, 20)) {
+      const w = createWorld(seed);
+      for (let rx = -12; rx <= 12; rx++) {
+        for (let rz = -12; rz <= 12; rz++) {
+          if (Math.hypot(rx, rz) < HOME_RADIUS + 2 || Math.hypot(rx + 1, rz) > 12) continue;
+          const a = w.region(rx, rz);
+          const b = w.region(rx + 1, rz);
+          if (a.landmark || b.landmark) continue;
+          pairs++;
+          if (a.biome === b.biome) same++;
+        }
+      }
+    }
+    expect(same / pairs).toBeGreaterThan(0.5);
   });
 
   it("fades the later biomes in to their share, and every biome occurs", () => {

@@ -20,6 +20,8 @@ export interface GameState {
 
 /** A region counts as seen when the player is within this distance of its shrine. */
 export const DISCOVER_RADIUS = 40;
+/** A region also counts as seen once any of its ground is this close, so a neighbour shows up as the player nears its edge. */
+export const REVEAL_DISTANCE = 28;
 const RUBBINGS_PER_REVEAL = 7;
 
 export function newGame(seed: string): GameState {
@@ -77,6 +79,17 @@ export function discoverNear(state: GameState, world: World, pos: Point): GameSt
       const r = world.region(here.coord.rx + dx, here.coord.rz + dz);
       const seen = r.id === here.id || Math.hypot(r.shrine.x - pos.x, r.shrine.z - pos.z) <= DISCOVER_RADIUS;
       if (seen && !state.explored.has(r.id)) {
+        next ??= new Set(state.explored);
+        next.add(r.id);
+      }
+    }
+  }
+  // Any region whose ground lies within REVEAL_DISTANCE: probe rings around the player.
+  for (const radius of [REVEAL_DISTANCE / 2, REVEAL_DISTANCE]) {
+    for (let k = 0; k < 12; k++) {
+      const a = (k * Math.PI) / 6;
+      const r = world.regionAt(pos.x + Math.cos(a) * radius, pos.z + Math.sin(a) * radius);
+      if (!state.explored.has(r.id) && !next?.has(r.id)) {
         next ??= new Set(state.explored);
         next.add(r.id);
       }
