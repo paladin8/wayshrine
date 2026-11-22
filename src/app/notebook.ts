@@ -104,7 +104,6 @@ const CSS = `
 .nb-empty.ja{font-family:${HAND_JA}}
 .nb-title{margin:auto 0;text-align:center;font-weight:400;font-size:clamp(24px,4.4vh,38px);color:#2b2a4a}
 .nb-folio{position:absolute;bottom:clamp(8px,1.8vh,14px);left:0;right:0;text-align:center;font:13px ${HAND_EN};color:#9a8566;font-variant-numeric:tabular-nums}
-.nb-ribbon{position:absolute;top:calc(100% - 14px);left:50%;margin-left:-9px;width:18px;height:44px;background:#a6392d;clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%);box-shadow:0 2px 3px #0005;pointer-events:none}
 .nb-turn,.nb-x{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#2a1a14b8;color:#f1e3c4;font:20px/1 ${UI_FONT};border:1px solid #e2c58f55}
 .nb-turn:hover,.nb-x:hover,.nb-turn:focus-visible,.nb-x:focus-visible{background:#2a1a14}
 .nb-turn:focus-visible,.nb-x:focus-visible{outline:2px solid #f1e3c4;outline-offset:2px}
@@ -113,12 +112,11 @@ const CSS = `
 .nb-turn.prev{left:clamp(8px,2vw,20px)}
 .nb-turn.next{right:clamp(8px,2vw,20px)}
 .nb-x{position:absolute;top:-12px;right:-12px;z-index:3;font-size:18px}
-@media(max-width:760px){.nb-ribbon{display:none}}
 @media(prefers-reduced-motion:reduce){.nb-overlay.open{animation:none}}
 .nb-spread{perspective:2600px}
 .nb-spread.opening .nb-page.left{visibility:hidden}
 .nb-book.opening .nb-turn{opacity:0}
-.nb-turn,.nb-ribbon{transition:opacity .3s}
+.nb-turn{transition:opacity .3s}
 .nb-leaf,.nb-lid{position:absolute;top:0;bottom:0;width:50%;z-index:4;pointer-events:none;transform-style:preserve-3d;will-change:transform}
 .nb-leaf.fwd,.nb-lid{left:50%;transform-origin:0 50%}
 .nb-leaf.back{left:0;transform-origin:100% 50%}
@@ -280,7 +278,6 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     else {
       spread.appendChild(buildPage(v, page, "left"));
       spread.appendChild(buildPage(v, page + 1, "right"));
-      el("div", "nb-ribbon", book);
     }
 
     const button = (cls: string, glyph: string, label: string, run: () => void): void => {
