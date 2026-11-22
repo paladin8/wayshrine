@@ -5,6 +5,11 @@ import { UI_FONT, setText } from "./style";
 const SMALL_SIZE = 168;
 /** World units per map pixel in the corner map: about five regions across. */
 const SMALL_SCALE = 2;
+/** The expanded map never starts further out than this (world units per pixel), so it stays a readable size however far the player has explored. */
+const MAX_FIT_SCALE = 4;
+/** Zooming out past these hides detail: first the (debug) monuments, then the ordinary shrines. Landmark stars always stay. */
+const HIDE_MONUMENTS_SCALE = 2.5;
+const HIDE_SHRINES_SCALE = 6;
 const FOG = [0x3a, 0x34, 0x34] as const;
 const DEAD_GREY = [0x8c, 0x8c, 0x88] as const;
 /** How far an unrestored region is drained toward grey: enough to read as asleep, not enough to lose its biome. */
@@ -43,9 +48,10 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
     ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
   }
   ctx.closePath();
-  ctx.fillStyle = restored ? "#d96b59" : "#ffd23f";
+  ctx.fillStyle = restored ? "#e04b3a" : "#ffd23f";
   ctx.fill();
-  ctx.strokeStyle = restored ? "#ffe9a8" : "#2a2424";
+  if (restored) return;
+  ctx.strokeStyle = "#2a2424";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
@@ -55,7 +61,8 @@ function drawShrineDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: n
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fillStyle = restored ? "#d96b59" : "#2a2424";
   ctx.fill();
-  ctx.strokeStyle = restored ? "#ffe9a8" : "#cfc8b8";
+  if (restored) return;
+  ctx.strokeStyle = "#cfc8b8";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
@@ -231,9 +238,15 @@ export function createMinimap(
         if (!state.explored.has(landmark.id)) include(landmark.shrine);
       }
       const span = Math.max(maxU - minU, maxV - minV) + REGION_SIZE * 1.6;
-      const fitScale = Math.max(span / size, 1.2);
-      const fitU = (minU + maxU) / 2;
-      const fitV = (minV + maxV) / 2;
+      let fitScale = Math.max(span / size, 1.2);
+      let fitU = (minU + maxU) / 2;
+      let fitV = (minV + maxV) / 2;
+      if (fitScale > MAX_FIT_SCALE) {
+        // Too much explored to show at once: stay at a readable size, centred on the player.
+        fitScale = MAX_FIT_SCALE;
+        fitU = pos.x * R.x + pos.z * R.z;
+        fitV = pos.x * F.x + pos.z * F.z;
+      }
       scale = fitScale / zoomK;
       const u = fitU + panU;
       const v = fitV + panV;
@@ -298,6 +311,7 @@ export function createMinimap(
     const dotR = expanded ? 4.5 : 3.5;
     waypoints = [];
     for (const id of state.explored) {
+      if (expanded && scale > HIDE_SHRINES_SCALE) break;
       const r = world.regionById(id);
       if (r.landmark) continue; // landmark markers are drawn below
       const [x, y] = project(r.shrine);
@@ -315,6 +329,7 @@ export function createMinimap(
     }
     // Debug: monuments in restored regions as diamonds, bright until read.
     for (const m of input.monuments ?? []) {
+      if (expanded && scale > HIDE_MONUMENTS_SCALE) break;
       if (!state.restored.has(m.regionId)) continue;
       const [x, y] = project(m);
       if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
@@ -394,8 +409,9 @@ export function createMinimap(
     const box = canvas.getBoundingClientRect();
     return [((e.clientX - box.left) / box.width) * canvas.width, ((e.clientY - box.top) / box.height) * canvas.height];
   };
+  const maxScale = (): number => Math.max(view.fitScale * 2.5, MAX_FIT_SCALE * 3);
   const setView = (u: number, v: number, scale: number): void => {
-    const clamped = Math.max(0.25, Math.min(view.fitScale * 2.5, scale));
+    const clamped = Math.max(0.25, Math.min(maxScale(), scale));
     panU = u - view.fitU;
     panV = v - view.fitV;
     zoomK = view.fitScale / clamped;
@@ -409,7 +425,7 @@ export function createMinimap(
       const half = canvas.width / 2;
       const uAt = view.u + (x - half) * view.scale;
       const vAt = view.v + (half - y) * view.scale;
-      const next = Math.max(0.25, Math.min(view.fitScale * 2.5, view.scale * Math.exp(e.deltaY * 0.0015)));
+      const next = Math.max(0.25, Math.min(maxScale(), view.scale * Math.exp(e.deltaY * 0.0015)));
       view = { ...view, scale: next, u: uAt - (x - half) * next, v: vAt - (half - y) * next };
       setView(view.u, view.v, next);
       redraw();
