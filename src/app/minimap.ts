@@ -109,7 +109,9 @@ const CSS = `
 .map .legend div{display:flex;align-items:center;gap:7px;white-space:nowrap}
 .map .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #fffaf099}
 .map .legend .sw.blocked{background-image:repeating-linear-gradient(45deg,#0000 0 3px,#2a2424b3 3px 5px)}
-.map .legend .need{opacity:.75}
+.map .legend .need{opacity:.75;display:none}
+.map.large .legend{pointer-events:auto}
+.map .legend div:hover .need{display:inline}
 `;
 
 /**
