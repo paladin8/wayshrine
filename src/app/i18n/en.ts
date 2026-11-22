@@ -109,6 +109,7 @@ export const en: Messages = {
   },
   promptRestore: "Press E to restore the shrine",
   promptSkip: "Press E to skip",
+  promptRestoreLandmark: "Press E to restore the landmark",
   compassHere: "Shrine here",
   compassNearest: (distance) => `Nearest shrine · ${distance}`,
   map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel", zoom: "Zoom out (Z)" },

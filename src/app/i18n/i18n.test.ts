@@ -16,6 +16,7 @@ function allText(m: Messages): string[] {
     ...Object.values(m.notebook),
     m.promptRestore,
     m.promptSkip,
+    m.promptRestoreLandmark,
     m.compassHere,
     m.compassNearest(52),
     ...Object.values(m.map),

@@ -109,6 +109,7 @@ export const ja: Messages = {
   },
   promptRestore: "Eキーで祠を蘇らせる",
   promptSkip: "Eキーでスキップ",
+  promptRestoreLandmark: "Eキーで名所を蘇らせる",
   compassHere: "祠はここ",
   compassNearest: (distance) => `最寄りの祠 · ${distance}`,
   map: { expand: "M: 拡大", close: "M: 閉じる", travel: "蘇った祠をクリックで移動", zoom: "俯瞰 (Z)" },

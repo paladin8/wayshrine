@@ -34,6 +34,7 @@ export interface Messages {
   };
   readonly promptRestore: string;
   readonly promptSkip: string;
+  readonly promptRestoreLandmark: string;
   readonly compassHere: string;
   readonly compassNearest: (distance: number) => string;
   readonly map: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };

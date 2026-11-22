@@ -414,7 +414,9 @@ export function startApp(container: HTMLElement): void {
         ? t.promptSkip
         : null
       : reach && !isRestored(state, reach)
-        ? t.promptRestore
+        ? reach.landmark
+          ? t.promptRestoreLandmark
+          : t.promptRestore
         : stone
           ? isLegible(state, stone)
             ? t.monuments.promptRead
