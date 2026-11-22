@@ -14,6 +14,7 @@ import {
   resetGame,
   resetShrines,
   restoreShrine,
+  unrestoreShrine,
   serialize,
   vitality,
   DISCOVER_RADIUS,
@@ -142,5 +143,14 @@ describe("collecting monuments", () => {
 
   it("loads version 2 saves with nothing collected", () => {
     expect(deserialize({ v: 2, seed: "s", restored: [], explored: [] }).collected).toEqual([]);
+  });
+
+  it("un-restores one shrine and leaves the rest, and is a no-op when it was not restored", () => {
+    const [a, b] = world.landmarks;
+    const both = restoreShrine(restoreShrine(newGame(world.seed), a!), b!);
+    const one = unrestoreShrine(both, a!);
+    expect(one.restored.has(a!.id)).toBe(false);
+    expect(one.restored.has(b!.id)).toBe(true);
+    expect(unrestoreShrine(one, a!)).toBe(one);
   });
 });

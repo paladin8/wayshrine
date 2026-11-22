@@ -16,6 +16,7 @@ import {
   resetGame,
   resetShrines,
   restoreShrine,
+  unrestoreShrine,
   safePosition,
   skipTarget,
   timingOf,
@@ -64,6 +65,8 @@ const KEY_ACT = ["KeyE", "Space", "Enter"];
 const KEY_MAP = "KeyM";
 const KEY_BOOK = "KeyB";
 const KEY_MUTE = "KeyN";
+/** Debug only. */
+const KEY_UNRESTORE = "KeyU";
 
 function loadGame(seed: string): GameState {
   try {
@@ -144,6 +147,20 @@ export function startApp(container: HTMLElement): void {
     saveGame(state);
   };
 
+  /** Debug: un-restores the shrine or landmark within reach, else the one whose region the player is in. */
+  const unrestoreHere = (): void => {
+    const region = shrineInReach(terrain, pos) ?? world.regionAt(pos.x, pos.z);
+    if (!isRestored(state, region)) return;
+    if (awakening?.regionId === region.id) {
+      awakening = null;
+      ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
+    }
+    state = unrestoreShrine(state, region);
+    saveGame(state);
+    // A lost ability may leave the player standing where they can no longer be.
+    pos = safePosition(terrain, capabilitiesOf(state, world), pos);
+  };
+
   if (params.has("debug")) {
     const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
@@ -152,6 +169,7 @@ export function startApp(container: HTMLElement): void {
     };
     const actions = {
       restoreLandmarks,
+      unrestoreHere,
       resetShrines: () => {
         awakening = null;
         ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.3));
@@ -192,6 +210,7 @@ export function startApp(container: HTMLElement): void {
     down.add(e.code);
     if (e.code === KEY_MAP) minimap.toggleExpanded();
     if (e.code === KEY_BOOK && !awakening) monumentUi.toggleBook();
+    if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });
     if (KEY_ACT.includes(e.code)) {
       if (awakening) {

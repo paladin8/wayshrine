@@ -65,6 +65,14 @@ export function isCollected(state: GameState, id: string): boolean {
   return state.collected.includes(id);
 }
 
+/** Un-restores one shrine or landmark. For debugging. */
+export function unrestoreShrine(state: GameState, region: Region): GameState {
+  if (!state.restored.has(region.id)) return state;
+  const restored = new Set(state.restored);
+  restored.delete(region.id);
+  return { ...state, restored };
+}
+
 /** Un-restores every shrine, keeping what has been explored. For debugging. */
 export function resetShrines(state: GameState): GameState {
   return state.restored.size === 0 ? state : { ...state, restored: new Set() };

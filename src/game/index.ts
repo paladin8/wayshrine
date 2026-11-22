@@ -13,6 +13,7 @@ export {
   resetGame,
   resetShrines,
   restoreShrine,
+  unrestoreShrine,
   serialize,
   vitality,
 } from "./state";
