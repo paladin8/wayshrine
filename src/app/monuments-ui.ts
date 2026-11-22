@@ -45,6 +45,7 @@ const CSS = `
 .mu-line:nth-child(3){margin-top:2.4em}
 .mu-en,.mu-item .e,.mu-by:lang(en){font-family:${EN_SCRIPT}}
 .mu-en{text-align:center;font-size:clamp(18px,3.2vmin,34px);line-height:1.35;white-space:pre-line;margin:0 auto;max-width:40ch;overflow-wrap:anywhere}
+.mu-by-ja{font-family:${JA_SCRIPT};margin-left:.3em}
 .mu-by{text-align:center;font-size:clamp(14px,2.3vmin,21px);opacity:.84;margin:clamp(8px,2vh,18px) 0 0}
 .mu-bar{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 28px 10px 0}
 .mu-bar h2{margin:0;font-size:18px}
@@ -135,6 +136,12 @@ export function createMonumentUi(
       const by = el("p", "mu-by", card);
       by.lang = language;
       setText(by, `— ${entry.by[language]}`);
+      if (language === "en") {
+        // The Japanese name always appears, in the Japanese typeface, beside the English one.
+        const ja = el("span", "mu-by-ja", by);
+        ja.lang = "ja";
+        setText(ja, `（${entry.by.ja}）`);
+      }
     }
   }
 
