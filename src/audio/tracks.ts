@@ -4,13 +4,16 @@ export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface TrackInfo {
   readonly url: string;
+  /** Level relative to the other tracks, for ones mastered quieter than the rest (default 1). */
+  readonly gain?: number;
 }
 
 const base = import.meta.env.BASE_URL;
 
 export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "waves-beyond-the-headlands": { url: `${base}audio/music/waves-beyond-the-headlands.mp3` },
-  "snowline-walk": { url: `${base}audio/music/snowline-walk.mp3` },
+  // Mastered quieter than the other themes; 25% up brings it level.
+  "snowline-walk": { url: `${base}audio/music/snowline-walk.mp3`, gain: 1.25 },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 

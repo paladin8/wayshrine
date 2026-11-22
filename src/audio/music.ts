@@ -57,6 +57,8 @@ export interface Music {
 interface Voice {
   readonly id: TrackId;
   readonly player: AudioPlayer;
+  /** The track's own level relative to the others. */
+  readonly trackGain: number;
   /** Fade level in [0, 1]. */
   level: number;
   target: 0 | 1;
@@ -94,13 +96,13 @@ export function createMusic(options: MusicOptions = {}): Music {
   let duckTarget = 1;
 
   const apply = (v: Voice): void => {
-    v.player.volume = muted ? 0 : volume * gain * duck * v.level;
+    v.player.volume = muted ? 0 : volume * gain * v.trackGain * duck * v.level;
   };
 
   const start = (id: TrackId): void => {
     const info = tracks[id];
     if (!info) throw new Error(`unknown track: ${id}`);
-    const voice: Voice = { id, player: createPlayer(info.url), level: 0, target: 1, gap: null };
+    const voice: Voice = { id, player: createPlayer(info.url), trackGain: info.gain ?? 1, level: 0, target: 1, gap: null };
     voice.player.onended = () => {
       voice.gap = gapSeconds;
     };
