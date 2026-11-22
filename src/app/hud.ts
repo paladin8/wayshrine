@@ -1,6 +1,6 @@
 import { CAPABILITIES, type Capability } from "../world";
 import type { Messages } from "./i18n";
-import { BRUSH_FONT, BRUSH_FONT_FACE, UI_FONT, setText } from "./style";
+import { UI_FONT, setText } from "./style";
 
 export interface CompassModel {
   /** Clockwise angle from screen-up, in radians. */
@@ -23,15 +23,22 @@ export interface HudModel {
   readonly prompt: string | null;
   /** Transient hint, e.g. why the player is blocked, or null. */
   readonly hint: string | null;
-  /** The name of the landmark the player is at, or null. */
-  readonly banner: BannerModel | null;
+  /** The name of the landmark being restored, or null. */
+  readonly landmarkName: LandmarkNameModel | null;
 }
 
-/** A landmark's name, drawn in brush calligraphy near the bottom of the screen. */
-export interface BannerModel {
-  readonly text: string;
+/**
+ * A landmark's name, as the pre-rendered brush images in `public/images/landmark-names`: the Japanese
+ * name set vertically in the middle of the screen and, in English, the translation beneath it.
+ */
+export interface LandmarkNameModel {
+  readonly id: string;
+  /** The name as text, for the images' alt text. */
+  readonly label: string;
   /** 0 (invisible) to 1. */
   readonly opacity: number;
+  /** Also show the English image below the Japanese one. */
+  readonly english: boolean;
 }
 
 export interface Hud {
@@ -39,7 +46,6 @@ export interface Hud {
 }
 
 const CSS = `
-${BRUSH_FONT_FACE}
 .hud{position:fixed;inset:0;pointer-events:none;font:14px/1.3 ${UI_FONT};color:#2a2424}
 .hud .chip{display:inline-block;margin-right:6px;padding:4px 10px;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422}
 .hud .chip.off{opacity:.4}
@@ -52,9 +58,12 @@ ${BRUSH_FONT_FACE}
 .hud .dial{width:34px;height:34px;border-radius:50%;background:#2a2424;position:relative}
 .hud .needle{position:absolute;inset:0;transition:transform .12s linear}
 .hud .needle::before{content:"";position:absolute;left:50%;top:4px;margin-left:-5px;border:5px solid transparent;border-bottom:13px solid #ffe9a8;border-top:0}
-.hud .banner{position:absolute;left:0;right:0;bottom:96px;text-align:center;font-family:${BRUSH_FONT};font-weight:400;font-size:clamp(34px,6vw,72px);letter-spacing:.05em;font-style:italic;padding:0 5vw;color:#1d1818;opacity:0;text-shadow:0 0 .5em #fffaf0e6,0 0 .16em #fffaf0,0 .03em .02em #fffaf0aa}
-.hud .banner.ja{letter-spacing:.14em;font-style:normal}
-.hud .banner::after{content:"";display:block;width:min(42%,420px);height:3px;margin:.18em auto 0;border-radius:3px;background:linear-gradient(90deg,#1d181800,#1d1818cc 30%,#1d1818cc 70%,#1d181800);filter:blur(.4px)}
+.hud .lname{position:absolute;inset:0;opacity:0;--em:clamp(28px,10vh,100px)}
+.hud .lname::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 34% 52% at 50% 52%,#120c0c8c,#120c0c00)}
+.hud .lname .ja{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.hud .lname .en{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(var(--ja-half,120px) + 10px))}
+.hud .lname .ja img{max-height:58vh}
+.hud .lname img{display:block;max-width:92vw;filter:drop-shadow(0 0 5px #140c0ccc) drop-shadow(0 2px 3px #140c0c99)}
 .hud .dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:#ffe9a8}
 `;
 
@@ -104,12 +113,37 @@ export function createHud(container: HTMLElement): Hud {
   msg.className = "msg";
   bc.appendChild(msg);
 
-  const banner = document.createElement("div");
-  banner.className = "banner";
-  banner.style.display = "none";
-  root.appendChild(banner);
-  // Load the brush font up front so the first name does not appear in a fallback face.
-  void document.fonts?.load(`1em ${BRUSH_FONT}`).catch(() => undefined);
+  const lname = document.createElement("div");
+  lname.className = "lname";
+  lname.style.display = "none";
+  const jaBox = document.createElement("div");
+  jaBox.className = "ja";
+  const enBox = document.createElement("div");
+  enBox.className = "en";
+  const jaImg = document.createElement("img");
+  const enImg = document.createElement("img");
+  jaBox.appendChild(jaImg);
+  enBox.appendChild(enImg);
+  lname.append(jaBox, enBox);
+  root.appendChild(lname);
+  let shownId: string | null = null;
+  /** The images were drawn at a fixed glyph size, so every one is scaled by the same factor (relative to `--em`). */
+  const GLYPH_PX = 320;
+  const sizeToEm = (img: HTMLImageElement): void => {
+    if (!img.naturalHeight) return;
+    img.style.height = `calc(${img.naturalHeight / GLYPH_PX} * var(--em))`;
+    img.style.width = "auto";
+  };
+  const placeEnglish = (): void => {
+    // Sit the English just beneath the Japanese, which stays centred on the screen.
+    lname.style.setProperty("--ja-half", `${jaImg.getBoundingClientRect().height / 2}px`);
+  };
+  jaImg.onload = () => {
+    sizeToEm(jaImg);
+    placeEnglish();
+  };
+  enImg.onload = () => sizeToEm(enImg);
+  window.addEventListener("resize", placeEnglish);
 
   return {
     update(m) {
@@ -129,13 +163,23 @@ export function createHud(container: HTMLElement): Hud {
         setText(compassText, m.compass.arrived ? t.compassHere : t.compassNearest(Math.round(m.compass.distance)));
       }
 
-      if (m.banner) {
-        setText(banner, m.banner.text);
-        banner.classList.toggle("ja", /[\u3040-\u30ff\u4e00-\u9fff]/.test(m.banner.text));
-        banner.style.display = "block";
-        banner.style.opacity = String(m.banner.opacity);
-      } else if (banner.style.display !== "none") {
-        banner.style.display = "none";
+      const n = m.landmarkName;
+      if (n) {
+        if (n.id !== shownId) {
+          shownId = n.id;
+          const base = `${import.meta.env.BASE_URL}images/landmark-names/${n.id}`;
+          jaImg.src = `${base}.ja.png`;
+          enImg.src = `${base}.en.png`;
+        }
+        jaImg.alt = n.label;
+        enImg.alt = n.english ? n.label : "";
+        enBox.style.display = n.english ? "block" : "none";
+        lname.style.display = "block";
+        lname.style.opacity = String(n.opacity);
+        if (n.opacity > 0) placeEnglish();
+      } else if (lname.style.display !== "none") {
+        lname.style.display = "none";
+        shownId = null;
       }
 
       const text = m.hint ?? m.prompt;

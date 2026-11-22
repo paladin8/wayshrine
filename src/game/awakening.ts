@@ -26,13 +26,32 @@ export const AWAKENING: AwakeningTiming = {
   zoomIn: 1.6,
 };
 
-/** A landmark: a slower wave timed to its own track, and the long pause on the finished region. */
+/**
+ * A landmark: a slower wave timed to its own track, and a long pause on the finished region,
+ * first to see it and then to read its name (see `CAPTION_DELAY`).
+ */
 export const AWAKENING_LANDMARK: AwakeningTiming = {
   zoomOut: 1.2,
   wave: 10.8,
-  hold: 3,
+  hold: 5.5,
   zoomIn: 1.6,
 };
+
+/** A landmark's name appears this many seconds into the pause, once the player has seen the restored region. */
+export const CAPTION_DELAY = 1.3;
+/** The name fades in and out over about this long, in seconds. */
+export const CAPTION_FADE = 0.8;
+
+/**
+ * Whether a landmark's name should be on screen at `t`: from `CAPTION_DELAY` into the pause until the
+ * camera starts to return. 0 or 1; the app eases toward it so the name fades and a skip does not pop.
+ */
+export function captionTarget(t: number, kind: AwakeningKind): 0 | 1 {
+  if (kind !== "landmark") return 0;
+  const timing = timingOf(kind);
+  const holdStart = timing.zoomOut + timing.wave;
+  return t >= holdStart + CAPTION_DELAY && t < holdStart + timing.hold ? 1 : 0;
+}
 
 export const timingOf = (kind: AwakeningKind): AwakeningTiming => (kind === "landmark" ? AWAKENING_LANDMARK : AWAKENING);
 

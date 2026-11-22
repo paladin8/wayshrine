@@ -1,6 +1,7 @@
 import {
   awakeningFrame,
-  awakeningTotal,
+  captionTarget,
+  CAPTION_FADE,
   capabilitiesOf,
   clearOfObstacles,
   collectMonument,
@@ -47,12 +48,6 @@ const AWAKENING_CUES: Readonly<Record<AwakeningKind, readonly CueId[]>> = {
   landmark: ["awakening-burst", "radiant-arrival"],
 };
 const ALL_AWAKENING_CUES: readonly CueId[] = ["awakening-burst", "dawn-reverence", "radiant-arrival"];
-/** A landmark's name fades in, stays, and fades out; seconds. */
-const BANNER_IN = 0.9;
-const BANNER_OUT = 1.4;
-const BANNER_SECONDS = 5.5;
-/** The same landmark's name is not shown again on re-entering its region within this many seconds. */
-const BANNER_COOLDOWN = 40;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
@@ -133,12 +128,15 @@ export function startApp(container: HTMLElement): void {
   let blockedBy: Biome | null = null;
   let hintLeft = 0;
   /** The restoration sequence in progress, if any; `t` is seconds since it began. */
-  let awakening: { regionId: string; kind: AwakeningKind; t: number } | null = null;
-  /** The landmark name on screen, if any: `t` is seconds since it appeared, `duration` when it has fully faded. */
-  let banner: { id: string; t: number; duration: number } | null = null;
-  let bannerLandmark: string | null = null;
-  const bannerShownAt = new Map<string, number>();
-  let clock = 0;
+  let awakening: {
+    regionId: string;
+    kind: AwakeningKind;
+    t: number;
+    /** How visible a landmark's name is, 0 to 1; eased so it fades and a skip does not pop it. */
+    caption: number;
+    /** Set when the sequence is skipped before the name appeared, so it is not shown late. */
+    captionOff: boolean;
+  } | null = null;
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
 
@@ -218,22 +216,16 @@ export function startApp(container: HTMLElement): void {
         if (awakening.t > timingOf(awakening.kind).zoomOut) {
           awakening.t = skipTarget(awakening.t, awakening.kind);
           AWAKENING_CUES[awakening.kind].forEach((id) => cues.stop(id, SWELL_SKIP_FADE));
-          if (banner) banner.duration = Math.min(banner.duration, banner.t + timingOf(awakening.kind).zoomIn + BANNER_OUT / 2);
+          if (awakening.caption < 0.05) awakening.captionOff = true;
         }
       } else {
         const region = shrineInReach(terrain, pos);
         if (region && !isRestored(state, region)) {
           restore(region.id);
           const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
-          awakening = { regionId: region.id, kind, t: 0 };
+          awakening = { regionId: region.id, kind, t: 0, caption: 0, captionOff: false };
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           AWAKENING_CUES[kind].forEach((id) => cues.play(id));
-          // A landmark's name is held over the whole sequence.
-          if (region.landmark) {
-            banner = { id: region.landmark.id, t: 0, duration: awakeningTotal(kind) };
-            bannerLandmark = region.landmark.id;
-            bannerShownAt.set(region.landmark.id, clock);
-          }
         } else {
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
@@ -253,7 +245,6 @@ export function startApp(container: HTMLElement): void {
   let last = performance.now();
   const frame = (now: number): void => {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
-    clock += dt;
     last = now;
 
     const caps = capabilitiesOf(state, world);
@@ -291,23 +282,15 @@ export function startApp(container: HTMLElement): void {
     const prefs = settings.get();
     const t = messagesFor(prefs.language);
 
-    // A landmark's name appears when the player arrives in its region, and is held over its restoration.
-    const here = world.regionAt(pos.x, pos.z).landmark?.id ?? null;
-    if (here !== bannerLandmark) {
-      bannerLandmark = here;
-      if (here && !awakening && clock - (bannerShownAt.get(here) ?? -Infinity) > BANNER_COOLDOWN) {
-        banner = { id: here, t: 0, duration: BANNER_SECONDS };
-        bannerShownAt.set(here, clock);
-      }
-    }
-    let bannerModel: { text: string; opacity: number } | null = null;
-    if (banner) {
-      banner.t += dt;
-      if (banner.t >= banner.duration) banner = null;
-      else {
-        const k = Math.min(1, banner.t / BANNER_IN, (banner.duration - banner.t) / BANNER_OUT);
-        bannerModel = { text: t.landmarkNames[banner.id] ?? banner.id, opacity: k * k * (3 - 2 * k) };
-      }
+    // A landmark's name is overlaid late in its restoration, once the region has been seen.
+    let nameModel: { id: string; label: string; opacity: number; english: boolean } | null = null;
+    if (awakening?.kind === "landmark") {
+      const landmark = world.regionById(awakening.regionId).landmark!;
+      const target = awakening.captionOff ? 0 : captionTarget(awakening.t, awakening.kind);
+      const step = dt / CAPTION_FADE;
+      awakening.caption += Math.max(-step, Math.min(step, target - awakening.caption));
+      // Present from the start (invisible) so its images are loaded before they are needed.
+      nameModel = { id: landmark.id, label: t.landmarkNames[landmark.id] ?? landmark.id, opacity: awakening.caption, english: prefs.language === "en" };
     }
     const needed = blockedBy ? requirementOf(blockedBy) : null;
     const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
@@ -341,7 +324,7 @@ export function startApp(container: HTMLElement): void {
       compass,
       prompt,
       hint,
-      banner: bannerModel,
+      landmarkName: nameModel,
       messages: t,
       showCompass: prefs.showCompass,
     });

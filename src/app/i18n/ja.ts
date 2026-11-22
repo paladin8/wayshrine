@@ -88,6 +88,6 @@ export const ja: Messages = {
     language: "言語",
     credits: "クレジット",
     creditsText:
-      "諺・慣用句: JMdict/EDICT (© 電子辞書研究開発グループ、CC BY-SA 4.0)。俳句: 松尾芭蕉、与謝蕪村、小林一茶。 名所の名前の書体: 佑字 粛 (SIL OFL 1.1)。",
+      "諺・慣用句: JMdict/EDICT (© 電子辞書研究開発グループ、CC BY-SA 4.0)。俳句: 松尾芭蕉、与謝蕪村、小林一茶。 名所の名前の書体: 佑字 粛、Kaushan Script (SIL OFL 1.1)。",
   },
 };

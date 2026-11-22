@@ -88,6 +88,6 @@ export const en: Messages = {
     language: "Language",
     credits: "Credits",
     creditsText:
-      "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0. Haiku by Matsuo Bashō, Yosa Buson and Kobayashi Issa. Landmark names are set in Yuji Syuku (SIL Open Font License 1.1).",
+      "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0. Haiku by Matsuo Bashō, Yosa Buson and Kobayashi Issa. Landmark name lettering: Yuji Syuku and Kaushan Script (SIL Open Font License 1.1).",
   },
 };
