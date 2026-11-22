@@ -69,6 +69,7 @@ const KEY_ACT = ["KeyE", "Space", "Enter"];
 const KEY_MAP = "KeyM";
 const KEY_OVERVIEW = "KeyZ";
 const KEY_BOOK = "KeyB";
+const KEY_JOURNAL = "KeyJ";
 const KEY_MUTE = "KeyN";
 /** Debug only. */
 const KEY_UNRESTORE = "KeyU";
@@ -276,6 +277,7 @@ export function startApp(container: HTMLElement): void {
       overviewTime = 0;
     }
     if (e.code === KEY_BOOK && !awakening) monumentUi.toggleBook();
+    if (e.code === KEY_JOURNAL && !awakening && !e.metaKey && !e.ctrlKey && !e.altKey) notebook.toggle();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (debug && e.code === KEY_RUBBING) readRubbingHere();
     if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });

@@ -197,6 +197,7 @@ export function createHud(container: HTMLElement): Hud {
         const landmarkCount = m.restoredLandmarks.length;
         setText(countValue, String(landmarkCount));
         count.setAttribute("aria-label", t.landmarksRestored(landmarkCount));
+        count.title = `${t.notebook.title} (J)`;
       }
 
       const showCompass = m.showCompass && m.compass !== null;

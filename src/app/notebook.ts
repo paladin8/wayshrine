@@ -39,9 +39,8 @@ const CSS = `
 .nb-spread.single{grid-template-columns:1fr}
 .nb-page{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:clamp(14px,3vh,26px) clamp(18px,3.4vw,34px) clamp(30px,5vh,40px) clamp(24px,4vw,46px);box-sizing:border-box;background:
   radial-gradient(ellipse at 50% 0%,#fffdf4 0%,#0000 70%),
-  linear-gradient(#f6eed8,#efe4c8);overflow:hidden;animation:nb-turn .28s ease-out}
-@keyframes nb-turn{from{opacity:.2;transform:translateX(var(--turn,8px))}to{opacity:1;transform:none}}
-.nb-page.left{--turn:-8px;border-radius:4px 0 0 4px;background:
+  linear-gradient(#f6eed8,#efe4c8);overflow:hidden}
+.nb-page.left{border-radius:4px 0 0 4px;background:
   linear-gradient(to left,#00000030,#0000 11%),
   radial-gradient(ellipse at 50% 0%,#fffdf4 0%,#0000 70%),
   linear-gradient(#f6eed8,#efe4c8)}
@@ -94,7 +93,27 @@ const CSS = `
 .nb-turn.next{right:clamp(8px,2vw,20px)}
 .nb-x{position:absolute;top:-12px;right:-12px;z-index:3;font-size:18px}
 @media(max-width:760px){.nb-ribbon{display:none}}
-@media(prefers-reduced-motion:reduce){.nb-overlay.open,.nb-page{animation:none}}
+@media(prefers-reduced-motion:reduce){.nb-overlay.open{animation:none}}
+.nb-spread{perspective:2600px}
+.nb-spread.opening .nb-page.left{visibility:hidden}
+.nb-book.opening .nb-turn,.nb-book.opening .nb-ribbon{opacity:0}
+.nb-turn,.nb-ribbon{transition:opacity .3s}
+.nb-leaf,.nb-lid{position:absolute;top:0;bottom:0;width:50%;z-index:4;pointer-events:none;transform-style:preserve-3d;will-change:transform}
+.nb-leaf.fwd,.nb-lid{left:50%;transform-origin:0 50%}
+.nb-leaf.back{left:0;transform-origin:100% 50%}
+.nb-leaf{filter:drop-shadow(0 0 10px #0005)}
+.nb-lid{filter:drop-shadow(0 4px 14px #0007)}
+.nb-face{position:absolute;inset:0;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.nb-face.rear{transform:rotateY(180deg)}
+.nb-face>.nb-page{position:absolute;inset:0;width:auto;height:auto}
+.nb-face.cover{border-radius:0 6px 6px 0;background:radial-gradient(circle at 20% 15%,#7a382c,#5a261d 55%,#43190f)}
+.nb-face.cover::before{content:"";position:absolute;inset:-3px 5px -3px -3px;border:2px dashed #e2c58f66;border-radius:6px}
+.nb-leaf.fwd{animation:nb-flip-fwd .6s cubic-bezier(.45,.05,.4,1) forwards}
+.nb-leaf.back{animation:nb-flip-back .6s cubic-bezier(.45,.05,.4,1) forwards}
+.nb-lid{animation:nb-lid .95s cubic-bezier(.5,0,.25,1) .15s forwards}
+@keyframes nb-flip-fwd{from{transform:rotateY(0)}to{transform:rotateY(-180deg)}}
+@keyframes nb-flip-back{from{transform:rotateY(0)}to{transform:rotateY(180deg)}}
+@keyframes nb-lid{from{transform:rotateY(0)}to{transform:rotateY(-180deg)}}
 `;
 
 interface Item {
@@ -102,6 +121,12 @@ interface Item {
   /** 1-based position in the overall order. */
   readonly no: number;
   readonly restored: boolean;
+}
+
+interface View {
+  readonly list: readonly Item[];
+  readonly pages: number;
+  readonly language: Locale;
 }
 
 export function createNotebook(container: HTMLElement, opener: HTMLElement, source: NotebookSource): Notebook {
@@ -113,8 +138,11 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   overlay.className = "nb-overlay";
   container.appendChild(overlay);
   const narrow = window.matchMedia(NARROW);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let open = false;
+  /** True while the cover or a page is moving; input to the book waits. */
+  let busy = false;
   /** Index of the first visible page. */
   let page = 0;
 
@@ -123,6 +151,12 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     const all = source.all.map((id, i) => ({ id, no: i + 1, restored: have.has(id) }));
     return source.debug ? all : all.filter((i) => i.restored);
   };
+  const viewNow = (): View => {
+    const list = items();
+    return { list, pages: Math.max(1, Math.ceil(list.length / PER_PAGE)), language: source.language() };
+  };
+  const perView = (): number => (narrow.matches ? 1 : 2);
+  const animated = (): boolean => !narrow.matches && !reduced.matches;
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: HTMLElement): HTMLElementTagNameMap[K] => {
     const node = document.createElement(tag);
@@ -133,16 +167,18 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
 
   function entry(item: Item, language: Locale, parent: HTMLElement): void {
     const t = messagesFor(language);
-    const other: Locale = language === "en" ? "ja" : "en";
     const node = el("div", item.restored ? "nb-entry" : "nb-entry locked", parent);
     const head = el("div", "nb-head", node);
-    el("span", "nb-no", head).textContent = `No. ${item.no}`;
+    el("span", "nb-no", head).textContent = language === "ja" ? `第${item.no}` : `No. ${item.no}`;
     const name = el("h3", `nb-name ${language}`, head);
     name.lang = language;
     name.textContent = t.landmarkNames[item.id] ?? item.id;
-    const alt = el("span", `nb-alt ${other}`, head);
-    alt.lang = other;
-    alt.textContent = messagesFor(other).landmarkNames[item.id] ?? "";
+    if (language === "en") {
+      // The Japanese name sits beside the English one; the Japanese book has no English.
+      const alt = el("span", "nb-alt ja", head);
+      alt.lang = "ja";
+      alt.textContent = messagesFor("ja").landmarkNames[item.id] ?? "";
+    }
     const body = el("p", `nb-body ${language}`, node);
     body.lang = language;
     body.textContent = item.restored ? (landmarkNotes[item.id]?.[language] ?? "") : t.notebook.locked;
@@ -156,13 +192,30 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     });
   }
 
+  /** One sheet of paper: its entries, or blank past the last page. */
+  function buildPage(v: View, index: number, side: "left" | "right" | "solo"): HTMLElement {
+    const t = messagesFor(v.language);
+    const sheet = el("section", side === "solo" ? "nb-page left right" : `nb-page ${side}`);
+    if (index < 0 || index >= v.pages) return sheet;
+    el("div", "nb-tape", sheet);
+    if (v.list.length === 0) {
+      const title = el("h2", `nb-title ${v.language}`, sheet);
+      title.style.fontFamily = v.language === "ja" ? HAND_JA : HAND_EN;
+      title.textContent = t.notebook.title;
+      el("p", `nb-empty ${v.language}`, sheet).textContent = t.notebook.empty;
+    } else {
+      for (const item of v.list.slice(index * PER_PAGE, (index + 1) * PER_PAGE)) entry(item, v.language, sheet);
+    }
+    el("div", "nb-folio", sheet).textContent = String(index + 1);
+    return sheet;
+  }
+
   function render(): void {
-    const language = source.language();
-    const t = messagesFor(language);
-    const list = items();
-    const perView = narrow.matches ? 1 : 2;
-    const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
-    page = Math.min(Math.max(0, page - (page % perView)), pages - 1 - ((pages - 1) % perView));
+    const v = viewNow();
+    const per = perView();
+    const lastFirst = v.pages - 1 - ((v.pages - 1) % per);
+    page = Math.min(Math.max(0, page - (page % per)), lastFirst);
+    const t = messagesFor(v.language);
 
     overlay.replaceChildren();
     const book = el("div", "nb-book", overlay);
@@ -170,71 +223,113 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     book.setAttribute("role", "dialog");
     book.setAttribute("aria-modal", "true");
     book.setAttribute("aria-label", t.notebook.title);
-    const spread = el("div", perView === 1 ? "nb-spread single" : "nb-spread", book);
-
-    for (let slot = 0; slot < perView; slot++) {
-      const index = page + slot;
-      const side = el("section", `nb-page ${perView === 1 || slot === 0 ? "left" : "right"}`, spread);
-      if (perView === 1) side.classList.add("right");
-      if (index >= pages) continue; // the blank page after the last
-      el("div", "nb-tape", side);
-      const slice = list.slice(index * PER_PAGE, (index + 1) * PER_PAGE);
-      if (list.length === 0) {
-        const title = el("h2", `nb-title ${language}`, side);
-        title.style.fontFamily = language === "ja" ? HAND_JA : HAND_EN;
-        title.textContent = t.notebook.title;
-        el("p", `nb-empty ${language}`, side).textContent = t.notebook.empty;
-      } else {
-        for (const item of slice) entry(item, language, side);
-      }
-      el("div", "nb-folio", side).textContent = String(index + 1);
+    const spread = el("div", per === 1 ? "nb-spread single" : "nb-spread", book);
+    if (per === 1) spread.appendChild(buildPage(v, page, "solo"));
+    else {
+      spread.appendChild(buildPage(v, page, "left"));
+      spread.appendChild(buildPage(v, page + 1, "right"));
+      el("div", "nb-ribbon", book);
     }
-    if (perView === 2) el("div", "nb-ribbon", book);
 
-    const prev = el("button", "nb-turn prev", book);
-    prev.type = "button";
-    prev.textContent = "‹";
-    prev.title = t.notebook.prev;
-    prev.setAttribute("aria-label", t.notebook.prev);
-    prev.disabled = page === 0;
-    prev.addEventListener("click", () => turn(-1));
-    const next = el("button", "nb-turn next", book);
-    next.type = "button";
-    next.textContent = "›";
-    next.title = t.notebook.next;
-    next.setAttribute("aria-label", t.notebook.next);
-    next.disabled = page + perView >= pages;
-    next.addEventListener("click", () => turn(1));
-    const x = el("button", "nb-x", book);
-    x.type = "button";
-    x.textContent = "×";
-    x.title = t.notebook.close;
-    x.setAttribute("aria-label", t.notebook.close);
-    x.addEventListener("click", close);
+    const button = (cls: string, glyph: string, label: string, run: () => void): void => {
+      const b = el("button", cls, book);
+      b.type = "button";
+      b.textContent = glyph;
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      b.addEventListener("click", run);
+      if (cls.includes("prev")) b.disabled = page === 0;
+      if (cls.includes("next")) b.disabled = page + per >= v.pages;
+    };
+    button("nb-turn prev", "‹", t.notebook.prev, () => turn(-1));
+    button("nb-turn next", "›", t.notebook.next, () => turn(1));
+    button("nb-x", "×", t.notebook.close, close);
     opener.setAttribute("aria-expanded", String(open));
   }
 
+  const focusBook = (): void => overlay.querySelector<HTMLElement>(".nb-book")?.focus({ preventScroll: true });
+
+  /** Runs `done` when the animation on `node` ends (or soon after, if the browser never reports it). */
+  function whenDone(node: HTMLElement, ms: number, done: () => void): void {
+    let finished = false;
+    const finish = (): void => {
+      if (finished) return;
+      finished = true;
+      done();
+    };
+    node.addEventListener("animationend", finish, { once: true });
+    window.setTimeout(finish, ms);
+  }
+
   function turn(by: number): void {
-    const perView = narrow.matches ? 1 : 2;
-    const pages = Math.max(1, Math.ceil(items().length / PER_PAGE));
-    const target = page + by * perView;
-    if (target < 0 || target >= pages) return;
-    page = target;
-    render();
-    overlay.querySelector<HTMLElement>(".nb-book")?.focus({ preventScroll: true });
+    if (busy) return;
+    const per = perView();
+    const v = viewNow();
+    const target = page + by * per;
+    if (target < 0 || target >= v.pages) return;
+    const spread = overlay.querySelector<HTMLElement>(".nb-spread");
+    const sheets = spread?.querySelectorAll<HTMLElement>(":scope > .nb-page");
+    if (!animated() || !spread || !sheets || sheets.length !== 2) {
+      page = target;
+      render();
+      focusBook();
+      return;
+    }
+    // A leaf carrying the old page on its front and the new one on its back turns over the spread.
+    const [oldLeft, oldRight] = [sheets[0]!, sheets[1]!];
+    const newLeft = buildPage(v, target, "left");
+    const newRight = buildPage(v, target + 1, "right");
+    const forward = by > 0;
+    const leaf = el("div", forward ? "nb-leaf fwd" : "nb-leaf back");
+    const front = el("div", "nb-face", leaf);
+    const rear = el("div", "nb-face rear", leaf);
+    front.appendChild(forward ? oldRight : oldLeft);
+    rear.appendChild(forward ? newLeft : newRight);
+    spread.replaceChildren(forward ? oldLeft : newLeft, forward ? newRight : oldRight, leaf);
+    busy = true;
+    whenDone(leaf, 900, () => {
+      busy = false;
+      if (!open) return;
+      page = target;
+      render();
+      focusBook();
+    });
+  }
+
+  /** The cover swings open on the right-hand side, and the first spread appears beneath it. */
+  function openCover(): void {
+    const book = overlay.querySelector<HTMLElement>(".nb-book");
+    const spread = overlay.querySelector<HTMLElement>(".nb-spread");
+    if (!book || !spread) return;
+    const v = viewNow();
+    book.classList.add("opening");
+    spread.classList.add("opening");
+    const lid = el("div", "nb-lid", spread);
+    el("div", "nb-face cover", lid);
+    // The inside of the cover is the left-hand page, so it lands as the page it will become.
+    el("div", "nb-face rear", lid).appendChild(buildPage(v, page, "left"));
+    busy = true;
+    whenDone(lid, 1400, () => {
+      busy = false;
+      if (open) render();
+      focusBook();
+    });
   }
 
   function show(): void {
     open = true;
+    busy = false;
     page = 0;
     overlay.classList.add("open");
     render();
-    overlay.querySelector<HTMLElement>(".nb-book")?.focus({ preventScroll: true });
+    if (animated()) openCover();
+    focusBook();
   }
 
   function close(): void {
     if (!open) return;
     open = false;
+    busy = false;
     overlay.classList.remove("open");
     opener.setAttribute("aria-expanded", "false");
     const focused = document.activeElement;
@@ -247,13 +342,15 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   overlay.addEventListener("pointerdown", (e) => {
     if (e.target === overlay) close();
   });
-  narrow.addEventListener("change", () => open && render());
+  narrow.addEventListener("change", () => {
+    if (open && !busy) render();
+  });
   // The notebook owns the keyboard while it is open.
   window.addEventListener(
     "keydown",
     (e) => {
       if (!open) return;
-      if (e.code === "Escape") {
+      if (e.code === "Escape" || (e.code === "KeyJ" && !e.metaKey && !e.ctrlKey && !e.altKey)) {
         e.stopImmediatePropagation();
         if (!e.repeat) close();
       } else if (e.code === "ArrowLeft" || e.code === "ArrowRight") {
@@ -269,7 +366,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     toggle: () => (open ? close() : show()),
     close,
     refresh: () => {
-      if (open) render();
+      if (open && !busy) render();
     },
   };
 }
