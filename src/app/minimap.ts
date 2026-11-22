@@ -6,10 +6,10 @@ const SMALL_SIZE = 168;
 /** World units per map pixel in the corner map: about five regions across. */
 const SMALL_SCALE = 2;
 /** The expanded map never starts further out than this (world units per pixel), so it stays a readable size however far the player has explored. */
-const MAX_FIT_SCALE = 4;
+const MAX_FIT_SCALE = 2.5;
 /** Zooming out past these hides detail: first the (debug) monuments, then the ordinary shrines. Landmark stars always stay. */
-const HIDE_MONUMENTS_SCALE = 2.5;
-const HIDE_SHRINES_SCALE = 6;
+const HIDE_MONUMENTS_SCALE = 1.6;
+const HIDE_SHRINES_SCALE = 3.5;
 const FOG = [0x3a, 0x34, 0x34] as const;
 const DEAD_GREY = [0x8c, 0x8c, 0x88] as const;
 /** How far an unrestored region is drained toward grey: enough to read as asleep, not enough to lose its biome. */
