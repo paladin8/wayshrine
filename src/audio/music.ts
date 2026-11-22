@@ -4,6 +4,7 @@ import { TRACKS, type TrackId, type TrackInfo } from "./tracks";
 export interface AudioPlayer {
   volume: number;
   currentTime: number;
+  loop?: boolean;
   onended: ((event: Event) => unknown) | null;
   play(): Promise<void> | void;
   pause(): void;

@@ -122,7 +122,7 @@ EXTRA_SOLIDS=[]   # [x, y, r] in Blender coordinates
 # over an inlet of the sea.
 LV=-0.6; FLOOR=LV-0.5
 FH=11.2   # footprint half-width (the sidecar's half): larger than the usual 9.6, for a roomier islet
-IC=(0.0,0.8); IRX,IRY,IP=10.0,9.8,3.2
+IC=(0.0,0.4); IRX,IRY,IP=9.6,9.4,3.2   # keeps the outer 1.2 of the footprint open water
 def ell_m(x,y):
     # a rounded square, so the islet fills the footprint, with a little irregularity in the shoreline
     dx=abs((x-IC[0])/IRX); dy=abs((y-IC[1])/IRY); th=math.atan2(y-IC[1],x-IC[0])
@@ -523,8 +523,8 @@ scene.frame_end=DEER_END
 # The deer walk along the shore of each arm, on the level ground just above the beach, in view of the camera
 # and clear of the trees, the lanterns and the buildings.
 routes=[
-    ((8.3,-0.2),1.4,1,None,(8.3,-3.0),4,24),
-    ((-8.0,-2.2),-0.6,0.92,20,(-8.0,-4.2),10,29),   # the front of the left arm, clear of the torii from the camera
+    ((7.8,-0.2),1.4,1,None,(7.8,-3.0),4,24),
+    ((-7.7,-2.8),-0.6,0.92,20,(-7.6,-4.0),10,29),   # the front of the left arm, clear of the torii from the camera
 ]
 for index,args in enumerate(routes,1):
     deer(index,*args)

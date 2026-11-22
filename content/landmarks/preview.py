@@ -19,8 +19,9 @@ if os.environ.get("FI_GROUND"):
     # stand-in for the game's terrain under terrainSurface models (preview only; the .blend is not saved)
     gm=bpy.data.meshes.new("PreviewGround"); h=9.8
     gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
-    mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=(0.195,0.42,0.15,1)
-    p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=(0.195,0.42,0.15,1); p.inputs["Roughness"].default_value=1.0
+    gc={"snow":(0.88,0.91,0.93,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow for a snow region
+    mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=gc
+    p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=gc; p.inputs["Roughness"].default_value=1.0
     gm.materials.append(mat); g=bpy.data.objects.new("PreviewGround",gm); col.objects.link(g)
 if os.environ.get("FI_WATER"):
     # stand-in for the water region's sea round a model that ends in open water (preview only)

@@ -19,7 +19,7 @@
 ## Next
 0. Landmarks: screen-edge glow and compass guidance for revealed landmarks, skyline peek for tall landmarks, real looks, props and player visuals for the later biomes and abilities (placeholders now), more landmark models.
 1. Real scenery for the haiku (ponds, bridges, fields) from the tags in `content/haiku-scenery.json`; tie the rubbing collection to technological advancement; biome edge shapes.
-2. **Ability acquisition.** Handle the moment an ability is gained (pickup feedback, replacing the placeholder). The background music and the shrine-activation music should change at each ability acquisition, so each stage of the game sounds different. See `docs/music.md`.
+2. **Ability acquisition.** The boat prototype announces the unlock at three restored landmarks and uses the first boarding to transition between two themes. Extend the reward and first-use pattern to the other abilities. Give each stage a distinct background score and shrine-activation music. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.
 5. **Technology thread.** Work out how it fits in. The long-term aim is skyscrapers and a shinkansen, but they have to arrive in a way that feels natural, not as a jump. Related: item 3 and tying the rubbing collection to technological advancement (item 1). Open question; needs a design pass before any building.
@@ -36,5 +36,5 @@
 
 ## Known gaps
 - Landmarks use one placeholder model; ordinary regions differ only by biome.
-- One music track for every biome. Touch input not supported.
+- Two background themes, selected by first-voyage progress. Touch input not supported.
 - Chunk meshes build on the main thread (2 per frame); move to a worker if hitching appears.

@@ -12,6 +12,7 @@ export {
   isLandmarkRevealed,
   isRestored,
   newGame,
+  recordBoatLaunch,
   resetGame,
   resetShrines,
   restoreShrine,
@@ -55,3 +56,5 @@ export {
 export type { AwakeningFrame } from "./awakening";
 export { FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";
 export { MONUMENT_REACH, isLegible, monumentInReach } from "./monuments";
+
+export { BOAT_PUSH_OFF_SECONDS, boatLaunchFrame, onWater, planBoatLaunch, type BoatLaunch } from "./boat";

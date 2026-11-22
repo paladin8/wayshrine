@@ -1,5 +1,8 @@
 import {
   awakeningFrame,
+  BOAT_PUSH_OFF_SECONDS,
+  boatLaunchFrame,
+  blockerAt,
   captionTarget,
   CAPTION_FADE,
   capabilitiesOf,
@@ -9,10 +12,14 @@ import {
   deserialize,
   discoverNear,
   isLegible,
+  landmarksRestored,
   isRestored,
   monumentInReach,
   movePlayer,
   newGame,
+  onWater,
+  planBoatLaunch,
+  recordBoatLaunch,
   nextShrine,
   requirementOf,
   resetGame,
@@ -24,16 +31,17 @@ import {
   skipTarget,
   timingOf,
   type AwakeningKind,
+  type BoatLaunch,
   serialize,
   shrineInReach,
   startPosition,
   type GameState,
   type SaveData,
 } from "../game";
-import { createCuePlayer, createMusic, trackFor, type CueId } from "../audio";
+import { createCuePlayer, createMusic, MUSIC_SETS, musicSetFor, type CueId, type MusicSet } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Obstacles, type Point, type World } from "../world";
+import { CAPABILITY_THRESHOLDS, capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor } from "./i18n";
@@ -44,6 +52,13 @@ import { createSettingsStore } from "./settings";
 import { createSettingsPanel } from "./settings-panel";
 
 const HINT_SECONDS = 1.5;
+const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
+  meadow: "walk-meadow",
+  water: "row-water",
+};
+const MOVEMENT_FADE_IN = 0.65;
+const MOVEMENT_FADE_OUT = 0.85;
+const BOAT_REVEAL_SECONDS = 3;
 const OVERVIEW_SECONDS = 3;
 const OVERVIEW_FADE_SECONDS = 0.5;
 
@@ -51,15 +66,18 @@ function overviewZoomAt(elapsed: number): number {
   const t = Math.min(elapsed, OVERVIEW_SECONDS - elapsed, OVERVIEW_FADE_SECONDS) / OVERVIEW_FADE_SECONDS;
   return t * t * (3 - 2 * t);
 }
-/** Everything that plays for an awakening: the burst at the wave launch and the swell under the whole sequence. */
-const AWAKENING_CUES: Readonly<Record<AwakeningKind, readonly CueId[]>> = {
-  shrine: ["awakening-burst", "dawn-reverence"],
-  landmark: ["awakening-burst", "radiant-arrival"],
-};
-const ALL_AWAKENING_CUES: readonly CueId[] = ["awakening-burst", "dawn-reverence", "radiant-arrival"];
+const AWAKENING_BURST = "awakening-burst";
+const ALL_AWAKENING_CUES: readonly CueId[] = [
+  AWAKENING_BURST,
+  ...MUSIC_SETS.flatMap(({ awakening }) => [awakening.shrine, awakening.landmark]),
+];
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
+const VOYAGE_DUCK = 0.16;
+// The supplied cue has a long decay. Bring the new score up while the tail is still audible.
+const VOYAGE_RELEASE_START = 3.3;
+const VOYAGE_RELEASE_SECONDS = 3.2;
 
 const KEY_UP = ["KeyW", "ArrowUp"];
 const KEY_DOWN = ["KeyS", "ArrowDown"];
@@ -116,14 +134,24 @@ export function startApp(container: HTMLElement): void {
     },
   };
   const minimap = createMinimap(container, world, (right, up) => stage.groundDirection(right, up), (region) => {
-    if (awakening) return;
+    if (momentBusy()) return;
     // Land on the shrine's plateau, within reach of its gate.
     pos = standPoint(region);
     minimap.toggleExpanded();
   }, () => {
-    if (!awakening && overviewTime >= OVERVIEW_SECONDS) overviewTime = 0;
+    if (!momentBusy() && overviewTime >= OVERVIEW_SECONDS) overviewTime = 0;
   });
 
+  let debugPanel: ReturnType<typeof createDebugPanel> | undefined;
+  if (debug) {
+    // Let the debug dialog handle Escape before the map and other overlays.
+    window.addEventListener("keydown", (event) => {
+      if (event.code !== "Escape" || !debugPanel?.isOpen()) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!event.repeat) debugPanel.close();
+    }, true);
+  }
   const hud = createHud(container);
   const music = createMusic();
   const cues = createCuePlayer();
@@ -152,12 +180,12 @@ export function startApp(container: HTMLElement): void {
     sound: (cue) => cues.play(cue),
     onTravel: (id) => {
       const region = world.landmarks.find((r) => r.landmark?.id === id);
-      if (!region || awakening) return;
+      if (!region || momentBusy()) return;
       pos = standPoint(region);
     },
   });
   /** Dialogs own the keyboard while open. */
-  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen();
+  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen() || debugPanel?.isOpen() === true;
   let drawnCollected = state.collected.length;
   let drawnLanguage = settings.get().language;
   let drawnLandmarks = -1;
@@ -182,7 +210,36 @@ export function startApp(container: HTMLElement): void {
     caption: number;
     /** Set when the sequence is skipped before the name appeared, so it is not shown late. */
     captionOff: boolean;
+    readonly unlocksBoat: boolean;
+    readonly musicSet: MusicSet;
   } | null = null;
+  let boatRevealLeft = 0;
+  let boatVoyage: { readonly path: BoatLaunch; readonly preview: boolean; t: number } | null = null;
+  // A debug voyage gives temporary water access, without writing that voyage to the save.
+  let boatTrial = false;
+  const momentBusy = (): boolean => awakening !== null || boatRevealLeft > 0 || boatVoyage !== null;
+  let debugMusicIndex = -1;
+  const selectedMusicSet = (): MusicSet => {
+    const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial;
+    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch);
+  };
+
+  const startVoyage = (path: BoatLaunch, preview = false): void => {
+    // If this save is already on the later score, let the debug run fade back to theme one first.
+    const lead = preview && debugMusicIndex < 0 && music.status().track === musicSetFor(true).background ? -3.1 : 0;
+    boatVoyage = { path, preview, t: lead };
+    pos = path.from;
+    facing = path.facing;
+    overviewTime = OVERVIEW_SECONDS;
+    if (lead === 0) cues.play("first-voyage");
+  };
+
+  const stopBoatMoments = (): void => {
+    boatRevealLeft = 0;
+    boatVoyage = null;
+    boatTrial = false;
+    cues.stop("first-voyage", 0.25);
+  };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
 
@@ -204,6 +261,7 @@ export function startApp(container: HTMLElement): void {
   /** Debug: reads the first rubbing in the player's region that is not yet in the book. */
   /** Debug: moves the player to the next unrestored shrine. */
   const goToNextShrine = (): void => {
+    if (momentBusy()) return;
     const g = nextShrine(world, state, pos);
     if (g) pos = standPoint(g.region);
   };
@@ -226,9 +284,52 @@ export function startApp(container: HTMLElement): void {
     pos = safePosition(terrain, capabilitiesOf(state, world), pos);
   };
 
-  if (params.has("debug")) {
+  const down = new Set<string>();
+  if (debug) {
+    const beginPreview = (): void => {
+      awakening = null;
+      ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.25));
+      stopBoatMoments();
+      overviewTime = OVERVIEW_SECONDS;
+      panel.close();
+      notebook.close();
+      if (monumentUi.isBoxOpen()) monumentUi.toggleBox();
+      else monumentUi.dismissReading();
+      if (minimap.isExpanded()) minimap.toggleExpanded();
+      music.unlock();
+    };
+    const previewBoatUnlock = (): void => {
+      beginPreview();
+      boatRevealLeft = BOAT_REVEAL_SECONDS;
+    };
+    const previewFirstVoyage = (): void => {
+      const caps = new Set<Capability>(["boat"]);
+      // Trace out from a coastal landmark until a clear bank meets enough open water to push off.
+      for (const region of world.landmarks) {
+        if (region.biome !== "water") continue;
+        for (let bearing = 0; bearing < 16; bearing++) {
+          const angle = bearing * Math.PI / 8;
+          const at = (r: number): Point => ({ x: region.site.x + Math.cos(angle) * r, z: region.site.z + Math.sin(angle) * r });
+          for (let r = 4; r < 32; r += 0.35) {
+            const from = at(r);
+            const entry = at(r + 0.35);
+            if (onWater(terrain, from) || !onWater(terrain, entry) || blockerAt(terrain, caps, from.x, from.z)) continue;
+            const clear = clearOfObstacles(terrain, caps, obstacles, from);
+            if (Math.hypot(clear.x - from.x, clear.z - from.z) > 0.01) continue;
+            const path = planBoatLaunch(terrain, caps, obstacles, from, entry);
+            if (Math.hypot(path.afloat.x - entry.x, path.afloat.z - entry.z) < 1.8) continue;
+            beginPreview();
+            boatTrial = true;
+            startVoyage(path, true);
+            return;
+          }
+        }
+      }
+    };
+
     const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
+      stopBoatMoments();
       state = revealLandmarks(next(state), world);
       overviewTime = OVERVIEW_SECONDS;
       saveGame(state);
@@ -250,11 +351,18 @@ export function startApp(container: HTMLElement): void {
       },
       readRubbing: readRubbingHere,
       goToTarget: goToNextShrine,
+      previewBoatUnlock,
+      previewFirstVoyage,
+      cycleMusic: () => {
+        music.unlock();
+        debugMusicIndex = debugMusicIndex + 1 < MUSIC_SETS.length ? debugMusicIndex + 1 : -1;
+        return MUSIC_SETS[debugMusicIndex]?.label ?? "Auto";
+      },
     };
-    createDebugPanel(container, actions);
+    debugPanel = createDebugPanel(container, actions, () => down.clear());
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => (pos = { x, z }), restore, ...actions },
+      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => { stopBoatMoments(); pos = { x, z }; }, restore, ...actions },
     });
   }
 
@@ -273,12 +381,11 @@ export function startApp(container: HTMLElement): void {
     true,
   );
 
-  const down = new Set<string>();
   const any = (codes: readonly string[]): number => (codes.some((c) => down.has(c)) ? 1 : 0);
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     music.unlock(); // browsers allow audio only after a user gesture
-    if (e.code === KEY_RUBBING_BOX && !awakening && !e.metaKey && !e.ctrlKey && !e.altKey
+    if (e.code === KEY_RUBBING_BOX && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey
         && (monumentUi.isBoxOpen() || !modalOpen())) {
       down.clear();
       monumentUi.toggleBox();
@@ -290,10 +397,10 @@ export function startApp(container: HTMLElement): void {
     }
     down.add(e.code);
     if (e.code === KEY_MAP) minimap.toggleExpanded();
-    if (e.code === KEY_OVERVIEW && !awakening && overviewTime >= OVERVIEW_SECONDS && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.code === KEY_OVERVIEW && !momentBusy() && overviewTime >= OVERVIEW_SECONDS && !e.metaKey && !e.ctrlKey && !e.altKey) {
       overviewTime = 0;
     }
-    if (e.code === KEY_JOURNAL && !awakening && !e.metaKey && !e.ctrlKey && !e.altKey) notebook.toggle();
+    if (e.code === KEY_JOURNAL && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey) notebook.toggle();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (debug && e.code === KEY_RUBBING) readRubbingHere();
     if (debug && e.code === KEY_NEXT_SHRINE && !e.metaKey && !e.ctrlKey && !e.altKey) goToNextShrine();
@@ -305,19 +412,23 @@ export function startApp(container: HTMLElement): void {
         // Once the camera has pulled back, the sequence can be skipped to its end.
         if (awakening.t > timingOf(awakening.kind).zoomOut) {
           awakening.t = skipTarget(awakening.t, awakening.kind);
-          AWAKENING_CUES[awakening.kind].forEach((id) => cues.stop(id, SWELL_SKIP_FADE));
+          cues.stop(AWAKENING_BURST, SWELL_SKIP_FADE);
+          cues.stop(awakening.musicSet.awakening[awakening.kind], SWELL_SKIP_FADE);
           if (awakening.caption < 0.05) awakening.captionOff = true;
         }
-      } else {
+      } else if (!momentBusy()) {
         const region = shrineInReach(terrain, pos);
         if (region && !isRestored(state, region)) {
+          const unlocksBoat = region.landmark !== null && landmarksRestored(state, world) === CAPABILITY_THRESHOLDS.boat - 1;
           restore(region.id);
           const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
-          awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false };
+          const musicSet = selectedMusicSet();
+          awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false, unlocksBoat, musicSet };
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
-          AWAKENING_CUES[kind].forEach((id) => cues.play(id));
+          cues.play(AWAKENING_BURST);
+          cues.play(musicSet.awakening[kind]);
         } else {
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
@@ -330,7 +441,16 @@ export function startApp(container: HTMLElement): void {
   });
   window.addEventListener("pointerdown", () => music.unlock());
   window.addEventListener("keyup", (e) => down.delete(e.code));
-  window.addEventListener("blur", () => down.clear());
+  let movementCue: CueId | undefined;
+  const releaseMovement = (): void => {
+    down.clear();
+    Object.values(MOVEMENT_CUES).forEach((id) => cues.stop(id));
+    movementCue = undefined;
+  };
+  window.addEventListener("blur", releaseMovement);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) releaseMovement();
+  });
 
   let lastRestored: GameState["restored"] | undefined;
   let restoredLandmarks: readonly string[] = [];
@@ -345,9 +465,11 @@ export function startApp(container: HTMLElement): void {
       restoredLandmarks = world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id);
     }
     const caps = capabilitiesForCount(restoredLandmarks.length);
+    if (boatTrial && !boatVoyage && !onWater(terrain, pos)) boatTrial = false;
+    const sailingCaps = boatTrial ? new Set<Capability>([...caps, "boat"]) : caps;
     // Losing a capability (a reset, an old save) must never strand the player.
-    pos = clearOfObstacles(terrain, caps, obstacles, safePosition(terrain, caps, pos));
-    const seen = discoverNear(state, world, pos);
+    if (!boatVoyage) pos = clearOfObstacles(terrain, sailingCaps, obstacles, safePosition(terrain, sailingCaps, pos));
+    const seen = boatTrial ? state : discoverNear(state, world, pos);
     if (seen !== state) {
       state = seen;
       saveGame(state);
@@ -355,12 +477,18 @@ export function startApp(container: HTMLElement): void {
     const live = !modalOpen();
     const right = live ? any(KEY_RIGHT) - any(KEY_LEFT) : 0;
     const up = live ? any(KEY_UP) - any(KEY_DOWN) : 0;
-    if (!awakening && (right !== 0 || up !== 0)) {
+    let moving = false;
+    if (!momentBusy() && (right !== 0 || up !== 0)) {
       monumentUi.dismissReading();
       const dir = stage.groundDirection(right, up);
-      const moved = movePlayer(pos, dir, dt, terrain, caps, obstacles);
+      const from = pos;
+      const moved = movePlayer(pos, dir, dt, terrain, sailingCaps, obstacles);
+      moving = Math.hypot(from.x - moved.pos.x, from.z - moved.pos.z) > 0.001;
       pos = moved.pos;
       facing = Math.atan2(dir.x, dir.z);
+      if (caps.has("boat") && !state.boatLaunched && !boatTrial && !onWater(terrain, from) && onWater(terrain, pos)) {
+        startVoyage(planBoatLaunch(terrain, caps, obstacles, from, pos));
+      }
       if (moved.blockedBy) {
         blockedBy = moved.blockedBy;
         hintLeft = HINT_SECONDS;
@@ -370,12 +498,33 @@ export function startApp(container: HTMLElement): void {
     if (hintLeft === 0) blockedBy = null;
     overviewTime = Math.min(OVERVIEW_SECONDS, overviewTime + dt);
 
+    let voyageFrame: ReturnType<typeof boatLaunchFrame> | undefined;
+    if (boatVoyage) {
+      const before = boatVoyage.t;
+      boatVoyage.t += dt;
+      if (before < 0 && boatVoyage.t >= 0) cues.play("first-voyage");
+      if (boatVoyage.t >= 0) {
+        voyageFrame = boatLaunchFrame(boatVoyage.path, boatVoyage.t);
+        pos = voyageFrame.rider;
+        if (voyageFrame.done) {
+          if (!boatVoyage.preview) {
+            state = recordBoatLaunch(state);
+            saveGame(state);
+          }
+          boatVoyage = null;
+        }
+      }
+    }
+    boatRevealLeft = Math.max(0, boatRevealLeft - dt);
+
     let scene: { regionId: string; progress: number; zoom: number } | undefined;
     if (awakening) {
       awakening.t += dt;
       const f = awakeningFrame(awakening.t, awakening.kind);
-      if (f.done) awakening = null;
-      else {
+      if (f.done) {
+        if (awakening.unlocksBoat) boatRevealLeft = BOAT_REVEAL_SECONDS;
+        awakening = null;
+      } else {
         const zoom = awakening.t < timingOf(awakening.kind).zoomOut
           ? awakening.initialZoom + (1 - awakening.initialZoom) * f.zoom
           : f.zoom;
@@ -399,7 +548,7 @@ export function startApp(container: HTMLElement): void {
     // After restoration, the name returns, smaller and near the bottom, while the player is close to the landmark.
     const here = world.regionAt(pos.x, pos.z);
     const nearLandmark =
-      !awakening && here.landmark && isRestored(state, here) && Math.hypot(pos.x - here.site.x, pos.z - here.site.z) < LANDMARK_NAME_RANGE
+      !momentBusy() && here.landmark && isRestored(state, here) && Math.hypot(pos.x - here.site.x, pos.z - here.site.z) < LANDMARK_NAME_RANGE
         ? here.landmark.id
         : null;
     if (nearLandmark) nearNameId = nearLandmark;
@@ -408,12 +557,14 @@ export function startApp(container: HTMLElement): void {
     const needed = blockedBy ? requirementOf(blockedBy) : null;
     const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
     const reach = shrineInReach(terrain, pos);
-    const stone = awakening ? null : monumentInReach(monuments, pos);
+    const stone = momentBusy() ? null : monumentInReach(monuments, pos);
     const prompt = awakening
       ? awakening.t > timingOf(awakening.kind).zoomOut
         ? t.promptSkip
         : null
-      : reach && !isRestored(state, reach)
+      : momentBusy()
+        ? null
+        : reach && !isRestored(state, reach)
         ? reach.landmark
           ? t.promptRestoreLandmark
           : t.promptRestore
@@ -444,7 +595,8 @@ export function startApp(container: HTMLElement): void {
       restoredLandmarks,
       compass,
       prompt: reading ? null : prompt,
-      hint: reading ? null : hint,
+      hint: reading || momentBusy() ? null : hint,
+      boatReveal: boatRevealLeft > 0 ? prefs.language : null,
       landmarkName: nameModel,
       nearLandmarkName: nearModel,
       messages: t,
@@ -452,13 +604,28 @@ export function startApp(container: HTMLElement): void {
     });
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
-    music.setTrack(trackFor(world.regionAt(pos.x, pos.z).biome));
+    // Finish a restoration in the set it started in, even if debug changes the next set.
+    music.setTrack((awakening?.musicSet ?? selectedMusicSet()).background);
+    const nextMovementCue = moving && !voyageFrame
+      ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
+      : undefined;
+    if (nextMovementCue !== movementCue) {
+      if (movementCue) cues.stop(movementCue, MOVEMENT_FADE_OUT);
+      if (nextMovementCue) cues.play(nextMovementCue, MOVEMENT_FADE_IN);
+      movementCue = nextMovementCue;
+    }
     cues.update(dt);
-    // Only the awakening swell ducks the music; the monument chime sits under it at its normal level.
-    music.setDuck(ALL_AWAKENING_CUES.some((id) => cues.playing().includes(id)) ? SWELL_DUCK : 1);
+    const audible = cues.playing();
+    const voyageTime = cues.elapsed("first-voyage");
+    const release = voyageTime === null ? 1 : Math.min(1, Math.max(0, (voyageTime - VOYAGE_RELEASE_START) / VOYAGE_RELEASE_SECONDS));
+    const voyageDuck = VOYAGE_DUCK + (1 - VOYAGE_DUCK) * release;
+    music.setDuck(ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : voyageDuck);
     music.update(dt);
 
-    stage.render(dt, { player: pos, facing, state, overviewZoom: overviewZoomAt(overviewTime), awakening: scene });
+    stage.render(dt, {
+      player: pos, facing, state, moving, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      voyage: voyageFrame,
+    });
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

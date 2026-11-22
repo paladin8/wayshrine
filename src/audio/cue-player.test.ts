@@ -5,6 +5,7 @@ import type { AudioPlayer } from "./music";
 class FakePlayer implements AudioPlayer {
   volume = 1;
   currentTime = 0;
+  loop = false;
   onended: (() => void) | null = null;
   playing = false;
   reject = false;
@@ -18,10 +19,10 @@ class FakePlayer implements AudioPlayer {
   }
 }
 
-function setup() {
+function setup(loop = false, gain = 1) {
   const made: FakePlayer[] = [];
   const cues = createCuePlayer({
-    cues: { x: { url: "x.mp3" } },
+    cues: { x: { url: "x.mp3", loop, gain } },
     createPlayer: () => {
       const p = new FakePlayer();
       made.push(p);
@@ -41,6 +42,45 @@ describe("cue player", () => {
     expect(p.currentTime).toBe(0);
     expect(p.volume).toBeCloseTo(0.8);
     expect(cues.playing()).toEqual(["x"]);
+  });
+
+  it("enables native looping only for cues marked as loops", () => {
+    expect(setup().p.loop).toBe(false);
+    const { cues, p } = setup(true);
+    expect(p.loop).toBe(true);
+    cues.play("x" as never);
+    cues.stop("x" as never, 0.12);
+    cues.update(0.12);
+    expect(p.playing).toBe(false);
+  });
+
+  it("fades a quiet loop in, out, and back in from its current level", () => {
+    const { cues, p } = setup(true, 0.32);
+    const cue = "x" as never;
+    cues.play(cue, 1);
+    expect(p.volume).toBe(0);
+    cues.update(0.5);
+    expect(p.volume).toBeCloseTo(0.128);
+    cues.stop(cue, 1);
+    expect(p.volume).toBeCloseTo(0.128);
+    cues.update(0.5);
+    expect(p.volume).toBeCloseTo(0.064);
+    p.currentTime = 0.6;
+    cues.play(cue, 1);
+    expect(p.volume).toBeCloseTo(0.064);
+    expect(p.currentTime).toBe(0.6);
+    cues.update(1);
+    expect(p.volume).toBeCloseTo(0.256);
+  });
+
+  it("reports the playhead while a cue is active", () => {
+    const { cues, p } = setup();
+    expect(cues.elapsed("x" as never)).toBeNull();
+    cues.play("x" as never);
+    p.currentTime = 5.25;
+    expect(cues.elapsed("x" as never)).toBe(5.25);
+    p.onended?.();
+    expect(cues.elapsed("x" as never)).toBeNull();
   });
 
   it("is silent while muted", () => {
@@ -80,6 +120,17 @@ describe("cue player", () => {
     cues.play("x" as never);
     await new Promise((r) => setTimeout(r, 0));
     expect(cues.playing()).toEqual([]);
+  });
+
+  it("keeps a restarted cue active when its previous play was refused", async () => {
+    const { cues, p } = setup(true);
+    p.reject = true;
+    cues.play("x" as never);
+    p.reject = false;
+    cues.play("x" as never);
+    await Promise.resolve();
+    expect(p.playing).toBe(true);
+    expect(cues.playing()).toEqual(["x"]);
   });
 
   it("throws for an unknown cue", () => {

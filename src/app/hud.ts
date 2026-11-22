@@ -1,5 +1,5 @@
 import { CAPABILITIES, CAPABILITY_THRESHOLDS, FAR_SIGHT_STARS, type Capability } from "../world";
-import type { Messages } from "./i18n";
+import type { Locale, Messages } from "./i18n";
 import { UI_FONT, setText } from "./style";
 
 export interface CompassModel {
@@ -27,6 +27,7 @@ export interface HudModel {
   readonly landmarkName: LandmarkNameModel | null;
   /** The small name shown near the bottom while the player is close to a restored landmark, or null. */
   readonly nearLandmarkName?: LandmarkNameModel | null;
+  readonly boatReveal: Locale | null;
 }
 
 /**
@@ -85,6 +86,12 @@ const CSS = `
 .hud .lname.near::before{display:none}
 .hud .lname.near .ja,.hud .lname.near .en{position:static;transform:none}
 .hud .lname.near .ja img{max-height:30vh}
+.hud .boat-reveal{position:absolute;bottom:clamp(76px,15vh,132px);left:50%;transform:translateX(-50%);box-sizing:border-box;width:max-content;max-width:calc(100vw - 38px);padding:12px 20px 14px;text-align:center;border:1px solid #e6c68a85;border-radius:4px;background:#332419ee;color:#fff4d5;box-shadow:0 7px 21px #19100973}
+.hud .boat-reveal strong{display:block;margin-bottom:4px;font:400 25px/1.15 "Kaushan Script",cursive;color:#ffdfa3}
+.hud .boat-reveal:lang(ja) strong{font-family:"Yuji Syuku",serif}
+.hud .boat-reveal:not([hidden]){animation:boat-reveal .25s ease-out}
+@keyframes boat-reveal{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+@media(prefers-reduced-motion:reduce){.hud .boat-reveal:not([hidden]){animation:none}}
 .hud .dot{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:#ffe9a8}
 `;
 
@@ -186,6 +193,14 @@ export function createHud(container: HTMLElement): Hud {
   near.append(nearJaBox, nearEnBox);
   root.appendChild(near);
   let nearShownId: string | null = null;
+  const boat = document.createElement("div");
+  boat.className = "boat-reveal";
+  boat.hidden = true;
+  boat.setAttribute("role", "status");
+  const boatTitle = document.createElement("strong");
+  const boatHint = document.createElement("span");
+  boat.append(boatTitle, boatHint);
+  root.append(boat);
   /** The images were drawn at a fixed glyph size, so every one is scaled by the same factor (relative to `--em`). */
   const GLYPH_PX = 320;
   const sizeToEm = (img: HTMLImageElement): void => {
@@ -211,6 +226,12 @@ export function createHud(container: HTMLElement): Hud {
     landmarkButton: count,
     update(m) {
       const t = m.messages;
+      if (m.boatReveal) {
+        boat.lang = m.boatReveal;
+        setText(boatTitle, t.boatReveal.title);
+        setText(boatHint, t.boatReveal.hint);
+      }
+      boat.hidden = m.boatReveal === null;
       for (const { item, chip, name, stars } of chips) {
         const held = item.id === "farSight" ? m.restoredLandmarks.length >= item.stars : m.capabilities.has(item.id);
         const status = held ? "unlocked" : "locked";

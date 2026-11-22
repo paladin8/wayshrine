@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { lifeAt, vitality, type GameState } from "../game";
+import { lifeAt, vitality, type boatLaunchFrame, type GameState } from "../game";
 import { CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Point, type Terrain } from "../world";
 import { createAmbient } from "./ambient";
 import { createGlimmer } from "./glimmer";
@@ -39,6 +39,8 @@ export interface StageView {
   /** Heading in radians about the vertical axis. */
   readonly facing: number;
   readonly state: GameState;
+  readonly voyage?: ReturnType<typeof boatLaunchFrame>;
+  readonly moving?: boolean;
   /** Optional camera pull-back centred on the player, from 0 to 1. */
   readonly overviewZoom?: number;
   /**
@@ -100,7 +102,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
   scene.add(sun, sun.target);
 
   const player = buildPlayer();
-  scene.add(player.group);
+  scene.add(player.group, player.hull);
 
   const chunks = new Map<string, VitalityMesh>();
   const shrines = new Map<string, ShrineMesh>();
@@ -255,7 +257,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       const awakening = view.awakening ?? null;
       awakeningRegion = awakening?.regionId ?? null;
       awakeningProgress = awakening?.progress ?? 0;
-      const zoom = awakening?.zoom ?? view.overviewZoom ?? 0;
+      const zoom = awakening?.zoom ?? Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0);
       const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       const pos = view.player;
       setLifeTime(clock);
@@ -293,11 +295,19 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       const onWater = isWater(tile.biome);
-      const groundY = terrain.groundAt(pos.x, pos.z) + (onWater ? 0.05 + Math.sin(clock * 3) * 0.03 : 0);
+      const voyage = view.voyage;
+      const seated = voyage?.seated ?? Number(onWater);
+      const bob = 0.045 + Math.sin(clock * 3) * 0.03;
+      const groundY = terrain.groundAt(pos.x, pos.z) + bob * seated;
       playerY += (groundY - playerY) * Math.min(1, dt * 14);
       player.group.position.set(pos.x, playerY, pos.z);
       player.group.rotation.y = view.facing;
-      player.setBoat(onWater);
+      player.setPose(seated, voyage?.lift ?? 0);
+
+      const hull = voyage?.hull ?? pos;
+      player.hull.position.set(hull.x, terrain.groundAt(hull.x, hull.z) + bob, hull.z);
+      player.hull.rotation.y = view.facing;
+      player.setBoat(onWater || voyage !== undefined, voyage?.wake ?? Number(view.moving ?? false), clock);
 
       applyZoom(zoom, viewSize);
       camera.position.copy(target).add(offset);
