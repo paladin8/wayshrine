@@ -111,7 +111,9 @@ const CSS = `
 .map .legend .sw.blocked{background-image:repeating-linear-gradient(45deg,#0000 0 3px,#2a2424b3 3px 5px)}
 .map .legend .need{opacity:.75;display:none}
 .map.large .legend{pointer-events:auto}
-.map .legend div:hover .need{display:inline}
+.map .legend:hover .need{display:inline}
+.map.large canvas{cursor:grab;touch-action:none}
+.map.large canvas.dragging{cursor:grabbing}
 `;
 
 /**
@@ -160,6 +162,12 @@ export function createMinimap(
   const R = basis(1, 0);
   const F = basis(0, 1);
   let expanded = false;
+  /** The expanded map's view, as an offset from the auto-fit view (screen-space world units) and a zoom factor. */
+  let panU = 0;
+  let panV = 0;
+  let zoomK = 1;
+  /** The view the last expanded draw used: centre (screen-space u, v) and world units per pixel, and the auto-fit it started from. */
+  let view = { u: 0, v: 0, scale: 1, fitU: 0, fitV: 0, fitScale: 1 };
   let lastKey = "";
   let waypoints: Waypoint[] = [];
   let hovered: Waypoint | null = null;
@@ -223,9 +231,13 @@ export function createMinimap(
         if (!state.explored.has(landmark.id)) include(landmark.shrine);
       }
       const span = Math.max(maxU - minU, maxV - minV) + REGION_SIZE * 1.6;
-      scale = Math.max(span / size, 1.2);
-      const u = (minU + maxU) / 2;
-      const v = (minV + maxV) / 2;
+      const fitScale = Math.max(span / size, 1.2);
+      const fitU = (minU + maxU) / 2;
+      const fitV = (minV + maxV) / 2;
+      scale = fitScale / zoomK;
+      const u = fitU + panU;
+      const v = fitV + panV;
+      view = { u, v, scale, fitU, fitV, fitScale };
       centre = { x: u * R.x + v * F.x, z: u * R.z + v * F.z };
     }
 
@@ -368,7 +380,74 @@ export function createMinimap(
     }
     return best;
   };
+  // Google-Maps-style navigation: drag to pan, wheel to zoom about the cursor.
+  let redrawQueued = false;
+  const redraw = (): void => {
+    if (redrawQueued) return;
+    redrawQueued = true;
+    requestAnimationFrame(() => {
+      redrawQueued = false;
+      if (expanded && lastInput) draw(lastInput, lastSize, zoomK > 2.5 ? 3 : 4);
+    });
+  };
+  const toCanvas = (e: MouseEvent): [number, number] => {
+    const box = canvas.getBoundingClientRect();
+    return [((e.clientX - box.left) / box.width) * canvas.width, ((e.clientY - box.top) / box.height) * canvas.height];
+  };
+  const setView = (u: number, v: number, scale: number): void => {
+    const clamped = Math.max(0.25, Math.min(view.fitScale * 2.5, scale));
+    panU = u - view.fitU;
+    panV = v - view.fitV;
+    zoomK = view.fitScale / clamped;
+  };
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      if (!expanded) return;
+      e.preventDefault();
+      const [x, y] = toCanvas(e);
+      const half = canvas.width / 2;
+      const uAt = view.u + (x - half) * view.scale;
+      const vAt = view.v + (half - y) * view.scale;
+      const next = Math.max(0.25, Math.min(view.fitScale * 2.5, view.scale * Math.exp(e.deltaY * 0.0015)));
+      view = { ...view, scale: next, u: uAt - (x - half) * next, v: vAt - (half - y) * next };
+      setView(view.u, view.v, next);
+      redraw();
+    },
+    { passive: false },
+  );
+  let drag: { id: number; x: number; y: number; moved: boolean } | null = null;
+  let suppressClick = false;
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!expanded || e.button !== 0) return;
+    const [x, y] = toCanvas(e);
+    drag = { id: e.pointerId, x, y, moved: false };
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const [x, y] = toCanvas(e);
+    if (!drag.moved) {
+      if (Math.hypot(x - drag.x, y - drag.y) < 4) return;
+      drag.moved = true;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.classList.add("dragging");
+      hovered = null;
+    }
+    setView(view.u - (x - drag.x) * view.scale, view.v + (y - drag.y) * view.scale, view.scale);
+    drag.x = x;
+    drag.y = y;
+    redraw();
+  });
+  const endDrag = (e: PointerEvent): void => {
+    if (!drag || e.pointerId !== drag.id) return;
+    suppressClick = drag.moved;
+    drag = null;
+    canvas.classList.remove("dragging");
+  };
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
   canvas.addEventListener("mousemove", (e) => {
+    if (drag?.moved) return;
     const next = hit(e);
     canvas.classList.toggle("travel", next !== null);
     if (next?.region.id === hovered?.region.id) return;
@@ -381,6 +460,10 @@ export function createMinimap(
     if (lastInput) draw(lastInput, lastSize, 4);
   });
   canvas.addEventListener("click", (e) => {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
     const target = hit(e);
     if (target) onTravel(target.region);
   });
@@ -394,6 +477,10 @@ export function createMinimap(
       zoom.style.display = expanded ? "none" : "";
       hovered = null;
       lastKey = "";
+      panU = 0;
+      panV = 0;
+      zoomK = 1;
+      drag = null;
     },
     update(input) {
       shown = input.visible;
