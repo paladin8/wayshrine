@@ -284,18 +284,6 @@ def lantern(cx,cy,idx):
     bipyr("stone",0,0,2.38,0.11,2.28,2.56,6,T)
 lantern(7.9,-5.0,1); lantern(4.6,-9.0,2)
 
-# Miyajima deer on the beach
-def deer(cx,cy,rot,s=1.0):
-    T=dict(cx=cx,cy=cy,rot=rot,s=s)
-    box("wood",0,0,0.42,0.74,0.38,0.15,T)
-    for lx in (-0.27,0.27):
-        for ly in (-0.09,0.09): box("wood",lx,ly,0.0,0.46,0.045,0.045,T)
-    solid([rect(0.08,0.08,0.62,0.32,0),rect(0.06,0.06,0.95,0.5,0)],"wood",T)
-    box("wood",0.6,0,0.92,1.06,0.14,0.07,T)
-    for sy in (-1,1): cone("wood",rect(0.03,0.025,1.05,0.54,sy*0.05),(0.5,sy*0.17,1.17),T)
-    box("cream",-0.4,0,0.6,0.72,0.04,0.06,T)
-deer(8.2,-3.4,2.6); deer(5.6,-7.9,-2.4,0.92)
-
 # ---- trees on the slopes of Mt Misen, with a couple of autumn maples
 def conifer(cx,cy,s,ph=0):
     g=H(cx,cy); T=dict(cx=cx,cy=cy,cz=g,s=s)
@@ -397,9 +385,142 @@ for key in sorted(B):
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
     allv+= [v.co.copy() for v in me.vertices]
+# ---- Miyajima deer, with separate pivots for the neck, legs and tail
+FPS=24
+DEER_END=38*FPS+1
+HOOF_HEIGHT=0.023
+LEG_LENGTH=0.44
+def empty(name, parent=None, location=(0,0,0)):
+    obj=bpy.data.objects.new(name,None)
+    col.objects.link(obj)
+    obj.parent=parent
+    obj.location=location
+    return obj
+
+def deer_part(pivot, draw):
+    # Keep moving geometry out of the static mesh buckets and the solid sidecar.
+    global B
+    landmark=B
+    B={}
+    draw()
+    for material,(vs,fs) in B.items():
+        name=pivot.name+"_"+material
+        me=bpy.data.meshes.new(name)
+        me.from_pydata(vs,[],fs)
+        me.materials.append(getmat(material))
+        obj=bpy.data.objects.new(name,me)
+        col.objects.link(obj)
+        obj.parent=pivot
+        stats[name]=sum(len(face)-2 for face in fs)
+    B=landmark
+
+def tilt(obj,axis,angle,frame):
+    obj.rotation_euler[axis]=math.radians(angle)
+    obj.keyframe_insert(data_path="rotation_euler",index=axis,frame=frame)
+
+def idle_pose(obj,axis,frames,offsets):
+    for offset in offsets:
+        for frame,angle in frames:
+            tilt(obj,axis,angle,frame+offset)
+    tilt(obj,axis,0,1)
+    tilt(obj,axis,0,DEER_END)
+
+def walk(body,legs,start,origin,destination,yaw):
+    # Turn, then stroll for less than three seconds. The diagonal legs move
+    # out of phase, and the stance portion of each step keeps the hoof down.
+    heading=math.atan2(destination[1]-origin[1],destination[0]-origin[0])
+    heading=yaw+math.remainder(heading-yaw,math.tau)
+    first=start+16
+    duration=64
+    body.rotation_euler.z=yaw
+    body.keyframe_insert(data_path="rotation_euler",index=2,frame=start)
+    body.rotation_euler.z=heading
+    body.keyframe_insert(data_path="rotation_euler",index=2,frame=first)
+
+    distance=math.dist(origin,destination)
+    strides=round(distance/0.50)
+    stance_distance=0.6*distance/(strides*body.scale.x)
+    for elapsed in range(0,duration+1,2):
+        t=elapsed/duration
+        ease=t*t*(3-2*t)
+        frame=first+elapsed
+        body.location.x=origin[0]+(destination[0]-origin[0])*ease
+        body.location.y=origin[1]+(destination[1]-origin[1])*ease
+        body.keyframe_insert(data_path="location",frame=frame)
+        ramp=min(1,ease*12,(1-ease)*12)
+        for leg,height,offset in legs:
+            phase=(strides*ease+offset)%1
+            # Through stance the foot travels backward relative to the body.
+            # Return it forward through a lifted swing over the last 40%.
+            swing=max(0,(phase-0.6)/0.4)
+            stride=(0.5-phase/0.6) if phase<0.6 else (-0.5+swing)
+            angle=-math.asin(stride*ramp*stance_distance/LEG_LENGTH)
+            lift=0.09*math.sin(math.pi*swing)*ramp
+            tilt(leg,1,math.degrees(angle),frame)
+            leg.location.z=height+lift-LEG_LENGTH*(1-math.cos(angle))
+            leg.keyframe_insert(data_path="location",index=2,frame=frame)
+    return heading
+
+def deer(index,home,rot,scale,offset,stop,outbound,returning):
+    body=empty(f"deer_{index}",location=(*home,HOOF_HEIGHT))
+    body.rotation_euler.z=rot
+    body.scale=(scale,)*3
+    body["collisionRadius"]=0.26
+    body["collisionHalfLength"]=0.28
+
+    def draw_body():
+        box("wood",0,0,0.42,0.74,0.38,0.15)
+
+    def draw_head():
+        solid([rect(0.08,0.08,0),rect(0.06,0.06,0.33,0.18,0)],"wood")
+        box("wood",0.28,0,0.30,0.44,0.14,0.07)
+        for sy in (-1,1):
+            cone("wood",rect(0.03,0.025,0.43,0.22,sy*0.05),(0.18,sy*0.17,0.55))
+
+    deer_part(body,draw_body)
+    neck=empty(body.name+"_neck",body,(0.32,0,0.62))
+    tail=empty(body.name+"_tail",body,(-0.36,0,0.68))
+    deer_part(neck,draw_head)
+    deer_part(tail,lambda: box("cream",-0.06,0,-0.08,0.04,0.08,0.06))
+    legs=[]
+    for name,x,y,phase in [("front_left",0.27,-0.09,0),("front_right",0.27,0.09,0.5),
+                           ("hind_left",-0.27,-0.09,0.75),("hind_right",-0.27,0.09,0.25)]:
+        leg=empty(body.name+"_"+name,body,(x,y,LEG_LENGTH))
+        deer_part(leg,lambda: box("wood",0,0,-LEG_LENGTH,0.02,0.045,0.045))
+        legs.append((leg,LEG_LENGTH,phase))
+
+    pauses=(outbound*FPS+90,) if offset is None else (offset,outbound*FPS+90)
+    idle_pose(neck,1,[(20,0),(38,12),(58,65),(70,59),(82,66),(108,0),(140,-7),(164,0)],pauses)
+    idle_pose(legs[0][0],1,[(36,0),(50,-22),(67,-12),(89,0)],pauses)
+    idle_pose(tail,2,[(15,0),(26,24),(35,-20),(46,0),(120,0),(132,-25),(144,22),(156,0)],pauses)
+    for frame in (1,DEER_END):
+        body.keyframe_insert(data_path="location",frame=frame)
+        body.keyframe_insert(data_path="rotation_euler",index=2,frame=frame)
+        for leg,_,_ in legs:
+            tilt(leg,1,0,frame)
+            leg.keyframe_insert(data_path="location",index=2,frame=frame)
+
+    heading=walk(body,legs,outbound*FPS,home,stop,rot)
+    heading=walk(body,legs,returning*FPS,stop,home,heading)
+    body.keyframe_insert(data_path="rotation_euler",index=2,frame=returning*FPS+80)
+    body.rotation_euler.z=heading+math.remainder(rot-heading,math.tau)
+    body.keyframe_insert(data_path="rotation_euler",index=2,frame=returning*FPS+100)
+    body.keyframe_insert(data_path="rotation_euler",index=2,frame=DEER_END)
+
+scene=bpy.context.scene
+scene.render.fps=FPS
+scene.frame_end=DEER_END
+# Separate routes keep the deer on the beach, clear of the bay, the lanterns and the buildings.
+routes=[
+    ((8.2,-3.4),2.6,1,None,(8.6,-1.2),4,24),
+    ((5.6,-7.9),-2.4,0.92,20,(7.4,-7.2),10,29),
+]
+for index,args in enumerate(routes,1):
+    deer(index,*args)
+scene.frame_set(1)
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
-    export_cameras=False, export_lights=False, export_animations=False, export_materials='EXPORT')
+    export_cameras=False, export_lights=False, export_extras=True, export_animations=True, export_animation_mode='SCENE', export_materials='EXPORT')
 res={"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
 json.dump(res,open("/tmp/lm_build.json","w"))

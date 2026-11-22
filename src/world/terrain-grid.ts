@@ -117,6 +117,7 @@ export function createTerrain(world: World): Terrain {
     let biome: Biome = onPlateau && isWater(region.biome) ? "meadow" : region.biome;
     let height: number;
     let skirt = false;
+    let shore = false;
     if (onPlateau) {
       if (model?.terrainSurface) {
         height = plateauBase(region);
@@ -131,12 +132,19 @@ export function createTerrain(world: World): Terrain {
       const edge = plateauBase(region) + (model && !model.terrainSurface ? groundHeight(model, dx, dz) : 0);
       height = edge + (natural(x, z, region.biome) - edge) * k;
       // The slope down to water becomes shore, then water.
-      if (isWater(region.biome)) biome = height > 0.55 ? "meadow" : region.biome;
+      if (isWater(region.biome)) {
+        biome = height > 0.55 ? "meadow" : region.biome;
+        // Open water is flat at the natural level, so the slope above it can meet it without a step.
+        if (isWater(biome)) {
+          height = natural(x, z, region.biome);
+          shore = true;
+        }
+      }
       skirt = !isWater(biome);
     } else {
       height = natural(x, z, biome);
     }
-    return { x, z, region, biome, height, skirt };
+    return { x, z, region, biome, height, skirt, shore };
   }
 
   function tileAt(tx: number, tz: number): Tile {
@@ -144,18 +152,26 @@ export function createTerrain(world: World): Terrain {
     return { biome, height, regionId: region.id, skirt };
   }
 
-  /** Mean height of the skirt tiles meeting at the corner (cx, cz); undefined if none do. */
+  /**
+   * Height of the surface at the corner (cx, cz) of the skirt tiles meeting there: the mean of their heights,
+   * or the water's level where the slope runs into the shore, so there is no step at the waterline.
+   * Undefined if no skirt tile meets there.
+   */
   function cornerOf(cx: number, cz: number): number | undefined {
     let sum = 0;
     let n = 0;
+    let shore = Infinity;
     for (const [dx, dz] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
-      const t = tileAt(cx + dx, cz + dz);
+      const t = sample(cx + dx, cz + dz);
       if (t.skirt) {
         sum += t.height;
         n++;
+      } else if (t.shore) {
+        shore = Math.min(shore, t.height);
       }
     }
-    return n ? sum / n : undefined;
+    if (!n) return undefined;
+    return Number.isFinite(shore) ? shore : sum / n;
   }
 
   function corners(tx: number, tz: number): readonly [number, number, number, number] {
