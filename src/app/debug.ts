@@ -33,6 +33,6 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions):
   add("Reset shrines", actions.resetShrines);
   add("Reset everything", actions.resetAll);
   add("Read a rubbing (R)", actions.readRubbing);
-  add("Go to nearest shrine", actions.goToTarget);
+  add("Go to next shrine (G)", actions.goToTarget);
   container.appendChild(panel);
 }

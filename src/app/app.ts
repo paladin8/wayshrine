@@ -76,6 +76,7 @@ const KEY_MUTE = "KeyN";
 /** Debug only. */
 const KEY_UNRESTORE = "KeyU";
 const KEY_RUBBING = "KeyR";
+const KEY_NEXT_SHRINE = "KeyG";
 
 function loadGame(world: World): GameState {
   const { seed } = world;
@@ -201,6 +202,11 @@ export function startApp(container: HTMLElement): void {
   };
 
   /** Debug: reads the first rubbing in the player's region that is not yet in the book. */
+  /** Debug: moves the player to the next unrestored shrine. */
+  const goToNextShrine = (): void => {
+    const g = nextShrine(world, state, pos);
+    if (g) pos = standPoint(g.region);
+  };
   const readRubbingHere = (): void => {
     const next = monuments.inRegion(world.regionAt(pos.x, pos.z).id).find((m) => !isCollected(state, m.id));
     if (next) readMonument(next.id);
@@ -243,10 +249,7 @@ export function startApp(container: HTMLElement): void {
         pos = startPosition(terrain);
       },
       readRubbing: readRubbingHere,
-      goToTarget: () => {
-        const g = nextShrine(world, state, pos);
-        if (g) pos = standPoint(g.region);
-      },
+      goToTarget: goToNextShrine,
     };
     createDebugPanel(container, actions);
     // Also available from the console: window.wayshrine.
@@ -293,6 +296,7 @@ export function startApp(container: HTMLElement): void {
     if (e.code === KEY_JOURNAL && !awakening && !e.metaKey && !e.ctrlKey && !e.altKey) notebook.toggle();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (debug && e.code === KEY_RUBBING) readRubbingHere();
+    if (debug && e.code === KEY_NEXT_SHRINE && !e.metaKey && !e.ctrlKey && !e.altKey) goToNextShrine();
     if (e.code === KEY_MUTE) settings.update({ muted: !settings.get().muted });
     if (KEY_ACT.includes(e.code)) {
       if (e.code !== "KeyE" && e.target instanceof HTMLButtonElement) return;
