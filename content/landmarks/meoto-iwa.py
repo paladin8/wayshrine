@@ -113,35 +113,29 @@ import random
 rng=random.Random(7)
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
-def edge_k(x,y,w):
-    # 0 on the footprint's edge (square with chamfered corners), easing to 1 over w units inward,
-    # so the sidecar's outer ring is exactly the base height and the game terrain blends from one level
-    d=min(9.6-abs(x),9.6-abs(y),(18.0-abs(x)-abs(y))/math.sqrt(2))
-    return smooth(0.0,w,d)
 EXTRA_SOLIDS=[]
 
-# ---- the sea: fills the back and left inside a rocky rim (so it never meets the game's own shore at
-# the footprint edge); the land on the camera side carries the promenade and the shrine
-BC=(-2.0,0.8); BRX,BRY,BP=6.6,7.6,3.0
-WATER_Z=-0.18; BED_Z=-0.5
-def bay_m(x,y):
-    dx=abs((x-BC[0])/BRX); dy=abs((y-BC[1])/BRY); th=math.atan2(y-BC[1],x-BC[0])
-    return (dx**BP+dy**BP)**(1/BP)/(1+0.05*math.sin(3*th+0.4)+0.04*math.sin(7*th+1.3))
-def bay_pt(th,k=1.0):
-    c,s=math.cos(th),math.sin(th); lo,hi=0.0,20.0
+# ---- the footprint: a small round shore in open water. The sea runs out to the edge all round at the
+# region's water level (landmarkWaterLevel in terrain-grid.ts), so the model slots into the game's water.
+# The land carries the shrine and a promenade facing the rocks, which stand in the sea off its shore.
+LV=-0.6; FLOOR=LV-0.5
+IC=(4.2,3.4); IRX,IRY=4.5,5.0
+def isl_m(x,y):
+    dx=(x-IC[0])/IRX; dy=(y-IC[1])/IRY; th=math.atan2(dy,dx)
+    return math.hypot(dx,dy)/(1+0.07*math.sin(3*th+0.4)+0.05*math.sin(5*th+1.3)+0.03*math.sin(8*th+0.2))
+def shore_pt(th,m):
+    # the point at angle th (degrees) round the island where isl_m == m
+    c,sn=math.cos(math.radians(th)),math.sin(math.radians(th)); lo,hi=0.0,12.0
     for _ in range(40):
         mid=(lo+hi)/2
-        if bay_m(BC[0]+c*mid,BC[1]+s*mid)<1.0: lo=mid
+        if isl_m(IC[0]+c*mid,IC[1]+sn*mid)<m: lo=mid
         else: hi=mid
-    return (BC[0]+c*lo*k, BC[1]+s*lo*k)
+    return (IC[0]+c*lo,IC[1]+sn*lo)
 def H(x,y):
-    if bay_m(x,y)<0.97: return BED_Z
-    return 0.35*smooth(4.0,8.5,y)*smooth(4.5,8.0,x)*edge_k(x,y,1.8)    # a slight rise at the back right for the shrine
-
-def octo(z,h=9.6,ch=1.2):
-    a=h-ch
-    return [(-a,-h,z),(a,-h,z),(h,-a,z),(h,a,z),(a,h,z),(-a,h,z),(-h,a,z),(-h,-a,z)]
-solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)   # slab sides; the top is the ground grid
+    m=isl_m(x,y)
+    rise=0.35*smooth(4.0,8.5,y)*smooth(4.5,8.0,x)    # a slight rise at the back right for the shrine
+    land=(LV+0.1)+(rise-(LV+0.1))*smooth(0.98,0.8,m)   # a short rocky beach down to the water
+    k=smooth(0.98,1.05,m); return land*(1-k)+FLOOR*k
 
 GS=0.8; NG=24
 gv={}
@@ -150,11 +144,8 @@ for j in range(NG+1):
         x=-9.6+i*GS; y=-9.6+j*GS
         if 0<i<NG and 0<j<NG:
             x+=rng.uniform(-0.22,0.22); y+=rng.uniform(-0.22,0.22)
-        s=abs(x)+abs(y)
-        if s>18.0:
-            e=(s-18.0)/2; x-=math.copysign(e,x); y-=math.copysign(e,y)
         z=H(x,y)
-        if 0<i<NG and 0<j<NG and 0.97<=bay_m(x,y)<1.12: z+=rng.uniform(0.0,0.16)   # rocky shore
+        if 0<i<NG and 0<j<NG and 0.8<=isl_m(x,y)<1.0: z+=rng.uniform(0.0,0.14)   # rocky shore
         gv[(i,j)]=(x,y,z)
 gverts=[]; gid={}
 for k,v in gv.items(): gid[k]=len(gverts); gverts.append(v)
@@ -168,21 +159,23 @@ for j in range(NG):
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
             cx=sum(p[0] for p in P)/3; cy=sum(p[1] for p in P)/3
-            gf.append([gid[k] for k in t3]); gm.append("darkstone" if bay_m(cx,cy)<1.12 else "foliage")
-loop=[(i,0) for i in range(NG+1)]+[(NG,j) for j in range(1,NG+1)]+[(i,NG) for i in range(NG-1,-1,-1)]+[(0,j) for j in range(NG-1,0,-1)]
-for n in range(len(loop)):
-    A,Bk=gv[loop[n]],gv[loop[(n+1)%len(loop)]]
-    if max(A[2],Bk[2])<0.01: continue
-    base=len(gverts); gverts+=[(A[0],A[1],0.0),(Bk[0],Bk[1],0.0)]
-    gf.append([base,base+1,gid[loop[(n+1)%len(loop)]],gid[loop[n]]]); gm.append("stone")
+            gf.append([gid[k] for k in t3]); gm.append("darkstone" if isl_m(cx,cy)>0.8 else "foliage")
 emit(gverts,gf,gm,orient=False)
-NW=48
-def clamp_in(p,h=9.45):
-    x,y=max(-h,min(h,p[0])),max(-h,min(h,p[1]))
-    s=abs(x)+abs(y)
-    if s>17.8: e=(s-17.8)/2; x-=math.copysign(e,x); y-=math.copysign(e,y)
-    return (x,y)
-emit([clamp_in(bay_pt(2*math.pi*k/NW,1.1))+(WATER_Z,) for k in range(NW)],[list(range(NW))],["water"],orient=False)
+# the sea, just under the game's own water tiles: it fills any tile the game keeps as land along the shore
+emit([(-9.6,-9.6,LV-0.04),(9.6,-9.6,LV-0.04),(9.6,9.6,LV-0.04),(-9.6,9.6,LV-0.04)],[[0,1,2,3]],["water"],orient=False)
+
+# the landing: a short wooden jetty off the front of the shore, where the boat comes in
+J0=shore_pt(-62,0.86); J1=shore_pt(-62,1.18); JD=LV+0.28
+jx,jy=J1[0]-J0[0],J1[1]-J0[1]; JL=math.hypot(jx,jy); jh=math.atan2(jy,jx)
+def jetty_d(x,y):
+    t=max(0.0,min(1.0,((x-J0[0])*jx+(y-J0[1])*jy)/(JL*JL)))
+    return math.hypot(x-(J0[0]+jx*t),y-(J0[1]+jy*t)), t
+box("wood",0,0,JD-0.1,JD,JL/2+0.2,0.42,dict(cx=(J0[0]+J1[0])/2,cy=(J0[1]+J1[1])/2,rot=jh))
+for k in range(4):
+    t=k/3
+    for sy in (-1,1):
+        px=J0[0]+jx*t-math.sin(jh)*sy*0.36; py=J0[1]+jy*t+math.cos(jh)*sy*0.36
+        prism("wood",px,py,FLOOR,JD+0.12,0.06,0.06,6,0)
 
 # ---- craggy sea stacks: stacked irregular rings, so the flat shading breaks them into facets
 def crag(cx,cy,rings,mat="darkstone",n=8,jit=0.22):
@@ -204,11 +197,11 @@ def ring_r(rings,z):
 
 # the husband rock (tall, a little torii on its peak) and the wife rock, on the diagonal facing the camera
 MX,MY=-4.7,-1.5; FX,FY=-0.5,2.6
-MR=[(-0.6,1.75,0,0),(0.4,1.85,0,0),(1.6,1.6,0.1,0),(2.8,1.35,0.15,0.1),(3.9,1.1,0.1,0.15),(4.8,0.82,0.12,0.1),(5.45,0.45,0.1,0.1)]
-FR=[(-0.6,1.3,0,0),(0.5,1.35,0,0),(1.4,1.1,0,0.05),(2.1,0.78,0.05,0.05),(2.55,0.32,0.05,0.05)]
+MR=[(-1.3,1.75,0,0),(0.4,1.85,0,0),(1.6,1.6,0.1,0),(2.8,1.35,0.15,0.1),(3.9,1.1,0.1,0.15),(4.8,0.82,0.12,0.1),(5.45,0.45,0.1,0.1)]
+FR=[(-1.3,1.3,0,0),(0.5,1.35,0,0),(1.4,1.1,0,0.05),(2.1,0.78,0.05,0.05),(2.55,0.32,0.05,0.05)]
 crag(MX,MY,MR); crag(FX,FY,FR,n=7)
 for (x,y,r) in [(MX+1.2,MY-1.3,0.45),(MX-1.5,MY+0.9,0.4),(FX+1.0,FY-0.9,0.32),(MX+0.2,MY-1.9,0.3)]:
-    crag(x,y,[(-0.6,r*1.1,0,0),(0.0,r,0,0),(r*0.8,r*0.5,0,0)],n=6)
+    crag(x,y,[(-1.3,r*1.1,0,0),(0.0,r,0,0),(r*0.8,r*0.5,0,0)],n=6)
 # tufts of green and the little torii on the husband rock's peak
 tx,ty=MX+0.1,MY+0.1
 for (ox,oy,r) in [(-0.25,0.2,0.32),(0.3,-0.15,0.26),(0.05,0.35,0.22)]: ico("foliage",tx+ox,ty+oy,5.45,r,r,r*0.6)
@@ -243,29 +236,26 @@ for t in (0.25,0.45,0.65,0.82):
     prof=[(-0.07,0),(0.07,0),(0.07,-0.12),(-0.02,-0.12),(-0.02,-0.2),(0.07,-0.2),(0.07,-0.36),(-0.07,-0.36),(-0.07,-0.24),(0.02,-0.24),(0.02,-0.16),(-0.07,-0.16)]
     T=dict(cx=x,cy=y,cz=z-0.05,rot=math.atan2(uy,ux)); extrude_y("snow",prof,-0.012,0.012,T)
 # Frog Rock (Kaeru Iwa) near the shore
-KX,KY=2.2,-4.6
-crag(KX,KY,[(-0.6,0.95,0,0),(0.1,1.0,0,0),(0.55,0.75,0,-0.05),(0.85,0.4,0,-0.05)],n=7)
+KX,KY=2.6,-2.4
+crag(KX,KY,[(-1.3,0.95,0,0),(0.1,1.0,0,0),(0.55,0.75,0,-0.05),(0.85,0.4,0,-0.05)],n=7)
 for sx in (-1,1): ico("darkstone",KX+sx*0.35,KY-0.4,0.82,0.2,0.2,0.18)
 
 # ---- the shore: a paved promenade along the water, low stone posts, frog statues, lanterns
-PROM=[]
-for k in range(17):
-    th=math.radians(-100+k*8.4); p=bay_pt(th,1.2)
-    if max(abs(p[0]),abs(p[1]))<8.8 and abs(p[0])+abs(p[1])<17.0: PROM.append(p)
+PROM=[shore_pt(-176+k*8.5,0.74) for k in range(10)]   # from the back of the shore round to the front, facing the rocks
 for p,q in zip(PROM,PROM[1:]):
     mx,my=(p[0]+q[0])/2,(p[1]+q[1])/2; h=math.atan2(q[1]-p[1],q[0]-p[0]); Lp=math.hypot(q[0]-p[0],q[1]-p[1])
     box("stone",0,0,-0.05,0.06,Lp/2+0.12,0.62,dict(cx=mx,cy=my,rot=h),mt="cream")
-    if abs(mx)<9.2 and abs(my)<9.2:
-        box("stone",0,0,0.0,0.45,0.07,0.07,dict(cx=mx-math.sin(h)*(-0.72),cy=my+math.cos(h)*(-0.72),rot=h))
+    box("stone",0,0,0.0,0.45,0.07,0.07,dict(cx=mx-math.sin(h)*(-0.72),cy=my+math.cos(h)*(-0.72),rot=h))
 def frog(cx,cy,rot,s=1.0):
     T=dict(cx=cx,cy=cy,rot=rot,s=s)
     box("stone",0,0,0.0,0.1,0.28,0.24,T)
     ico("stone",0,0,0.28,0.3,0.26,0.2,T)
     for sy in (-1,1): ico("stone",0.16,sy*0.11,0.44,0.08,0.08,0.07,T)
-for (x,y,r) in [(7.6,-6.2,2.6),(8.2,-5.0,2.8),(7.4,-3.4,3.0),(8.0,-1.6,3.1),(7.2,0.4,3.3),(8.3,1.4,3.2),(5.4,-8.6,2.0),(6.6,-8.2,2.3)]: frog(x,y,r,1.0+0.25*rng.random())
+for k,(th,m) in enumerate([(-150,0.6),(-125,0.6),(-100,0.62),(-40,0.7),(10,0.74),(50,0.74),(-170,0.55)]):
+    x,y=shore_pt(th,m); frog(x,y,math.radians(th)+math.pi,1.0+0.25*rng.random())
 
 # ---- Futami Okitama Shrine: plain cypress hall in the Ise style, with a plain wooden torii
-SX,SY=6.6,5.6; SZ=H(SX,SY)
+SX,SY=5.4,4.8; SZ=H(SX,SY)
 box("stone",SX,SY,SZ-0.3,SZ+0.3,1.5,1.2)
 box("wood",SX,SY,SZ+0.3,SZ+1.55,1.05,0.75)
 for sx in (-1,1):
@@ -292,7 +282,7 @@ def lantern(cx,cy,idx):
     box("glow_lantern_%d"%idx,0,0,1.48,1.92,0.27,0.27,T)
     solid([rect(0.62,0.62,1.92),rect(0.62,0.62,2.0),rect(0.14,0.14,2.3)],"stone",T)
     bipyr("stone",0,0,2.38,0.11,2.28,2.56,6,T)
-lantern(7.6,-0.6,1); lantern(6.4,3.0,2)
+lantern(*shore_pt(-176,0.66),1); lantern(*shore_pt(-62,0.66),2)
 
 # coastal pines (cloud-pruned), leaning a little toward the sea
 def pine(cx,cy,cz,s,ang):
@@ -302,15 +292,19 @@ def pine(cx,cy,cz,s,ang):
     ico("foliage",0.15,0.35,1.25,0.65,0.6,0.25,T)
     ico("foliage",1.05,-0.45,1.25,0.6,0.55,0.22,T)
     ico("foliage",0.45,-0.1,2.05,0.5,0.45,0.22,T)
-for (x,y,s,a) in [(8.6,-3.4,1.1,3.0),(8.8,3.2,1.0,2.8),(8.4,7.2,1.15,3.6),(4.6,8.6,1.0,4.2),(6.0,-7.2,0.9,2.4)]: pine(x,y,H(x,y),s,a)
+for (th,m,sc,a) in [(-20,0.7,1.1,3.0),(25,0.72,1.0,2.8),(80,0.7,1.15,3.6),(125,0.68,1.0,4.2),(-85,0.72,0.9,2.4)]:
+    x,y=shore_pt(th,m); pine(x,y,H(x,y),sc,a)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/meoto-iwa.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
 HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y):
-    return WATER_Z if bay_m(x,y)<1.0 else max(0.0,H(x,y))
+    d,t=jetty_d(x,y)
+    if d<0.45 and t>0.0: return JD
+    return max(LV,H(x,y))   # open water at the region's level; the game draws it
 ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+for i in range(GN): ground[0][i]=ground[GN-1][i]=ground[i][0]=ground[i][GN-1]=LV     # the edge ring is open water
 CELL=0.3
 cellg={}
 def cg(cx,cy):
@@ -339,14 +333,9 @@ for key,(bv,bf) in B.items():
                     if nz>0.92 and z<g+0.6: continue
                     solid_cells.add((cx,cy))
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
-PSTEP=0.6; PR=0.43
-for iy in range(int(2*HALF/PSTEP)):
-    for ix in range(int(2*HALF/PSTEP)):
-        x=-HALF+PSTEP*(ix+0.5); y=-HALF+PSTEP*(iy+0.5)
-        if bay_m(x,y)<1.04: solids.append([round(x,2),round(-y,2),PR])
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=PROM[len(PROM)//2]   # the promenade, facing the rocks
-STAND=(8.4,-8.2)      # the front-right corner of the shore
+STAND=(J0[0]+jx*0.3,J0[1]+jy*0.3)   # on the landing
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[round(INTERACT[0],2),round(-INTERACT[1],2)],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/meoto-iwa.json"

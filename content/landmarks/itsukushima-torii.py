@@ -20,8 +20,9 @@ def lin(h):
 # geometry buckets: material key -> (verts, faces). Every piece is a closed solid; winding is
 # made outward by checking the signed volume.
 B={}
+DY=0.0   # the shrine group is authored on a slightly different footprint; shift it in y while DY is set
 def emit(verts,faces,mats,orient=True):
-    V=[Vector(v) for v in verts]
+    V=[Vector((v[0],v[1]+DY,v[2])) for v in verts]
     vol=0.0
     for f in faces:
         a=V[f[0]]
@@ -113,38 +114,29 @@ import random
 rng=random.Random(4)
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
-def edge_k(x,y,w):
-    # 0 on the footprint's edge (square with chamfered corners), easing to 1 over w units inward,
-    # so the sidecar's outer ring is exactly the base height and the game terrain blends from one level
-    d=min(9.6-abs(x),9.6-abs(y),(18.0-abs(x)-abs(y))/math.sqrt(2))
-    return smooth(0.0,w,d)
 EXTRA_SOLIDS=[]   # [x, y, r] in Blender coordinates
 
-# ---- the bay: a squarish basin in front of the shrine, enclosed by a sand rim so that it never meets
-# the game's own shore at the footprint edge (wide on the camera side, where the player arrives)
-BC=(-1.0,-2.4); BRX,BRY,BP=7.2,6.2,3.0
-WATER_Z=-0.18; BED_Z=-0.5
+# ---- the footprint: an islet in open water. The sea runs out to the edge all round at the region's
+# water level (landmarkWaterLevel in terrain-grid.ts), so the model slots into the game's water. The
+# land is an imperfect round back arc of forest with a sand beach, and the shrine's front stands out
+# over an inlet of the sea.
+LV=-0.6; FLOOR=LV-0.5
+IC=(0.2,1.3); IRX,IRY=8.0,7.0
+def ell_m(x,y):
+    dx=(x-IC[0])/IRX; dy=(y-IC[1])/IRY; th=math.atan2(dy,dx)
+    return math.hypot(dx,dy)/(1+0.06*math.sin(3*th+0.5)+0.04*math.sin(5*th+1.7)+0.025*math.sin(8*th))
+BC=(-0.9,-2.4); BRX,BRY,BP=5.9,5.6,3.0
 def bay_m(x,y):
     dx=abs((x-BC[0])/BRX); dy=abs((y-BC[1])/BRY); th=math.atan2(y-BC[1],x-BC[0])
     return (dx**BP+dy**BP)**(1/BP)/(1+0.04*math.sin(3*th+0.7)+0.03*math.sin(5*th+2.1))
-def bay_pt(th,k=1.0):
-    c,s=math.cos(th),math.sin(th); lo,hi=0.0,20.0
-    for _ in range(40):
-        mid=(lo+hi)/2
-        if bay_m(BC[0]+c*mid,BC[1]+s*mid)<1.0: lo=mid
-        else: hi=mid
-    return (BC[0]+c*lo*k, BC[1]+s*lo*k)
-# land: forested foot of Mt Misen rising at the back, a rise for the pagoda at the back right
+def isl_m(x,y): return max(ell_m(x,y),2.0-bay_m(x,y))   # 1 at the shore, below 1 on land
 def H(x,y):
-    if bay_m(x,y)<0.97: return BED_Z
-    band=2.4*smooth(7.6,10.4,y)
-    bump=1.8*math.exp(-((x-6.4)**2+(y-7.0)**2)/5.0)
-    return max(0.0,band,bump)*edge_k(x,y,1.8)
-
-def octo(z,h=9.6,ch=1.2):
-    a=h-ch
-    return [(-a,-h,z),(a,-h,z),(h,-a,z),(h,a,z),(a,h,z),(-a,h,z),(-h,a,z),(-h,-a,z)]
-solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)   # slab sides; the top is the ground grid
+    m=isl_m(x,y)
+    band=1.4*smooth(6.4,8.2,y)
+    bump=1.6*math.exp(-((x-4.7)**2+(y-5.5)**2)/4.0)
+    land=max(0.0,band,bump)
+    land=(LV+0.1)+(land-(LV+0.1))*smooth(0.98,0.74,m)   # a gentle beach from the shore up to the level ground
+    k=smooth(0.98,1.05,m); return land*(1-k)+FLOOR*k
 
 GS=0.8; NG=24
 gv={}
@@ -153,9 +145,6 @@ for j in range(NG+1):
         x=-9.6+i*GS; y=-9.6+j*GS
         if 0<i<NG and 0<j<NG:
             x+=rng.uniform(-0.22,0.22); y+=rng.uniform(-0.22,0.22)
-        s=abs(x)+abs(y)
-        if s>18.0:
-            e=(s-18.0)/2; x-=math.copysign(e,x); y-=math.copysign(e,y)
         gv[(i,j)]=(x,y,H(x,y))
 gverts=[]; gid={}
 for k,v in gv.items(): gid[k]=len(gverts); gverts.append(v)
@@ -169,25 +158,32 @@ for j in range(NG):
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
             cx=sum(p[0] for p in P)/3; cy=sum(p[1] for p in P)/3
-            sand=bay_m(cx,cy)<1.3 or cy<-8.3 or (cx>5.6 and cy<1.5)
+            sand=isl_m(cx,cy)>0.8 or (cx>5.0 and cy<1.5 and isl_m(cx,cy)>0.62)
             gf.append([gid[k] for k in t3]); gm.append("cream" if sand else "foliage")
-loop=[(i,0) for i in range(NG+1)]+[(NG,j) for j in range(1,NG+1)]+[(i,NG) for i in range(NG-1,-1,-1)]+[(0,j) for j in range(NG-1,0,-1)]
-for n in range(len(loop)):
-    A,Bk=gv[loop[n]],gv[loop[(n+1)%len(loop)]]
-    if max(A[2],Bk[2])<0.01: continue
-    base=len(gverts); gverts+=[(A[0],A[1],0.0),(Bk[0],Bk[1],0.0)]
-    gf.append([base,base+1,gid[loop[(n+1)%len(loop)]],gid[loop[n]]]); gm.append("stone")   # retaining wall at the edge
 emit(gverts,gf,gm,orient=False)
-NW=48
-emit([bay_pt(2*math.pi*k/NW,1.08)+(WATER_Z,) for k in range(NW)],[list(range(NW))],["water"],orient=False)
+# the sea, just under the game's own water tiles: it fills any tile the game keeps as land along the shore
+emit([(-9.6,-9.6,LV-0.04),(9.6,-9.6,LV-0.04),(9.6,9.6,LV-0.04),(-9.6,9.6,LV-0.04)],[[0,1,2,3]],["water"],orient=False)
+
+# the landing: a short wooden jetty off the beach, where the boat comes in
+J0=(7.2,0.2); J1=(6.6,-3.2); JD=LV+0.28
+jx,jy=J1[0]-J0[0],J1[1]-J0[1]; JL=math.hypot(jx,jy); jh=math.atan2(jy,jx)
+def jetty_d(x,y):
+    t=max(0.0,min(1.0,((x-J0[0])*jx+(y-J0[1])*jy)/(JL*JL)))
+    return math.hypot(x-(J0[0]+jx*t),y-(J0[1]+jy*t)), t
+box("wood",0,0,JD-0.1,JD,JL/2+0.2,0.42,dict(cx=(J0[0]+J1[0])/2,cy=(J0[1]+J1[1])/2,rot=jh))
+for k in range(4):
+    t=k/3
+    for sy in (-1,1):
+        px=J0[0]+jx*t-math.sin(jh)*sy*0.36; py=J0[1]+jy*t+math.cos(jh)*sy*0.36
+        prism("wood",px,py,FLOOR,JD+0.12,0.06,0.06,6,0)
 
 # ---- the great torii (O-torii), ryobu style, standing in the bay on the shrine's axis
 T=dict(cx=0.0,cy=-5.4,s=0.9)
 for sx in (-1,1):
-    solid([ngon(0.5,-0.6,8,math.pi/8,sx*2.45,0),ngon(0.42,6.3,8,math.pi/8,sx*2.33,0)],"vermilion",T)   # main pillars, leaning in
+    solid([ngon(0.5,-1.3,8,math.pi/8,sx*2.45,0),ngon(0.42,6.3,8,math.pi/8,sx*2.33,0)],"vermilion",T)   # main pillars, leaning in
     for sy in (-1,1):
         x,y=sx*2.45,sy*2.05
-        solid([rect(0.2,0.2,-0.6,x,y),rect(0.17,0.17,4.25,x,y-sy*0.12)],"vermilion",T)                  # supporting legs
+        solid([rect(0.2,0.2,-1.3,x,y),rect(0.17,0.17,4.25,x,y-sy*0.12)],"vermilion",T)                  # supporting legs
         solid([rect(0.33,0.3,4.25,x,y-sy*0.12),rect(0.33,0.3,4.35,x,y-sy*0.12),rect(0.06,0.3,4.62,x,y-sy*0.12)],"roof",T)  # their little roofs
         for zt in (2.0,3.65): box("vermilion",x,sy*1.02,zt,zt+0.22,0.11,1.02,T)                         # ties
 box("vermilion",0,0,4.75,5.1,3.65,0.17,T)                    # nuki
@@ -199,6 +195,7 @@ extrude_y("roof",[(-4.9,6.5),(4.9,6.5),(5.45,7.05),(5.35,7.25),(3.0,7.0),(0,6.98
 
 # ---- the shrine on stilts over the water: hall, open stage running out to the front lantern, corridors
 DECK=0.45
+BED_Z=FLOOR   # the stilts and the torii stand on the seabed
 def stilts(pts):
     for x,y in pts: box("vermilion",x,y,BED_Z-0.05,DECK-0.1,0.08,0.08)
 def gable_x(x0,x1,yc,hw,eave,ridge,th=0.12):   # ridge along x
@@ -229,6 +226,7 @@ def corridor(x0,y0,x1,y1):
             if k<n: GLOWS.append((x0,y+L/(2*n)))
         for sx in (-1,1): box("vermilion",x0+sx*0.55,(ya+yb)/2,1.6,1.75,0.07,L/2)
         gable_y(ya-0.2,yb+0.2,x0,0.85,1.72,2.2)
+DY=-0.9
 # worship hall (haiden) and main hall (honden) behind it
 box("wood",0,4.9,DECK-0.12,DECK,2.8,1.3); stilts([(x,y) for x in (-2.2,-0.7,0.7,2.2) for y in (4.0,5.8)])
 box("snow",0,4.95,DECK,1.8,2.35,0.85)
@@ -265,9 +263,10 @@ for sx in (-1,1):
 box("wood",5.2,1.28,DECK,1.65,0.85,0.04)
 flared_roof([(1.2,1.2,1.72,0.15),(1.2,1.2,1.84,0.15),(0.9,0.9,2.0,0.05),(0.3,0.3,2.45,0.0)],"roof",5.2,0.4)
 for i,(x,y) in enumerate(GLOWS): box("glow_kairo",x,y,1.3,1.48,0.08,0.08)   # hanging lanterns, one glow object
+DY=0.0
 
 # ---- five-storey pagoda on the rise at the back right
-PX,PY=6.4,7.0; PS=0.72; PG=H(PX,PY)
+PX,PY=4.7,5.5; PS=0.62; PG=H(PX,PY)
 def pz(z): return PG+PS*z
 box("stone",PX,PY,PG-0.4,pz(0.35),1.2*PS,1.2*PS)
 for i in range(5):
@@ -287,7 +286,7 @@ def lantern(cx,cy,idx):
     box("glow_lantern_%d"%idx,0,0,1.48,1.92,0.27,0.27,T)
     solid([rect(0.62,0.62,1.92),rect(0.62,0.62,2.0),rect(0.14,0.14,2.3)],"stone",T)
     bipyr("stone",0,0,2.38,0.11,2.28,2.56,6,T)
-lantern(7.9,-5.0,1); lantern(4.6,-9.0,2)
+lantern(7.3,2.4,1); lantern(3.2,6.9,2)
 
 # ---- trees on the slopes of Mt Misen, with a couple of autumn maples
 def conifer(cx,cy,s,ph=0):
@@ -308,18 +307,27 @@ def maple(cx,cy,s):
     prism("wood",0,0,-0.3,1.1,0.18,0.15,6,0,T)
     ico("vermilion",0,0,1.85,1.05,1.05,0.85,T)
     ico("vermilion",0.45,-0.3,1.4,0.65,0.65,0.5,T)
-for a in [(-7.4,7.6,1.1,0),(-4.6,8.6,1.0,0.3),(-8.4,4.8,0.95,0.6),(-2.4,8.5,0.9,0.5),(8.6,4.4,0.85,0.2),(3.0,8.5,0.9,0.9)]: conifer(*a)
-for a in [(-6.2,8.6,0.9),(8.6,1.6,0.8)]: roundtree(*a)
-maple(-4.6,6.6,0.85); maple(4.0,7.6,0.8)
+TREES=[("c",-5.6,6.2,1.0,0),("c",-3.6,7.4,0.95,0.3),("c",-6.6,4.0,0.9,0.6),("c",0.9,8.1,0.85,0.5),("c",7.0,4.4,0.8,0.2),("c",2.6,8.0,0.8,0.9),
+       ("r",-5.0,7.4,0.85),("r",7.0,1.0,0.75),("m",-4.2,5.6,0.8),("m",3.6,6.8,0.75)]
+for t in TREES:
+    x,y=t[1],t[2]
+    for _ in range(80):
+        if isl_m(x,y)<=0.76: break
+        x+=(0.2-x)*0.05; y+=(5.6-y)*0.05   # keep the trees on the level ground, off the beach
+    else: raise SystemExit('tree %s cannot reach level ground'%(t,))
+    t=(t[0],x,y)+t[3:]
+    {"c":lambda *a:conifer(*a),"r":lambda *a:roundtree(*a),"m":lambda *a:maple(*a)}[t[0]](*t[1:])
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/itsukushima-torii.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
 HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y):
-    # the bay at water level (the game's terrain, 0.2 lower, sits under the water); land follows the model
-    return WATER_Z if bay_m(x,y)<1.0 else H(x,y)
+    d,t=jetty_d(x,y)
+    if d<0.45 and t>0.0: return JD
+    return max(LV,H(x,y))   # open water at the region's level; the game draws it
 ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+for i in range(GN): ground[0][i]=ground[GN-1][i]=ground[i][0]=ground[i][GN-1]=LV     # the edge ring is open water
 CELL=0.3
 cellg={}
 def cg(cx,cy):
@@ -349,15 +357,9 @@ for key,(bv,bf) in B.items():
                     if nz>0.92 and z<g+0.6: continue   # ground-level surfaces
                     solid_cells.add((cx,cy))
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
-# the bay is not walkable: cover it (and its sloping beach edge) with coarser discs
-PSTEP=0.6; PR=0.43
-for iy in range(int(2*HALF/PSTEP)):
-    for ix in range(int(2*HALF/PSTEP)):
-        x=-HALF+PSTEP*(ix+0.5); y=-HALF+PSTEP*(iy+0.5)
-        if bay_m(x,y)<1.04: solids.append([round(x,2),round(-y,2),PR])
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
-INTERACT=(6.4,-6.6)   # the beach facing the torii, on the camera side
-STAND=(7.6,-8.2)      # the front-right corner of the beach
+INTERACT=(7.0,0.6)   # the beach by the landing, facing the torii
+STAND=(J0[0]+(J1[0]-J0[0])*0.3,J0[1]+(J1[1]-J0[1])*0.3)   # on the landing
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/itsukushima-torii.json"
@@ -515,10 +517,10 @@ def deer(index,home,rot,scale,offset,stop,outbound,returning):
 scene=bpy.context.scene
 scene.render.fps=FPS
 scene.frame_end=DEER_END
-# Separate routes keep the deer on the beach, clear of the bay, the lanterns and the buildings.
+# Separate routes keep the deer on the level ground, clear of the shore, the lanterns and the buildings.
 routes=[
-    ((8.2,-3.4),2.6,1,None,(8.6,-1.2),4,24),
-    ((5.6,-7.9),-2.4,0.92,20,(7.4,-7.2),10,29),
+    ((6.6,3.6),2.6,1,None,(7.0,1.8),4,24),
+    ((-6.0,4.8),-2.4,0.92,20,(-5.2,6.0),10,29),
 ]
 for index,args in enumerate(routes,1):
     deer(index,*args)
