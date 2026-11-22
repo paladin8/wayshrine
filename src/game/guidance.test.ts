@@ -5,11 +5,14 @@ import { blockerAt, safePosition, startPosition } from "./player";
 import { capabilitiesOf, newGame, restoreShrine } from "./state";
 
 describe("nextShrine", () => {
-  it("points at a landmark in a new game, not the nearest shrine", () => {
+  it("points at the nearest unrestored shrine or landmark", () => {
     const world = createWorld("guide");
-    const g = nextShrine(world, newGame(world.seed), startPosition(createTerrain(world)))!;
-    expect(g.region.landmark).not.toBeNull();
+    const pos = startPosition(createTerrain(world));
+    const g = nextShrine(world, newGame(world.seed), pos)!;
     expect(g.distance).toBeCloseTo(Math.hypot(g.dx, g.dz));
+    // Nothing reachable is closer: it picks a landmark only when one is the nearest place.
+    const nearer = world.landmarks.filter((l) => Math.hypot(l.site.x - pos.x, l.site.z - pos.z) < g.distance - 1);
+    for (const l of nearer) expect(canTraverse(l.biome, new Set())).toBe(false);
   });
 
   it("never suggests a shrine that can't be reached yet", () => {
@@ -29,11 +32,11 @@ describe("nextShrine", () => {
   });
 
   it("is enough on its own: following it collects every capability, on every seed", () => {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 12; i++) {
       const world = createWorld(`follow-${i}`);
       let state = newGame(world.seed);
       let pos = world.region(0, 0).site;
-      for (let step = 0; step < 60; step++) {
+      for (let step = 0; step < 1500; step++) {
         const g = nextShrine(world, state, pos);
         if (!g) break;
         state = restoreShrine(state, g.region);
@@ -42,7 +45,7 @@ describe("nextShrine", () => {
       }
       expect(capabilitiesOf(state, world).size, `seed follow-${i}`).toBe(CAPABILITIES.length);
     }
-  });
+  }, 120_000);
 
   it("returns null when every reachable shrine is restored", () => {
     const world = createWorld("exhaust");

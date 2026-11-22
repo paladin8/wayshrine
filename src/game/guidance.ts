@@ -28,16 +28,14 @@ function reachableUnrestored(world: World, state: GameState): Region[] {
 }
 
 /**
- * The nearest unrestored landmark the player can currently reach; once every
- * landmark is restored, the nearest unrestored shrine instead, or null.
- * Places behind terrain the player can't yet cross are never suggested, so
+ * The nearest unrestored shrine or landmark the player can currently reach, or
+ * null. Places behind terrain the player can't yet cross are never suggested, so
  * following the guidance can't lead into a dead end.
  */
 export function nextShrine(world: World, state: GameState, pos: Point): Guidance | null {
   const open = reachableUnrestored(world, state);
-  const landmarks = open.filter((r) => r.landmark);
   let best: Guidance | null = null;
-  for (const region of landmarks.length > 0 ? landmarks : open) {
+  for (const region of open) {
     const at = anchorOf(region);
     const dx = at.x - pos.x;
     const dz = at.z - pos.z;
