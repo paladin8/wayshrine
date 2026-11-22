@@ -26,7 +26,7 @@ export function plateauBase(region: Region): number {
 }
 
 /** Terrain under a landmark's model sits this far below the model's own ground, so the model is never z-fought. */
-const MODEL_PAD = 0.2;
+const MODEL_PAD = 0.6;
 
 export interface Tile {
   readonly biome: Biome;
