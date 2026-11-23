@@ -14,7 +14,6 @@ export interface DebugActions {
   readonly previewClimbUse: () => void;
   readonly cycleMusic: () => string;
   /** Switches gear transitions between their cue and a plain slow crossfade; returns the new mode. */
-  readonly toggleGearMusic: () => string;
 }
 
 const CSS = `
@@ -81,10 +80,6 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   add(panel, "Go to next shrine (G)", actions.goToTarget);
   const musicSet = add(panel, "Music set: Auto", () => {
     musicSet.textContent = `Music set: ${actions.cycleMusic()}`;
-  });
-
-  const gearMusic = add(panel, "Gear music: cue", () => {
-    gearMusic.textContent = `Gear music: ${actions.toggleGearMusic()}`;
   });
 
   const content = document.createElement("div");

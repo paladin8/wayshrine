@@ -4,7 +4,7 @@ const MOVEMENT_GAIN = 0.32;
 const FOOTSTEP_GAIN = MOVEMENT_GAIN * 0.75;
 
 /** Sound effects, separate from background music. */
-export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "haiku-bell", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "first-voyage", "first-snowshoe", "first-climb", "walk-meadow", "walk-snow", "walk-mountain", "row-water"] as const;
+export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "walk-meadow", "walk-snow", "walk-mountain", "row-water"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -20,14 +20,12 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "winter-light-restored": { url: `${base}audio/cues/winter-light-restored.mp3` },
   "awakening-burst": { url: `${base}audio/cues/awakening-burst.mp3` },
   "haiku-bell": { url: `${base}audio/cues/haiku-bell.wav`, gain: 0.65 },
+  "haiku-cicadas": { url: `${base}audio/cues/haiku-cicadas.wav`, loop: true, gain: 0.36 },
   "monument-read": { url: `${base}audio/cues/monument-read.mp3` },
   "book-open": { url: `${base}audio/cues/book-open.mp3` },
   "page-flip": { url: `${base}audio/cues/page-flip.mp3` },
   "box-open": { url: `${base}audio/cues/box-open.mp3` },
-  "first-voyage": { url: `${base}audio/cues/crossing-at-dawn.mp3` },
   // Mastered about 1.2 dB hotter than the voyage cue; 0.5 (-6 dB) sits it well below that.
-  "first-snowshoe": { url: `${base}audio/cues/trail-through-fresh-snow.mp3`, gain: 0.5 },
-  "first-climb": { url: `${base}audio/cues/ridge-within-reach.mp3` },
   "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: FOOTSTEP_GAIN },
   "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: FOOTSTEP_GAIN * 1.75 },
   "walk-mountain": { url: `${base}audio/cues/walk-mountain.wav`, loop: true, gain: FOOTSTEP_GAIN },

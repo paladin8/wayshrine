@@ -9,7 +9,7 @@
 - `?debug` exposes `window.wayshrine.music.status()`.
 
 ## Cues
-`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). The awakening swells duck the music to 4%, and gear first-use cues duck it to 16%.
+`src/audio/cues.ts` is the registry and `src/audio/cue-player.ts` plays them (players are created up front, reused, and follow the same volume and mute). The awakening swells duck the music to 4%. Gear first uses have no cue; the background themes crossfade into each other instead.
 
 | Cue id | File | Notes |
 | --- | --- | --- |
@@ -35,17 +35,17 @@ In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze)
 
 ## Boat prototype
 
-The score stays on **Homeward Breeze** after earning the boat. The first boarding plays **Crossing at Dawn** (`public/audio/cues/crossing-at-dawn.mp3`, supplied by the project owner, 10 s). As the skiff pushes off, the background crossfades to **Waves Beyond the Headlands** under the cue. The second theme comes up during the quiet tail, from 3.3 to 6.5 s, and persists in the save once the launch finishes. Click **…** in the debug box to open **Gear acquisition**. Choosing a preview closes the dialog before it starts.
+The score stays on **Homeward Breeze** after earning the boat. At the first boarding the background crossfades to **Waves Beyond the Headlands** over 9 s as the skiff pushes off; there is no cue or duck (the earlier *Crossing at Dawn* cue was dropped, its file is unused). The second theme persists in the save once the launch finishes. Click **…** in the debug box to open **Gear acquisition**. Choosing a preview closes the dialog before it starts.
 
 ## First snowshoe use
 
-The first moving step on snow after earning snowshoes plays **Trail Through Fresh Snow** (`public/audio/cues/trail-through-fresh-snow.mp3`, supplied by the project owner, 10 s). **Snowline Walk** starts crossfading underneath it. The duck releases from 4.0 to 7.2 s of cue playback, as the cue tails off. The first step is saved immediately, and Snowline remains the background theme on reload or after leaving snow.
+The first moving step on snow after earning snowshoes starts the strap-on moment and crossfades the background from the sea theme to **Snowline Walk** over 9 s, with no cue or duck (*Trail Through Fresh Snow* was dropped, its file is unused). The first step is saved immediately, and Snowline remains the background theme on reload or after leaving snow.
 
-In **Gear acquisition**, **Preview snowshoe use** plays the strap-on moment and its transition music without updating the save. In Auto, the normal score returns when the preview cue ends. Choose **Snowline** in the music selector to keep auditioning the background track.
+In **Gear acquisition**, **Preview snowshoe use** plays the strap-on moment and the crossfade without updating the save, fading back to the sea theme first if the save is already further along. Choose **Snowline** in the music selector to keep auditioning the background track.
 
 ## First climb
 
-The first moving step onto a mountain after earning the walking sticks plays **Ridge Within Reach** (`public/audio/cues/ridge-within-reach.mp3`, supplied by the project owner, 10 s, about -22.5 LUFS). The background crosses from **Snowline Walk** to **Ridgewalk in E Major** at 4.2 s of cue playback, and the duck releases from 5.5 to 8.0 s as the cue thins out. The first climb is saved immediately and Ridgewalk remains the background on reload.
+The first moving step onto a mountain after earning the walking sticks crossfades the background from **Snowline Walk** to **Ridgewalk in E Major** over 9 s, with no cue or duck (*Ridge Within Reach* was dropped, its file is unused). The first climb is saved immediately and Ridgewalk remains the background on reload.
 
 In **Gear acquisition**, **Preview climbing use** plays the moment from the snow theme (fading back to it first if the save is already on Ridgewalk) without updating the save.
 
