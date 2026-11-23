@@ -55,12 +55,6 @@ import { createSettingsStore } from "./settings";
 import { createSettingsPanel } from "./settings-panel";
 
 const HINT_SECONDS = 1.5;
-/** The synthesised alternative to each supplied footstep loop (marsh only has the synthesised one). */
-const SYNTH_STEP_CUES: Readonly<Partial<Record<CueId, CueId>>> = {
-  "walk-meadow": "walk-meadow-synth",
-  "walk-snow": "walk-snow-synth",
-  "walk-mountain": "walk-mountain-synth",
-};
 const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   meadow: "walk-meadow",
   snow: "walk-snow",
@@ -413,10 +407,6 @@ export function startApp(container: HTMLElement): void {
       previewBoatUnlock: () => previewGearUnlock("boat"),
       previewSnowshoeUnlock: () => previewGearUnlock("snowshoes"),
       previewClimbUnlock: () => previewGearUnlock("climbing"),
-      toggleFootsteps: () => {
-        synthFootsteps = !synthFootsteps;
-        return synthFootsteps ? "synth" : "supplied";
-      },
       previewGetaUnlock: () => previewGearUnlock("geta"),
       previewClimbUse: () => {
         beginPreview();
@@ -539,13 +529,10 @@ export function startApp(container: HTMLElement): void {
   });
   window.addEventListener("pointerdown", () => music.unlock());
   window.addEventListener("keyup", (e) => down.delete(e.code));
-  /** Compare the synthesised footsteps with the supplied recordings (debug toggle). */
-  let synthFootsteps = true;
   let movementCue: CueId | undefined;
   const releaseMovement = (): void => {
     down.clear();
     Object.values(MOVEMENT_CUES).forEach((id) => cues.stop(id));
-    Object.values(SYNTH_STEP_CUES).forEach((id) => cues.stop(id));
     movementCue = undefined;
   };
   window.addEventListener("blur", releaseMovement);
@@ -732,8 +719,9 @@ export function startApp(container: HTMLElement): void {
 
     // Keep the background steady through a restoration if debug selects another track.
     music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview) ? GEAR_FADE_SECONDS : undefined);
-    const biomeCue = moving && !voyageFrame ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome] : undefined;
-    const nextMovementCue = biomeCue && synthFootsteps ? SYNTH_STEP_CUES[biomeCue] ?? biomeCue : biomeCue;
+    const nextMovementCue = moving && !voyageFrame
+      ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
+      : undefined;
     if (nextMovementCue !== movementCue) {
       if (movementCue) cues.stop(movementCue, MOVEMENT_FADE_OUT);
       if (nextMovementCue) cues.play(nextMovementCue, MOVEMENT_FADE_IN);
