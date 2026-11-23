@@ -23,9 +23,11 @@ Sync rule: cues are all started when the awakening starts (the burst is padded t
 
 ## Movement sounds
 
-Meadow steps, snow footsteps, and lake rowing loop while the player moves on the corresponding terrain. The loops play at about one-third gain, fade in over 0.65 s, and fade out over 0.85 s on stop or when changing surfaces. They stay quiet during the first-voyage ceremony. They use the sound-effects slider and mute setting. Other biomes have no movement clips yet.
+Meadow steps, snow footsteps, and lake rowing loop while the player moves on the corresponding terrain. The loops play at about one-third gain, fade in over 0.65 s, and fade out over 0.85 s on stop or when changing surfaces. They stay quiet during the first-voyage ceremony. They use the sound-effects slider and mute setting. Mountain and marsh footsteps exist too.
 
 The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `footsteps_in_snow_#1-1795389766172.mp3`, and `sound_of_water_light_#1-1795381169811.mp3`. The game assets are trimmed, gain-matched WAVs with short edge fades in `public/audio/cues/`.
+
+**Synthesised footsteps.** `scripts/synth-footsteps.py` generates a synthesised loop for meadow, snow, mountain and marsh (`walk-<surface>-synth.wav`): six steps per loop at 2.9 steps/s so they stay in time with the walk animation, alternating left and right, level-matched to the supplied recordings. They are the default; the debug button **Footsteps: synth / supplied** flips between them to compare. Marsh has only the synthesised loop (`walk-marsh`), so that surface sounds the same in both modes.
 
 ## Music sets
 
@@ -51,7 +53,7 @@ In **Gear acquisition**, **Preview climbing use** plays the moment from the snow
 
 ## First geta use
 
-The first moving step into marsh after earning geta crouches the traveller to slip them on, then crossfades the background from **Ridgewalk in E Major** to **Marshwalk** over 5 s. There is no cue. The first step is saved immediately and Marshwalk remains the background on reload. The track slot is `marshwalk` (`public/audio/music/marshwalk.mp3`, not supplied yet, so the background is silent after the crossfade until it lands) and the marsh footstep loop is `walk-marsh` (`public/audio/cues/walk-marsh.wav`, also pending; a missing file is skipped silently).
+The first moving step into marsh after earning geta crouches the traveller to slip them on, then crossfades the background from **Ridgewalk in E Major** to **Marshwalk** over 5 s. There is no cue. The first step is saved immediately and Marshwalk remains the background on reload. The track slot is `marshwalk` (`public/audio/music/marshwalk.mp3`, not supplied yet, so the background is silent after the crossfade until it lands) and the marsh footstep loop is the synthesised `walk-marsh`.
 
 In **Gear acquisition**, **Preview geta unlock** and **Preview geta use** play the reveal and the slip-on moment without updating the save, fading back to Ridgewalk first if the save is already on Marshwalk.
 

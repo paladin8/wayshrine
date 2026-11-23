@@ -13,6 +13,7 @@ export interface DebugActions {
   readonly previewGetaUse: () => void;
   readonly previewClimbUnlock: () => void;
   readonly previewGetaUnlock: () => void;
+  readonly toggleFootsteps: () => string;
   readonly previewClimbUse: () => void;
   readonly cycleMusic: () => string;
   /** Switches gear transitions between their cue and a plain slow crossfade; returns the new mode. */
@@ -82,6 +83,10 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   add(panel, "Go to next shrine (G)", actions.goToTarget);
   const musicSet = add(panel, "Music set: Auto", () => {
     musicSet.textContent = `Music set: ${actions.cycleMusic()}`;
+  });
+
+  const footsteps = add(panel, "Footsteps: synth", () => {
+    footsteps.textContent = `Footsteps: ${actions.toggleFootsteps()}`;
   });
 
   const content = document.createElement("div");
