@@ -118,8 +118,8 @@ export const en: Messages = {
   promptRestoreLandmark: "Press E to restore the landmark",
   promptSkip: "Press E to skip",
   railway: {
-    board: "E · Board the shinkansen",
-    dormant: "Restore both station shrines to run the train",
+    board: "E · Board the local train",
+    dormant: "Restore all shrines along the railway",
     preparing: "Preparing the ride…",
     unavailable: "The train view could not load. Try boarding again.",
     skip: "Skip ride",

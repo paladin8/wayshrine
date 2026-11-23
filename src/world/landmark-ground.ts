@@ -33,6 +33,28 @@ import shirataniUnsuikyo from "./landmark-grounds/shiratani-unsuikyo.json";
 import arashiyama from "./landmark-grounds/arashiyama.json";
 import nachiFalls from "./landmark-grounds/nachi-falls.json";
 import meijiJingu from "./landmark-grounds/meiji-jingu.json";
+import iseJingu from "./landmark-grounds/ise-jingu.json";
+import izumoTaisha from "./landmark-grounds/izumo-taisha.json";
+import takachiho from "./landmark-grounds/takachiho.json";
+import iyaKazurabashi from "./landmark-grounds/iya-kazurabashi.json";
+import ginkakuJi from "./landmark-grounds/ginkaku-ji.json";
+import ryoanJi from "./landmark-grounds/ryoan-ji.json";
+import sakurajima from "./landmark-grounds/sakurajima.json";
+import mountAso from "./landmark-grounds/mount-aso.json";
+import beppuHells from "./landmark-grounds/beppu-hells.json";
+import owakudani from "./landmark-grounds/owakudani.json";
+import kumamotoCastle from "./landmark-grounds/kumamoto-castle.json";
+import dazaifu from "./landmark-grounds/dazaifu.json";
+import dogoOnsen from "./landmark-grounds/dogo-onsen.json";
+import kintaikyo from "./landmark-grounds/kintaikyo.json";
+import gunkanjima from "./landmark-grounds/gunkanjima.json";
+import naruto from "./landmark-grounds/naruto.json";
+import shuriCastle from "./landmark-grounds/shuri-castle.json";
+import taketomi from "./landmark-grounds/taketomi.json";
+import matsushima from "./landmark-grounds/matsushima.json";
+import amanohashidate from "./landmark-grounds/amanohashidate.json";
+import tottoriDunes from "./landmark-grounds/tottori-dunes.json";
+import shiretoko from "./landmark-grounds/shiretoko.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -99,6 +121,28 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   arashiyama: arashiyama as unknown as LandmarkGround,
   "nachi-falls": nachiFalls as unknown as LandmarkGround,
   "meiji-jingu": meijiJingu as unknown as LandmarkGround,
+  "ise-jingu": iseJingu as unknown as LandmarkGround,
+  "izumo-taisha": izumoTaisha as unknown as LandmarkGround,
+  takachiho: takachiho as unknown as LandmarkGround,
+  "iya-kazurabashi": iyaKazurabashi as unknown as LandmarkGround,
+  "ginkaku-ji": ginkakuJi as unknown as LandmarkGround,
+  "ryoan-ji": ryoanJi as unknown as LandmarkGround,
+  sakurajima: sakurajima as unknown as LandmarkGround,
+  "mount-aso": mountAso as unknown as LandmarkGround,
+  "beppu-hells": beppuHells as unknown as LandmarkGround,
+  owakudani: owakudani as unknown as LandmarkGround,
+  "kumamoto-castle": kumamotoCastle as unknown as LandmarkGround,
+  dazaifu: dazaifu as unknown as LandmarkGround,
+  "dogo-onsen": dogoOnsen as unknown as LandmarkGround,
+  kintaikyo: kintaikyo as unknown as LandmarkGround,
+  gunkanjima: gunkanjima as unknown as LandmarkGround,
+  naruto: naruto as unknown as LandmarkGround,
+  "shuri-castle": shuriCastle as unknown as LandmarkGround,
+  taketomi: taketomi as unknown as LandmarkGround,
+  matsushima: matsushima as unknown as LandmarkGround,
+  amanohashidate: amanohashidate as unknown as LandmarkGround,
+  "tottori-dunes": tottoriDunes as unknown as LandmarkGround,
+  shiretoko: shiretoko as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

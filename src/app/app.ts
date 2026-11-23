@@ -53,7 +53,7 @@ import {
 import { createCuePlayer, createMusic, MUSIC_SETS, musicSetFor, type CueId, type MusicSet, type TrackId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { CAPABILITY_THRESHOLDS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, planMonuments, railPoint, standPoint, stationFloor, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
+import { CAPABILITY_THRESHOLDS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor, type Messages } from "./i18n";
@@ -151,7 +151,7 @@ export function startApp(container: HTMLElement): void {
   const seed = params.get("seed") ?? "wayshrine";
   const world = createWorld(seed);
   const terrain = createTerrain(world);
-  const railway = fujiRailway(terrain);
+  const railway = fujiRailway(world);
   const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
   const sceneryObstacles = createObstacles(terrain, monuments);
@@ -317,7 +317,7 @@ export function startApp(container: HTMLElement): void {
   const startTrainRide = (from: StationIndex, preview = false): void => {
     if (!railway) return;
     const visibleState = preview
-      ? railway.stations.reduce((next, station) => restoreShrine(next, world.regionById(station.shrineId)), state)
+      ? railway.requiredRegions.reduce((next, id) => restoreShrine(next, world.regionById(id)), state)
       : state;
     trainRide = {
       from, preview, visibleState, t: 0, wait: 0,
@@ -759,7 +759,7 @@ export function startApp(container: HTMLElement): void {
           const door = railPoint(railway, railway.stations[ride.from].distance + 1.4, 0.9);
           const step = railFrame.boarding;
           railPlayer = { x: from.x + (door.x - from.x) * step, z: from.z + (door.z - from.z) * step };
-          const ground = stationFloor(railway, terrain, from) ?? terrain.groundAt(from.x, from.z);
+          const ground = terrain.groundAt(from.x, from.z);
           boardingHeight = ground + (railway.height + 0.42 - ground) * step;
         }
       }

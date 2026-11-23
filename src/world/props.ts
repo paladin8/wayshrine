@@ -1,6 +1,6 @@
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
-import { fujiRailway, RAIL_HALF_LENGTH } from "./fuji-railway";
+import { fujiRailway, railwayClearance } from "./fuji-railway";
 import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
 import { isWater, type Biome } from "./terrain";
 
@@ -105,7 +105,7 @@ export function propsInChunk(
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   const props: Prop[] = [];
-  const railway = fujiRailway(terrain);
+  const railway = fujiRailway(world);
 
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
@@ -122,15 +122,7 @@ export function propsInChunk(
       const region = world.regionAt(x, z);
       const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;
-      if (railway) {
-        const dx = x - railway.origin.x;
-        const dz = z - railway.origin.z;
-        const along = dx * railway.along.x + dz * railway.along.z;
-        const across = dx * railway.across.x + dz * railway.across.z;
-        const onRailway = Math.abs(along) < RAIL_HALF_LENGTH && Math.abs(across) < 2.6;
-        const onPlatform = Math.abs(across - 3) < 3.2 && railway.stations.some((station) => Math.abs(along - station.distance) < 10.5);
-        if (onRailway || onPlatform) continue;
-      }
+      if (railway && railwayClearance(railway, x, z) < 0.85) continue;
       if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius)) continue;
 
       let profile = shared.profiles.get(region.id);

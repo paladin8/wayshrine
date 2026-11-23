@@ -1,9 +1,9 @@
-import { railPoint, type FujiRailway, type Point } from "../world";
+import type { FujiRailway, Point } from "../world";
 import type { GameState } from "./state";
 
 export type StationIndex = 0 | 1;
 export const TRAIN_BOARD_SECONDS = 1.15;
-export const TRAIN_RUN_SECONDS = 16;
+export const TRAIN_RUN_SECONDS = 42;
 export const TRAIN_TOTAL_SECONDS = TRAIN_BOARD_SECONDS + TRAIN_RUN_SECONDS + 1;
 
 export function otherStation(index: StationIndex): StationIndex {
@@ -11,7 +11,7 @@ export function otherStation(index: StationIndex): StationIndex {
 }
 
 export function railwayPowered(line: FujiRailway, state: GameState): boolean {
-  return line.stations.every((station) => state.restored.has(station.shrineId));
+  return line.requiredRegions.every((id) => state.restored.has(id));
 }
 
 export function stationInReach(line: FujiRailway | null, pos: Point): StationIndex | null {
@@ -40,7 +40,7 @@ export function trainFrame(line: FujiRailway, from: StationIndex, seconds: numbe
   const distance = start + (end - start) * progress;
   return {
     distance,
-    position: railPoint(line, distance),
+    routeProgress: from === 0 ? progress : 1 - progress,
     direction: from === 0 ? 1 : -1,
     windowView: seconds >= 0.6 && seconds < TRAIN_TOTAL_SECONDS - 0.38,
     fade: Math.max(clamp(1 - Math.abs(seconds - 0.6) / 0.34), clamp(1 - Math.abs(seconds - (TRAIN_TOTAL_SECONDS - 0.38)) / 0.34)),

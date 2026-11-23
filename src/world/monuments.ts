@@ -1,5 +1,6 @@
 import { createRng, type Rng } from "../core";
 import type { Point } from "./coords";
+import { fujiRailway, railwayClearance } from "./fuji-railway";
 import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
 import { monumentClearance } from "./landmarks";
 import type { Biome } from "./terrain";
@@ -142,6 +143,7 @@ function edgeMargin(world: World, region: Region, x: number, z: number): number 
 }
 
 function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, avoid: Point | null): Point | null {
+  const railway = fujiRailway(world);
   const { site, shrine, landmark } = region;
   const maxDistance = MAX_SITE_DISTANCE + (landmark ? 6 : 0);
   const fits = (p: Point): boolean => {
@@ -151,6 +153,7 @@ function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, 
     if (landmark && Math.max(Math.abs(dx), Math.abs(dz)) < monumentClearance(landmark)) return false;
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) return false;
     if (world.regionAt(p.x, p.z) !== region || terrain.tileAtPoint(p.x, p.z).biome !== region.biome) return false;
+    if (railway && railwayClearance(railway, p.x, p.z) < 1.0) return false;
     // The site bisector is only an approximation once the edges are bent.
     for (const [x, z] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
       if (world.regionAt(p.x + x * MONUMENT_EDGE_MARGIN, p.z + z * MONUMENT_EDGE_MARGIN) !== region) return false;

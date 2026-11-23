@@ -1,9 +1,12 @@
 import * as THREE from "three";
-import { railPoint, type FujiRailway } from "../world";
+import type { TrainFrame } from "../game";
 import { disposeObject } from "./dispose";
+import { buildFujiCountryside } from "./fuji-countryside";
+import { buildLandmark } from "./landmark-mesh";
+import type { ShrineMesh } from "./shrine-mesh";
 
-const horizon = new THREE.Color(0xc0dded);
-const zenith = new THREE.Color(0x4994da);
+const horizon = new THREE.Color(0xc7dff0);
+const zenith = new THREE.Color(0x408ed9);
 
 function clearSky(): THREE.DataTexture {
   const rows = 128;
@@ -25,62 +28,77 @@ function clearSky(): THREE.DataTexture {
   return texture;
 }
 
-interface AerialTint {
-  readonly source: THREE.MeshStandardMaterial;
-  readonly material: THREE.MeshStandardMaterial;
-  readonly haze: number;
-}
+/** The seat travels through an authored scene in both directions on the same timeline as the map train. */
+export function createFujiVista() {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(48, 1, 0.3, 1960);
+  const asset = new THREE.Group();
+  let landmark: ShrineMesh | undefined;
+  let updateCountryside: ((seconds: number, cameraX: number) => void) | undefined;
 
-/** Reuse the landmark's authored mountain, at a distance that gives it believable parallax from the seat. */
-export function createFujiVista(line: FujiRailway) {
-  const root = new THREE.Group();
-  root.name = "Fuji railway panorama";
-  root.visible = false;
-  const sky = clearSky();
-  const fog = new THREE.Fog(horizon, 43, 83);
-  const mountainPosition = railPoint(line, 0, -105);
-  let source: THREE.Object3D | undefined;
-  let panorama: THREE.Object3D | undefined;
-  const tints: AerialTint[] = [];
-
-  function copyMaterial(source: THREE.Material): THREE.Material {
-    const material = source.clone();
-    if (source instanceof THREE.MeshStandardMaterial && material instanceof THREE.MeshStandardMaterial) {
-      const snow = material.name.startsWith("mountain_snow");
-      material.fog = false;
-      material.emissiveIntensity = snow ? 0.19 : 0.05;
-      tints.push({ source, material, haze: snow ? 0.08 : 0.24 });
-    }
-    return material;
+  function load(): void {
+    if (landmark) return;
+    scene.background = clearSky();
+    scene.fog = new THREE.Fog(horizon, 148, 1040);
+    scene.add(new THREE.HemisphereLight(0xe1eeff, 0xb4ab81, 1.69));
+    const sun = new THREE.DirectionalLight(0xfff1d8, 2.25);
+    sun.position.set(-73, 119, 61);
+    scene.add(sun);
+    updateCountryside = buildFujiCountryside(scene);
+    landmark = buildLandmark("mount-fuji");
+    asset.add(landmark.group);
+    landmark.setVitality(1);
   }
 
-  function replaceMountain(mountain: THREE.Object3D): void {
-    tints.length = 0;
-    if (panorama) {
-      root.remove(panorama);
-      disposeObject(panorama);
-    }
-    source = mountain;
-    panorama = mountain.clone();
-    panorama.position.set(mountainPosition.x, 0.5, mountainPosition.z);
-    panorama.scale.set(3.7, 3.55, 3.7);
-    panorama.traverse((part) => {
+  function installMountain(): boolean {
+    if (!landmark) return false;
+    if (!landmark.modelReady?.()) return false;
+    const mountain = landmark.group.getObjectByName("fuji_mountain");
+    if (!mountain) return false;
+    scene.add(mountain);
+    mountain.position.set(21, -38, -1090);
+    mountain.scale.set(36, 33, 36);
+    mountain.traverse((part) => {
       if (!(part instanceof THREE.Mesh)) return;
-      part.geometry = part.geometry.clone();
-      part.material = Array.isArray(part.material) ? part.material.map(copyMaterial) : copyMaterial(part.material);
       part.castShadow = false;
       part.receiveShadow = false;
+      for (const material of Array.isArray(part.material) ? part.material : [part.material]) {
+        if (!(material instanceof THREE.MeshStandardMaterial)) continue;
+        const snow = material.name.startsWith("mountain_snow");
+        material.color.lerp(horizon, snow ? 0.12 : 0.31);
+        material.fog = false;
+      }
     });
-    root.add(panorama);
+    disposeObject(landmark.group);
+    asset.remove(landmark.group);
+    landmark = undefined;
+    return true;
   }
 
-  function prepare(mountain: THREE.Object3D): void {
-    if (source !== mountain) replaceMountain(mountain);
-    for (const { source, material, haze } of tints) {
-      material.color.copy(source.color).lerp(horizon, haze);
-      material.emissive.copy(material.color);
-    }
-  }
-
-  return { root, sky, fog, prepare };
+  let loaded = false;
+  return {
+    load() {
+      if (!loaded) load();
+    },
+    ready() {
+      loaded ||= installMountain();
+      return loaded;
+    },
+    resize(aspect: number) {
+      camera.aspect = aspect;
+      camera.fov = Math.max(48, THREE.MathUtils.radToDeg(2 * Math.atan(0.49 / Math.max(0.76, aspect))));
+      camera.updateProjectionMatrix();
+    },
+    render(renderer: THREE.WebGLRenderer, frame: TrainFrame, seconds: number) {
+      const progress = frame.routeProgress;
+      // Ease through the open field at the centre so the principal view has time to settle.
+      const distance = progress + 0.047 * Math.sin(progress * Math.PI * 2);
+      const x = THREE.MathUtils.lerp(-624, 624, distance);
+      const y = 2.45 + Math.sin(progress * Math.PI) * 0.14;
+      camera.position.set(x, y, 0);
+      camera.lookAt(x + frame.direction * 5.5, y + 2.1, -125);
+      updateCountryside?.(seconds, x);
+      renderer.render(scene, camera);
+    },
+  };
 }

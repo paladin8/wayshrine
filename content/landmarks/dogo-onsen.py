@@ -1,0 +1,278 @@
+# Dogo Onsen (the three-storey timber bathhouse, its curving gables, bamboo blinds, the vermilion drum tower and its white heron) landmark generator for Wayshrine.
+# Run: Blender -b --factory-startup --python dogo-onsen.py
+# Rebuilds content/landmarks/dogo-onsen.blend and public/models/landmarks/dogo-onsen.glb
+import bpy, math, os, json
+from mathutils import Vector
+bpy.ops.wm.read_factory_settings(use_empty=True)
+ROOT=os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
+GLB=ROOT+"/public/models/landmarks/dogo-onsen.glb"
+BLEND=ROOT+"/content/landmarks/dogo-onsen.blend"
+os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
+
+PAL={"wood":"5e4632","sudare":"c8a874","tile":"4a4d52","green":"6f9a8a","white":"f0ede6","red":"c8473a","stone":"9a958c","pave":"c9c3b6","leaf":"4f7a45","bark":"4e3a30","glow_cream":"e8dcb0"}
+def lin(h):
+    o=[]
+    for i in (0,2,4):
+        c=int(h[i:i+2],16)/255
+        o.append(c/12.92 if c<=0.04045 else ((c+0.055)/1.055)**2.4)
+    return o+[1.0]
+
+# geometry buckets: material key -> (verts, faces). Every piece is a closed solid; winding is
+# made outward by checking the signed volume.
+B={}
+def emit(verts,faces,mats,orient=True):
+    V=[Vector(v) for v in verts]
+    vol=0.0
+    for f in faces:
+        a=V[f[0]]
+        for i in range(1,len(f)-1):
+            vol+=a.dot(V[f[i]].cross(V[f[i+1]]))
+    if orient and vol<0: faces=[list(reversed(f)) for f in faces]
+    maps={}
+    for f,m in zip(faces,mats):
+        if m is None: continue
+        if m not in B: B[m]=([],[])
+        bv,bf=B[m]; mp=maps.setdefault(m,{})
+        idx=[]
+        for i in f:
+            if i not in mp:
+                mp[i]=len(bv); bv.append(tuple(V[i]))
+            idx.append(mp[i])
+        bf.append(idx)
+
+def xf(pts,cx=0,cy=0,cz=0,rot=0,s=1.0):
+    c,sn=math.cos(rot),math.sin(rot)
+    return [(cx+s*(x*c-y*sn), cy+s*(x*sn+y*c), cz+s*z) for (x,y,z) in pts]
+def solid(rings,mat,T=None,mb='same',mt='same'):
+    T=T or {}
+    n=len(rings[0]); verts=[p for r in rings for p in r]; faces=[]; fm=[]
+    for k in range(len(rings)-1):
+        for i in range(n):
+            j=(i+1)%n
+            faces.append([k*n+i,k*n+j,(k+1)*n+j,(k+1)*n+i]); fm.append(mat)
+    faces.append(list(range(n-1,-1,-1))); fm.append(mat if mb=='same' else mb)
+    L=len(rings)-1
+    faces.append([L*n+i for i in range(n)]); fm.append(mat if mt=='same' else mt)
+    emit(xf(verts,**T),faces,fm)
+def rect(hx,hy,z,ox=0,oy=0):
+    return [(ox-hx,oy-hy,z),(ox+hx,oy-hy,z),(ox+hx,oy+hy,z),(ox-hx,oy+hy,z)]
+def ngon(r,z,n,ph=0,ox=0,oy=0):
+    return [(ox+r*math.cos(ph+2*math.pi*i/n), oy+r*math.sin(ph+2*math.pi*i/n), z) for i in range(n)]
+def box(mat,ox,oy,z0,z1,hx,hy,T=None,mt='same'):
+    solid([rect(hx,hy,z0,ox,oy),rect(hx,hy,z1,ox,oy)],mat,T,mt=mt)
+def frus(mat,ox,oy,z0,z1,hx0,hy0,hx1,hy1,oy1=None,T=None):
+    solid([rect(hx0,hy0,z0,ox,oy),rect(hx1,hy1,z1,ox,oy if oy1 is None else oy1)],mat,T)
+def prism(mat,ox,oy,z0,z1,r0,r1,n=6,ph=0,T=None):
+    solid([ngon(r0,z0,n,ph,ox,oy),ngon(r1,z1,n,ph,ox,oy)],mat,T)
+def cone(mat,ring,apex,T=None):
+    T=T or {}; n=len(ring); verts=list(ring)+[apex]
+    faces=[list(range(n-1,-1,-1))]+[[i,(i+1)%n,n] for i in range(n)]
+    emit(xf(verts,**T),faces,[mat]*len(faces))
+def bipyr(mat,ox,oy,zc,r,zb,zt,n=6,T=None):
+    T=T or {}; ring=ngon(r,zc,n,0,ox,oy); verts=ring+[(ox,oy,zb),(ox,oy,zt)]
+    faces=[[(i+1)%n,i,n] for i in range(n)]+[[i,(i+1)%n,n+1] for i in range(n)]
+    emit(xf(verts,**T),faces,[mat]*len(faces))
+ICO_F=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]]
+def ico(mat,ox,oy,oz,rx,ry,rz,T=None):
+    T=T or {}; t=(1+5**0.5)/2
+    raw=[(-1,t,0),(1,t,0),(-1,-t,0),(1,-t,0),(0,-1,t),(0,1,t),(0,-1,-t),(0,1,-t),(t,0,-1),(t,0,1),(-t,0,-1),(-t,0,1)]
+    vs=[]
+    for v in raw:
+        l=Vector(v).normalized(); vs.append((ox+l.x*rx,oy+l.y*ry,oz+l.z*rz))
+    emit(xf(vs,**T),ICO_F,[mat]*20)
+def extrude_y(mat,prof,y0,y1,T=None): solid([[(x,y0,z) for x,z in prof],[(x,y1,z) for x,z in prof]],mat,T)
+def extrude_x(mat,prof,x0,x1,T=None): solid([[(x0,y,z) for y,z in prof],[(x1,y,z) for y,z in prof]],mat,T)
+
+def flared_roof(spec,mat="roof",ox=0.0,oy=0.0):
+    """Hip roof from stacked rings (hx, hy, z, lift). Each ring has its corners raised by
+    `lift` and pushed out along the diagonal, easing to flat at mid-edge (sori)."""
+    sg=[(-1,-1),(1,-1),(1,1),(-1,1)]
+    rings=[]
+    for hx,hy,z,lift in spec:
+        cs=[(-hx,-hy),(hx,-hy),(hx,hy),(-hx,hy)]; r=[]
+        for k in range(4):
+            (x0,y0),(x1,y1)=cs[k],cs[(k+1)%4]
+            for t in (0.0,0.25,0.5,0.75):
+                x=x0+(x1-x0)*t; y=y0+(y1-y0)*t
+                if t==0.0: x+=sg[k][0]*0.45*lift; y+=sg[k][1]*0.45*lift
+                r.append((ox+x,oy+y,z+lift*abs(2*t-1)**2.5))
+        rings.append(r)
+    n=16; verts=[p for r in rings for p in r]; faces=[]
+    for k in range(len(rings)-1):
+        for i in range(n):
+            j=(i+1)%n; a,b,c,dd=k*n+i,k*n+j,(k+1)*n+j,(k+1)*n+i
+            faces+=[[a,b,c],[a,c,dd]]
+    cb=len(verts); verts.append((ox,oy,spec[0][2]))
+    ct=len(verts); verts.append((ox,oy,spec[-1][2]))
+    L=(len(rings)-1)*n
+    for i in range(n):
+        j=(i+1)%n; faces.append([cb,j,i]); faces.append([ct,L+i,L+j])
+    emit(verts,faces,[mat]*len(faces))
+
+import random
+rng=random.Random(48)
+EXTRA_SOLIDS=[]; NOSOLID={"leaf"}
+def smooth(e0,e1,x):
+    t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
+FH=9.6   # footprint half-width (the sidecar's half): a single building, the bathhouse in its square
+TERRAIN_SURFACE=True; EDGE_LEVEL=0.0
+def water_disc(x,y): return False
+
+def kara(cx,cy,zb,rot,w,h,depth,face="wood",hood="tile"):
+    T=dict(cx=cx,cy=cy,cz=zb,rot=rot)
+    lo=[(-w,0),(-0.62*w,0.22*h),(-0.28*w,0.72*h),(0,0.86*h),(0.28*w,0.72*h),(0.62*w,0.22*h),(w,0)]
+    extrude_y(face,lo,0.1,-depth,T)
+    hi=[(w+0.18,-0.07),(0.64*w,0.22*h+0.15),(0.28*w,0.72*h+0.15),(0,0.86*h+0.16),(-0.28*w,0.72*h+0.15),(-0.64*w,0.22*h+0.15),(-w-0.18,-0.07)]
+    extrude_y(hood,lo+hi,0.12,-(depth+0.12),T)
+    extrude_y("white",[(-0.2,0.86*h+0.08),(0.2,0.86*h+0.08),(0.2,0.86*h+0.18),(-0.2,0.86*h+0.18)],-(depth+0.13),-(depth+0.15),T)
+def chidori(cx,cy,zb,rot,w,h,depth,hood="tile"):
+    T=dict(cx=cx,cy=cy,cz=zb,rot=rot)
+    extrude_y("wood",[(-w,0),(w,0),(0,h)],0.1,-depth,T)
+    extrude_y(hood,[(-w-0.15,-0.05),(0,h+0.14),(w+0.15,-0.05),(w-0.04,-0.05),(0,h-0.03),(-w+0.04,-0.05)],0.12,-(depth+0.1),T)
+def storey(cx,cy,hx,hy,z0,z1,blinds=True,nwin=None):
+    box("wood",cx,cy,z0,z1,hx,hy)
+    n=nwin or max(2,int(2*hx/0.7))
+    for k in range(n):
+        x=cx-hx+2*hx*(k+0.5)/n
+        box("sudare" if blinds else "glow_win_%d_%d"%(int(z0*10),k),x,cy-hy-0.01,z0+(z1-z0)*0.25,z0+(z1-z0)*0.8,hx/n*0.8,0.01)
+    m=max(2,int(2*hy/0.7))
+    for k in range(m):
+        y=cy-hy+2*hy*(k+0.5)/m
+        box("sudare",cx+hx+0.01,y,z0+(z1-z0)*0.25,z0+(z1-z0)*0.8,0.01,hy/m*0.8)
+def eave(cx,cy,hx,hy,z,o=0.45,mat="tile",top=None):
+    nh=top or (hx-0.3,hy-0.3)
+    flared_roof([(hx+o,hy+o,z,0.16),(hx+o,hy+o,z+0.08,0.16),(nh[0]+0.05,nh[1]+0.05,z+0.45,0.0)],mat,cx,cy)
+
+# ---- the square before it
+box("pave",0,-4.4,-0.04,0.03,6.4,2.8)
+box("stone",0.4,0.6,-0.05,0.25,4.6,3.4)
+
+# ---- the main block (Kami-no-yu): three storeys of dark timber, the upper two screened with bamboo blinds,
+# its roofs stepped up in grey tile with green copper skirts
+MX,MY=-0.2,1.0
+storey(MX,MY,2.6,1.7,0.25,1.55,blinds=False)
+eave(MX,MY,2.6,1.7,1.55,0.5,"green",(2.25,1.35))
+storey(MX,MY,2.25,1.35,1.95,3.0)
+eave(MX,MY,2.25,1.35,3.0,0.45,"tile",(1.7,0.95))
+storey(MX,MY,1.7,0.95,3.4,4.3)
+flared_roof([(2.2,1.45,4.3,0.22),(2.2,1.45,4.4,0.22),(1.6,0.9,4.7,0.06),(1.3,0.12,5.15,0.0)],"tile",MX,MY)
+box("white",MX,MY,5.1,5.22,1.32,0.14)
+chidori(MX,MY-1.35,3.05,0,1.0,0.75,0.5); chidori(MX+2.25,MY,3.05,math.pi/2,0.8,0.65,0.5)
+kara(MX,MY-0.95,4.35,0,0.75,0.6,0.45)
+# the Shinrokaku: the little vermilion drum tower on the ridge, the white heron at its peak
+box("red",MX,MY,5.15,5.85,0.42,0.42)
+for k in range(2): box("glow_tower_%d"%k,MX-0.18+0.36*k,MY-0.43,5.35,5.7,0.12,0.01)
+flared_roof([(0.68,0.68,5.85,0.1),(0.68,0.68,5.93,0.1),(0.06,0.06,6.35,0.0)],"tile",MX,MY)
+solid([[(MX-0.12,MY-0.04,6.35),(MX+0.12,MY-0.04,6.35),(MX+0.12,MY+0.04,6.35),(MX-0.12,MY+0.04,6.35)],[(MX-0.05,MY-0.03,6.55),(MX+0.2,MY-0.03,6.62),(MX+0.2,MY+0.03,6.62),(MX-0.05,MY+0.03,6.55)]],"white")
+box("white",MX+0.22,MY,6.6,6.78,0.03,0.025)
+
+# ---- the entrance wing at the front under its great curving gable, and a second gable above it
+EX,EY=-0.3,-1.6
+storey(EX,EY,1.55,0.95,0.25,1.4,blinds=False,nwin=3)
+box("glow_door",EX,EY-0.96,0.3,1.2,0.55,0.01)
+eave(EX,EY,1.55,0.95,1.4,0.4,"tile",(1.1,0.5))
+kara(EX,EY-0.95,1.42,0,1.25,1.05,0.6)
+for sx in (-1,1): prism("wood",EX+sx*1.2,EY-1.5,0.0,1.45,0.08,0.08,8)
+box("sudare",EX,EY-1.56,1.25,1.4,1.2,0.01)
+# the east wing (the imperial bath), two storeys under green copper
+WX,WY=3.4,0.3
+storey(WX,WY,1.2,1.5,0.25,1.4,blinds=False)
+eave(WX,WY,1.2,1.5,1.4,0.4,"green",(0.95,1.2))
+storey(WX,WY,0.95,1.2,1.8,2.7)
+flared_roof([(1.35,1.6,2.7,0.18),(1.35,1.6,2.78,0.18),(0.9,1.1,3.0,0.05),(0.12,0.85,3.45,0.0)],"green",WX,WY)
+chidori(WX,WY-1.2,2.72,0,0.7,0.55,0.45,"green")
+
+# ---- trees behind, a few lanterns about the square
+def tree(x,y,s):
+    T=dict(cx=x,cy=y,s=s,rot=rng.uniform(0,6.28))
+    solid([ngon(0.15,-0.3,5),ngon(0.1,1.9,5)],"bark",T)
+    ico("leaf",0,0,2.5,1.2,1.1,1.0,T); ico("leaf",0.6,0.35,2.0,0.75,0.7,0.6,T)
+for x,y,s in [(-5.6,4.4,1.0),(-3.0,6.4,1.05),(1.4,6.6,1.0),(5.0,5.4,1.0),(-6.8,0.4,0.9),(7.0,2.2,0.9),(-7.0,-6.6,0.8),(7.2,-6.4,0.8)]:
+    tree(x,y,s)
+for k,(x,y) in enumerate(((-3.2,-3.6),(2.6,-3.6),(-5.6,-2.0),(5.8,-2.4))):
+    prism("stone",x,y,-0.05,0.55,0.12,0.09,6); box("stone",x,y,0.55,0.6,0.2,0.2)
+    box("glow_lantern_%d"%k,x,y,0.6,0.82,0.12,0.12); flared_roof([(0.26,0.26,0.82,0.04),(0.26,0.26,0.87,0.04),(0.03,0.03,1.07,0.0)],"stone",x,y)
+
+def ground_at(x,y): return 0.0
+INTERACT=(-0.3,-3.4)   # in the square before the entrance gable
+STAND=(0.6,-4.6)
+
+# ---- sidecar for the game: ground heights, solid footprints and where to stand.
+# Written to src/world/landmark-grounds/dogo-onsen.json and read by the world layer (see docs/landmarks.md).
+# Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
+HALF=FH; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+for i in range(GN): ground[0][i]=ground[GN-1][i]=ground[i][0]=ground[i][GN-1]=EDGE_LEVEL    # the edge ring: the base height, or open water
+CELL=0.3
+solid_cells=set(); cellg={}
+BAND0,BAND1=0.35,1.6
+for key,(bv,bf) in B.items():
+    if key in NOSOLID: continue      # foliage overhead (crowns, hanging tresses) doesn't block; trunks do
+    for f in bf:
+        for i in range(1,len(f)-1):
+            a,b,c=[Vector(bv[k]) for k in (f[0],f[i],f[i+1])]
+            n=(b-a).cross(c-a); ln=math.sqrt(n.dot(n))
+            if ln<1e-9: continue
+            nz=n.z/ln
+            e=max(math.dist(tuple(a),tuple(b)),math.dist(tuple(b),tuple(c)),math.dist(tuple(a),tuple(c)))
+            m=max(1,int(e/0.15))
+            for p in range(m+1):
+                for q in range(m+1-p):
+                    u,v=p/m,q/m; w=1-u-v
+                    x=a.x*w+b.x*u+c.x*v; y=a.y*w+b.y*u+c.y*v; z=a.z*w+b.z*u+c.z*v
+                    if not(-HALF<=x<HALF and -HALF<=y<HALF): continue
+                    ck=(int((x+HALF)/CELL),int((y+HALF)/CELL)); g=cellg.get(ck)
+                    if g is None: g=cellg[ck]=ground_at(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5))
+                    if z<g+BAND0 or z>g+BAND1: continue
+                    if nz>0.92 and z<g+0.6: continue
+                    solid_cells.add(ck)
+solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
+for ix in range(int(2*HALF/0.6)+1):
+    for iy in range(int(2*HALF/0.6)+1):
+        x,y=-HALF+0.3+ix*0.6,-HALF+0.3+iy*0.6
+        if water_disc(x,y): EXTRA_SOLIDS.append((x,y,0.43))
+solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
+side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
+      "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
+if TERRAIN_SURFACE: side["terrainSurface"]=True
+if "terrain_at" in globals():         # the terrain's own height where it differs from the walkable ground (a deck over a gorge)
+    terr=[[round(terrain_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+    for i in range(GN): terr[0][i]=terr[GN-1][i]=terr[i][0]=terr[i][GN-1]=EDGE_LEVEL
+    if terr!=ground: side["terrain"]=terr
+_p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/dogo-onsen.json"
+os.makedirs(os.path.dirname(_p),exist_ok=True)
+open(_p,"w").write(json.dumps(side,separators=(",",":")))
+
+# ---- one object per material (+ one object per glow part)
+mats={}
+def getmat(name):
+    if name in mats: return mats[name]
+    m=bpy.data.materials.new(name)
+    if m.node_tree is None:
+        try: m.use_nodes=True
+        except Exception: pass
+    p=[n for n in m.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]
+    p.inputs["Base Color"].default_value=lin(PAL[name])
+    p.inputs["Roughness"].default_value=1.0
+    p.inputs["Metallic"].default_value=0.0
+    m.diffuse_color=lin(PAL[name]); m.roughness=1.0
+    mats[name]=m; return m
+col=bpy.context.scene.collection
+stats={}; allv=[]
+for key in sorted(B):
+    vs,fs=B[key]
+    matname="glow_cream" if key.startswith("glow_") else key
+    objname=key if key.startswith("glow_") else "dogo_"+key
+    me=bpy.data.meshes.new(objname); me.from_pydata(vs,[],fs); me.validate(); me.update()
+    for p in me.polygons: p.use_smooth=False
+    me.materials.append(getmat(matname))
+    ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
+    stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
+    allv+= [v.co.copy() for v in me.vertices]
+mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
+bpy.ops.wm.save_as_mainfile(filepath=BLEND)
+bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
+    export_cameras=False, export_lights=False, export_animations=False, export_materials='EXPORT')
+clr=min(math.hypot(s[0]-STAND[0],s[1]+STAND[1])-s[2] for s in solids)
+res={"stand_clear":round(clr,3),"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
+json.dump(res,open("/tmp/lm_build.json","w"))

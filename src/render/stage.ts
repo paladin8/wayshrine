@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { lifeAt, railwayPowered, vitality, type boatLaunchFrame, type GameState, type TrainFrame } from "../game";
-import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, stationFloor, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
+import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
 import { createAmbient } from "./ambient";
 import { buildFujiTrain } from "./fuji-train";
 import { createFujiVista } from "./fuji-vista";
@@ -134,15 +134,13 @@ export function createStage(
   scene.background = new THREE.Color(palette.background);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
-  const seatCamera = new THREE.PerspectiveCamera(53, 1, 0.18, 175);
-  const fujiVista = railway && createFujiVista(railway);
-  if (fujiVista) scene.add(fujiVista.root);
-  const standardSky = scene.background;
+  const fujiVista = railway ? createFujiVista() : null;
   const railwayMesh = railway && buildFujiTrain(railway, terrain);
   if (railwayMesh) {
     railwayMesh.root.visible = false;
     scene.add(railwayMesh.root);
   }
+  let railwayVitalityReady = false;
   let wasRiding = false;
   let wasAtWindow = false;
   const target = new THREE.Vector3();
@@ -178,20 +176,14 @@ export function createStage(
   let playerY = 1;
 
   const chunkKey = (cx: number, cz: number): string => `${cx},${cz}`;
-  const railChunks = new Map<string, { cx: number; cz: number }>();
-  if (railway) {
-    const bound = 105;
-    const minX = Math.floor((railway.origin.x - bound) / CHUNK_SIZE);
-    const maxX = Math.floor((railway.origin.x + bound) / CHUNK_SIZE);
-    const minZ = Math.floor((railway.origin.z - bound) / CHUNK_SIZE);
-    const maxZ = Math.floor((railway.origin.z + bound) / CHUNK_SIZE);
-    for (let cz = minZ; cz <= maxZ; cz++) {
-      for (let cx = minX; cx <= maxX; cx++) {
-        const dx = (cx + 0.5) * CHUNK_SIZE - railway.origin.x;
-        const dz = (cz + 0.5) * CHUNK_SIZE - railway.origin.z;
-        const along = dx * railway.along.x + dz * railway.along.z;
-        const across = dx * railway.across.x + dz * railway.across.z;
-        if (Math.abs(along) < 98 && across > -82 && across < 20) railChunks.set(chunkKey(cx, cz), { cx, cz });
+  // Warm up the two station views for boarding and arrival. The window has its own scene.
+  const stationChunks = new Map<string, { cx: number; cz: number }>();
+  for (const { stand } of railway?.stations ?? []) {
+    const cx = Math.floor(stand.x / CHUNK_SIZE);
+    const cz = Math.floor(stand.z / CHUNK_SIZE);
+    for (let dz = -LOAD_RADIUS; dz <= LOAD_RADIUS; dz++) {
+      for (let dx = -LOAD_RADIUS; dx <= LOAD_RADIUS; dx++) {
+        stationChunks.set(chunkKey(cx + dx, cz + dz), { cx: cx + dx, cz: cz + dz });
       }
     }
   }
@@ -231,7 +223,7 @@ export function createStage(
     }
     if (riding) {
       let remaining = 5;
-      for (const [key, { cx, cz }] of railChunks) {
+      for (const [key, { cx, cz }] of stationChunks) {
         if (chunks.has(key)) continue;
         const built = buildChunk(terrain, cx, cz, shownProgress, monuments);
         chunks.set(key, built);
@@ -242,7 +234,7 @@ export function createStage(
     // Keep a margin so chunks are not rebuilt as the camera zooms in and out.
     const keep = LOAD_RADIUS + EXTRA_LOAD_RADIUS + 1;
     for (const [key, chunk] of chunks) {
-      if (riding && railChunks.has(key)) continue;
+      if (riding && stationChunks.has(key)) continue;
       const [cx, cz] = key.split(",").map(Number) as [number, number];
       if (Math.max(Math.abs(cx - pcx), Math.abs(cz - pcz)) > Math.max(keep, radius + 1)) {
         scene.remove(chunk.object);
@@ -293,7 +285,12 @@ export function createStage(
       shown.set(id, v < goal ? Math.min(goal, v + step) : Math.max(goal, v - step));
       dirty.add(id);
     }
+    if (railwayMesh && !railwayVitalityReady) {
+      for (const id of railwayMesh.scenery.regionIds) dirty.add(id);
+      railwayVitalityReady = true;
+    }
     if (dirty.size === 0) return;
+    railwayMesh?.scenery.applyVitality(shownProgress, dirty);
     for (const chunk of chunks.values()) chunk.applyVitality(shownProgress, dirty);
     for (const [id, shrine] of shrines) if (dirty.has(id)) shrine.setVitality(shownProgress(id));
   }
@@ -338,14 +335,12 @@ export function createStage(
       aspect = w / h;
       renderer.setSize(w, h);
       appliedZoom = -1;
-      seatCamera.aspect = aspect;
-      seatCamera.fov = Math.max(53, THREE.MathUtils.radToDeg(2 * Math.atan(0.55 / Math.max(0.78, aspect))));
-      seatCamera.updateProjectionMatrix();
+      fujiVista?.resize(aspect);
     },
     tick(dt) {
       clock += dt;
       for (const shrine of shrines.values()) shrine.tick(clock);
-      if (state && targetReady) {
+      if (state && targetReady && !wasAtWindow) {
         // Solve player motion against the animal poses that this frame will draw.
         sightings.update(dt, target, Math.max(0, appliedZoom));
       }
@@ -358,8 +353,9 @@ export function createStage(
       }
     },
     railwayReady() {
-      return railway !== null && shrines.get(railway.landmarkId)?.modelReady?.() === true
-        && [...railChunks.keys()].every((key) => chunks.has(key));
+      if (!fujiVista?.ready()) return false;
+      for (const key of stationChunks.keys()) if (!chunks.has(key)) return false;
+      return true;
     },
     render(dt, view) {
       state = view.state;
@@ -372,14 +368,18 @@ export function createStage(
       const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       const pos = view.player;
       const riding = view.train !== undefined;
-      const atWindow = view.train?.windowView ?? false;
+      if (riding) fujiVista?.load();
+      if (view.train?.windowView && fujiVista) {
+        wasAtWindow = true;
+        fujiVista.render(renderer, view.train, clock);
+        return;
+      }
       setLifeTime(clock);
 
       // The camera follows the player, or the shrine being restored.
-      const focus = awakening ? world.regionById(awakening.regionId).shrine : atWindow ? view.train!.position : pos;
-      const floor = railway ? stationFloor(railway, terrain, focus) : undefined;
-      const elevation = (floor ?? terrain.groundAt(focus.x, focus.z)) + 0.65 * closeUp;
-      if (!targetReady || riding !== wasRiding || atWindow !== wasAtWindow) {
+      const focus = awakening ? world.regionById(awakening.regionId).shrine : pos;
+      const elevation = terrain.groundAt(focus.x, focus.z) + 0.65 * closeUp;
+      if (!targetReady || riding !== wasRiding || wasAtWindow) {
         target.set(focus.x, elevation, focus.z);
         targetReady = true;
       } else {
@@ -391,17 +391,16 @@ export function createStage(
       const centre = { x: target.x, z: target.z };
 
       wasRiding = riding;
-      wasAtWindow = atWindow;
+      wasAtWindow = false;
       streamChunks(centre, zoom, riding);
       streamShrines(centre);
       updateProgress(dt);
       if (railway && railwayMesh) {
-        const vitality = railway.stations.map(({ shrineId, stand }) => {
-          const { shrine } = world.regionById(shrineId);
-          return lifeAt(shownProgress(shrineId), Math.hypot(stand.x - shrine.x, stand.z - shrine.z));
-        });
-        railwayMesh.root.visible = riding || Math.hypot(centre.x - railway.origin.x, centre.z - railway.origin.z) < 120;
-        railwayMesh.update(view.train, view.parkedTrain ?? railway.stations[0].distance, railwayPowered(railway, view.state), vitality);
+        const visible = riding || railwayClearance(railway, centre.x, centre.z) < 85;
+        railwayMesh.root.visible = visible;
+        if (visible) {
+          railwayMesh.update(view.train, view.parkedTrain ?? railway.stations[0].distance, railwayPowered(railway, view.state), shownProgress);
+        }
       }
       haiku.update(dt, centre, pos, viewSize, awakening);
       ambient.update(dt, {
@@ -426,9 +425,7 @@ export function createStage(
       const voyage = view.voyage;
       const seated = voyage?.seated ?? Number(onWater);
       const bob = 0.045 + Math.sin(clock * 3) * 0.03;
-      const groundY = view.boardingHeight ?? (railway ? stationFloor(railway, terrain, pos) : undefined)
-        ?? terrain.groundAt(pos.x, pos.z) + bob * seated;
-      player.group.visible = !atWindow;
+      const groundY = view.boardingHeight ?? terrain.groundAt(pos.x, pos.z) + bob * seated;
       playerY += (groundY - playerY) * Math.min(1, dt * 14);
       player.group.position.set(pos.x, playerY, pos.z);
       player.group.rotation.y = view.facing;
@@ -470,46 +467,10 @@ export function createStage(
       applyZoom(zoom, viewSize);
       camera.position.copy(target).add(offset);
       camera.lookAt(target);
-      if (railway && atWindow) {
-        sun.position.set(
-          target.x + railway.across.x * 19 - railway.along.x * 18,
-          target.y + 28,
-          target.z + railway.across.z * 19 - railway.along.z * 18,
-        );
-      } else {
-        sun.position.set(target.x - 14, target.y + 27, target.z + 11);
-      }
+      sun.position.set(target.x - 14, target.y + 27, target.z + 11);
       sun.target.position.set(target.x, target.y - 1, target.z);
       sun.target.updateMatrixWorld();
-      if (railway && fujiVista && view.train?.windowView) {
-        const { position, direction } = view.train;
-        const eye = railway.height + 0.95;
-        seatCamera.position.set(position.x - railway.across.x * 0.63, eye, position.z - railway.across.z * 0.63);
-        seatCamera.lookAt(
-          position.x - railway.across.x * 30 + railway.along.x * direction * 2.7,
-          eye + 2.9,
-          position.z - railway.across.z * 30 + railway.along.z * direction * 2.7,
-        );
-        const mountain = shrines.get(railway.landmarkId)?.group.getObjectByName("fuji_mountain");
-        const landmarkVisible = mountain?.visible;
-        if (mountain) {
-          fujiVista.prepare(mountain);
-          mountain.visible = false;
-          fujiVista.root.visible = true;
-        }
-        scene.background = fujiVista.sky;
-        scene.fog = fujiVista.fog;
-        try {
-          renderer.render(scene, seatCamera);
-        } finally {
-          if (mountain && landmarkVisible !== undefined) mountain.visible = landmarkVisible;
-          fujiVista.root.visible = false;
-          scene.background = standardSky;
-          scene.fog = null;
-        }
-      } else {
-        renderer.render(scene, camera);
-      }
+      renderer.render(scene, camera);
     },
   };
 }

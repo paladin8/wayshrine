@@ -19,8 +19,17 @@ sc.camera=cam
 if os.environ.get("FI_GROUND"):
     # stand-in for the game's terrain under terrainSurface models (preview only; the .blend is not saved)
     gm=bpy.data.meshes.new("PreviewGround"); h=float(os.environ.get("FI_HALF","9.6"))+0.2   # FI_HALF for a larger footprint
-    gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
-    gc={"snow":(0.88,0.91,0.93,1),"mountain":(0.235,0.22,0.22,1),"marsh":(0.138,0.202,0.065,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow|mountain|marsh for those regions
+    name=os.path.splitext(os.path.basename(bpy.data.filepath))[0]
+    side=os.path.join(D,"..","..","src","world","landmark-grounds",name+".json")
+    gj=json.load(open(side)) if os.path.exists(side) else None
+    if gj and gj.get("terrainSurface"):
+        # follow the sidecar's ground grid, drawn 0.2 low as the game draws it, so sunken ground (gorges, moats) shows
+        gh,gs,gg=gj["half"],gj["step"],gj.get("terrain") or gj["ground"]; n=len(gg)
+        gm.from_pydata([(-gh+gs*ix,gh-gs*iz,gg[iz][ix]-0.2) for iz in range(n) for ix in range(n)],[],
+                       [[iz*n+ix,iz*n+ix+1,(iz+1)*n+ix+1,(iz+1)*n+ix] for iz in range(n-1) for ix in range(n-1)])
+    else:
+        gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
+    gc={"snow":(0.88,0.91,0.93,1),"mountain":(0.235,0.22,0.22,1),"marsh":(0.138,0.202,0.065,1),"forest":(0.031,0.087,0.055,1),"volcanic":(0.102,0.053,0.053,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow|mountain|marsh|forest|volcanic for those regions (base tone of each biome palette, linear)
     mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=gc
     p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=gc; p.inputs["Roughness"].default_value=1.0
     gm.materials.append(mat); g=bpy.data.objects.new("PreviewGround",gm); col.objects.link(g)
@@ -29,7 +38,7 @@ if os.environ.get("FI_WATER"):
     wz=float(os.environ["FI_WATER"]); h=40.0
     wm=bpy.data.meshes.new("PreviewWater")
     wm.from_pydata([(-h,-h,wz),(h,-h,wz),(h,h,wz),(-h,h,wz)],[],[[0,1,2,3]])
-    mat=bpy.data.materials.new("PreviewWater"); c=(0.05,0.44,0.51,1); mat.diffuse_color=c
+    mat=bpy.data.materials.new("PreviewWater"); c=(0.022,0.09,0.19,1) if wz<-0.7 else (0.05,0.44,0.51,1); mat.diffuse_color=c   # the open sea (-0.75) is darker than a water region (-0.6)
     p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=c; p.inputs["Roughness"].default_value=1.0
     wm.materials.append(mat); w=bpy.data.objects.new("PreviewWater",wm); col.objects.link(w)
 sun_d=bpy.data.lights.new("PreviewSun",'SUN'); sun_d.energy=float(os.environ.get("FI_SUN","2.2")); sun_d.angle=math.radians(3)

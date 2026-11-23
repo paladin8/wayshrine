@@ -1,4 +1,5 @@
 import { createNoise } from "../core";
+import { fujiRailway, railwayBank, railwayGround } from "./fuji-railway";
 import { createIsletRelief } from "./islets";
 import { createRegionalRelief } from "./landforms";
 import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
@@ -97,6 +98,8 @@ export function createTerrain(world: World): Terrain {
   const relief = createNoise(`${world.seed}:landforms`);
   const regionalRelief = createRegionalRelief(world.seed);
   const islandRelief = createIsletRelief(world);
+  const railway = fujiRailway(world);
+  const waterStations = railway?.stations.filter(({ shrineId }) => isWater(world.regionById(shrineId).biome)) ?? [];
 
   /** Height of the natural ground of a biome, before any plateau. */
   function natural(x: number, z: number, region: Region): number {
@@ -220,6 +223,24 @@ export function createTerrain(world: World): Terrain {
       }
     } else {
       height = natural(x, z, region);
+    }
+    if (railway && !onPlateau) {
+      if (isWater(biome)) {
+        const bank = waterStations.length ? railwayBank(railway, waterStations, x, z, height) : height;
+        if (bank > height + 0.15) {
+          height = bank;
+          biome = "meadow";
+          skirt = true;
+        } else if (bank > height) {
+          shore = true;
+        }
+      } else {
+        const grade = railwayGround(railway, x, z, height);
+        if (grade !== height) {
+          height = grade;
+          skirt = true;
+        }
+      }
     }
     return { region, biome, height, skirt, shore, shoal, terrace: landShrine && onPlateau };
   }
