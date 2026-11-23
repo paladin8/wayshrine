@@ -350,8 +350,13 @@ export function createMinimap(
     if (hovered) {
       const h = waypoints.find((w) => w.region.id === hovered?.region.id);
       if (h) {
+        // A cream ring over a dark one, so it reads on pale snow and dark forest alike.
+        const ringR = (h.region.landmark ? starR : dotR) + 2.5;
         ctx.beginPath();
-        ctx.arc(h.x, h.y, dotR + 3.5, 0, Math.PI * 2);
+        ctx.arc(h.x, h.y, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = "#2a2424";
+        ctx.lineWidth = 4;
+        ctx.stroke();
         ctx.strokeStyle = "#fffaf0";
         ctx.lineWidth = 2;
         ctx.stroke();
