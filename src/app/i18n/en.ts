@@ -143,6 +143,9 @@ export const en: Messages = {
     minimap: "Show minimap",
     compass: "Show next-shrine compass",
     language: "Language",
+    character: "Traveller",
+    female: "Female",
+    male: "Male",
     instructions: "How to play",
     instructionsText: [
       "Walk with WASD or the arrow keys. Press E at a shrine to restore it and bring its region back to life.",

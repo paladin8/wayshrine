@@ -668,7 +668,7 @@ export function startApp(container: HTMLElement): void {
     music.update(dt);
 
     stage.render(dt, {
-      player: pos, facing, state, moving, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      player: pos, facing, state, moving, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       voyage: voyageFrame,
     });
     requestAnimationFrame(frame);

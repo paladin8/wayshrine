@@ -67,6 +67,9 @@ export interface Messages {
     readonly minimap: string;
     readonly compass: string;
     readonly language: string;
+    readonly character: string;
+    readonly female: string;
+    readonly male: string;
     readonly instructions: string;
     /** A few short paragraphs. */
     readonly instructionsText: readonly string[];

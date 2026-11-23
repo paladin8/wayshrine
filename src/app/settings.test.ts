@@ -19,6 +19,8 @@ describe("settings", () => {
     expect(parseSettings("nope")).toEqual(d);
     expect(parseSettings({ musicVolume: "loud", showMinimap: 1, language: "fr" })).toEqual(d);
     expect(parseSettings({ musicVolume: NaN })).toEqual(d);
+    expect(parseSettings({ character: "robot" }).character).toBe("female");
+    expect(parseSettings({ character: "male" }).character).toBe("male");
   });
 
   it("clamps volumes", () => {

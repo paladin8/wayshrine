@@ -1,32 +1,31 @@
 import * as THREE from "three";
 import { buildBoat, buildScullingOar, buildWake } from "./boat-mesh";
-import { palette } from "./palette";
+import { buildCharacter, type Character, type CharacterVariant, type GearId } from "./character";
 
 export interface PlayerMesh {
   readonly group: THREE.Group;
   readonly hull: THREE.Group;
+  /** Swap the traveller's body (the rest of the pose and gear carry over). */
+  setCharacter(variant: CharacterVariant): void;
+  /** What the traveller wears or carries right now, or null for plain boots. */
+  setGear(gear: GearId | null): void;
+  /** Advance the walk cycle: `walking` is whether the player is moving this frame. */
+  animate(dt: number, walking: boolean): void;
   setPose(seated: number, lift: number): void;
   setBoat(visible: boolean, wake: number, seconds: number): void;
 }
 
 /** A small low-poly traveller, with a boat that appears on water. */
-export function buildPlayer(): PlayerMesh {
+export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
   const group = new THREE.Group();
   const rider = new THREE.Group();
   group.add(rider);
-  const mat = (color: number): THREE.MeshStandardMaterial =>
-    new THREE.MeshStandardMaterial({ color, flatShading: true });
-  const add = (geo: THREE.BufferGeometry, m: THREE.Material, y: number): THREE.Mesh => {
-    const mesh = new THREE.Mesh(geo, m);
-    mesh.position.y = y;
-    mesh.castShadow = true;
-    rider.add(mesh);
-    return mesh;
-  };
 
-  add(new THREE.ConeGeometry(0.28, 0.75, 6), mat(palette.red), 0.4);
-  add(new THREE.IcosahedronGeometry(0.2, 0), mat(palette.cream), 0.95);
-  add(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 6), mat(palette.roof), 1.12); // hat brim
+  let variant = initial;
+  let character: Character = buildCharacter(variant);
+  rider.add(character.root);
+  let gear: GearId | null = null;
+  let seated = 0;
 
   const hull = new THREE.Group();
   const boat = buildBoat();
@@ -39,10 +38,26 @@ export function buildPlayer(): PlayerMesh {
   return {
     group,
     hull,
-    setPose(seated, lift) {
-      rider.scale.y = 1 - 0.25 * seated;
-      rider.position.y = lift + 0.13 * seated;
-      rider.rotation.x = -0.16 * seated;
+    setCharacter(next) {
+      if (next === variant) return;
+      variant = next;
+      rider.remove(character.root);
+      character.dispose();
+      character = buildCharacter(variant);
+      character.setGear(gear);
+      rider.add(character.root);
+    },
+    setGear(next) {
+      if (next === gear) return;
+      gear = next;
+      character.setGear(gear);
+    },
+    animate(dt, walking) {
+      character.update(dt, walking ? 1 : 0, seated);
+    },
+    setPose(next, lift) {
+      seated = next;
+      rider.position.y = lift + 0.1 * next;
     },
     setBoat(visible, strength, seconds) {
       hull.visible = visible;

@@ -143,6 +143,9 @@ export const ja: Messages = {
     minimap: "ミニマップを表示",
     compass: "次の祠のコンパスを表示",
     language: "言語",
+    character: "旅人",
+    female: "女性",
+    male: "男性",
     instructions: "遊び方",
     instructionsText: [
       "WASD か矢印キーで歩きます。祠で E を押すと、その地が息を吹き返します。",

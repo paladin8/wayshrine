@@ -1,5 +1,5 @@
 import { LOCALES, LOCALE_NAMES, messagesFor } from "./i18n";
-import type { SettingsStore } from "./settings";
+import { CHARACTER_CHOICES, type SettingsStore } from "./settings";
 import { UI_FONT, setText } from "./style";
 
 export interface SettingsPanel {
@@ -93,6 +93,15 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
   const minimap = checkbox();
   const compass = checkbox();
 
+  const characterHeading = el("h3", undefined, card);
+  const characters = el("div", "sp-langs", card);
+  const characterButtons = CHARACTER_CHOICES.map((choice) => {
+    const b = el("button", "sp-lang", characters);
+    b.type = "button";
+    b.addEventListener("click", () => store.update({ character: choice }));
+    return [choice, b] as const;
+  });
+
   const languageHeading = el("h3", undefined, card);
   const langs = el("div", "sp-langs", card);
   const langButtons = LOCALES.map((locale) => {
@@ -130,6 +139,11 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
     setText(displayHeading, t.display);
     setText(minimap.label, t.minimap);
     setText(compass.label, t.compass);
+    setText(characterHeading, t.character);
+    for (const [choice, b] of characterButtons) {
+      b.textContent = t[choice];
+      b.setAttribute("aria-pressed", String(choice === s.character));
+    }
     setText(languageHeading, t.language);
     setText(creditsHeading, t.credits);
     setText(creditsBody, t.creditsText);

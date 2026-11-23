@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { lifeAt, vitality, type boatLaunchFrame, type GameState } from "../game";
-import { CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Point, type Terrain } from "../world";
+import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Point, type Terrain, type Capability } from "../world";
 import { createAmbient } from "./ambient";
 import { lightBiome } from "./biome-light";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
+import type { CharacterVariant, GearId } from "./character";
 import { buildPlayer } from "./player-mesh";
 import { buildLandmark } from "./landmark-mesh";
 import { createLargeWildlife } from "./large-wildlife";
@@ -36,6 +37,15 @@ const GLIMMER_RADIUS = 17;
 const RIGHT = new THREE.Vector3(1, 0, -1).normalize();
 const FORWARD = new THREE.Vector3(-1, 0, -1).normalize();
 
+/** The gear shown for each ability, worn on the biome that needs it. */
+const WORN_GEAR: Readonly<Partial<Record<Capability, GearId>>> = {
+  snowshoes: "snowshoes",
+  geta: "geta",
+  ashSandals: "ashSandals",
+  lantern: "lantern",
+  climbing: "climbing",
+};
+
 export interface StageView {
   readonly player: Point;
   /** Heading in radians about the vertical axis. */
@@ -43,6 +53,10 @@ export interface StageView {
   readonly state: GameState;
   readonly voyage?: ReturnType<typeof boatLaunchFrame>;
   readonly moving?: boolean;
+  /** Which traveller body to show (default female). */
+  readonly character?: CharacterVariant;
+  /** Abilities held, so the traveller wears or carries the gear the ground underfoot calls for. */
+  readonly capabilities?: ReadonlySet<Capability>;
   /** Optional camera pull-back centred on the player, from 0 to 1. */
   readonly overviewZoom?: number;
   /**
@@ -316,6 +330,10 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       player.group.position.set(pos.x, playerY, pos.z);
       player.group.rotation.y = view.facing;
       player.setPose(seated, voyage?.lift ?? 0);
+      const needed = BIOME_REQUIRES[tile.biome];
+      player.setCharacter(view.character ?? "female");
+      player.setGear(seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null);
+      player.animate(dt, view.moving ?? false);
 
       const hull = voyage?.hull ?? pos;
       player.hull.position.set(hull.x, terrain.groundAt(hull.x, hull.z) + bob, hull.z);

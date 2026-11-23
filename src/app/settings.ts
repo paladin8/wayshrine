@@ -9,7 +9,13 @@ export interface Settings {
   readonly showMinimap: boolean;
   readonly showCompass: boolean;
   readonly language: Locale;
+  /** Which traveller body the player has. */
+  readonly character: CharacterChoice;
 }
+
+export const CHARACTER_CHOICES = ["female", "male"] as const;
+export type CharacterChoice = (typeof CHARACTER_CHOICES)[number];
+const isCharacter = (v: unknown): v is CharacterChoice => CHARACTER_CHOICES.includes(v as CharacterChoice);
 
 const KEY = "wayshrine:settings";
 
@@ -21,6 +27,7 @@ export function defaultSettings(preferredLanguages: readonly string[] = []): Set
     showMinimap: true,
     showCompass: true,
     language: detectLocale(preferredLanguages),
+    character: "female",
   };
 }
 
@@ -44,6 +51,7 @@ export function parseSettings(raw: unknown, preferredLanguages: readonly string[
     showMinimap: flag(p.showMinimap, d.showMinimap),
     showCompass: flag(p.showCompass, d.showCompass),
     language: isLocale(p.language) ? p.language : d.language,
+    character: isCharacter(p.character) ? p.character : d.character,
   };
 }
 
