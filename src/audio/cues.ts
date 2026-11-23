@@ -1,5 +1,7 @@
 const base = import.meta.env.BASE_URL;
 const MOVEMENT_GAIN = 0.32;
+/** Footsteps sit a quarter below the other movement sounds. */
+const FOOTSTEP_GAIN = MOVEMENT_GAIN * 0.75;
 
 /** Sound effects, separate from background music. */
 export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "first-voyage", "first-snowshoe", "first-climb", "walk-meadow", "walk-snow", "walk-mountain", "row-water"] as const;
@@ -25,9 +27,9 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   // Mastered about 1.2 dB hotter than the voyage cue; 0.5 (-6 dB) sits it well below that.
   "first-snowshoe": { url: `${base}audio/cues/trail-through-fresh-snow.mp3`, gain: 0.5 },
   "first-climb": { url: `${base}audio/cues/ridge-within-reach.mp3` },
-  "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: MOVEMENT_GAIN },
-  "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: MOVEMENT_GAIN * 1.75 },
-  "walk-mountain": { url: `${base}audio/cues/walk-mountain.wav`, loop: true, gain: MOVEMENT_GAIN },
+  "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: FOOTSTEP_GAIN },
+  "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: FOOTSTEP_GAIN * 1.75 },
+  "walk-mountain": { url: `${base}audio/cues/walk-mountain.wav`, loop: true, gain: FOOTSTEP_GAIN },
   "row-water": { url: `${base}audio/cues/row-water.wav`, loop: true, gain: MOVEMENT_GAIN },
   "box-flip": { url: `${base}audio/cues/box-flip.mp3` },
 };
