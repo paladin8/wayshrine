@@ -25,6 +25,8 @@ export interface MusicOptions {
   readonly gain?: number;
   /** Seconds the music takes to move between ducked and normal level. */
   readonly duckSeconds?: number;
+  /** Seconds the music takes to come back up after a duck (default: the same as `duckSeconds`). */
+  readonly duckReleaseSeconds?: number;
 }
 
 export interface MusicStatus {
@@ -87,6 +89,7 @@ export function createMusic(options: MusicOptions = {}): Music {
   const gapSeconds = options.gapSeconds ?? 4;
   const gain = options.gain ?? DEFAULT_GAIN;
   const duckSeconds = options.duckSeconds ?? 0.8;
+  const duckReleaseSeconds = options.duckReleaseSeconds ?? duckSeconds;
 
   let voices: Voice[] = [];
   let desired: TrackId | null = null;
@@ -147,7 +150,7 @@ export function createMusic(options: MusicOptions = {}): Music {
     },
     update(dt) {
       const delta = duckTarget - duck;
-      const maxMove = dt / duckSeconds;
+      const maxMove = dt / (delta > 0 ? duckReleaseSeconds : duckSeconds);
       duck = Math.abs(delta) <= maxMove ? duckTarget : duck + Math.sign(delta) * maxMove;
       const step = dt / fadeSeconds;
       for (const v of voices) {

@@ -22,7 +22,7 @@ class FakePlayer implements AudioPlayer {
 
 const tracks = { a: { url: "a.mp3" }, b: { url: "b.mp3" } } as never;
 
-function setup(opts: { fade?: number; gap?: number; gain?: number } = {}) {
+function setup(opts: { release?: number; fade?: number; gap?: number; gain?: number } = {}) {
   const made: FakePlayer[] = [];
   const music = createMusic({
     tracks,
@@ -30,6 +30,7 @@ function setup(opts: { fade?: number; gap?: number; gain?: number } = {}) {
     gapSeconds: opts.gap ?? 4,
     gain: opts.gain ?? 1,
     duckSeconds: 1,
+    duckReleaseSeconds: opts.release,
     createPlayer: (url) => {
       const p = new FakePlayer(url);
       made.push(p);
@@ -200,5 +201,21 @@ describe("music", () => {
     run(music, 5);
     expect(made[0]!.volume).toBeCloseTo(0.5, 1);
     expect(made[1]!.volume).toBeCloseTo(0.5, 1);
+  });
+
+  it("can come back up from a duck more slowly than it goes down", () => {
+    const { music, made } = setup({ release: 6 });
+    music.setVolume(1);
+    music.setTrack("a" as never);
+    music.unlock();
+    run(music, 3);
+    music.setDuck(0);
+    run(music, 1.2);
+    expect(made[0]!.volume).toBeCloseTo(0);
+    music.setDuck(1);
+    run(music, 3);
+    expect(made[0]!.volume).toBeCloseTo(0.5, 1);
+    run(music, 3.5);
+    expect(made[0]!.volume).toBeCloseTo(1);
   });
 });
