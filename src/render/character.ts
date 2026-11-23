@@ -7,10 +7,19 @@ export type CharacterVariant = (typeof CHARACTER_VARIANTS)[number];
 /** Gear that shows on the character: each is worn or carried on the biome that needs it. */
 export type GearId = "snowshoes" | "geta" | "ashSandals" | "lantern" | "climbing";
 
+/** A foot planted on the ground, where it stands in world space. */
+export interface FootStep {
+  readonly x: number;
+  readonly z: number;
+}
+
 export interface Character {
   readonly root: THREE.Group;
-  /** Advance the walk cycle. `walk` is 0 (standing) to 1 (walking), `seated` is 0 to 1. */
-  update(dt: number, walk: number, seated: number): void;
+  /**
+   * Advance the walk cycle. `walk` is 0 (standing) to 1 (walking), `seated` is 0 to 1. Returns the
+   * feet that came down flat this frame, in world space.
+   */
+  update(dt: number, walk: number, seated: number): readonly FootStep[];
   setGear(gear: GearId | null): void;
   dispose(): void;
 }
@@ -26,6 +35,8 @@ const ASH = 0x8a7f7c;
 
 /** Walk cycles per second at full speed. */
 const CADENCE = 1.45;
+const TAU = Math.PI * 2;
+const footPoint = new THREE.Vector3();
 
 const mat = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters> = {}): THREE.MeshStandardMaterial =>
   new THREE.MeshStandardMaterial({ color, flatShading: true, ...extra });
@@ -281,6 +292,7 @@ export function buildCharacter(variant: CharacterVariant): Character {
       walkSmooth += (walk - walkSmooth) * k;
       seatedSmooth += (seated - seatedSmooth) * Math.min(1, dt * 10);
       const w = walkSmooth * (1 - seatedSmooth);
+      const before = phase;
       phase += dt * Math.PI * 2 * CADENCE * walkSmooth;
       const s = Math.sin(phase);
       const c = Math.cos(phase);
@@ -334,6 +346,19 @@ export function buildCharacter(variant: CharacterVariant): Character {
       head.rotation.z = c * 0.03 * w;
       pack.rotation.z = -c * 0.03 * w;
       scarfTail.rotation.x = 0.35 + 0.5 * w + Math.sin(phase * 2 + 1) * 0.12 * w + Math.sin(performance.now() / 700) * 0.03;
+
+      // A foot is flat under the hip when its swing crosses zero: the right leg at half a cycle, the left at a full one.
+      const steps: FootStep[] = [];
+      if (w > 0.5 && phase > before) {
+        const crossed = (at: number): boolean => Math.floor((phase - at) / TAU) > Math.floor((before - at) / TAU);
+        legs.forEach((leg, i) => {
+          if (!crossed(i === 0 ? Math.PI : 0)) return;
+          root.updateWorldMatrix(true, true);
+          leg.sole.getWorldPosition(footPoint);
+          steps.push({ x: footPoint.x, z: footPoint.z });
+        });
+      }
+      return steps;
     },
     dispose() {
       owned.forEach((g) => g.dispose());

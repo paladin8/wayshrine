@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { buildBoat, buildScullingOar, buildWake } from "./boat-mesh";
-import { buildCharacter, type Character, type CharacterVariant, type GearId } from "./character";
+import { buildCharacter, type Character, type CharacterVariant, type FootStep, type GearId } from "./character";
 
 export interface PlayerMesh {
   readonly group: THREE.Group;
@@ -9,8 +9,8 @@ export interface PlayerMesh {
   setCharacter(variant: CharacterVariant): void;
   /** What the traveller wears or carries right now, or null for plain boots. */
   setGear(gear: GearId | null): void;
-  /** Advance the walk cycle: `walking` is whether the player is moving this frame. */
-  animate(dt: number, walking: boolean): void;
+  /** Advance the walk cycle: `walking` is whether the player is moving this frame. Returns the feet that landed. */
+  animate(dt: number, walking: boolean): readonly FootStep[];
   setPose(seated: number, lift: number): void;
   setBoat(visible: boolean, wake: number, seconds: number): void;
 }
@@ -53,7 +53,7 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       character.setGear(gear);
     },
     animate(dt, walking) {
-      character.update(dt, walking ? 1 : 0, seated);
+      return character.update(dt, walking ? 1 : 0, seated);
     },
     setPose(next, lift) {
       seated = next;

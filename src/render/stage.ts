@@ -8,6 +8,7 @@ import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import type { CharacterVariant, GearId } from "./character";
+import { createFootprints } from "./footprints";
 import { buildPlayer } from "./player-mesh";
 import { buildLandmark } from "./landmark-mesh";
 import { createLargeWildlife } from "./large-wildlife";
@@ -120,6 +121,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
 
   const player = buildPlayer();
   scene.add(player.group, player.hull);
+  const footprints = createFootprints();
+  scene.add(footprints.root);
 
   const chunks = new Map<string, VitalityMesh>();
   const shrines = new Map<string, ShrineMesh>();
@@ -332,8 +335,12 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       player.setPose(seated, voyage?.lift ?? 0);
       const needed = BIOME_REQUIRES[tile.biome];
       player.setCharacter(view.character ?? "female");
-      player.setGear(seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null);
-      player.animate(dt, view.moving ?? false);
+      const worn = seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null;
+      player.setGear(worn);
+      for (const step of player.animate(dt, view.moving ?? false)) {
+        if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);
+      }
+      footprints.update(dt);
 
       const hull = voyage?.hull ?? pos;
       player.hull.position.set(hull.x, terrain.groundAt(hull.x, hull.z) + bob, hull.z);
