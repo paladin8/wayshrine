@@ -84,10 +84,10 @@ const GEAR_MUSIC_DUCK = 0.16;
 // The supplied cue has a long decay. Bring the new score up while the tail is still audible.
 const VOYAGE_RELEASE_START = 3.3;
 const VOYAGE_RELEASE_SECONDS = 3.2;
-const SNOWSHOE_RELEASE_START = 4;
-const SNOWSHOE_RELEASE_SECONDS = 3.2;
+const SNOWSHOE_RELEASE_START = 3.2;
+const SNOWSHOE_RELEASE_SECONDS = 2;
 /** How long the player crouches to strap on snowshoes and steps off the first time. */
-const SNOWSHOE_MOMENT_SECONDS = 3.4;
+const SNOWSHOE_MOMENT_SECONDS = 4.6;
 
 function gearMusicDuck(elapsed: number | null, start: number, duration: number): number {
   if (elapsed === null) return 1;
