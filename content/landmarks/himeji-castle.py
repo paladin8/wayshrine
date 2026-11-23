@@ -221,7 +221,7 @@ def watari(x0,y0,x1,y1):
 watari(-2.1,1.0,-1.0,1.0); watari(-3.3,2.5,-3.3,3.5); watari(-1.9,4.6,1.1,4.6); watari(2.4,2.2,2.4,3.3)
 
 # ---- the approach: a gatehouse with hanging lanterns, plastered walls, and a gravel path
-GX,GY=-5.2,-6.4
+GX,GY=-6.0,-7.8
 for sx in (-1,1): box("snow",GX+sx*1.05,GY,0.0,1.6,0.35,0.6)
 box("wood",GX,GY,1.45,1.6,1.1,0.55)
 box("snow",GX,GY,1.6,2.5,1.5,0.75); windows(GX,GY,1.5,0.75,1.6,2.5,3,1)
@@ -233,11 +233,19 @@ def dobei(x0,x1,y):
     L=abs(x1-x0)/2; cx=(x0+x1)/2
     box("snow",cx,y,0.0,1.05,L,0.17)
     extrude_x("tile",[(y-0.32,1.0),(y+0.32,1.0),(y+0.32,1.08),(y,1.3),(y-0.32,1.08)],cx-L-0.05,cx+L+0.05)
-dobei(-8.6,-6.6,GY); dobei(-3.8,-1.6,GY)
-box("cream",GX,-8.0,-0.02,0.03,0.85,1.6)
+dobei(-10.4,-7.4,GY); dobei(-4.6,3.9,GY)
+# a corner turret (sumi-yagura) where the outer wall ends
+TX,TY=4.9,GY
+box("stone",TX,TY,-0.05,0.75,1.15,1.05)
+box("snow",TX,TY,0.75,1.85,0.9,0.8); windows(TX,TY,0.9,0.8,0.75,1.85,2,1)
+skirt(0.9,0.8,1.85,0.68,0.6,2.0,TX,TY,0.35)
+box("snow",TX,TY,2.0,2.7,0.68,0.6); windows(TX,TY,0.68,0.6,2.0,2.7,1,1)
+flared_roof([(1.05,0.95,2.7,0.2),(1.05,0.95,2.8,0.2),(0.8,0.7,2.95,0.06),(0.55,0.1,3.3,0.0)],"tile",TX,TY)
+box("tile",TX,TY,3.25,3.35,0.6,0.11); ridge_shachi(TX,TY,0.58,3.3)
+box("cream",GX,-9.65,-0.02,0.03,0.85,1.45)
 box("cream",GX,GY,-0.02,0.03,0.85,0.75)
-for k in range(6):
-    t=k/5; x=GX+0.9+(-1.8-GX-0.9)*t; y=GY+0.9+(-3.6-GY-0.9)*t
+for k in range(8):
+    t=k/7; x=GX+0.4+(-1.8-GX-0.4)*t; y=GY+0.5+(-3.6-GY-0.5)*t
     box("cream",x,y,-0.02,0.03,0.75,0.6,dict(rot=-0.75))
 
 # ---- grounds: cherry trees in blossom on the lawn, pines behind
@@ -260,14 +268,14 @@ def sakura(cx,cy,s):
     ico("blossom",0,0,1.95,1.25,1.15,0.85,T)
     ico("blossom",0.65,0.35,1.55,0.75,0.7,0.55,T)
     ico("blossom",-0.6,-0.3,1.6,0.7,0.65,0.5,T)
-for a in [(4.8,-5.6,1.0),(7.4,-1.0,0.95),(-1.8,-7.4,0.9),(-7.8,-3.0,1.0),(-7.4,2.6,0.9),(6.8,6.4,0.95),(-6.6,7.6,0.9)]: sakura(*a)
-for a in [(0.4,8.6,0.95,0.2),(3.6,8.4,0.9,0.6),(-3.0,8.4,0.95,0.4)]: conifer(*a)
-for a in [(8.4,3.4,0.85)]: roundtree(*a)
+for a in [(5.4,-4.6,1.0),(8.6,-1.2,0.95),(-9.0,-3.4,1.0),(-8.6,3.0,0.9),(7.8,7.4,0.95),(-7.6,8.7,0.9)]: sakura(*a)
+for a in [(0.4,9.8,0.95,0.2),(4.1,9.7,0.9,0.6),(-3.4,9.7,0.95,0.4)]: conifer(*a)
+for a in [(9.6,3.9,0.85,0.3)]: conifer(*a)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/himeji-castle.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
-HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+HALF=11.2; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y): return 0.0     # flat grounds; the stone base is solid, not walkable
 ground=[[0.0 for ix in range(GN)] for iz in range(GN)]
 CELL=0.3
@@ -293,7 +301,7 @@ for key,(bv,bf) in B.items():
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=(0.5,-5.0)   # the lawn in front of the keep
-STAND=(2.0,-8.6)      # the front edge of the lawn
+STAND=(-6.0,-10.4)    # the approach outside the gatehouse
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/himeji-castle.json"

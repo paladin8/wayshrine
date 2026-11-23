@@ -151,9 +151,10 @@ def skirt(hx,hy,z1,nhx,nhy,nz0,cx,cy,o=0.45):
 # ---- the grounds: snow all round, the inner moat (L-shaped, in front of and beside the inner bailey) inside a
 # snow rim, the inner bailey (honmaru) raised on battered stone walls, the keep on its south-east corner
 WATER_Z=-0.25; BED_Z=-0.7; HM=1.7
-MS=(-8.5,4.75,-1.75,0.55)     # south moat x0,x1,y0,y1 (the inner edge runs under the wall)
-ME=(4.75,7.0,-1.75,7.9)       # east moat
-HMP=[(-7.0,0.95),(4.35,0.95),(4.35,7.6),(-5.4,7.6),(-7.0,6.0)]   # honmaru outline (top edge)
+FH=11.2                       # footprint half-width (the sidecar's half): the middle size, like Matsumoto
+MS=(-9.9,4.75,-1.75,0.55)     # south moat x0,x1,y0,y1 (the inner edge runs under the wall)
+ME=(4.75,7.0,-1.75,9.3)       # east moat
+HMP=[(-8.4,0.95),(4.35,0.95),(4.35,9.0),(-6.6,9.0),(-8.4,7.2)]   # honmaru outline (top edge)
 def in_rect(x,y,r,pad=0.0): return r[0]-pad<=x<=r[1]+pad and r[2]-pad<=y<=r[3]+pad
 def in_moat(x,y): return in_rect(x,y,MS) or in_rect(x,y,ME)
 def in_poly(x,y,P):
@@ -167,11 +168,11 @@ def H(x,y):
     if in_rect(x,y,MS,-0.25) or in_rect(x,y,ME,-0.25): return BED_Z
     return 0.0
 
-GS=0.8; NG=24
+GS=0.8; NG=int(round(2*FH/GS))
 gv={}
 for j in range(NG+1):
     for i in range(NG+1):
-        x=-9.6+i*GS; y=-9.6+j*GS
+        x=-FH+i*GS; y=-FH+j*GS
         gv[(i,j)]=(x,y,H(x,y))
 gverts=[]; gid={}
 for k,v in gv.items(): gid[k]=len(gverts); gverts.append(v)
@@ -186,7 +187,7 @@ for j in range(NG):
             zc=sum(p[2] for p in P)/3
             gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.02 else "snow")
 emit(gverts,gf,gm,orient=False)
-def octo(z,h=9.6,ch=1.2):
+def octo(z,h=FH,ch=1.2):
     # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
     return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)
@@ -292,8 +293,8 @@ def snow_lantern(cx,cy,idx):
     box("snow",cx,cy,0.5,0.62,0.24,0.24)
     box("glow_lantern_%d"%idx,cx,cy,0.62,0.9,0.2,0.2)
     solid([rect(0.38,0.38,0.9),rect(0.38,0.38,0.98),rect(0.1,0.1,1.2)],"snow",dict(cx=cx,cy=cy))
-for i,(x,y) in enumerate([(BX-1.1,-3.9),(BX+1.1,-3.9),(BX-1.1,-5.8),(BX+1.1,-5.8),(8.6,0.6),(8.6,3.8)],1): snow_lantern(x,y,i)
-box("stone",BX,-5.3,-0.02,0.03,0.55,3.35)           # trodden path to the bridge
+for i,(x,y) in enumerate([(BX-1.1,-3.9),(BX+1.1,-3.9),(BX-1.1,-6.0),(BX+1.1,-6.0),(BX-1.1,-8.1),(BX+1.1,-8.1),(9.0,0.8),(9.0,4.6),(9.0,8.2)],1): snow_lantern(x,y,i)
+box("stone",BX,-6.1,-0.02,0.03,0.55,4.15)           # trodden path to the bridge
 
 # ---- trees in winter: bare cherry trees holding snow along the moat, snow-laden pines on the honmaru
 def winter_sakura(cx,cy,s,z=0.0):
@@ -310,14 +311,14 @@ def snow_pine(cx,cy,s,z=0.0,ph=0.0):
     for (r,zb,zt,p) in [(1.15,0.7,2.3,ph),(0.9,1.6,3.1,ph+0.4),(0.62,2.4,3.85,ph+0.8)]:
         cone("foliage",ngon(r,zb,7,p),(0,0,zt),T)
         cone("snow",ngon(r*0.55,zb+(zt-zb)*0.45+0.04,7,p),(0,0,zt+0.04),T)
-for a in [(-5.6,-4.0,0.95),(-4.4,-6.4,0.85),(0.6,-4.0,0.9),(3.2,-4.1,0.85),(8.7,5.9,0.8),(8.6,-3.9,0.8),(-8.6,-3.4,0.8)]: winter_sakura(*a)
-for (x,y,s,p) in [(-4.4,4.4,0.85,0.3),(-1.8,5.9,0.8,0.7),(-5.6,2.4,0.75,0.1),(0.9,6.6,0.75,0.5),(-2.8,2.6,0.6,0.9)]: snow_pine(x,y,s,HM,p)
-for (x,y,s,p) in [(-7.6,-6.4,0.75,0.2),(5.8,-6.8,0.6,0.6)]: snow_pine(x,y,s,0.0,p)
+for a in [(-5.8,-4.2,0.95),(-4.8,-7.2,0.85),(0.6,-4.2,0.9),(3.4,-4.4,0.85),(9.2,6.6,0.8),(9.0,-4.2,0.8),(-9.4,-3.6,0.8),(1.4,-8.0,0.85),(6.4,-8.6,0.8)]: winter_sakura(*a)
+for (x,y,s,p) in [(-4.8,5.0,0.85,0.3),(-1.8,6.9,0.8,0.7),(-6.6,2.6,0.75,0.1),(0.9,7.8,0.75,0.5),(-3.2,2.8,0.6,0.9),(-6.0,7.4,0.7,0.4)]: snow_pine(x,y,s,HM,p)
+for (x,y,s,p) in [(-8.6,-7.6,0.75,0.2),(6.0,-6.6,0.6,0.6),(9.6,-9.4,0.7,0.3)]: snow_pine(x,y,s,0.0,p)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/hirosaki-castle.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
-HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+HALF=FH; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y):
     if on_bridge(x,y): return bridge_z(y)
     if in_moat(x,y): return WATER_Z          # the game's terrain sits under the water
@@ -361,7 +362,7 @@ for iy in range(int(2*HALF/PSTEP)):
         if in_moat(x,y) and not on_bridge(x,y,0.5): solids.append([round(x,2),round(-y,2),PR])
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=(BX,BY0-0.9)           # the foot of the bridge
-STAND=(BX,-7.7)                 # on the path to the bridge
+STAND=(BX,-9.6)                 # on the path to the bridge
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[round(INTERACT[0],2),round(-INTERACT[1],2)],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/hirosaki-castle.json"

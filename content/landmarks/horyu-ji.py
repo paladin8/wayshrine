@@ -137,12 +137,12 @@ def podium(cx,cy,hx,hy,z1,step=0.12):
     box("stone",cx,cy,-0.05,z1-step,hx+step,hy+step); box("stone",cx,cy,z1-step,z1,hx,hy)
 
 # ---- grounds: a gravel courtyard inside the cloister and a gravel approach to the middle gate
-box("sand",0,-0.2,-0.02,0.03,7.2,5.4)
-box("sand",0,-7.9,-0.02,0.03,0.75,1.55)
+box("sand",0,-0.25,-0.02,0.03,8.0,6.15)
+box("sand",0,-8.6,-0.02,0.03,0.75,2.2)
 
 # ---- the five-storey pagoda (west): roofs shrinking strongly toward the top, a pent roof (mokoshi) round the
 # ground storey and a tall bronze finial
-PX,PY=-3.2,0.5
+PX,PY=-3.7,0.4
 podium(PX,PY,1.25,1.25,0.35)
 box("timber",PX,PY,0.35,0.95,1.12,1.12); posts(PX,PY,1.12,1.12,0.35,0.95,4,4,0.05)
 flared_roof([(1.45,1.45,0.95,0.06),(1.45,1.45,1.01,0.06),(0.95,0.95,1.25,0.0)],"tile",PX,PY)
@@ -172,7 +172,7 @@ bipyr("bronze",PX,PY,ZS+2.36,0.07,ZS+2.28,ZS+2.5,6)                 # jewel (hoj
 
 # ---- the Golden Hall (Kondo, east): two storeys on a stone podium, a pent roof round the ground storey,
 # deep first eaves, a railed upper storey and a hip-and-gable roof
-KX,KY=2.9,0.3
+KX,KY=3.4,0.3
 podium(KX,KY,2.25,1.95,0.45)
 box("timber",KX,KY,0.45,1.15,2.0,1.7); posts(KX,KY,2.0,1.7,0.45,1.15,6,5,0.05)
 flared_roof([(2.35,2.05,1.15,0.08),(2.35,2.05,1.22,0.08),(1.55,1.3,1.5,0.0)],"tile",KX,KY)
@@ -189,7 +189,7 @@ storey(KX,KY,1.0,0.82,2.55,3.35,4,3)
 irimoya(KX,KY,[(2.02,1.72,3.35,0.36),(2.02,1.72,3.47,0.36),(1.3,1.02,3.95,0.12),(0.95,0.16,4.7,0.0)],0.92,0.88,3.97,4.66)
 
 # ---- the middle gate (Chumon): two storeys, hip-and-gable roof, the cloister joining it on both sides
-CX,CY=0.0,-5.6
+CX,CY=0.0,-6.4
 podium(CX,CY,1.75,0.95,0.2)
 storey(CX,CY,1.45,0.72,0.2,1.4,4,2)
 box("darkwood",CX-0.36,CY-0.74,0.2,1.3,0.28,0.02); box("darkwood",CX+0.36,CY-0.74,0.2,1.3,0.28,0.02)   # doors
@@ -199,7 +199,7 @@ storey(CX,CY,1.15,0.58,1.86,2.55,4,2)
 irimoya(CX,CY,[(1.95,1.28,2.55,0.28),(1.95,1.28,2.65,0.28),(1.15,0.7,2.98,0.08),(0.92,0.12,3.55,0.0)],0.9,0.62,3.0,3.52)
 
 # ---- the lecture hall (Daikodo) closing the back of the cloister
-DX,DY=0.0,5.75
+DX,DY=0.0,6.45
 podium(DX,DY,3.75,1.25,0.25)
 storey(DX,DY,3.45,1.0,0.25,1.55,9,3)
 irimoya(DX,DY,[(4.0,1.6,1.55,0.28),(4.0,1.6,1.65,0.28),(3.55,1.15,2.02,0.08),(3.1,0.14,2.7,0.0)],3.08,1.1,2.04,2.66)
@@ -224,7 +224,7 @@ def kairo(x0,y0,x1,y1,out):
             box("darkwood",qx,qy,0.3,0.7,0.26 if alx else 0.02,0.02 if alx else 0.26)
     if alx: extrude_x("tile",[(my-0.68,1.02),(my+0.68,1.02),(my+0.68,1.1),(my,1.42),(my-0.68,1.1)],mx-L-0.25,mx+L+0.25)
     else: extrude_y("tile",[(mx-0.68,1.02),(mx+0.68,1.02),(mx+0.68,1.1),(mx,1.42),(mx-0.68,1.1)],my-L-0.25,my+L+0.25)
-KW,KF,KB=7.2,-5.6,5.25
+KW,KF,KB=8.0,-6.4,5.95
 kairo(-KW,KF,-1.75,KF,(0,-1)); kairo(1.75,KF,KW,KF,(0,-1))
 kairo(-KW,KF+0.45,-KW,KB-0.45,(-1,0)); kairo(KW,KF+0.45,KW,KB-0.45,(1,0))
 kairo(-KW,KB,-3.75,KB,(0,1)); kairo(3.75,KB,KW,KB,(0,1))
@@ -246,7 +246,8 @@ def stone_lantern(cx,cy,idx):
     solid([rect(0.52,0.52,1.6),rect(0.52,0.52,1.67),rect(0.12,0.12,1.94)],"stone",T)
     bipyr("stone",0,0,2.0,0.09,1.92,2.14,6,T)
 bronze_lantern(KX,KY-3.0,1); bronze_lantern(PX,PY-3.0,2)
-stone_lantern(-1.35,-7.3,3); stone_lantern(1.35,-7.3,4)
+stone_lantern(-1.35,-8.1,3); stone_lantern(1.35,-8.1,4)
+stone_lantern(-1.35,-10.0,5); stone_lantern(1.35,-10.0,6)
 
 # ---- trees: pines along the approach and round the cloister, cherry trees in blossom at the front corners
 def conifer(cx,cy,s,ph=0):
@@ -267,14 +268,14 @@ def sakura(cx,cy,s):
     ico("blossom",0,0,1.95,1.25,1.15,0.85,T)
     ico("blossom",0.65,0.35,1.55,0.75,0.7,0.55,T)
     ico("blossom",-0.6,-0.3,1.6,0.7,0.65,0.5,T)
-for a in [(-2.4,-7.0,0.75,0.4),(2.4,-8.4,0.7,2.1),(-2.7,-8.4,0.7,4.2),(-5.4,-7.4,0.8,1.0)]: pine(*a)
-for a in [(-7.0,-7.6,0.9),(5.4,-7.4,0.85)]: sakura(*a)
-for a in [(-8.5,-1.8,0.7,0.2),(-8.5,2.6,0.75,0.6),(-5.6,7.6,0.85,0.4),(-2.0,8.4,0.8,0.1),(2.4,8.3,0.85,0.7),(5.8,7.5,0.8,0.3)]: conifer(*a)
+for a in [(-2.5,-7.8,0.75,0.4),(2.5,-9.4,0.7,2.1),(-2.8,-9.6,0.7,4.2),(-5.6,-8.4,0.8,1.0),(4.6,-8.2,0.75,3.0)]: pine(*a)
+for a in [(-8.0,-8.6,0.9),(7.2,-8.8,0.85),(9.4,-3.4,0.8)]: sakura(*a)
+for a in [(-9.7,-2.4,0.75,0.2),(-9.7,2.8,0.8,0.6),(-6.4,8.9,0.85,0.4),(-2.2,9.6,0.8,0.1),(2.6,9.6,0.85,0.7),(6.6,8.8,0.8,0.3),(9.8,2.6,0.75,0.5),(-9.6,7.6,0.8,0.2),(9.6,7.4,0.8,0.9)]: conifer(*a)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/horyu-ji.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
-HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+HALF=11.2; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y): return 0.0     # flat grounds; the halls and their podiums are solid, not walkable
 ground=[[0.0 for ix in range(GN)] for iz in range(GN)]
 CELL=0.3
@@ -299,8 +300,8 @@ for key,(bv,bf) in B.items():
                     solid_cells.add((int((x+HALF)/CELL),int((y+HALF)/CELL)))
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
-INTERACT=(0.0,-7.2)   # the approach in front of the middle gate
-STAND=(0.0,-8.9)      # the front end of the approach
+INTERACT=(0.0,-8.0)   # the approach in front of the middle gate
+STAND=(0.0,-10.5)     # the front end of the approach
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/horyu-ji.json"

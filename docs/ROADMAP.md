@@ -6,7 +6,7 @@
 - World core: seeded RNG and noise, regions, biomes, landmark progression, no-soft-lock property tests (region level and tile level).
 - Game state: restore, capabilities, save format, player movement.
 - **Monuments and rubbings:** 1,009 Japanese texts on standing stones, spread 0 to 2 per region; worn until the region is restored; a glimmer when one is on screen; reading adds a loose sheet to the rubbing box (B). Haiku match their region's biome. See ADR 0005.
-- **Haiku scenery:** eight tagged rubbing sites have their own scenery, from an old pond and cherry bell to a windblown bamboo grove and a pair of houses in the rain. The local effects follow the restoration wave.
+- **Haiku scenery:** twenty-three tagged rubbing sites have their own scenery, from an old pond and cherry bell to a windblown bamboo grove, foxfire in wheat, the Mogami rapids, footprints in fresh snow, and a clouded moon reflected in water. The local effects follow the restoration wave.
 - **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap and compass toggles), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, three scores tied to first uses of gear, volume/mute controls.
 - **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 13, 20, 30, 41 and 49 restored landmarks instead of at shrines, and far sight at 56; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; compass points at the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
@@ -21,11 +21,11 @@
 
 ## Next
 0. Landmarks: screen-edge glow and compass guidance for revealed landmarks, skyline peek for tall landmarks, real looks, props and player visuals for the later biomes and abilities (placeholders now), more landmark models.
-1. Extend haiku scenery to more tags in `content/haiku-scenery.json`; tie the rubbing collection to technological advancement; biome edge shapes.
+1. Extend haiku scenery to more tags in `content/haiku-scenery.json` and refine biome edge shapes.
 2. **Ability acquisition.** The boat prototype announces the unlock at three restored landmarks and uses the first boarding to transition between two themes. The first step on snow with snowshoes plays a cue and brings in Snowline Walk. Extend the reward and first-use pattern to the other abilities. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.
-5. **Technology thread.** Work out how it fits in. The long-term aim is skyscrapers and a shinkansen, but they have to arrive in a way that feels natural, not as a jump. Related: item 3 and tying the rubbing collection to technological advancement (item 1). Open question; needs a design pass before any building.
+5. **Technology thread.** Five shrine-powered scenic rail lines centred on landmark views. Deferred while current priorities move forward. The first prototype is a Mount Fuji window ride. See the [scenic railway plan](railway-plan.md).
 6. **Livelier world.** Extend rare sightings with responses to nearby players, and eventually add people.
 7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, walking sticks and the rest) given the same treatment.
 8. **Footsteps.** Moving across different terrain should make different sounds.

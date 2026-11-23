@@ -87,16 +87,17 @@ def extrude_x(mat,prof,x0,x1,T=None): solid([[(x0,y,z) for y,z in prof],[(x1,y,z
 import random
 rng=random.Random(8)
 FLOORS=[]   # (x0,x1,y0,y1,top): flat surfaces the player can walk on, for the game sidecar
+FH=11.2     # footprint half-width (the sidecar's half): the middle size, for the long climb of torii
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 def edge_k(x,y,w):
     # 0 on the footprint's edge (square with chamfered corners), easing to 1 over w units inward,
     # so the sidecar's outer ring is exactly the base height and the game terrain blends from one level
-    d=min(9.6-abs(x),9.6-abs(y),(18.0-abs(x)-abs(y))/math.sqrt(2))
+    d=min(FH-abs(x),FH-abs(y),(2*FH-1.2-abs(x)-abs(y))/math.sqrt(2))
     return smooth(0.0,w,d)
 
 # ---- tunnel centreline: out of the gate, bend right, run up the slope, bend left to the summit
-SEGS=[(0.4,0.0),(3.0*math.radians(65),-1/3.0),(1.8,0.0),(3.0*math.radians(55),1/3.0)]
+SEGS=[(0.6,0.0),(3.4*math.radians(65),-1/3.4),(2.4,0.0),(3.4*math.radians(55),1/3.4)]
 PATH_L=sum(l for l,k in SEGS)
 def P(s):
     x,y,h=0.0,-0.9,math.pi/2
@@ -109,7 +110,7 @@ def P(s):
         if s<=0: break
     return x,y,h
 EX,EY,EH=P(PATH_L)
-SHX,SHY=EX+2.4*math.cos(EH),EY+2.4*math.sin(EH)   # main shrine on the summit, facing down the path
+SHX,SHY=EX+2.2*math.cos(EH),EY+2.2*math.sin(EH)   # main shrine on the summit, facing down the path
 SHROT=EH-math.pi/2
 
 # ---- hill: low-poly heightfield peaking at the main shrine
@@ -118,8 +119,8 @@ def Ha(x,y):
     ramp=0.97+0.8*smooth(-1.0,6.5,y)       # meets the gate platform (z=1), rises gently toward the back
     cone=3.37-0.319*max(0.0,dd-2.4)        # even-grade mound up to a flat summit for the main shrine
     return (0.03+max(ramp,cone))*edge_k(x,y,2.2)
-NX,NY=17,11
-GX=[-9.6+19.2*i/(NX-1) for i in range(NX)]; GYS=[-1.0+10.6*j/(NY-1) for j in range(NY)]
+NX,NY=19,13
+GX=[-FH+2*FH*i/(NX-1) for i in range(NX)]; GYS=[-1.0+(FH+1.0)*j/(NY-1) for j in range(NY)]
 gv={}
 for j in range(NY):
     for i in range(NX):
@@ -160,23 +161,23 @@ def Hm(x,y):
 H=Hm
 
 # base slab: top at z=0, sides 1 unit below ground
-def octo(z,h=9.6,ch=1.2):
+def octo(z,h=FH,ch=1.2):
     # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
     return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt="foliage")
 
 # forecourt, steps, gate platform
-box("cream",0,-8.875,-0.05,0.04,1.5,0.675)
-box("stone",0,-3.6,-0.05,1.0,5.0,2.6)
-FLOORS+=[(-1.5,1.5,-9.55,-8.2,0.04),(-5.0,5.0,-6.2,-1.0,1.0)]
+box("cream",0,-10.275,-0.05,0.04,1.5,0.675)
+box("stone",0,-4.3,-0.05,1.0,5.0,3.3)
+FLOORS+=[(-1.5,1.5,-10.95,-9.6,0.04),(-5.0,5.0,-7.6,-1.0,1.0)]
 for i in range(5):
-    y0=-8.2+0.4*i
-    box("stone",0,(y0-6.2)/2,-0.05,0.2*(i+1),1.75,(-6.2-y0)/2,mt="cream")
-    FLOORS.append((-1.75,1.75,y0,-6.2,0.2*(i+1)))
-box("cream",0,-3.6,0.95,1.04,1.35,2.6)
+    y0=-9.6+0.4*i
+    box("stone",0,(y0-7.6)/2,-0.05,0.2*(i+1),1.75,(-7.6-y0)/2,mt="cream")
+    FLOORS.append((-1.75,1.75,y0,-7.6,0.2*(i+1)))
+box("cream",0,-4.3,0.95,1.04,1.35,3.3)
 
 # ---- Romon gate (two storeys, dark hip roofs)
-GY=-3.6
+GY=-4.4
 box("cream",0,GY,0.98,1.2,3.6,1.95)
 for x in (-3.0,-1.1,1.1,3.0):
     for dy in (-1.35,0,1.35):
@@ -208,7 +209,7 @@ def torii(cx,cy,cz,s,rot=0,down=0.15):
     extrude_y("roof",[(-1.36,2.50),(1.36,2.50),(1.56,2.75),(0.7,2.66),(-0.7,2.66),(-1.56,2.75)],-0.15,0.15,T)
 # tunnel: 14 torii along the curve, shrinking and closing up toward the summit,
 # with slight donor-to-donor variation in size and spacing
-N=14; s0=0.15; s1=PATH_L-0.35
+N=18; s0=0.15; s1=PATH_L-0.35
 w=[(1-0.3*i/(N-2))*(1+rng.uniform(-0.08,0.08)) for i in range(N-1)]
 pos=[s0]
 for wi in w: pos.append(pos[-1]+(s1-s0)*wi/sum(w))
@@ -264,7 +265,7 @@ def fox(cx,cy,cz,rot,s,item):
     else:
         bipyr("wood",0,-0.68,1.18,0.14,1.03,1.44,6,T)
 for sx,item in ((-1,"jewel"),(1,"key")):
-    px,py=sx*2.6,-8.7
+    px,py=sx*2.6,-10.1
     box("stone",px,py,-0.05,0.25,0.6,0.6)
     box("stone",px,py,0.25,1.05,0.48,0.48)
     box("stone",px,py,1.05,1.15,0.56,0.56)
@@ -279,10 +280,10 @@ def lantern(cx,cy,idx):
     box("glow_lantern_%d"%idx,0,0,1.48,1.92,0.27,0.27,T)
     solid([rect(0.62,0.62,1.92),rect(0.62,0.62,2.0),rect(0.14,0.14,2.3)],"stone",T)
     bipyr("stone",0,0,2.38,0.11,2.28,2.56,6,T)
-lantern(-4.4,-8.4,1); lantern(4.4,-8.4,2)
+lantern(-4.4,-9.8,1); lantern(4.4,-9.8,2)
 
 # ---- subshrine on the terrace right of the tunnel, with a small torii
-SX,SY=6.8,1.4
+SX,SY=8.0,1.8
 hs=[H(SX+dx,SY+dy) for dx in (-1.05,1.05) for dy in (-0.95,0.95)]
 T0=max(hs)+0.2; Tb=min(hs)-0.25
 box("stone",SX,SY,Tb,T0,1.05,0.95)
@@ -309,24 +310,24 @@ def roundtree(cx,cy,s):
     ico("foliage",0.55,-0.35,1.6,0.8,0.8,0.65,T)
 def bush(cx,cy,s):
     ico("foliage",0,0,0.3,0.75,0.75,0.55,dict(cx=cx,cy=cy,cz=H(cx,cy),s=s))
-for a in [(-7.4,6.8,1.1,0),(-5.0,8.7,1.0,0.3),(-7.8,2.6,0.9,0.6),(-1.8,8.6,0.9,0.5),(0.8,8.6,0.85,0.2),(8.6,4.6,0.9,0.2),(8.6,7.4,0.85,0.8)]: conifer(*a)
-for a in [(-7.6,-7.2,1.0),(-8.0,-2.6,0.9),(-3.0,2.8,0.8),(-4.4,5.6,0.85),(-0.6,5.0,0.8)]: roundtree(*a)
-for a in [(6.9,-8.2,1.0),(8.0,-6.4,0.8),(-5.8,-8.7,0.9),(6.6,-2.6,0.9),(-6.4,-4.2,0.8)]: bush(*a)
+for a in [(-8.6,7.9,1.1,0),(-5.8,10.0,1.0,0.3),(-9.1,3.0,0.9,0.6),(-2.1,10.0,0.9,0.5),(0.9,10.0,0.85,0.2),(10.0,5.4,0.9,0.2),(10.0,8.6,0.85,0.8),(-9.4,-0.4,0.85,0.4),(4.0,10.1,0.9,0.6)]: conifer(*a)
+for a in [(-8.9,-8.4,1.0),(-9.3,-3.0,0.9),(-3.5,3.3,0.8),(-5.1,6.5,0.85),(-0.7,5.8,0.8)]: roundtree(*a)
+for a in [(8.0,-9.6,1.0),(9.3,-7.5,0.8),(-6.8,-10.1,0.9),(7.7,-3.0,0.9),(-7.5,-4.9,0.8)]: bush(*a)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/fushimi-inari.json and read by the world layer.
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
-HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+HALF=FH; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y):
-    h=Hm(x,y) if -1.0<=y<=9.6 else 0.0
+    h=Hm(x,y) if -1.0<=y<=FH else 0.0
     for x0,x1,y0,y1,top in FLOORS:
         if x0<=x<=x1 and y0<=y<=y1: h=max(h,top)
     return h
 ground=[[round(ground_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
 # Hm() is 0 outside the hill's triangles (the corners of the octagonal base); fill those holes from
-# their neighbours so the game's terrain doesn't fall to 0 there. Rows iz <= 13 are the hill (z <= 1);
-# the front (iz > 13) is legitimately flat at 0.
-_hole=[(r,c) for r in range(1,14) for c in range(1,GN-1) if ground[r][c]==0.0]   # never the edge ring
+# their neighbours so the game's terrain doesn't fall to 0 there. Rows iz <= 15 are the hill (z <= 1);
+# the front (iz > 15) is legitimately flat at 0.
+_hole=[(r,c) for r in range(1,16) for c in range(1,GN-1) if ground[r][c]==0.0]   # never the edge ring
 for _ in range(400):
     for r,c in _hole:
         vs=[ground[rr][cc] for rr,cc in((r+1,c),(r-1,c),(r,c+1),(r,c-1)) if 0<=rr<GN and 0<=cc<GN and ground[rr][cc]>0]
@@ -361,7 +362,7 @@ for key,(bv,bf) in B.items():
                     solid.add((cx,cy))
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid)]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
-      "interact":[round(EX,2),round(-EY,2)],"reach":3.6,"stand":[0.0,8.9]}
+      "interact":[round(EX,2),round(-EY,2)],"reach":3.6,"stand":[0.0,10.3]}
 import json as _json, os as _os
 _p=ROOT+"/src/world/landmark-grounds/fushimi-inari.json"
 _os.makedirs(_os.path.dirname(_p),exist_ok=True)

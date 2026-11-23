@@ -61,12 +61,12 @@ export function createAnimalModels() {
     piece.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis.normalize());
   }
 
-  function quadruped(species: "deer" | "serow" | "boar" | "fox", antlers: boolean): AnimalModel {
+  function quadruped(species: "deer" | "serow" | "boar" | "fox", antlers: boolean, resting = false): AnimalModel {
     const group = new THREE.Group();
     const { back, belly, dark } = COATS[species];
     const deer = species === "deer", serow = species === "serow", boar = species === "boar";
     const tall = deer || serow;
-    const hip = deer ? 0.78 : serow ? 0.67 : boar ? 0.43 : 0.37;
+    const hip = resting ? 0.29 : deer ? 0.78 : serow ? 0.67 : boar ? 0.43 : 0.37;
     const width = boar ? 0.32 : tall ? 0.25 : 0.20;
     const length = boar ? 0.61 : deer ? 0.57 : 0.51;
     const depth = tall ? 0.29 : boar ? 0.32 : 0.21;
@@ -102,14 +102,28 @@ export function createAnimalModels() {
     }
     const legs = [-1, 1].flatMap((side) => [-1, 1].map((front) => {
       const joint = pivot(group, side * width * 0.59, hip * 0.98, front * length * 0.60);
-      bone(joint, back, [0, 0.04, 0], [0, -hip * 0.55, -0.035 * front], tall ? 0.073 : 0.068);
-      bone(joint, dark, [0, -hip * 0.51, -0.035 * front], [0, -hip * 0.96, 0.018], tall ? 0.045 : 0.049);
-      mesh(joint, dark, 0, -hip * 0.96, 0.044, 0.056, 0.034, 0.066);
+      if (resting) {
+        const kneeZ = front > 0 ? 0.26 : -0.18;
+        const hoofZ = front > 0 ? 0.08 : 0.15;
+        bone(joint, back, [0, 0.015, 0], [side * 0.075, -0.194, kneeZ], 0.082);
+        bone(joint, dark, [side * 0.075, -0.194, kneeZ], [side * 0.042, -0.234, hoofZ], 0.046);
+        mesh(joint, dark, side * 0.042, -0.234, hoofZ, 0.057, 0.034, 0.074);
+      } else {
+        bone(joint, back, [0, 0.04, 0], [0, -hip * 0.55, -0.035 * front], tall ? 0.073 : 0.068);
+        bone(joint, dark, [0, -hip * 0.51, -0.035 * front], [0, -hip * 0.96, 0.018], tall ? 0.045 : 0.049);
+        mesh(joint, dark, 0, -hip * 0.96, 0.044, 0.056, 0.034, 0.066);
+      }
       return { joint, side, front };
     }));
     return {
       group,
       pose(time, gait, phase) {
+        if (resting) {
+          trunk.scale.y = 1 + 0.028 * Math.sin(time * 1.9 + phase);
+          neck.rotation.set(0.83 + 0.10 * Math.sin(time * 0.70 + phase), 0.11 * Math.sin(time * 0.49 + phase), 0);
+          tail.rotation.y = Math.sin(time * 3.1) * Math.max(0, Math.sin(time * 0.78 + phase)) ** 8 * 0.29;
+          return;
+        }
         for (const { joint, side, front } of legs) {
           const shift = species === "fox" ? (front < 0 ? Math.PI : 0) + side * 0.28 : side * front < 0 ? Math.PI : 0;
           joint.rotation.x = Math.sin(phase + shift) * gait * (species === "fox" ? 0.91 : boar ? 0.62 : 0.51);
@@ -204,6 +218,9 @@ export function createAnimalModels() {
   }
 
   return {
+    buildRestingDeer(): AnimalModel {
+      return quadruped("deer", false, true);
+    },
     build(species: Species, lead: boolean): AnimalModel {
       const model = species === "crane" ? crane()
         : species === "dolphin" || species === "whale" || species === "otter" ? swimmer(species)

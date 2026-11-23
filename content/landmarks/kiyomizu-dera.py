@@ -116,23 +116,24 @@ def smooth(e0,e1,x):
 def edge_k(x,y,w):
     # 0 on the footprint's edge (square with chamfered corners), easing to 1 over w units inward,
     # so the sidecar's outer ring is exactly the base height and the game terrain blends from one level
-    d=min(9.6-abs(x),9.6-abs(y),(18.0-abs(x)-abs(y))/math.sqrt(2))
+    d=min(FH-abs(x),FH-abs(y),(2*FH-1.2-abs(x)-abs(y))/math.sqrt(2))
     return smooth(0.0,w,d)
 FLOORS=[]; EXTRA_SOLIDS=[]
+FH=11.2   # footprint half-width (the sidecar's half): the middle size, a hillside precinct
 PLAT=3.6   # height of the hillside terrace the main hall stands on
 def H(x,y):
     # Mt Otowa: a terrace at the back, falling steeply to the valley floor in front
-    return PLAT*smooth(-2.2,2.2,y+0.04*x)*(1-0.7*smooth(6.6,9.6,x))*edge_k(x,y,2.4)   # eases to 0 at the footprint edge
+    return PLAT*smooth(-2.2,2.2,y+0.04*x)*(1-0.7*smooth(7.8,FH,x))*edge_k(x,y,2.6)   # eases to 0 at the footprint edge
 
-def octo(z,h=9.6,ch=1.2):
+def octo(z,h=FH,ch=1.2):
     # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
     return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
 solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt=None)
-GS=0.8; NG=24
+GS=0.8; NG=int(round(2*FH/GS))
 gv={}
 for j in range(NG+1):
     for i in range(NG+1):
-        x=-9.6+i*GS; y=-9.6+j*GS
+        x=-FH+i*GS; y=-FH+j*GS
         if 0<i<NG and 0<j<NG:
             x+=rng.uniform(-0.22,0.22); y+=rng.uniform(-0.22,0.22)
         z=H(x,y)
@@ -217,7 +218,7 @@ for wx in (HX-HW+0.85,HX+HW-0.85):
     for ox in (-0.75,0.75): box("darkwood",wx+ox,wy-0.72,PLAT,PLAT+1.3,0.07,0.07)
 
 # ---- the vermilion three-storey pagoda on the terrace
-PX,PY=6.9,6.7; PS=0.95; PG=H(PX,PY)
+PX,PY=7.6,7.4; PS=0.95; PG=H(PX,PY)
 def pz(z): return PG+PS*z
 box("stone",PX,PY,PG-0.3,pz(0.35),1.25*PS,1.25*PS)
 for i in range(3):
@@ -247,11 +248,11 @@ def lantern(cx,cy,idx):
     box("glow_lantern_%d"%idx,0,0,1.48,1.92,0.27,0.27,T)
     solid([rect(0.62,0.62,1.92),rect(0.62,0.62,2.0),rect(0.14,0.14,2.3)],"stone",T)
     bipyr("stone",0,0,2.38,0.11,2.28,2.56,6,T)
-lantern(8.1,-5.8,1); lantern(4.3,-5.6,2)
+lantern(8.1,-5.8,1); lantern(4.3,-5.6,2); lantern(9.6,-8.6,3)
 
 # stone path up from the front corner to the waterfall
-for k in range(8):
-    t=k/7; x=7.4+(OX+0.6-7.4)*t; y=-8.3+(OY-1.9+8.3)*t
+for k in range(10):
+    t=k/9; x=8.6+(OX+0.6-8.6)*t; y=-10.2+(OY-1.9+10.2)*t
     box("cream",0,0,-0.04,0.05,0.42,0.28,dict(cx=x+rng.uniform(-0.08,0.08),cy=y,rot=-0.55+rng.uniform(-0.15,0.15)))
 
 # ---- autumn maples and green trees on the slope and the terrace
@@ -273,14 +274,14 @@ def maple(cx,cy,s):
     prism("darkwood",0,0,-0.3,1.1,0.17,0.14,6,0,T)
     ico("vermilion",0,0,1.85,1.1,1.05,0.85,T)
     ico("vermilion",0.5,-0.3,1.35,0.65,0.6,0.5,T)
-for a in [(-7.7,-1.8,1.0),(-5.0,-5.6,0.9),(-2.2,-7.0,0.85),(8.4,-0.6,0.85),(-7.6,5.6,0.9),(1.8,8.5,0.85),(-8.2,-6.6,0.8)]: maple(*a)
-for a in [(-7.6,-4.2,0.85),(5.6,-7.2,0.8),(-4.6,8.6,0.9)]: roundtree(*a)
-for a in [(-8.4,2.4,0.9,0.2),(4.0,8.6,0.9,0.6),(8.6,2.6,0.85,0.4),(-1.6,8.5,0.85,0.9)]: conifer(*a)
+for a in [(-8.9,-2.0,1.0),(-5.6,-6.4,0.9),(-2.4,-8.2,0.85),(9.6,-0.6,0.85),(-8.8,6.4,0.9),(2.0,9.8,0.85),(-9.4,-7.6,0.8),(1.4,-9.6,0.85),(5.4,-9.8,0.8)]: maple(*a)
+for a in [(-8.8,-4.8,0.85),(6.2,-8.2,0.8),(-5.2,9.8,0.9)]: roundtree(*a)
+for a in [(-9.6,2.8,0.9,0.2),(4.6,9.8,0.9,0.6),(9.8,3.0,0.85,0.4),(-1.8,9.8,0.85,0.9),(9.6,9.4,0.8,0.3)]: conifer(*a)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/kiyomizu-dera.json and read by the world layer (see docs/landmarks.md).
 # Game coordinates: x = Blender x, z = -Blender y, height = Blender z; the model's origin is the region's site.
-HALF=9.6; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
+HALF=FH; GSTEP=0.8; GN=int(round(2*HALF/GSTEP))+1
 def ground_at(x,y):
     h=H(x,y)
     for x0,x1,y0,y1,top in FLOORS:
@@ -320,7 +321,7 @@ for key,(bv,bf) in B.items():
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=(OX,OY-2.1)   # in front of Otowa Waterfall
-STAND=(7.6,-8.2)       # the foot of the path, front-right corner
+STAND=(8.9,-10.0)      # the foot of the path, front-right corner
 side={"half":HALF,"step":GSTEP,"ground":ground,"terrain":terrain,"solids":solids,
       "interact":[round(INTERACT[0],2),round(-INTERACT[1],2)],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/kiyomizu-dera.json"

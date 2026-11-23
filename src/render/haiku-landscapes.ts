@@ -1,21 +1,5 @@
 import * as THREE from "three";
-import { branch, TAU, TIMBER, type BuildScene, type Scenery } from "./haiku-scenery";
-
-const bladeGeometry = new THREE.BufferGeometry();
-bladeGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
-  0, 0, 0, -0.25, 0.40, 0, 0.35, 0.71, 0.09,
-  -0.25, 0.40, 0, 0.71, 1, -0.05, 0.35, 0.71, 0.09,
-  0, 0, 0, 0.35, 0.71, 0.09, 0.50, 0.44, 0,
-  0.50, 0.44, 0, 0.35, 0.71, 0.09, 0.71, 1, -0.05,
-], 3));
-bladeGeometry.computeVertexNormals();
-
-function blade(art: Scenery, color: number, x: number, y: number, z: number, width: number, height: number) {
-  const front = art.mesh(bladeGeometry, color, x, y, z);
-  front.material.side = THREE.DoubleSide;
-  front.scale.set(width, height, width);
-  return front;
-}
+import { blade, branch, TAU, TIMBER, type BuildScene, type Scenery } from "./haiku-scenery";
 
 function wind(age: number): number {
   return 0.24 * Math.sin(age * 2.1) + Math.pow(0.5 + 0.5 * Math.sin(age * 0.81), 4);

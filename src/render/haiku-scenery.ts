@@ -58,3 +58,19 @@ export function branch(art: Scenery, from: THREE.Vector3, to: THREE.Vector3, rad
   beam.castShadow = castShadow;
   return beam;
 }
+
+const bladeGeometry = new THREE.BufferGeometry();
+bladeGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+  0, 0, 0, -0.25, 0.40, 0, 0.35, 0.71, 0.09,
+  -0.25, 0.40, 0, 0.71, 1, -0.05, 0.35, 0.71, 0.09,
+  0, 0, 0, 0.35, 0.71, 0.09, 0.50, 0.44, 0,
+  0.50, 0.44, 0, 0.35, 0.71, 0.09, 0.71, 1, -0.05,
+], 3));
+bladeGeometry.computeVertexNormals();
+
+export function blade(art: Scenery, color: number, x: number, y: number, z: number, width: number, height: number) {
+  const front = art.mesh(bladeGeometry, color, x, y, z);
+  front.material.side = THREE.DoubleSide;
+  front.scale.set(width, height, width);
+  return front;
+}

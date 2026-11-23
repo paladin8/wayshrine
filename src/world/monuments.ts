@@ -13,7 +13,22 @@ export type HaikuSceneKind =
   | "roadside-jizo"
   | "silver-grass"
   | "river-houses"
-  | "daffodil-snow";
+  | "daffodil-snow"
+  | "cicada-rocks"
+  | "summer-battlefield"
+  | "foxfire-wheat"
+  | "autumn-road"
+  | "geese-home"
+  | "mogami-rapids"
+  | "winter-macaque"
+  | "rapeseed-field"
+  | "evening-village"
+  | "soft-snow"
+  | "marsh-snipe"
+  | "resting-deer"
+  | "moon-viewing"
+  | "falling-peony"
+  | "winter-grove";
 
 /** What the world needs to know about a text in order to place its monument. */
 export interface MonumentSpec {

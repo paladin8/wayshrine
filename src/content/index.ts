@@ -14,6 +14,21 @@ const haikuScenes: Readonly<Partial<Record<string, HaikuSceneKind>>> = {
   "silver grass, twilight, mountains": "silver-grass",
   "great river, two houses, rain": "river-houses",
   "first snow, daffodils": "daffodil-snow",
+  "rocks, cicadas": "cicada-rocks",
+  "grassland, old battlefield": "summer-battlefield",
+  "wheat field, foxfire, night": "foxfire-wheat",
+  "lonely road, dusk": "autumn-road",
+  "geese flying home": "geese-home",
+  "swift river, rain": "mogami-rapids",
+  "mountain, monkey, rain": "winter-macaque",
+  "rapeseed field, moon and sun": "rapeseed-field",
+  "village, evening": "evening-village",
+  "soft falling snow": "soft-snow",
+  "marsh, snipe, dusk": "marsh-snipe",
+  "deer resting": "resting-deer",
+  "moon, drifting clouds": "moon-viewing",
+  "peony": "falling-peony",
+  "winter grove, axe": "winter-grove",
 };
 
 /** What the world needs to place the monuments: small, so it ships with the main bundle. */

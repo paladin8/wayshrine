@@ -2,6 +2,9 @@ import * as THREE from "three";
 import { createRng } from "../core";
 import type { HaikuSceneKind, Monument, MonumentPlan, Obstacles, Point, Terrain } from "../world";
 import { bambooThicket, daffodilSnow, riverHouses, roadsideJizo, silverGrass } from "./haiku-landscapes";
+import { autumnRoad, cicadaRocks, foxfireWheat, geeseHome, summerBattlefield } from "./haiku-vignettes";
+import { eveningVillage, softSnow, mogamiRapids, rapeseedField, winterMacaque } from "./haiku-dioramas";
+import { fallingPeony, marshSnipe, moonViewing, restingDeer, winterGrove } from "./haiku-tableaux";
 import { branch, scenery, TAU, TIMBER, type BuildScene } from "./haiku-scenery";
 
 const oldPond: BuildScene = (art, rng) => {
@@ -203,6 +206,21 @@ const BUILDERS: Readonly<Record<HaikuSceneKind, BuildScene>> = {
   "silver-grass": silverGrass,
   "river-houses": riverHouses,
   "daffodil-snow": daffodilSnow,
+  "cicada-rocks": cicadaRocks,
+  "summer-battlefield": summerBattlefield,
+  "foxfire-wheat": foxfireWheat,
+  "autumn-road": autumnRoad,
+  "geese-home": geeseHome,
+  "mogami-rapids": mogamiRapids,
+  "winter-macaque": winterMacaque,
+  "rapeseed-field": rapeseedField,
+  "evening-village": eveningVillage,
+  "soft-snow": softSnow,
+  "marsh-snipe": marshSnipe,
+  "resting-deer": restingDeer,
+  "moon-viewing": moonViewing,
+  "falling-peony": fallingPeony,
+  "winter-grove": winterGrove,
 };
 
 function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument): Point {
@@ -233,12 +251,17 @@ function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument)
   return best;
 }
 
+export interface HaikuSounds {
+  bell(): void;
+  cicadas(audible: boolean): void;
+}
+
 export function createHaikuScenes(
   terrain: Terrain,
   monuments: MonumentPlan,
   obstacles: Obstacles,
   lifeAtPoint: (x: number, z: number) => number,
-  onBell: () => void,
+  sounds: HaikuSounds,
 ) {
   const root = new THREE.Group();
   const scenes = monuments.all.flatMap((monument) => {
@@ -252,9 +275,11 @@ export function createHaikuScenes(
     root.add(art.root);
     return [{ monument, anchor, art, tick, age: 0, bellAge: 10, rang: false }];
   });
+  let hearingCicadas = false;
   return {
     root,
-    update(dt: number, focus: Point, viewSize: number, awakening: { regionId: string; progress: number } | null) {
+    update(dt: number, focus: Point, player: Point, viewSize: number, awakening: { regionId: string; progress: number } | null) {
+      let cicadasNearby = false;
       for (const scene of scenes) {
         const { anchor, monument, art, tick } = scene;
         const active = awakening?.regionId === monument.regionId;
@@ -263,16 +288,24 @@ export function createHaikuScenes(
         if (!art.root.visible && !active) continue;
 
         const life = lifeAtPoint(anchor.x, anchor.z);
+        if (monument.scene === "cicada-rocks" && life > 0.65) {
+          const hearingRange = hearingCicadas ? 12 : 9;
+          cicadasNearby ||= Math.hypot(anchor.x - player.x, anchor.z - player.z) < hearingRange;
+        }
         if (monument.scene === "cherry-bell" && active && !scene.rang && life >= 0.5 && awakening.progress < 1) {
           scene.rang = true;
           scene.bellAge = 0;
-          onBell();
+          sounds.bell();
         }
         scene.age = life > 0 ? scene.age + dt : 0;
         scene.bellAge = Math.min(scene.bellAge + dt, 10);
         if (!art.root.visible) continue;
         art.tint(life);
         tick(life, scene.age, scene.bellAge);
+      }
+      if (cicadasNearby !== hearingCicadas) {
+        hearingCicadas = cicadasNearby;
+        sounds.cicadas(cicadasNearby);
       }
     },
   };

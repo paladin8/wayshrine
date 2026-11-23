@@ -3,7 +3,7 @@ import { lifeAt, vitality, type boatLaunchFrame, type GameState } from "../game"
 import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability } from "../world";
 import { createAmbient } from "./ambient";
 import { lightBiome } from "./biome-light";
-import { createHaikuScenes } from "./haiku-scenes";
+import { createHaikuScenes, type HaikuSounds } from "./haiku-scenes";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
@@ -110,7 +110,7 @@ export function createStage(
   terrain: Terrain,
   monuments: MonumentPlan,
   obstacles: Obstacles,
-  onHaikuBell: () => void,
+  haikuSounds: HaikuSounds,
 ): Stage {
   const world = terrain.world;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -257,7 +257,7 @@ export function createStage(
     renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720));
   const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
   const sightings = createLargeWildlife(terrain, lifeAtPoint);
-  const haiku = createHaikuScenes(terrain, monuments, obstacles, lifeAtPoint, onHaikuBell);
+  const haiku = createHaikuScenes(terrain, monuments, obstacles, lifeAtPoint, haikuSounds);
   scene.add(sightings.root, haiku.root);
 
   const glimmer = createGlimmer(scene);
@@ -328,7 +328,7 @@ export function createStage(
       streamChunks(centre, zoom);
       streamShrines(centre);
       updateProgress(dt);
-      haiku.update(dt, centre, viewSize, awakening);
+      haiku.update(dt, centre, pos, viewSize, awakening);
       ambient.update(dt, {
         focus: centre,
         zoom,
