@@ -20,7 +20,7 @@ if os.environ.get("FI_GROUND"):
     # stand-in for the game's terrain under terrainSurface models (preview only; the .blend is not saved)
     gm=bpy.data.meshes.new("PreviewGround"); h=float(os.environ.get("FI_HALF","9.6"))+0.2   # FI_HALF for a larger footprint
     gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
-    gc={"snow":(0.88,0.91,0.93,1),"mountain":(0.235,0.22,0.22,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow|mountain for those regions
+    gc={"snow":(0.88,0.91,0.93,1),"mountain":(0.235,0.22,0.22,1),"marsh":(0.138,0.202,0.065,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow|mountain|marsh for those regions
     mat=bpy.data.materials.new("PreviewGrass"); mat.diffuse_color=gc
     p=[n for n in mat.node_tree.nodes if n.type=='BSDF_PRINCIPLED'][0]; p.inputs["Base Color"].default_value=gc; p.inputs["Roughness"].default_value=1.0
     gm.materials.append(mat); g=bpy.data.objects.new("PreviewGround",gm); col.objects.link(g)

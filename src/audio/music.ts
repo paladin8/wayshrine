@@ -16,8 +16,6 @@ export interface MusicOptions {
   readonly createPlayer?: PlayerFactory;
   /** Seconds to fade a track in or out when the track changes. */
   readonly fadeSeconds?: number;
-  /** Silence between a track ending and starting over. */
-  readonly gapSeconds?: number;
   /**
    * Fixed attenuation under the player's volume setting. The tracks are mastered hot
    * (about -15 LUFS), so the slider's full range maps to a comfortable level.
@@ -51,7 +49,7 @@ export interface Music {
   setMuted(muted: boolean): void;
   /** Wants the music at this fraction of its level (e.g. under a stinger); 1 releases. Eased in `update`. */
   setDuck(level: number): void;
-  /** Advances fades and loop gaps; call once per frame. */
+  /** Advances fades and ducking; call once per frame. */
   update(dtSeconds: number): void;
   status(): MusicStatus;
 }
@@ -64,8 +62,6 @@ interface Voice {
   /** Fade level in [0, 1]. */
   level: number;
   target: 0 | 1;
-  /** Seconds left before a finished track starts over, or null while playing. */
-  gap: number | null;
 }
 
 /** Music plays at half the nominal level: the tracks are mastered loud. */
@@ -78,15 +74,14 @@ const defaultFactory: PlayerFactory = (url) => {
 };
 
 /**
- * Background music: one track at a time, crossfaded on change. Tracks that
- * finish pause for a moment and then repeat. Nothing plays until `unlock()`.
+ * Background music loops in the player and crossfades when the track changes.
+ * Nothing plays until `unlock()`.
  */
 export function createMusic(options: MusicOptions = {}): Music {
   const tracks = options.tracks ?? TRACKS;
   const createPlayer = options.createPlayer ?? defaultFactory;
   const defaultFade = options.fadeSeconds ?? 3;
   let fadeSeconds = defaultFade;
-  const gapSeconds = options.gapSeconds ?? 4;
   const gain = options.gain ?? DEFAULT_GAIN;
   const duckSeconds = options.duckSeconds ?? 0.8;
   const duckReleaseSeconds = options.duckReleaseSeconds ?? duckSeconds;
@@ -106,10 +101,9 @@ export function createMusic(options: MusicOptions = {}): Music {
   const start = (id: TrackId): void => {
     const info = tracks[id];
     if (!info) throw new Error(`unknown track: ${id}`);
-    const voice: Voice = { id, player: createPlayer(info.url), trackGain: info.gain ?? 1, level: 0, target: 1, gap: null };
-    voice.player.onended = () => {
-      voice.gap = gapSeconds;
-    };
+    const player = createPlayer(info.url);
+    player.loop = true;
+    const voice: Voice = { id, player, trackGain: info.gain ?? 1, level: 0, target: 1 };
     apply(voice);
     voices.push(voice);
     // Autoplay can still be refused (e.g. the gesture was too old); retry on the next unlock().
@@ -156,18 +150,9 @@ export function createMusic(options: MusicOptions = {}): Music {
       for (const v of voices) {
         v.level = v.target === 1 ? Math.min(1, v.level + step) : Math.max(0, v.level - step);
         apply(v);
-        if (v.gap !== null && v.target === 1) {
-          v.gap -= dt;
-          if (v.gap <= 0) {
-            v.gap = null;
-            v.player.currentTime = 0;
-            Promise.resolve(v.player.play()).catch(() => undefined);
-          }
-        }
       }
       for (const v of voices) {
         if (v.target === 0 && v.level === 0) {
-          v.player.onended = null;
           v.player.pause();
         }
       }

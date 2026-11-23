@@ -58,8 +58,8 @@ describe("propsInChunk", () => {
     const world = terrain.world;
     const regions = [
       ...Array.from({ length: 25 }, (_, i) => world.region(Math.floor(i / 5) - 2, i % 5 - 2)),
-      world.region(-6, -9),
-      world.region(18, 2),
+      world.region(-5, -11),
+      world.region(16, 2),
     ];
     for (const { shrine, id, landmark, biome } of regions) {
       let count = 0;
@@ -75,8 +75,8 @@ describe("propsInChunk", () => {
   it("uses every scenery kind somewhere in a wide area", () => {
     const seen = new Set<PropKind>();
     const big = createTerrain(createWorld("variety"));
-    for (let cx = -8; cx <= 8; cx++) {
-      for (let cz = -8; cz <= 8; cz++) propsInChunk(big, cx, cz).forEach((p) => seen.add(p.kind));
+    for (let cx = -12; cx <= 12; cx++) {
+      for (let cz = -12; cz <= 12; cz++) propsInChunk(big, cx, cz).forEach((p) => seen.add(p.kind));
     }
     expect([...seen].sort()).toEqual(["bush", "crag", "flower", "lantern", "pine", "rock", "tree"]);
   });

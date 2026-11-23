@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { REGION_REACH } from "./coords";
+import { neighborsOf, REGION_REACH } from "./coords";
 import {
   CAPABILITY_THRESHOLDS,
   HOME_RADIUS,
@@ -267,14 +267,33 @@ describe("biome distribution", () => {
     expect(same / pairs).toBeGreaterThan(0.5);
   });
 
+  it("gives most ordinary regions bordering a landmark the landmark's biome", () => {
+    let same = 0;
+    let pairs = 0;
+    for (const seed of SEEDS.slice(0, 20)) {
+      const world = createWorld(seed);
+      for (const landmark of world.landmarks) {
+        for (const { rx, rz } of neighborsOf(landmark.coord)) {
+          const neighbor = world.region(rx, rz);
+          if (neighbor.landmark) continue;
+          pairs++;
+          if (neighbor.biome === landmark.biome) same++;
+        }
+      }
+    }
+    expect(same / pairs).toBeGreaterThan(0.8);
+  });
+
   it("fades the later biomes in to their share, and every biome occurs", () => {
     const seen = new Map<string, number>();
     let far = 0;
     for (const seed of SEEDS.slice(0, 20)) {
       const w = createWorld(seed);
+      const dunes = w.landmarks.find((r) => r.biome === "dunes")!;
       for (let rx = -28; rx <= 28; rx++) {
         for (let rz = -28; rz <= 28; rz++) {
           const r = w.region(rx, rz);
+          if (r.biome === "dunes") expect(Math.hypot(rx - dunes.coord.rx, rz - dunes.coord.rz)).toBeLessThanOrEqual(2);
           if (r.landmark || Math.hypot(rx, rz) < OUTER_START + 4) continue;
           far++;
           seen.set(r.biome, (seen.get(r.biome) ?? 0) + 1);
@@ -284,8 +303,6 @@ describe("biome distribution", () => {
     const later = ["marsh", "forest", "volcanic", "sea"].reduce((p, b) => p + (seen.get(b) ?? 0), 0);
     expect(later / far).toBeGreaterThan(OUTER_SHARE - 0.05);
     expect(later / far).toBeLessThan(OUTER_SHARE + 0.05);
-    for (const b of BIOMES) if (b !== "dunes") expect(seen.get(b) ?? 0, b).toBeGreaterThan(0);
-    // Dunes exist only as the landmark's own region.
-    expect(seen.get("dunes") ?? 0).toBe(0);
+    for (const b of BIOMES) expect(seen.get(b) ?? 0, b).toBeGreaterThan(0);
   });
 });

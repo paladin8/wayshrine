@@ -5,6 +5,9 @@ import { bambooThicket, daffodilSnow, riverHouses, roadsideJizo, silverGrass } f
 import { autumnRoad, cicadaRocks, foxfireWheat, geeseHome, summerBattlefield } from "./haiku-vignettes";
 import { eveningVillage, softSnow, mogamiRapids, rapeseedField, winterMacaque } from "./haiku-dioramas";
 import { fallingPeony, marshSnipe, moonViewing, restingDeer, winterGrove } from "./haiku-tableaux";
+import { morningHaze, moonlitAlley, sparrowAndHorse, springSea, winterRiverLeek } from "./haiku-encounters";
+import { newYearCrow, pineRest, summerFord, teaPath, witheredField } from "./haiku-paths";
+import { plumSunrise, riceHedge, sadoStarlight, washingGreens, winterRoadShelter } from "./haiku-poems";
 import { branch, scenery, TAU, TIMBER, type BuildScene } from "./haiku-scenery";
 
 const oldPond: BuildScene = (art, rng) => {
@@ -221,6 +224,21 @@ const BUILDERS: Readonly<Record<HaikuSceneKind, BuildScene>> = {
   "moon-viewing": moonViewing,
   "falling-peony": fallingPeony,
   "winter-grove": winterGrove,
+  "sparrow-and-horse": sparrowAndHorse,
+  "spring-sea": springSea,
+  "winter-river-leek": winterRiverLeek,
+  "morning-haze": morningHaze,
+  "moonlit-alley": moonlitAlley,
+  "summer-ford": summerFord,
+  "tea-path": teaPath,
+  "new-year-crow": newYearCrow,
+  "pine-rest": pineRest,
+  "withered-field": witheredField,
+  "sado-starlight": sadoStarlight,
+  "winter-road-shelter": winterRoadShelter,
+  "rice-hedge": riceHedge,
+  "washing-greens": washingGreens,
+  "plum-sunrise": plumSunrise,
 };
 
 function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument): Point {
@@ -234,6 +252,8 @@ function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument)
     const z = monument.z + Math.sin(angle) * 3.65;
     const height = terrain.groundAt(x, z);
     let score = i * 0.065 + Math.abs(height - monument.y);
+    // The pine canopies should frame the rubbing instead of hiding it.
+    if (monument.scene === "pine-rest") score += 9 * Math.max(0, Math.cos(angle - Math.PI / 4) - 0.40);
     for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) {
       const tile = terrain.tileAtPoint(x + dx, z + dz);
       score += Math.abs(terrain.groundAt(x + dx, z + dz) - height);

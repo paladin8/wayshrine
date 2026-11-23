@@ -4,6 +4,7 @@ import { createMusic, type AudioPlayer } from "./music";
 class FakePlayer implements AudioPlayer {
   volume = 1;
   currentTime = 0;
+  loop = false;
   onended: (() => void) | null = null;
   playing = false;
   plays = 0;
@@ -22,12 +23,11 @@ class FakePlayer implements AudioPlayer {
 
 const tracks = { a: { url: "a.mp3" }, b: { url: "b.mp3" } } as never;
 
-function setup(opts: { release?: number; fade?: number; gap?: number; gain?: number } = {}) {
+function setup(opts: { release?: number; fade?: number; gain?: number } = {}) {
   const made: FakePlayer[] = [];
   const music = createMusic({
     tracks,
     fadeSeconds: opts.fade ?? 2,
-    gapSeconds: opts.gap ?? 4,
     gain: opts.gain ?? 1,
     duckSeconds: 1,
     duckReleaseSeconds: opts.release,
@@ -121,18 +121,12 @@ describe("music", () => {
     expect(made).toHaveLength(1);
   });
 
-  it("repeats a finished track after the gap", () => {
-    const { music, made } = setup({ gap: 4 });
+  it("enables native looping when a track starts", () => {
+    const { music, made } = setup();
     music.setTrack("a" as never);
     music.unlock();
-    run(music, 3);
-    made[0]!.currentTime = 99;
-    made[0]!.onended!();
-    run(music, 3);
-    expect(made[0]!.plays).toBe(1);
-    run(music, 2);
-    expect(made[0]!.plays).toBe(2);
-    expect(made[0]!.currentTime).toBe(0);
+    expect(made[0]!.loop).toBe(true);
+    expect(made[0]!.onended).toBeNull();
   });
 
   it("retries on the next gesture if the browser refuses autoplay", async () => {

@@ -12,7 +12,7 @@ Status: accepted. Extends [0006](0006-landmarks-and-progression.md).
 | forest | lantern | 30 | VI | the dark forest: dense trees |
 | volcanic | ash sandals | 41 | VII | basalt and ash, rock and crags |
 | sea | ship | 49 | VIII | deeper water; an ordinary shrine can be restored from the ship |
-| dunes | nothing | | VIII | sand; only ever a landmark's own region (Tottori) |
+| dunes | nothing | | VIII | sand around the Tottori landmark |
 
 - **Far sight.** At 56 restored landmarks (the end of act VIII) every unrestored landmark is marked on the map. It opens no terrain, so the planner is unaffected. Travel from the expanded map to restored shrines already exists and is not gated.
 - **Outer mix.** Near the start the biome weights are unchanged (meadow 40%, water, snow and mountain 20% each). From 14 regions out the later biomes fade in over 3 regions, up to 45% of regions (marsh 33%, forest 27%, volcanic and sea 20% of that share), the original four scaling down to match. So acts I to IV are placed as before and the later acts have somewhere to go.

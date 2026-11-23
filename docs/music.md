@@ -2,7 +2,7 @@
 
 ## How it works
 - One track plays at a time. Changing the wanted track crossfades (3 s) from the old one to the new one.
-- A track that finishes pauses for 4 s and starts over. This suits tracks that end with their own fade-out; it is not a sample-accurate loop.
+- Background tracks use the browser’s built-in loop and retain the fades in their recordings.
 - Browsers block audio before a user gesture, so nothing plays until the first key press or click. If the browser still refuses, the next gesture retries.
 - Music plays at half the slider level (`DEFAULT_GAIN` 0.5 in `music.ts`) because the tracks are mastered loud. `setDuck(level)` eases the music down and back, used under stingers.
 - Music volume, sound-effects volume and mute are player settings (`wayshrine:settings` in localStorage), set in the settings dialog (gear button or `Esc`). `N` mutes all sound. Music uses the music slider; all cues use the sound-effects slider.
@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | `dawn-reverence` | `public/audio/cues/dawn-reverence.mp3` | Awakening swell made with ElevenLabs. Original was 16.0 s with its peak at 13.7 s; the first 5.7 s were trimmed (0.4 s fade-in) so the peak lands at 8.0 s, just as the wave finishes lighting a typical region edge. Now about 10.3 s; it fades out by about 9.8 s, so it ends before the 1.5 s shrine hold does. Plays for ordinary shrines. |
 | `radiant-arrival` | `public/audio/cues/radiant-arrival.mp3` | Landmark awakening swell made with ElevenLabs (`Radiant_Arrival_2026-11-22T013035`). 14.0 s, quiet build with the peak at about 10.0 s and a tail that is silent by about 13.5 s; -3 dB so it sits near `dawn-reverence` in loudness (about -21.9 LUFS against -23.4). Plays instead of `dawn-reverence` when a landmark is restored. |
-| `winter-light-restored` | `public/audio/cues/winter-light-restored.mp3` | Shrine awakening swell for the snow theme (`Winter_Light_Restored_2026-11-23T000719`). Original 14.0 s with its main peak at 10.5 s; the first 2.5 s were trimmed (0.4 s fade-in, 1 s fade-out) so the peak lands at 8.0 s like `dawn-reverence`; now 10.4 s, about -23.3 LUFS. Plays instead of `dawn-reverence` for ordinary shrines while `snowline-walk` is the background. Landmarks still use `radiant-arrival`. |
+| `winter-light-restored` | `public/audio/cues/winter-light-restored.mp3` | Shrine awakening swell for the snow theme (`Winter_Light_Restored_2026-11-23T000719`). Original 14.0 s with its main peak at 10.5 s; the first 2.5 s were trimmed (0.4 s fade-in, 1 s fade-out) so the peak lands at 8.0 s like `dawn-reverence`; now 10.4 s, about -23.3 LUFS. Plays for ordinary shrines while Snowline or Marshwalk is the background, with a 2.4 s playback fade-in. Landmarks still use `radiant-arrival`. |
 | `awakening-burst` | `public/audio/cues/awakening-burst.mp3` | Activation and burst effect made with ElevenLabs (option 2 of two takes; the file has no charge-up, just a burst with a bright bloom and a short tail). 1.25 s of silence is padded at the start so the peak lands at 1.7 s with the onset at about 1.5 s. The wave launches at 1.2 s, but its front is tiny and barely visible for the first half second, so a peak at 1.2 s felt early. +3 dB, peak about -5.5 dBFS. 4.25 s. |
 | `monument-read` | `public/audio/cues/monument-read.mp3` | Soft struck-glass chime made with ElevenLabs (option 2 of two takes: darker, with a lower partial a fifth below the main tone at about 1.32 kHz). Trimmed to 2.0 s with a 0.5 s fade-out, peak about -9 dBFS. Plays when a monument is read for the first press of E, not when reopened from the book. It does not duck the music; only the awakening cues do. |
 
@@ -29,9 +29,9 @@ The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `
 
 ## Music sets
 
-All background tracks use **Dawn Reverence** for shrines and **Radiant Arrival** for landmarks, with the same awakening burst.
+**Breeze**, **Waves**, and **Ridgewalk** use **Dawn Reverence** for ordinary shrines. **Snowline** and **Marshwalk** use **Winter Light Restored**. Every set uses **Radiant Arrival** for landmarks and the same awakening burst.
 
-In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), **Snowline** (Snowline Walk), and **Ridgewalk** (Ridgewalk in E Major). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
+In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), **Snowline** (Snowline Walk), **Ridgewalk** (Ridgewalk in E Major), and **Marshwalk** (Still Water Reeds). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
 
 ## Boat prototype
 

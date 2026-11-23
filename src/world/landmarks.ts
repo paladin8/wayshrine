@@ -1,5 +1,5 @@
 import { createRng } from "../core";
-import { REGION_SIZE, regionId, type Point, type RegionCoord } from "./coords";
+import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
 import { groundOf } from "./landmark-ground";
 import { canTraverse, type Biome, type Capability } from "./terrain";
 import type { Region } from "./world";
@@ -220,6 +220,16 @@ export function planLandmarks(
   ambient: (rx: number, rz: number) => Biome,
   layout: LandmarkLayout = "graded",
 ): ReadonlyMap<string, Landmark> {
+  return planRegions(seed, ambient, layout).landmarks;
+}
+
+/** Plans landmark locations and validates optional biome changes against their approach routes. */
+export function planRegions(
+  seed: string,
+  ambient: (rx: number, rz: number) => Biome,
+  layout: LandmarkLayout,
+  nearbyBiomes?: (landmarks: ReadonlyMap<string, Landmark>) => Iterable<RegionCoord & { biome: Biome }>,
+): { landmarks: ReadonlyMap<string, Landmark>; biomes: ReadonlyMap<string, Biome> } {
   const rng = createRng(seed).fork("landmarks");
   const phase = rng.range(0, Math.PI * 2);
   const placed = new Map<string, Landmark>();
@@ -231,7 +241,7 @@ export function planLandmarks(
   for (let rz = -WINDOW; rz <= WINDOW; rz++) for (let rx = -WINDOW; rx <= WINDOW; rx++) grid[cell(rx, rz)] = ambient(rx, rz);
 
   /** Cells walkable from the origin with the given abilities. */
-  const flood = (caps: ReadonlySet<Capability>): Uint8Array => {
+  const flood = (caps: ReadonlySet<Capability>, parents?: Int32Array): Uint8Array => {
     const seen = new Uint8Array(side * side);
     const start = cell(0, 0);
     if (!canTraverse(grid[start]!, caps)) return seen;
@@ -248,6 +258,7 @@ export function planLandmarks(
         const n = cell(nx, nz);
         if (seen[n] || !canTraverse(grid[n]!, caps)) continue;
         seen[n] = 1;
+        if (parents) parents[n] = at;
         queue.push(n);
       }
     }
@@ -326,7 +337,50 @@ export function planLandmarks(
       throw new Error(`no room for ${landmark.id}`);
     });
   }
-  return placed;
+
+  // Freeze the landmark coordinates before changing their surroundings, so saves keep their region IDs.
+  const biomes = new Map<string, Biome>();
+  const routes = new Map<number, Set<number>>();
+  function preservesRoutes(index: number, previous: Biome, biome: Biome): boolean {
+    for (const [act, caps] of actCaps) {
+      if (!canTraverse(previous, caps) || canTraverse(biome, caps)) continue;
+      const existing = routes.get(act);
+      if (existing && !existing.has(index)) continue;
+
+      // A change off these paths cannot disconnect this act. Rebuild them only when needed.
+      const parents = new Int32Array(grid.length);
+      const seen = flood(caps, parents);
+      const route = new Set([cell(0, 0)]);
+      for (const [id, landmark] of placed) {
+        if (landmark.act !== act) continue;
+        const { rx, rz } = parseRegionId(id);
+        let step = cell(rx, rz);
+        if (!seen[step]) return false;
+        while (!route.has(step)) {
+          route.add(step);
+          step = parents[step]!;
+        }
+      }
+      routes.set(act, route);
+    }
+    return true;
+  }
+
+  for (const { rx, rz, biome } of nearbyBiomes?.(placed) ?? []) {
+    const id = regionId(rx, rz);
+    if (Math.max(Math.abs(rx), Math.abs(rz)) > WINDOW) {
+      biomes.set(id, biome);
+      continue;
+    }
+    const index = cell(rx, rz);
+    const previous = grid[index]!;
+    if (previous === biome) continue;
+    grid[index] = biome;
+    // Every act must still have a route with the abilities available at its start.
+    if (preservesRoutes(index, previous, biome)) biomes.set(id, biome);
+    else grid[index] = previous;
+  }
+  return { landmarks: placed, biomes };
 }
 
 const FOUR = [

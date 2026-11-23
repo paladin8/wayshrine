@@ -1,6 +1,6 @@
 import { createNoise, createRng, type Rng } from "../core";
 import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
-import { footprintHalf, HOME_RADIUS, LANDMARK_BLEND, LANDMARK_REACH_MARGIN, planLandmarks, type Landmark, type LandmarkLayout } from "./landmarks";
+import { footprintHalf, HOME_RADIUS, LANDMARK_BLEND, LANDMARK_REACH_MARGIN, planRegions, type Landmark, type LandmarkLayout } from "./landmarks";
 import type { Biome } from "./terrain";
 
 /** A region is the area energised by one shrine. Regions tile the infinite plane. */
@@ -74,6 +74,7 @@ export function ambientWeights(d: number): ReadonlyArray<readonly [Biome, number
  */
 export const CLUSTER_SPACING = 3;
 export const CLUSTER_NOISE = 0.1;
+const LANDMARK_BIOME_RADIUS = 2;
 
 function pickBiome(rng: Rng, d: number): Biome {
   let roll = rng.next();
@@ -148,9 +149,39 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
     return hit;
   }
 
-  let plan: ReadonlyMap<string, Landmark> | null = null;
-  const landmarkPlan = (): ReadonlyMap<string, Landmark> => (plan ??= planLandmarks(seed, ambient, layout));
-  const landmarkAt = (id: string): Landmark | null => landmarkPlan().get(id) ?? null;
+  function nearbyBiomes(landmarks: ReadonlyMap<string, Landmark>) {
+    const candidates = new Map<string, RegionCoord & { biome: Biome; distanceSquared: number }>();
+    for (const [id, { biome }] of landmarks) {
+      const center = parseRegionId(id);
+      const isOuter = OUTER_BIOME_SHARES.some(([outer]) => biome === outer);
+      for (let dz = -LANDMARK_BIOME_RADIUS; dz <= LANDMARK_BIOME_RADIUS; dz++) {
+        for (let dx = -LANDMARK_BIOME_RADIUS; dx <= LANDMARK_BIOME_RADIUS; dx++) {
+          const distanceSquared = dx * dx + dz * dz;
+          if (distanceSquared === 0 || distanceSquared > LANDMARK_BIOME_RADIUS ** 2) continue;
+          const rx = center.rx + dx;
+          const rz = center.rz + dz;
+          const distanceFromHome = Math.hypot(rx, rz);
+          if (distanceFromHome <= HOME_RADIUS || (isOuter && distanceFromHome <= OUTER_START - CLUSTER_SPACING)) continue;
+          const neighbor = regionId(rx, rz);
+          if (landmarks.has(neighbor)) continue;
+          // The nearest landmark wins; equal distances keep the earlier landmark.
+          if (distanceSquared < (candidates.get(neighbor)?.distanceSquared ?? Infinity)) {
+            candidates.set(neighbor, { rx, rz, biome, distanceSquared });
+          }
+        }
+      }
+    }
+    return [...candidates.entries()]
+      .filter(([id, { distanceSquared }]) => {
+        const chance = distanceSquared === 1 ? 1 : distanceSquared === 2 ? 0.85 : 0.55;
+        return root.fork(`landmark-biome:${id}`).next() < chance;
+      })
+      .map(([, candidate]) => candidate)
+      .sort((a, b) => a.distanceSquared - b.distanceSquared);
+  }
+
+  let plan: ReturnType<typeof planRegions> | null = null;
+  const regionPlan = () => (plan ??= planRegions(seed, ambient, layout, layout === "graded" ? nearbyBiomes : undefined));
 
   function region(rx: number, rz: number): Region {
     const id = regionId(rx, rz);
@@ -162,7 +193,8 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
       x: (rx + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
       z: (rz + 0.5) * REGION_SIZE + rng.range(-jitter, jitter),
     };
-    const landmark = landmarkAt(id);
+    const planned = regionPlan();
+    const landmark = planned.landmarks.get(id) ?? null;
     // A landmark stands at its cell's centre, so its region has room for a large footprint (MAX_FOOTPRINT_HALF).
     const site: Point = landmark ? { x: (rx + 0.5) * REGION_SIZE, z: (rz + 0.5) * REGION_SIZE } : jittered;
     let shrine = site;
@@ -177,7 +209,7 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
       coord: { rx, rz },
       site,
       shrine,
-      biome: landmark ? landmark.biome : ambient(rx, rz),
+      biome: landmark?.biome ?? planned.biomes.get(id) ?? ambient(rx, rz),
       landmark,
     };
     cache.set(id, made);
@@ -227,7 +259,7 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
     regionAt,
     regionById,
     get landmarks() {
-      landmarkRegions ??= [...landmarkPlan().entries()]
+      landmarkRegions ??= [...regionPlan().landmarks.entries()]
         .sort((a, b) => a[1].order - b[1].order)
         .map(([id]) => regionById(id));
       return landmarkRegions;

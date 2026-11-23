@@ -70,7 +70,7 @@ describe("terrain", () => {
 
   it("keeps a clear water approach around ordinary lake and sea shrines", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
-    for (const [rx, rz, biome, height] of [[-6, -9, "water", 0.4], [18, 2, "sea", 0.25]] as const) {
+    for (const [rx, rz, biome, height] of [[-5, -11, "water", 0.4], [16, 2, "sea", 0.25]] as const) {
       const region = terrain.world.region(rx, rz);
       expect(region.landmark).toBeNull();
       expect(region.biome).toBe(biome);

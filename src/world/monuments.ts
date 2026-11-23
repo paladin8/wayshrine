@@ -28,7 +28,22 @@ export type HaikuSceneKind =
   | "resting-deer"
   | "moon-viewing"
   | "falling-peony"
-  | "winter-grove";
+  | "winter-grove"
+  | "sparrow-and-horse"
+  | "spring-sea"
+  | "winter-river-leek"
+  | "morning-haze"
+  | "moonlit-alley"
+  | "summer-ford"
+  | "tea-path"
+  | "new-year-crow"
+  | "pine-rest"
+  | "withered-field"
+  | "sado-starlight"
+  | "winter-road-shelter"
+  | "rice-hedge"
+  | "washing-greens"
+  | "plum-sunrise";
 
 /** What the world needs to know about a text in order to place its monument. */
 export interface MonumentSpec {

@@ -235,7 +235,7 @@ describe("landmark as shrine", () => {
   it("allows a boat to reach and activate the lake and sea shrines from the water", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
     const solids = createObstacles(terrain, planMonuments(terrain, []));
-    for (const [rx, rz, biome, cap] of [[-6, -9, "water", "boat"], [18, 2, "sea", "ship"]] as const) {
+    for (const [rx, rz, biome, cap] of [[-5, -11, "water", "boat"], [16, 2, "sea", "ship"]] as const) {
       const region = terrain.world.region(rx, rz);
       const { x, z } = region.shrine;
       const start = { x, z: z + 5 };

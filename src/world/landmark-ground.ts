@@ -19,6 +19,9 @@ import kappaBashi from "./landmark-grounds/kappa-bashi.json";
 import tateyamaKurobe from "./landmark-grounds/tateyama-kurobe.json";
 import koyasanOkunoin from "./landmark-grounds/koyasan-okunoin.json";
 import yoshinoYama from "./landmark-grounds/yoshino-yama.json";
+import kushiroShitsugen from "./landmark-grounds/kushiro-shitsugen.json";
+import oze from "./landmark-grounds/oze.json";
+import yanagawa from "./landmark-grounds/yanagawa.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -71,6 +74,9 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   "tateyama-kurobe": tateyamaKurobe as unknown as LandmarkGround,
   "koyasan-okunoin": koyasanOkunoin as unknown as LandmarkGround,
   "yoshino-yama": yoshinoYama as unknown as LandmarkGround,
+  "kushiro-shitsugen": kushiroShitsugen as unknown as LandmarkGround,
+  oze: oze as unknown as LandmarkGround,
+  yanagawa: yanagawa as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

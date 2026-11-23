@@ -29,6 +29,21 @@ const haikuScenes: Readonly<Partial<Record<string, HaikuSceneKind>>> = {
   "moon, drifting clouds": "moon-viewing",
   "peony": "falling-peony",
   "winter grove, axe": "winter-grove",
+  "road, sparrow chick": "sparrow-and-horse",
+  "calm spring sea": "spring-sea",
+  "cold river, leek": "winter-river-leek",
+  "morning haze, nameless mountain": "morning-haze",
+  "moon overhead, town street": "moonlit-alley",
+  "river crossing": "summer-ford",
+  "mountain path, tea blossoms": "tea-path",
+  "gate, tree, crow": "new-year-crow",
+  "shade of pines": "pine-rest",
+  "withered field": "withered-field",
+  "rough sea, Milky Way": "sado-starlight",
+  "road, first winter shower": "winter-road-shelter",
+  "hedge, fallen rice": "rice-hedge",
+  "waterbirds, boat": "washing-greens",
+  "mountain path, plum blossoms, sunrise": "plum-sunrise",
 };
 
 /** What the world needs to place the monuments: small, so it ships with the main bundle. */

@@ -22,7 +22,7 @@ export const BIOME_REQUIRES: Readonly<Record<Biome, Capability | null>> = {
   forest: "lantern",
   volcanic: "ashSandals",
   sea: "ship",
-  // Sand is walkable from the start: Tottori's dunes are a one-off landmark biome, not a gate.
+  // Sand around the Tottori landmark is walkable from the start.
   dunes: null,
 };
 
