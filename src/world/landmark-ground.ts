@@ -15,6 +15,7 @@ import kenrokuEn from "./landmark-grounds/kenroku-en.json";
 import mountFuji from "./landmark-grounds/mount-fuji.json";
 import nikkoToshogu from "./landmark-grounds/nikko-toshogu.json";
 import kegonFalls from "./landmark-grounds/kegon-falls.json";
+import kappaBashi from "./landmark-grounds/kappa-bashi.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -63,6 +64,7 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   "mount-fuji": mountFuji as unknown as LandmarkGround,
   "nikko-toshogu": nikkoToshogu as unknown as LandmarkGround,
   "kegon-falls": kegonFalls as unknown as LandmarkGround,
+  "kappa-bashi": kappaBashi as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

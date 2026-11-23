@@ -112,7 +112,7 @@ def flared_roof(spec,mat="roof",ox=0.0,oy=0.0):
 import random
 rng=random.Random(16)
 EXTRA_SOLIDS=[]
-FH=16.8   # footprint half-width (the sidecar's half): the gorge, its cliffs and the forest round them
+FH=11.2   # footprint half-width (the sidecar's half): the middle size
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 D2R=math.pi/180
@@ -120,23 +120,24 @@ def dirv(a): return (math.cos(a*D2R),math.sin(a*D2R))
 
 # ---- the gorge: a horseshoe of sheer columnar cliffs opening toward the viewer (-Y/+X), forested on top and
 # down its outer slopes; the falls pour from a notch at the back of the bowl. Lofted from one profile per angle.
-C=(-3.2,3.2); TB=135.0; SPAN=125.0; A0,A1=TB-SPAN,TB+SPAN; NA=44
+C=(-2.2,2.2); TB=135.0; SPAN=125.0; A0,A1=TB-SPAN,TB+SPAN; NA=44
 def edge_dist(a):
     dx,dy=dirv(a); B=FH-0.6; t=1e9
     if abs(dx)>1e-6: t=min(t,((B if dx>0 else -B)-C[0])/dx)
     if abs(dy)>1e-6: t=min(t,((B if dy>0 else -B)-C[1])/dy)
     return t
-def r_in(a): return 5.4+2.2*((a-TB)/SPAN)**2
+HTOP=8.0   # cliff height at the back of the bowl
+def r_in(a): return 4.3+1.8*((a-TB)/SPAN)**2
 def notch(a): return math.exp(-((a-TB)/9.0)**2)
 def prof(a,odd=False,jit=0.0):
     t=(a-TB)/SPAN
     e=smooth(0.0,0.34,1-abs(t)); s=0.08+0.92*e
     ri=r_in(a)+(0.24 if odd else 0.0)+jit
     tal=1-math.exp(-((a-TB)/26.0)**2)                     # no scree under the falls: the pool meets the cliff
-    HT=(8.6-0.4*(1-e))*s-0.6*notch(a)
+    HT=(HTOP-0.4*(1-e))*s-0.6*notch(a)
     W=2.2+2.4*math.exp(-((a-TB)/35.0)**2)
-    Ro=min(ri+W+7.5,edge_dist(a))
-    W=min(W,max(1.0,Ro-ri-3.0))
+    Ro=max(ri+2.6,min(ri+W+7.5,edge_dist(a)))
+    W=min(W,max(0.8,Ro-ri-2.4))
     return [(ri-0.9*tal-0.02,-0.2),(ri-0.3*tal-0.01,0.2+0.8*s*tal),
             (ri+0.02,0.33*HT),(ri-0.07,0.38*HT),(ri+0.08,0.62*HT),(ri-0.02,0.67*HT),(ri+0.12,0.97*HT),
             (ri+0.45,HT),(ri+W,HT+0.25*s),(ri+W+(Ro-ri-W)*0.45,HT*0.62),(Ro-0.9,HT*0.16),(Ro,-0.2)]
@@ -188,7 +189,7 @@ def seep(a,z0,z1,w0,w1):
     cx,cy=C[0]+r*ux,C[1]+r*uy
     def ring(z,w,o): return [(cx-vx*w-ux*o,cy-vy*w-uy*o,z),(cx+vx*w-ux*o,cy+vy*w-uy*o,z),(cx+vx*w-ux*(o+0.05),cy+vy*w-uy*(o+0.05),z),(cx-vx*w-ux*(o+0.05),cy-vy*w-uy*(o+0.05),z)]
     solid([ring(z1,w1,0.04),ring(z0,w0,0.0)],"foam")
-HT0=8.6
+HT0=HTOP
 for da,top,w,bot in [(-14,0.67,0.11,0.0),(-21,0.38,0.08,0.0),(-27,0.67,0.1,0.0),(-35,0.38,0.07,1.0),(-44,0.67,0.08,1.0)]:
     a=TB+da; zt=top*HT0-0.05; zb=0.15 if bot==0 else 0.95
     if top>0.5:   # over the upper ledge, then on down past the lower one
@@ -196,7 +197,7 @@ for da,top,w,bot in [(-14,0.67,0.11,0.0),(-21,0.38,0.08,0.0),(-27,0.67,0.1,0.0),
     else: seep(a,zt,zb,0.025,w)
 
 # ---- the plunge pool and the river running out of the gorge toward the viewer
-PC=(C[0]+3.0*bx,C[1]+3.0*by); PRT,PRR=2.7,2.15
+PC=(C[0]+2.4*bx,C[1]+2.4*by); PRT,PRR=2.25,1.75
 def pool_pt(th,sc=1.0): return (PC[0]+sc*(PRT*math.cos(th)*tx+PRR*math.sin(th)*bx),PC[1]+sc*(PRT*math.cos(th)*ty+PRR*math.sin(th)*by))
 NP=18
 solid([[(*pool_pt(2*math.pi*i/NP,1.0+0.05*math.sin(5*i)),zz) for i in range(NP)] for zz in (-0.05,0.08)],"water")
@@ -204,9 +205,9 @@ def in_pool(x,y,pad=0.0):
     dx,dy=x-PC[0],y-PC[1]; u=(dx*tx+dy*ty)/(PRT+pad); v=(dx*bx+dy*by)/(PRR+pad); return u*u+v*v<=1.0
 RP=[]
 for k in range(16):
-    f=k/15; d=-1.3-12.0*f                                    # along -b from the pool centre (toward the viewer)
-    off=0.9*math.sin(f*5.2+0.4)*smooth(0.0,0.25,f)
-    RP.append((PC[0]+d*bx+off*tx,PC[1]+d*by+off*ty,0.55+0.3*f))
+    f=k/15; d=-1.1-8.6*f                                    # along -b from the pool centre (toward the viewer)
+    off=0.7*math.sin(f*5.2+0.4)*smooth(0.0,0.25,f)
+    RP.append((PC[0]+d*bx+off*tx,PC[1]+d*by+off*ty,0.5+0.25*f))
 def river_dist(x,y):
     best=1e9
     for (x0,y0,_),(x1,y1,_) in zip(RP,RP[1:]):
@@ -252,7 +253,7 @@ for o,f,s in [(-1.2,0.5,1.0),(0.0,1.0,1.15),(1.2,0.5,0.95),(-0.6,1.6,0.8),(0.7,1
     boulder(x+ex*f-ey*o,y+ey*f+ex*o,s)
 
 # ---- the observation deck at the foot of the falls, reached by a tunnel from the cliff (the elevator)
-DK=(-5.7,0.7); DF=(FX-DK[0],FY-DK[1]); DROT=math.atan2(DF[1],DF[0])-math.pi/2
+DK=(C[0]+2.75*math.cos(229*D2R),C[1]+2.75*math.sin(229*D2R)); DF=(FX-DK[0],FY-DK[1]); DROT=math.atan2(DF[1],DF[0])-math.pi/2
 T=dict(cx=DK[0],cy=DK[1],rot=DROT)
 box("concrete",0,0,-0.1,0.22,1.6,0.95,T)
 for x in (-1.45,-0.5,0.5,1.45): box("roof",x,0.82,0.22,0.95,0.04,0.04,T)
@@ -286,7 +287,7 @@ def hill_z(x,y):
         d=math.hypot(x-cx,y-cy)/R
         if d<0.8: return Hm*(1-smooth(0.3,1.0,d))*0.95
     return None
-hill(-9.0,-9.4,4.6,1.9); hill(10.4,-1.6,4.2,1.6)
+hill(-7.0,-7.4,3.4,1.5); hill(7.8,-1.6,3.0,1.3)
 
 # ---- forest: dark conifers over the cliff tops and the slopes the camera sees, autumn maples among them,
 # and trees on the gorge floor clear of the water, the deck and the view down the river
@@ -302,9 +303,9 @@ def maple(cx,cy,cz,s):
     ico("maple",0,0,1.75,1.05,0.95,0.75,T); ico("maple",0.55,0.3,1.4,0.6,0.55,0.45,T)
 placed=[]
 def free(x,y,d): return all(math.hypot(x-px,y-py)>=d for px,py in placed)
-STAND=(1.2,-10.4)
+STAND=(0.8,-8.4)
 tries=0
-while len(placed)<46 and tries<6000:
+while len(placed)<30 and tries<6000:
     tries+=1
     a=rng.uniform(A0+6,A1-6); dv=dirv(a); pts=prof(a)
     r=rng.uniform(pts[7][0]+0.4,pts[-1][0]-0.9)
@@ -321,7 +322,7 @@ while len(placed)<46 and tries<6000:
     if rng.random()<0.22: maple(x,y,z-0.1,rng.uniform(0.75,0.95))
     else: pine(x,y,z-0.15,rng.uniform(0.8,1.05))
 for cx,cy,R,Hm in HILLS:
-    for k in range(9):
+    for k in range(6):
         a=rng.uniform(0,6.28); d=R*rng.uniform(0.0,0.7); x,y=cx+d*math.cos(a),cy+d*math.sin(a)
         if not free(x,y,1.3) or abs(x)>FH-0.8 or abs(y)>FH-0.8: continue
         placed.append((x,y)); z=hill_z(x,y)-0.1
@@ -339,14 +340,14 @@ def ok_floor(x,y):
     u=(dx*(-bx)+dy*(-by)); v=dx*tx+dy*ty
     if u>-2 and abs(v)<3.2: return False                      # the view down the river to the falls
     return True
-for x,y,kind in [(0.6,-1.6,"m"),(-1.2,-3.8,"p"),(4.4,-1.6,"p"),(2.2,1.0,"m"),(-3.0,-6.8,"m"),(9.0,-2.6,"p"),(7.4,-0.4,"m"),
-                 (-6.4,-7.0,"p"),(11.2,-6.0,"m"),(-1.4,-11.8,"p"),(12.4,-9.6,"p"),(-9.4,-12.2,"m"),(4.6,-14.2,"p"),(14.0,-13.4,"m"),
-                 (-4.4,-14.6,"p"),(9.6,-13.6,"p"),(-7.6,-3.4,"m"),(6.6,-11.0,"m"),(14.4,-6.4,"p"),(-13.6,-14.0,"p"),(-2.8,-15.4,"m"),(14.6,-15.0,"p")]:
+for x,y,kind in [(0.4,-1.2,"m"),(-0.9,-2.7,"p"),(3.2,-1.2,"p"),(1.6,0.7,"m"),(-2.2,-4.9,"m"),(6.5,-1.9,"p"),(5.3,-0.3,"m"),
+                 (-4.6,-5.0,"p"),(8.1,-4.3,"m"),(-1.0,-8.5,"p"),(8.9,-6.9,"p"),(-6.8,-8.8,"m"),(3.3,-10.2,"p"),(10.1,-9.6,"m"),
+                 (-3.2,-10.5,"p"),(6.9,-9.8,"p"),(-5.5,-2.4,"m"),(4.8,-7.9,"m"),(10.4,-4.6,"p"),(-9.8,-10.1,"p"),(-2.0,-11.1,"m"),(10.5,-10.8,"p")]:
     if not ok_floor(x,y) or not free(x,y,1.4): continue
     placed.append((x,y))
     if kind=="m": maple(x,y,0.0,rng.uniform(0.85,1.0))
     else: pine(x,y,0.0,rng.uniform(0.9,1.05))
-for x,y,s in [(5.0,-9.0,0.8),(-5.8,-11.0,0.9),(11.6,-12.4,0.7),(1.8,-6.0,0.6),(-2.0,-8.6,0.7),(13.0,-3.4,0.8)]:
+for x,y,s in [(3.6,-6.5,0.8),(-4.2,-7.9,0.9),(8.4,-8.9,0.7),(1.3,-4.3,0.6),(-1.4,-6.2,0.7),(9.4,-2.4,0.8)]:
     if ok_floor(x,y): boulder(x,y,s,"scree","rock")
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.

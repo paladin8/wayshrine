@@ -113,7 +113,7 @@ import random
 rng=random.Random(15)
 H=lambda x,y: 0.0   # the game's terrain draws the mountain ground (terrainSurface)
 EXTRA_SOLIDS=[]
-FH=14.4   # footprint half-width (the sidecar's half)
+FH=11.2   # footprint half-width (the sidecar's half): the middle size, for compounds and precincts
 
 def irimoya(cx,cy,spec,gx,gy,zg0,zg1):
     """Hip-and-gable roof: a flared hip roof plus the dark gable boards under the ridge ends (ridge along x)."""
@@ -146,15 +146,15 @@ def brackets(cx,cy,hx,hy,z0,z1,layers=3):
         box("gold" if k%2==0 else "teal",cx,cy,z0+k*dz,z0+(k+1)*dz,hx+o,hy+o)
 
 # ---- the precinct floor: gravel courts and the paved approach
-box("gravel",0,-5.2,-0.02,0.03,8.6,4.6)
-box("stone",0,-11.0,-0.02,0.04,1.3,3.4)
+box("gravel",0,-5.0,-0.02,0.03,8.6,4.3)
+box("stone",0,-9.6,-0.02,0.04,1.3,1.4)
 
 # ---- the stone terrace, its stair, and on it the Yomeimon with corridors running out to either side
 TZ=1.3
-box("stone",0,6.0,-0.05,TZ,11.2,5.8,mt="gravel")
+box("stone",0,3.95,-0.05,TZ,9.2,4.45,mt="gravel")
 for k in range(6):
-    box("stone",0,0.2-(6-k)*0.16,-0.05,TZ*(k+1)/6,1.5,(6-k)*0.16)   # the stair up the terrace front
-YX,YY=0.0,2.1; YZ=TZ; S=1.35     # the Yomeimon, the hero of the precinct
+    box("stone",0,-0.5-(6-k)*0.16,-0.05,TZ*(k+1)/6,1.5,(6-k)*0.16)   # the stair up the terrace front
+YX,YY=0.0,1.4; YZ=TZ; S=1.35     # the Yomeimon, the hero of the precinct
 def ys(*v): return [a*S for a in v]
 podium(YX,YY,2.0*S,1.15*S,YZ+0.25)
 z0=YZ+0.25
@@ -184,20 +184,20 @@ extrude_y("gold",lo,0.3,-0.32,T)
 hi=[(0.94,-0.06),(0.5,0.26),(0.2,0.56),(0,0.62),(-0.2,0.56),(-0.5,0.26),(-0.94,-0.06)]
 extrude_y("roof",lo+hi,0.32,-0.42,T)
 for sx in (-1,1):                                                                           # corridors (kairo)
-    cx=YX+sx*6.55; L=3.3
+    cx=YX+sx*5.9; L=2.7
     box("vermilion",cx,YY,TZ,TZ+1.25,L,0.42)
     for k in range(8): box("gold",cx-L+0.45+k*(2*L-0.9)/7,YY-0.43,TZ+0.45,TZ+0.95,0.32,0.02)  # carved panels
     box("gold",cx,YY,TZ+1.2,TZ+1.32,L+0.04,0.46)
     extrude_x("roof",[(YY-0.75,TZ+1.32),(YY+0.75,TZ+1.32),(YY+0.75,TZ+1.42),(YY,TZ+1.85),(YY-0.75,TZ+1.42)],cx-L-0.1,cx+L+0.1)
 
 # ---- behind the gate: the white Karamon and the black-and-gold worship hall
-box("white",0,6.2,TZ,TZ+1.3,0.9,0.5)
-brackets(0,6.2,0.95,0.55,TZ+1.3,TZ+1.55,2)
-flared_roof([(1.35,0.95,TZ+1.55,0.22),(1.35,0.95,TZ+1.65,0.22),(0.8,0.5,TZ+1.9,0.05),(0.6,0.12,TZ+2.2,0.0)],"roof",0,6.2)
-box("roof",0,9.4,TZ,TZ+1.6,2.7,1.5)
-box("gold",0,7.88,TZ+0.45,TZ+1.35,2.4,0.02)
-brackets(0,9.4,2.75,1.55,TZ+1.6,TZ+1.95,2)
-irimoya(0,9.4,[(3.45,2.2,TZ+1.95,0.3),(3.45,2.2,TZ+2.05,0.3),(2.7,1.35,TZ+2.5,0.09),(2.35,0.18,TZ+3.2,0.0)],2.3,1.2,TZ+2.52,TZ+3.15)
+box("white",0,4.6,TZ,TZ+1.3,0.9,0.45)
+brackets(0,4.6,0.95,0.5,TZ+1.3,TZ+1.55,2)
+flared_roof([(1.35,0.85,TZ+1.55,0.22),(1.35,0.85,TZ+1.65,0.22),(0.8,0.45,TZ+1.9,0.05),(0.6,0.12,TZ+2.2,0.0)],"roof",0,4.6)
+box("roof",0,6.9,TZ,TZ+1.6,2.7,1.5)
+box("gold",0,5.38,TZ+0.45,TZ+1.35,2.4,0.02)
+brackets(0,6.9,2.75,1.55,TZ+1.6,TZ+1.95,2)
+irimoya(0,6.9,[(3.45,2.2,TZ+1.95,0.3),(3.45,2.2,TZ+2.05,0.3),(2.7,1.35,TZ+2.5,0.09),(2.35,0.18,TZ+3.2,0.0)],2.3,1.2,TZ+2.52,TZ+3.15)
 
 # ---- the lantern court: drum and bell towers, rows of bronze lanterns, the sacred stable; a stone torii outside
 def tower_bldg(cx,cy):
@@ -206,7 +206,7 @@ def tower_bldg(cx,cy):
     box("gold",cx,cy-0.96,0.7,1.2,0.6,0.02)
     brackets(cx,cy,1.0,1.0,1.55,1.85,2)
     flared_roof([(1.7,1.7,1.85,0.32),(1.7,1.7,1.97,0.32),(0.95,0.95,2.3,0.08),(0.35,0.35,2.75,0.0)],"roof",cx,cy)
-tower_bldg(-5.6,-1.6); tower_bldg(5.6,-1.6)
+tower_bldg(-5.6,-2.3); tower_bldg(5.6,-2.3)
 def bronze_lantern(cx,cy,idx=None):
     prism("stone",cx,cy,0.0,0.15,0.28,0.28,8,math.pi/8)
     prism("bronze",cx,cy,0.15,0.85,0.06,0.06,8,0)
@@ -215,23 +215,23 @@ def bronze_lantern(cx,cy,idx=None):
     cone("bronze",ngon(0.3,1.22,8,math.pi/8,cx,cy),(cx,cy,1.45))
 n=0
 for sx in (-1,1):
-    for y in (-7.2,-5.4,-3.6):
+    for y in (-7.0,-5.7,-4.4):
         for x in (2.6,3.8):
-            n+=1; bronze_lantern(sx*x,y,n if y==-7.2 and x==2.6 else None)
+            n+=1; bronze_lantern(sx*x,y,n if y==-7.0 and x==2.6 else None)
 # the sacred stable (Shinkyusha): plain wood under a bark roof
-box("stone",8.2,-7.6,-0.05,0.2,1.9,1.0)
-box("bark",8.2,-7.6,0.2,1.3,1.7,0.8)
-for x in (-1.0,0.0,1.0): box("gold",8.2+x,-8.41,0.85,1.15,0.32,0.02)                       # the carved panels (the three monkeys)
-flared_roof([(2.15,1.25,1.3,0.12),(2.15,1.25,1.38,0.12),(1.4,0.55,1.7,0.03),(1.2,0.1,1.95,0.0)],"roof",8.2,-7.6)
+box("stone",7.8,-7.6,-0.05,0.2,1.9,1.0)
+box("bark",7.8,-7.6,0.2,1.3,1.7,0.8)
+for x in (-1.0,0.0,1.0): box("gold",7.8+x,-8.41,0.85,1.15,0.32,0.02)                       # the carved panels (the three monkeys)
+flared_roof([(2.15,1.25,1.3,0.12),(2.15,1.25,1.38,0.12),(1.4,0.55,1.7,0.03),(1.2,0.1,1.95,0.0)],"roof",7.8,-7.6)
 # the stone torii (Ishidorii)
-T=dict(cx=0.0,cy=-10.6,s=1.2)
+T=dict(cx=0.0,cy=-9.2,s=1.2)
 for sx in (-1,1): prism("stone",sx*1.1,0,-0.1,2.6,0.15,0.13,8,0,T)
 box("stone",0,0,2.1,2.26,1.35,0.1,T)
 box("stone",0,0,2.55,2.72,1.5,0.14,T)
 extrude_y("stone",[(-1.62,2.72),(1.62,2.72),(1.8,2.94),(0.8,2.86),(-0.8,2.86),(-1.8,2.94)],-0.15,0.15,T)
 
 # ---- the five-storey pagoda by the entrance: vermilion, its upper storeys banded in colour
-PX,PY=-7.4,-7.8
+PX,PY=-6.8,-7.4
 box("stone",PX,PY,-0.05,0.4,1.35,1.35)
 z=0.4
 for i in range(5):
@@ -249,9 +249,9 @@ def cedar(cx,cy,s,ph=0.0):
     prism("bark",0,0,-0.3,2.6,0.32,0.24,6,ph,T)
     for (r,zb,zt,p) in [(1.15,1.8,3.8,ph),(0.95,3.0,4.9,ph+0.4),(0.75,4.1,5.9,ph+0.8),(0.5,5.1,6.9,ph+0.2)]:
         cone("cedar",ngon(r,zb,7,p),(0,0,zt),T)
-for (x,y,s,p) in [(-12.6,-2.0,1.1,0.2),(-12.8,4.2,1.15,0.6),(-11.6,11.0,1.1,0.1),(-6.4,12.8,1.2,0.4),(0.6,12.6,1.1,0.8),(6.8,12.8,1.15,0.3),
-                  (12.2,10.6,1.1,0.5),(12.8,3.6,1.1,0.7),(12.4,-2.8,1.05,0.2),(-11.8,-9.6,1.0,0.5),(11.6,-11.6,1.0,0.1),(-3.6,-12.6,0.95,0.6),(4.0,-12.8,0.95,0.3),
-                  (-10.4,-5.0,0.9,0.9),(9.8,-4.6,0.9,0.4)]: cedar(x,y,s,p)
+for (x,y,s,p) in [(-10.0,-1.8,1.0,0.2),(-10.0,4.0,1.05,0.6),(-9.5,9.3,1.0,0.1),(-5.0,10.0,1.05,0.4),(0.8,10.0,1.0,0.8),(5.6,10.0,1.05,0.3),
+                  (9.6,9.0,1.0,0.5),(10.0,3.4,1.0,0.7),(10.0,-2.2,0.95,0.2),(-9.8,-9.6,0.9,0.5),(-3.5,-10.1,0.85,0.6),(3.6,-10.1,0.85,0.3),
+                  (-9.0,-4.8,0.85,0.9)]: cedar(x,y,s,p)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/nikko-toshogu.json and read by the world layer (see docs/landmarks.md).
@@ -281,8 +281,8 @@ for key,(bv,bf) in B.items():
                     solid_cells.add((int((x+HALF)/CELL),int((y+HALF)/CELL)))
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
-INTERACT=(0.0,-4.0)   # the lantern court below the Yomeimon
-STAND=(0.0,-12.6)     # the approach, outside the stone torii
+INTERACT=(0.0,-3.4)   # the lantern court below the Yomeimon
+STAND=(0.0,-10.4)     # the approach, outside the stone torii
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/nikko-toshogu.json"
