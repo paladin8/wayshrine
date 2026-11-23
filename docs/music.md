@@ -31,7 +31,7 @@ The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `
 
 All background tracks use **Dawn Reverence** for shrines and **Radiant Arrival** for landmarks, with the same awakening burst.
 
-In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), and **Snowline** (Snowline Walk). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
+In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), **Snowline** (Snowline Walk), and **Ridgewalk** (Ridgewalk in E Major). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
 
 ## Boat prototype
 
@@ -43,8 +43,14 @@ The first moving step on snow after earning snowshoes plays **Trail Through Fres
 
 In **Gear acquisition**, **Preview snowshoe use** plays the strap-on moment and its transition music without updating the save. In Auto, the normal score returns when the preview cue ends. Choose **Snowline** in the music selector to keep auditioning the background track.
 
+## First climb
+
+The first moving step onto a mountain after earning the walking sticks plays **Ridge Within Reach** (`public/audio/cues/ridge-within-reach.mp3`, supplied by the project owner, 10 s, about -22.5 LUFS). The background crosses from **Snowline Walk** to **Ridgewalk in E Major** at 4.2 s of cue playback, and the duck releases from 5.5 to 8.0 s as the cue thins out. The first climb is saved immediately and Ridgewalk remains the background on reload.
+
+In **Gear acquisition**, **Preview climbing use** plays the moment from the snow theme (fading back to it first if the save is already on Ridgewalk) without updating the save.
+
 ## Code
-- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed)`, the set selection for each stage.
+- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
 - `src/app/settings.ts`, `src/app/settings-panel.ts`: persisted settings and the dialog that edits them.
 
@@ -56,6 +62,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `homeward-breeze` | `homeward-breeze.mp3` | Pastoral background track made by the project owner with ElevenLabs Music (plan tier and licence terms to be confirmed before release; see the Project doc `music-generation-plan`). 3:00, 192 kbps stereo MP3, about -15 LUFS integrated, true peak -1.1 dBFS. Starts with about 1.5 s near-silence and ends on a roughly 6 s fade-out. Used before the first voyage. |
 | `waves-beyond-the-headlands` | `waves-beyond-the-headlands.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Plays after the first departure. |
 | `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
+| `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
 
 Record the origin and licence of each track here when it is added.
 

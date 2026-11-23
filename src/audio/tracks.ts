@@ -1,5 +1,5 @@
 /** Every piece of music the game can play. */
-export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk"] as const;
+export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk"] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface TrackInfo {
@@ -14,6 +14,7 @@ export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "waves-beyond-the-headlands": { url: `${base}audio/music/waves-beyond-the-headlands.mp3` },
   // Mastered quieter than the other themes; 25% up brings it level.
   "snowline-walk": { url: `${base}audio/music/snowline-walk.mp3`, gain: 1.25 },
+  "ridgewalk": { url: `${base}audio/music/ridgewalk.mp3` },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 
@@ -33,10 +34,12 @@ export const MUSIC_SETS = [
     background: "waves-beyond-the-headlands",
   },
   { label: "Snowline", background: "snowline-walk" },
+  { label: "Ridgewalk", background: "ridgewalk" },
 ] as const satisfies readonly MusicSet[];
 
 /** First uses open new background themes across the world. */
-export function musicSetFor(launched: boolean, snowshoesUsed: boolean): MusicSet {
+export function musicSetFor(launched: boolean, snowshoesUsed: boolean, climbingUsed = false): MusicSet {
+  if (climbingUsed) return MUSIC_SETS[3];
   if (snowshoesUsed) return MUSIC_SETS[2];
   return launched ? MUSIC_SETS[1] : MUSIC_SETS[0];
 }

@@ -24,8 +24,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "first-voyage": { url: `${base}audio/cues/crossing-at-dawn.mp3` },
   // Mastered about 1.2 dB hotter than the voyage cue; 0.5 (-6 dB) sits it well below that.
   "first-snowshoe": { url: `${base}audio/cues/trail-through-fresh-snow.mp3`, gain: 0.5 },
-  // The music for this moment is supplied separately; until the file is added the cue is silent.
-  "first-climb": { url: `${base}audio/cues/first-climb.mp3` },
+  "first-climb": { url: `${base}audio/cues/ridge-within-reach.mp3` },
   "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: MOVEMENT_GAIN },
   "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: MOVEMENT_GAIN * 1.75 },
   "row-water": { url: `${base}audio/cues/row-water.wav`, loop: true, gain: MOVEMENT_GAIN },
