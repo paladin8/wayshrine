@@ -88,6 +88,8 @@ const SNOWSHOE_RELEASE_START = 3.2;
 const SNOWSHOE_RELEASE_SECONDS = 2;
 /** How long the player crouches to strap on snowshoes and steps off the first time. */
 const SNOWSHOE_MOMENT_SECONDS = 4.6;
+/** Seconds into the moment at which the background score crosses from the sea theme to the snow theme, under the cue. */
+const SNOWSHOE_MUSIC_SWITCH = 0.8;
 
 function gearMusicDuck(elapsed: number | null, start: number, duration: number): number {
   if (elapsed === null) return 1;
@@ -239,8 +241,9 @@ export function startApp(container: HTMLElement): void {
   const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
-    const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial;
-    const afterSnow = snowshoeMusicPreview || (!boatTrial && state.snowshoesUsed);
+    // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
+    const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial || snowshoeMoment !== null;
+    const afterSnow = snowshoeMoment ? snowshoeMoment.t >= SNOWSHOE_MUSIC_SWITCH : snowshoeMusicPreview || (!boatTrial && state.snowshoesUsed);
     return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow);
   };
 
@@ -386,9 +389,12 @@ export function startApp(container: HTMLElement): void {
       previewFirstVoyage,
       previewSnowshoeUse: () => {
         beginPreview();
-        snowshoeMusicPreview = true;
-        snowshoeMoment = { t: 0 };
-        playSnowshoeCue();
+        // If this save is already on the snow theme, let the preview fade back to the sea theme first.
+        const playing = music.status().track;
+        const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[1].background ? -3.1 : 0;
+        snowshoeMusicPreview = true; // keeps the snow theme once the moment ends, until the cue does
+        snowshoeMoment = { t: lead };
+        if (lead === 0) playSnowshoeCue();
       },
       cycleMusic: () => {
         music.unlock();
@@ -565,7 +571,9 @@ export function startApp(container: HTMLElement): void {
       }
     }
     if (snowshoeMoment) {
+      const before = snowshoeMoment.t;
       snowshoeMoment.t += dt;
+      if (before < 0 && snowshoeMoment.t >= 0) playSnowshoeCue();
       if (snowshoeMoment.t >= SNOWSHOE_MOMENT_SECONDS) snowshoeMoment = null;
     }
     if (gearReveal) {
@@ -657,7 +665,7 @@ export function startApp(container: HTMLElement): void {
     });
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
-    if (snowshoeMusicPreview && cues.elapsed("first-snowshoe") === null) snowshoeMusicPreview = false;
+    if (snowshoeMusicPreview && snowshoeMoment === null && cues.elapsed("first-snowshoe") === null) snowshoeMusicPreview = false;
     // Keep the background steady through a restoration if debug selects another track.
     music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background);
     const nextMovementCue = moving && !voyageFrame
@@ -679,7 +687,7 @@ export function startApp(container: HTMLElement): void {
     music.update(dt);
 
     stage.render(dt, {
-      player: pos, facing, state, moving, strapping: snowshoeMoment ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : undefined, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      player: pos, facing, state, moving, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : undefined, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       voyage: voyageFrame,
     });
     requestAnimationFrame(frame);
