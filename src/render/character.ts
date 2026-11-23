@@ -157,15 +157,29 @@ export function buildCharacter(variant: CharacterVariant): Character {
   for (const side of [1, -1]) {
     mesh(new THREE.BoxGeometry(0.03, 0.045, 0.02), eye, head, side * 0.065, 0.0, shape.headR * 0.93);
   }
+  let ponytail: { readonly base: THREE.Group; readonly upper: THREE.Group; readonly lower: THREE.Group } | null = null;
   const hairMat = m(shape.hair);
   const cap = new THREE.SphereGeometry(shape.headR * 1.1, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.56);
   cap.rotateX(-0.28);
   mesh(cap, hairMat, head, 0, 0.012, -0.012);
   if (variant === "female") {
-    mesh(new THREE.BoxGeometry(0.33, 0.24, 0.1), hairMat, head, 0, -0.06, -0.12); // back of a bob
-    const tail = mesh(new THREE.ConeGeometry(0.05, 0.22, 5), hairMat, head, 0, 0.1, -0.22);
-    tail.rotation.x = 2.5; // tied tuft, flicking up and back
-    for (const side of [1, -1]) mesh(new THREE.BoxGeometry(0.05, 0.2, 0.09), hairMat, head, side * 0.165, -0.04, -0.03);
+    // Hair swept back and gathered into a high ponytail: smooth back of the scalp, a tie, and a tail
+    // in two segments that swings with the walk (see `ponytail` in `update`).
+    mesh(new THREE.BoxGeometry(0.3, 0.17, 0.09), hairMat, head, 0, 0.0, -0.12);
+    for (const side of [1, -1]) mesh(new THREE.BoxGeometry(0.04, 0.17, 0.09), hairMat, head, side * 0.155, -0.04, -0.03);
+    const ponyBase = group(head, 0, 0.075, -0.2);
+    mesh(new THREE.IcosahedronGeometry(0.055, 0), hairMat, ponyBase, 0, 0, 0.0);
+    mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.03, 6), scarfMat, ponyBase, 0, -0.03, 0); // hair tie
+    const upper = group(ponyBase, 0, -0.04, 0);
+    const upperGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.17, 6);
+    upperGeo.translate(0, -0.085, 0);
+    mesh(upperGeo, hairMat, upper);
+    const lower = group(upper, 0, -0.17, 0);
+    const lowerGeo = new THREE.ConeGeometry(0.05, 0.2, 6);
+    lowerGeo.rotateX(Math.PI);
+    lowerGeo.translate(0, -0.1, 0);
+    mesh(lowerGeo, hairMat, lower);
+    ponytail = { base: ponyBase, upper, lower };
   } else {
     for (const [x, rz] of [[-0.08, 0.3], [0.06, -0.2], [0.13, -0.5]] as const) {
       const tuft = mesh(new THREE.ConeGeometry(0.045, 0.12, 4), hairMat, head, x, 0.17, 0.04);
@@ -386,6 +400,15 @@ export function buildCharacter(variant: CharacterVariant): Character {
       head.rotation.y = -(torso.rotation.y + pelvis.rotation.y) * 0.7;
       head.rotation.z = c * 0.03 * w;
       pack.rotation.z = -c * 0.03 * w;
+      if (ponytail) {
+        // The tail hangs back and swings, the tip lagging behind the base.
+        ponytail.base.rotation.x = 0.45 + 0.3 * w - 0.5 * t;
+        ponytail.base.rotation.z = -s * 0.1 * w;
+        ponytail.upper.rotation.x = 0.1 + Math.sin(phase * 2 + 0.6) * 0.14 * w;
+        ponytail.upper.rotation.z = -s * 0.1 * w;
+        ponytail.lower.rotation.x = 0.12 + Math.sin(phase * 2 + 1.5) * 0.24 * w + Math.sin(performance.now() / 900) * 0.02;
+        ponytail.lower.rotation.z = -s * 0.16 * w;
+      }
       scarfTail.rotation.x = 0.35 + 0.5 * w + Math.sin(phase * 2 + 1) * 0.12 * w + Math.sin(performance.now() / 700) * 0.03;
 
       if (crouch > 0) {
