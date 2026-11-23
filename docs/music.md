@@ -51,7 +51,7 @@ In **Gear acquisition**, **Preview climbing use** plays the moment from the snow
 
 ## First geta use
 
-The first moving step into marsh after earning geta crouches the traveller to slip them on, then crossfades the background from **Ridgewalk in E Major** to **Marshwalk** over 5 s. There is no cue. The first step is saved immediately and Marshwalk remains the background on reload. The track slot is `marshwalk` (`public/audio/music/marshwalk.mp3`, not supplied yet, so the background is silent after the crossfade until it lands) and the marsh footstep loop is `walk-marsh` (`public/audio/cues/walk-marsh.wav`, also pending; a missing file is skipped silently).
+The first moving step into marsh after earning geta crouches the traveller to slip them on, then crossfades the background from **Ridgewalk in E Major** to **Marshwalk** over 5 s. There is no cue. The first step is saved immediately and Marshwalk remains the background on reload. The track is `marshwalk` (`public/audio/music/marshwalk.mp3`, **Still Water Reeds**, supplied by the project owner, three minutes, about -16.7 LUFS). The marsh footstep loop is `walk-marsh` (`public/audio/cues/walk-marsh.wav`, from the supplied `footsteps_in_a_marsh_#2` recording, 2 s, gain-matched with short edge fades).
 
 In **Gear acquisition**, **Preview geta unlock** and **Preview geta use** play the reveal and the slip-on moment without updating the save, fading back to Ridgewalk first if the save is already on Marshwalk.
 
@@ -69,6 +69,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `waves-beyond-the-headlands` | `waves-beyond-the-headlands.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Plays after the first departure. |
 | `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
 | `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
+| `marshwalk` | `marshwalk.mp3` | Supplied by the project owner (`Still_Water_Reeds`). Three minutes, stereo MP3, about -16.7 LUFS. Becomes the background after the first geta step. |
 
 Record the origin and licence of each track here when it is added.
 
