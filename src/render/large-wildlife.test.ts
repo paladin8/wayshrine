@@ -33,8 +33,12 @@ describe("rare wildlife", () => {
 
   it("blocks walking into a deer and moves the obstacle with the rendered pose", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
-    const sight = createSightings(terrain)(terrain.world.region(1, -3))!;
-    expect(sight.species).toBe("deer");
+    const plan = createSightings(terrain);
+    const nearby = Array.from({ length: 81 }, (_, i) =>
+      plan(terrain.world.region(Math.floor(i / 9) - 4, i % 9 - 4)),
+    );
+    const sight = nearby.find((candidate) => candidate?.species === "deer" && candidate.biome === "meadow");
+    if (!sight) throw new Error("No deer sighting on nearby meadow");
     let restored = true;
     const wildlife = createLargeWildlife(terrain, () => Number(restored));
     const obstacles = {

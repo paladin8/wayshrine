@@ -14,6 +14,8 @@ export interface DebugActions {
   readonly previewClimbUnlock: () => void;
   readonly previewGetaUnlock: () => void;
   readonly previewClimbUse: () => void;
+  readonly previewLanternUnlock: () => void;
+  readonly previewLanternUse: () => void;
   readonly cycleMusic: () => string;
   /** Switches gear transitions between their cue and a plain slow crossfade; returns the new mode. */
 }
@@ -111,6 +113,8 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   preview("Preview climbing use", actions.previewClimbUse);
   preview("Preview geta unlock", actions.previewGetaUnlock);
   preview("Preview geta use", actions.previewGetaUse);
+  preview("Preview lantern unlock", actions.previewLanternUnlock);
+  preview("Preview lantern use", actions.previewLanternUse);
   dialog.appendChild(content);
   container.append(style, panel, dialog);
 

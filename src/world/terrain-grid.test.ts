@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ordinaryRegionNearLandmark } from "../test-fixtures";
 import { createWorld } from "./world";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
@@ -47,7 +48,7 @@ describe("terrain", () => {
 
   it("raises steep land shrines to the surrounding grade and eases into the approach", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
-    for (const [rx, rz] of [[-5, 5], [4, 17], [-4, -7], [-13, 10], [-14, 15]] as const) {
+    for (const [rx, rz] of [[-5, 5], [4, 18], [-4, -7], [-13, 10], [-14, 15]] as const) {
       const region = terrain.world.region(rx, rz);
       const { x, z } = region.shrine;
       const base = terrain.groundAt(x, z);
@@ -70,10 +71,8 @@ describe("terrain", () => {
 
   it("keeps a clear water approach around ordinary lake and sea shrines", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
-    for (const [rx, rz, biome, height] of [[-5, -11, "water", 0.4], [16, 2, "sea", 0.25]] as const) {
-      const region = terrain.world.region(rx, rz);
-      expect(region.landmark).toBeNull();
-      expect(region.biome).toBe(biome);
+    for (const [biome, height] of [["water", 0.4], ["sea", 0.25]] as const) {
+      const region = ordinaryRegionNearLandmark(terrain.world, biome);
       for (let z = -5; z <= 5; z++) {
         for (let x = -5; x <= 5; x++) {
           if (Math.hypot(x, z) > 5) continue;

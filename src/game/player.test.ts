@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ordinaryRegionNearLandmark } from "../test-fixtures";
 import {
   CAPABILITIES,
   canTraverse,
@@ -235,8 +236,8 @@ describe("landmark as shrine", () => {
   it("allows a boat to reach and activate the lake and sea shrines from the water", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
     const solids = createObstacles(terrain, planMonuments(terrain, []));
-    for (const [rx, rz, biome, cap] of [[-5, -11, "water", "boat"], [16, 2, "sea", "ship"]] as const) {
-      const region = terrain.world.region(rx, rz);
+    for (const [biome, cap] of [["water", "boat"], ["sea", "ship"]] as const) {
+      const region = ordinaryRegionNearLandmark(terrain.world, biome);
       const { x, z } = region.shrine;
       const start = { x, z: z + 5 };
       const caps = new Set<Capability>([cap]);

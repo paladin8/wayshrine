@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ordinaryRegionNearLandmark } from "../test-fixtures";
 import { createWorld } from "./world";
 import { PLATEAU_RADIUS, CHUNK_SIZE, createTerrain } from "./terrain-grid";
 import { propsInChunk, type PropKind } from "./props";
@@ -58,8 +59,8 @@ describe("propsInChunk", () => {
     const world = terrain.world;
     const regions = [
       ...Array.from({ length: 25 }, (_, i) => world.region(Math.floor(i / 5) - 2, i % 5 - 2)),
-      world.region(-5, -11),
-      world.region(16, 2),
+      ordinaryRegionNearLandmark(world, "water"),
+      ordinaryRegionNearLandmark(world, "sea"),
     ];
     for (const { shrine, id, landmark, biome } of regions) {
       let count = 0;
@@ -72,11 +73,16 @@ describe("propsInChunk", () => {
     }
   });
 
-  it("uses every scenery kind somewhere in a wide area", () => {
+  it("uses every scenery kind across meadow, snow and mountain regions", () => {
     const seen = new Set<PropKind>();
     const big = createTerrain(createWorld("variety"));
-    for (let cx = -12; cx <= 12; cx++) {
-      for (let cz = -12; cz <= 12; cz++) propsInChunk(big, cx, cz).forEach((p) => seen.add(p.kind));
+    for (const biome of ["meadow", "snow", "mountain"] as const) {
+      const { shrine } = ordinaryRegionNearLandmark(big.world, biome);
+      const x = Math.floor(shrine.x / CHUNK_SIZE);
+      const z = Math.floor(shrine.z / CHUNK_SIZE);
+      for (let cz = z - 1; cz <= z + 1; cz++) {
+        for (let cx = x - 1; cx <= x + 1; cx++) propsInChunk(big, cx, cz).forEach((p) => seen.add(p.kind));
+      }
     }
     expect([...seen].sort()).toEqual(["bush", "crag", "flower", "lantern", "pine", "rock", "tree"]);
   });

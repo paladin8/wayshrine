@@ -112,6 +112,7 @@ export const ja: Messages = {
     snowshoes: { title: "かんじきを手に入れた", hint: "雪の上を歩くと、かんじきを使えます。" },
     climbing: { title: "金剛杖を手に入れた", hint: "山に足を踏み入れると、杖を使えます。" },
     geta: { title: "下駄を手に入れた", hint: "湿地に足を踏み入れると、下駄を履けます。" },
+    lantern: { title: "提灯を手に入れた", hint: "暗い森に足を踏み入れると、提灯に火を灯せます。" },
   },
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",

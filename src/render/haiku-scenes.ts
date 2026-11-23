@@ -8,6 +8,9 @@ import { fallingPeony, marshSnipe, moonViewing, restingDeer, winterGrove } from 
 import { morningHaze, moonlitAlley, sparrowAndHorse, springSea, winterRiverLeek } from "./haiku-encounters";
 import { newYearCrow, pineRest, summerFord, teaPath, witheredField } from "./haiku-paths";
 import { plumSunrise, riceHedge, sadoStarlight, washingGreens, winterRoadShelter } from "./haiku-poems";
+import { duskDucks, harvestMoon, blossomHaze, coolBell, emptyBench, warriorPoetry, galeRiders } from "./haiku-seasons";
+import { rainFoxfire, riversidePalanquins, washingFly, mistFarewell, doubleCherry, nightClover, futamiOfferings } from "./haiku-closeups";
+import { iseRenewal, naraHallSnow, nikkoYoungLeaves, hiddenFuji, yoshinoHat, koyasanPheasant, hakoneFlurries } from "./haiku-landmark-scenes";
 import { branch, scenery, TAU, TIMBER, type BuildScene } from "./haiku-scenery";
 
 const oldPond: BuildScene = (art, rng) => {
@@ -239,10 +242,36 @@ const BUILDERS: Readonly<Record<HaikuSceneKind, BuildScene>> = {
   "rice-hedge": riceHedge,
   "washing-greens": washingGreens,
   "plum-sunrise": plumSunrise,
+  "dusk-ducks": duskDucks,
+  "harvest-moon": harvestMoon,
+  "blossom-haze": blossomHaze,
+  "cool-bell": coolBell,
+  "empty-bench": emptyBench,
+  "warrior-poetry": warriorPoetry,
+  "gale-riders": galeRiders,
+  "rain-foxfire": rainFoxfire,
+  "riverside-palanquins": riversidePalanquins,
+  "washing-fly": washingFly,
+  "mist-farewell": mistFarewell,
+  "double-cherry": doubleCherry,
+  "night-clover": nightClover,
+  "futami-offerings": futamiOfferings,
+  "ise-renewal": iseRenewal,
+  "nara-hall-snow": naraHallSnow,
+  "nikko-young-leaves": nikkoYoungLeaves,
+  "hidden-fuji": hiddenFuji,
+  "yoshino-hat": yoshinoHat,
+  "koyasan-pheasant": koyasanPheasant,
+  "hakone-flurries": hakoneFlurries,
 };
+
+const linkedScenes: ReadonlySet<HaikuSceneKind> = new Set(["futami-offerings", "ise-renewal", "nara-hall-snow", "nikko-young-leaves", "hidden-fuji", "yoshino-hat", "koyasan-pheasant", "hakone-flurries"]);
+
+const clearForeground: ReadonlySet<HaikuSceneKind> = new Set(["night-clover", "ise-renewal", "yoshino-hat"]);
 
 function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument): Point {
   const biome = terrain.tileAtPoint(monument.x, monument.z).biome;
+  const region = terrain.world.regionById(monument.regionId);
   let best: Point = monument;
   let bestScore = Infinity;
   for (let i = 0; i < 8; i++) {
@@ -252,8 +281,14 @@ function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument)
     const z = monument.z + Math.sin(angle) * 3.65;
     const height = terrain.groundAt(x, z);
     let score = i * 0.065 + Math.abs(height - monument.y);
-    // The pine canopies should frame the rubbing instead of hiding it.
-    if (monument.scene === "pine-rest") score += 9 * Math.max(0, Math.cos(angle - Math.PI / 4) - 0.40);
+    if (region.landmark && monument.scene && linkedScenes.has(monument.scene)) {
+      const delta = Math.hypot(x - region.shrine.x, z - region.shrine.z) - Math.hypot(monument.x - region.shrine.x, monument.z - region.shrine.z);
+      score += 4 * Math.max(0, -delta - 0.5);
+    }
+    // Tall canopies should frame the rubbing instead of hiding it.
+    if (monument.scene === "pine-rest" || monument.scene === "yoshino-hat") {
+      score += 9 * Math.max(0, Math.cos(angle - Math.PI / 4) - 0.40);
+    }
     for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) {
       const tile = terrain.tileAtPoint(x + dx, z + dz);
       score += Math.abs(terrain.groundAt(x + dx, z + dz) - height);
@@ -263,6 +298,9 @@ function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument)
     const foreground = 1.4;
     score += 4 * obstacles.near(x, z, 2.05).length;
     score += obstacles.near(x + foreground, z + foreground, 1.45).length;
+    if (monument.scene && clearForeground.has(monument.scene)) {
+      score += 6 * obstacles.near(x + 2.45, z + 2.45, 1.7).length;
+    }
     if (score < bestScore) {
       best = { x, z };
       bestScore = score;
@@ -287,13 +325,17 @@ export function createHaikuScenes(
   const scenes = monuments.all.flatMap((monument) => {
     if (!monument.scene) return [];
     const anchor = sceneAnchor(terrain, obstacles, monument);
-    const y = terrain.groundAt(anchor.x, anchor.z);
-    const localGround = (x: number, z: number): number => terrain.groundAt(anchor.x + x, anchor.z + z) - y;
-    const art = scenery();
-    const tick = BUILDERS[monument.scene](art, createRng(monument.id + terrain.world.seed), localGround);
-    art.root.position.set(anchor.x, y, anchor.z);
-    root.add(art.root);
-    return [{ monument, anchor, art, tick, age: 0, bellAge: 10, rang: false }];
+    const kind = monument.scene;
+    const mount = () => {
+      const y = terrain.groundAt(anchor.x, anchor.z);
+      const ground = (x: number, z: number): number => terrain.groundAt(anchor.x + x, anchor.z + z) - y;
+      const art = scenery();
+      const tick = BUILDERS[kind](art, createRng(monument.id + terrain.world.seed), ground);
+      art.root.position.set(anchor.x, y, anchor.z);
+      root.add(art.root);
+      return { art, tick };
+    };
+    return [{ monument, anchor, mount, drawing: null as ReturnType<typeof mount> | null, age: 0, bellAge: 10, rang: false }];
   });
   let hearingCicadas = false;
   return {
@@ -301,25 +343,27 @@ export function createHaikuScenes(
     update(dt: number, focus: Point, player: Point, viewSize: number, awakening: { regionId: string; progress: number } | null) {
       let cicadasNearby = false;
       for (const scene of scenes) {
-        const { anchor, monument, art, tick } = scene;
+        const { anchor, monument } = scene;
         const active = awakening?.regionId === monument.regionId;
         if (!active) scene.rang = false;
-        art.root.visible = Math.hypot(anchor.x - focus.x, anchor.z - focus.z) < viewSize * 1.2 + 4;
-        if (!art.root.visible && !active) continue;
+        const visible = Math.hypot(anchor.x - focus.x, anchor.z - focus.z) < viewSize * 1.2 + 4;
+        if (scene.drawing) scene.drawing.art.root.visible = visible;
+        if (!visible && !active) continue;
 
         const life = lifeAtPoint(anchor.x, anchor.z);
         if (monument.scene === "cicada-rocks" && life > 0.65) {
           const hearingRange = hearingCicadas ? 12 : 9;
           cicadasNearby ||= Math.hypot(anchor.x - player.x, anchor.z - player.z) < hearingRange;
         }
-        if (monument.scene === "cherry-bell" && active && !scene.rang && life >= 0.5 && awakening.progress < 1) {
+        if ((monument.scene === "cherry-bell" || monument.scene === "cool-bell") && active && !scene.rang && life >= 0.5 && awakening.progress < 1) {
           scene.rang = true;
           scene.bellAge = 0;
           sounds.bell();
         }
         scene.age = life > 0 ? scene.age + dt : 0;
         scene.bellAge = Math.min(scene.bellAge + dt, 10);
-        if (!art.root.visible) continue;
+        if (!visible) continue;
+        const { art, tick } = scene.drawing ??= scene.mount();
         art.tint(life);
         tick(life, scene.age, scene.bellAge);
       }

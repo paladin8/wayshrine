@@ -15,6 +15,7 @@ export {
   recordBoatLaunch,
   recordClimbUse,
   recordGetaUse,
+  recordLanternUse,
   recordSnowshoeUse,
   resetGame,
   resetShrines,

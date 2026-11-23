@@ -228,7 +228,10 @@ export function planRegions(
   seed: string,
   ambient: (rx: number, rz: number) => Biome,
   layout: LandmarkLayout,
-  nearbyBiomes?: (landmarks: ReadonlyMap<string, Landmark>) => Iterable<RegionCoord & { biome: Biome }>,
+  nearbyBiomes?: (
+    landmarks: ReadonlyMap<string, Landmark>,
+    biomeAt: (rx: number, rz: number) => Biome,
+  ) => Iterable<RegionCoord & { biome: Biome }>,
 ): { landmarks: ReadonlyMap<string, Landmark>; biomes: ReadonlyMap<string, Biome> } {
   const rng = createRng(seed).fork("landmarks");
   const phase = rng.range(0, Math.PI * 2);
@@ -266,6 +269,15 @@ export function planRegions(
   };
 
   const acts = [...new Set(LANDMARKS.map((l) => l.act))];
+  const bearings = acts.map((act) => phase + act * GOLDEN_ANGLE);
+  if (layout === "graded") {
+    // Keep the spread of the act sectors, then scramble which act uses each bearing.
+    const shuffle = rng.fork("act-bearings");
+    for (let i = bearings.length - 1; i > 0; i--) {
+      const j = shuffle.int(0, i + 1);
+      [bearings[i], bearings[j]] = [bearings[j]!, bearings[i]!];
+    }
+  }
   const actCaps = new Map(acts.map((act) => [act, capabilitiesForCount(landmarksBeforeAct(act))]));
   const stillReachable = (upTo: number): boolean => {
     for (const act of acts) {
@@ -281,14 +293,14 @@ export function planRegions(
     return true;
   };
 
-  for (const act of acts) {
+  for (const [actIndex, act] of acts.entries()) {
     const members = LANDMARKS.filter((l) => l.act === act);
     const before = landmarksBeforeAct(act);
     const caps = actCaps.get(act)!;
     const seen = flood(caps);
     const lo = ringRadius(before, layout);
     const hi = ringRadius(before + members.length, layout);
-    const bearing = phase + act * GOLDEN_ANGLE;
+    const bearing = bearings[actIndex]!;
     members.forEach((landmark, i) => {
       if (!canTraverse(landmark.biome, caps)) throw new Error(`${landmark.id} needs more than act ${act} holds`);
       const r = lo + ((hi - lo) * (i + 0.5)) / members.length;
@@ -366,7 +378,11 @@ export function planRegions(
     return true;
   }
 
-  for (const { rx, rz, biome } of nearbyBiomes?.(placed) ?? []) {
+  const biomeAt = (rx: number, rz: number): Biome => {
+    const id = regionId(rx, rz);
+    return placed.get(id)?.biome ?? biomes.get(id) ?? ambient(rx, rz);
+  };
+  for (const { rx, rz, biome } of nearbyBiomes?.(placed, biomeAt) ?? []) {
     const id = regionId(rx, rz);
     if (Math.max(Math.abs(rx), Math.abs(rz)) > WINDOW) {
       biomes.set(id, biome);

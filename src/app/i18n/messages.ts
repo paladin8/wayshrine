@@ -32,7 +32,7 @@ export interface Messages {
     readonly next: string;
     readonly close: string;
   };
-  readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta", { readonly title: string; readonly hint: string }>>;
+  readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern", { readonly title: string; readonly hint: string }>>;
   readonly promptRestore: string;
   readonly promptRestoreLandmark: string;
   readonly promptSkip: string;

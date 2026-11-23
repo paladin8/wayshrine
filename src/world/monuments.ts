@@ -43,7 +43,28 @@ export type HaikuSceneKind =
   | "winter-road-shelter"
   | "rice-hedge"
   | "washing-greens"
-  | "plum-sunrise";
+  | "plum-sunrise"
+  | "dusk-ducks"
+  | "harvest-moon"
+  | "blossom-haze"
+  | "cool-bell"
+  | "empty-bench"
+  | "warrior-poetry"
+  | "gale-riders"
+  | "rain-foxfire"
+  | "riverside-palanquins"
+  | "washing-fly"
+  | "mist-farewell"
+  | "double-cherry"
+  | "night-clover"
+  | "futami-offerings"
+  | "ise-renewal"
+  | "nara-hall-snow"
+  | "nikko-young-leaves"
+  | "hidden-fuji"
+  | "yoshino-hat"
+  | "koyasan-pheasant"
+  | "hakone-flurries";
 
 /** What the world needs to know about a text in order to place its monument. */
 export interface MonumentSpec {

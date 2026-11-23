@@ -14,6 +14,7 @@ import {
   newGame,
   recordClimbUse,
   recordGetaUse,
+  recordLanternUse,
   recordSnowshoeUse,
   resetGame,
   resetShrines,
@@ -100,6 +101,18 @@ describe("game state", () => {
     expect(deserialize(serialize(used), world).getaUsed).toBe(true);
     expect(resetShrines(used).getaUsed).toBe(false);
     expect(resetGame(used).getaUsed).toBe(false);
+  });
+
+  it("records the first lantern lighting once, survives reload, and defaults old saves to unused", () => {
+    const original = withLandmarks(CAPABILITY_THRESHOLDS.lantern);
+    expect(original.lanternUsed).toBe(false);
+    const used = recordLanternUse(original);
+    expect(recordLanternUse(used)).toBe(used);
+    const { lanternUsed: _absent, ...old } = serialize(used);
+    expect(deserialize(old, world).lanternUsed).toBe(false);
+    expect(deserialize(serialize(used), world).lanternUsed).toBe(true);
+    expect(resetShrines(used).lanternUsed).toBe(false);
+    expect(resetGame(used).lanternUsed).toBe(false);
   });
 
   it("records snowshoe first use once, survives reload, and defaults old saves to unused", () => {
@@ -194,34 +207,40 @@ describe("exploration", () => {
 });
 
 describe("landmark map reveals", () => {
-  const start = world.region(0, 0).site;
-  // Reveals follow the story: by act, then nearest the start within an act.
-  const central = [...world.landmarks].sort((a, b) =>
-    a.landmark!.act - b.landmark!.act ||
-    Math.hypot(a.site.x - start.x, a.site.z - start.z) - Math.hypot(b.site.x - start.x, b.site.z - start.z));
-  const names = (from: number, to: number) => central.slice(from, to).map((region) => region.landmark!.id);
+  const names = (from: number, to: number) => new Set(world.landmarks.slice(from, to).map((region) => region.landmark!.id));
   const rubbings = (count: number) => Array.from({ length: count }, (_, i) => `rubbing-${i}`);
 
-  it("reveals a central landmark for every seven unique rubbings after accounting for restored landmarks", () => {
-    let state = restoreShrine(newGame(world.seed), central[0]!);
-    state = discoverNear(state, world, central[1]!.shrine);
-    expect(isLandmarkRevealed(state, central[0]!)).toBe(false);
-    expect(isLandmarkRevealed(state, central[1]!)).toBe(false);
+  it("reveals a landmark for every seven unique rubbings after accounting for restored landmarks", () => {
+    let state = restoreShrine(newGame(world.seed), landmark(0));
+    state = discoverNear(state, world, landmark(1).shrine);
+    expect(isLandmarkRevealed(state, landmark(0))).toBe(false);
+    expect(isLandmarkRevealed(state, landmark(1))).toBe(false);
 
     for (const [i, id] of rubbings(21).entries()) {
       state = revealLandmarks(collectMonument(state, id), world);
       expect(state.revealedLandmarks.size).toBe(Math.max(0, Math.floor((i + 1) / 7) - 1));
     }
-    expect([...state.revealedLandmarks]).toEqual(names(1, 3));
+    expect(state.revealedLandmarks).toEqual(names(1, 3));
     expect(revealLandmarks(collectMonument(state, "rubbing-0"), world)).toBe(state);
 
-    state = revealLandmarks(restoreShrine(state, central[1]!), world);
-    expect([...state.revealedLandmarks]).toEqual(names(2, 3));
-    state = revealLandmarks(restoreShrine(state, central[4]!), world);
+    state = revealLandmarks(restoreShrine(state, landmark(1)), world);
+    expect(state.revealedLandmarks).toEqual(names(2, 3));
+    state = revealLandmarks(restoreShrine(state, landmark(4)), world);
     expect(state.revealedLandmarks.size).toBe(0);
-    state = revealLandmarks(unrestoreShrine(state, central[4]!), world);
-    expect([...state.revealedLandmarks]).toEqual(names(2, 3));
-    expect([...revealLandmarks(resetShrines(state), world).revealedLandmarks]).toEqual(names(0, 3));
+    state = revealLandmarks(unrestoreShrine(state, landmark(4)), world);
+    expect(state.revealedLandmarks).toEqual(names(2, 3));
+    expect(revealLandmarks(resetShrines(state), world).revealedLandmarks).toEqual(names(0, 3));
+  });
+
+  it("varies the first reveal with the seed even when landmark positions are identical", () => {
+    const firstReveals = new Set<string>();
+    const collected = rubbings(7);
+    for (let i = 0; i < 20; i++) {
+      const seed = `reveal-${i}`;
+      const { revealedLandmarks } = revealLandmarks({ ...newGame(seed), collected }, { ...world, seed });
+      for (const id of revealedLandmarks) firstReveals.add(id);
+    }
+    expect(firstReveals).toEqual(names(0, 3));
   });
 
   it("far sight marks every remaining landmark once enough are restored, and not before", () => {
@@ -232,21 +251,22 @@ describe("landmark map reveals", () => {
     for (const r of world.landmarks.slice(FAR_SIGHT_STARS)) expect(isLandmarkRevealed(after, r)).toBe(true);
   });
 
-  it("recalculates old markers from collected rubbings and actual distance to the start", () => {
+  it("recalculates old markers from collected rubbings and the seed", () => {
     const saved = {
       ...serialize(newGame(world.seed)),
       restored: Array.from({ length: 20 }, (_, i) => world.region(40, i).id),
       shrineCredits: 10,
-      revealedLandmarks: [central.at(-1)!.landmark!.id],
+      revealedLandmarks: [world.landmarks.at(-1)!.landmark!.id],
     };
     expect(deserialize(saved, world).revealedLandmarks.size).toBe(0);
     const collected = rubbings(7);
+    const expected = revealLandmarks({ ...newGame(world.seed), collected }, world).revealedLandmarks;
     const loaded = deserialize({ ...saved, collected }, world);
-    expect([...loaded.revealedLandmarks]).toEqual(names(0, 1));
-    expect([...deserialize({ v: 3, seed: world.seed, restored: [], explored: [], collected }, world).revealedLandmarks])
-      .toEqual(names(0, 1));
+    expect(loaded.revealedLandmarks).toEqual(expected);
+    expect(deserialize({ v: 3, seed: world.seed, restored: [], explored: [], collected }, world).revealedLandmarks)
+      .toEqual(expected);
     const reversedWorld = { ...world, landmarks: [...world.landmarks].reverse() };
-    expect([...deserialize({ ...saved, collected }, reversedWorld).revealedLandmarks]).toEqual(names(0, 1));
+    expect(deserialize({ ...saved, collected }, reversedWorld).revealedLandmarks).toEqual(expected);
   });
 });
 

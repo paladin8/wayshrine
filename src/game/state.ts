@@ -1,3 +1,4 @@
+import { createRng } from "../core";
 import { FAR_SIGHT_STARS, capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
 
 /**
@@ -22,6 +23,7 @@ export interface GameState {
   /** The first time the walking sticks came out on a mountain. */
   readonly climbingUsed: boolean;
   readonly getaUsed: boolean;
+  readonly lanternUsed: boolean;
 }
 
 /** A region counts as seen when the player is within this distance of its shrine. */
@@ -31,7 +33,7 @@ export const REVEAL_DISTANCE = 28;
 const RUBBINGS_PER_REVEAL = 7;
 
 export function newGame(seed: string): GameState {
-  return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [], boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false };
+  return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [], boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false, lanternUsed: false };
 }
 
 /** Restores a region's shrine. Restoring twice has no further effect. */
@@ -53,18 +55,18 @@ export function isLandmarkRevealed(state: GameState, region: Region): boolean {
   return region.landmark !== null && state.revealedLandmarks.has(region.landmark.id);
 }
 
-/** Spend one slot per restored landmark, then mark the unrestored landmarks in story order (by act, nearest the start within an act), so a star never points past the gear the player has; far sight marks them all. */
+/** Spend one slot per restored landmark, then mark the unrestored landmarks by act in a seeded order. Far sight marks them all. */
 export function revealLandmarks(state: GameState, world: World): GameState {
   const unrestored = world.landmarks.filter((region) => !isRestored(state, region));
   const restored = world.landmarks.length - unrestored.length;
   const goldStars =
     restored >= FAR_SIGHT_STARS ? unrestored.length : Math.max(0, Math.floor(state.collected.length / RUBBINGS_PER_REVEAL) - restored);
-  const start = world.region(0, 0).site;
-  const distance = (region: Region): number => Math.hypot(region.site.x - start.x, region.site.z - start.z);
+  const order = createRng(world.seed).fork("landmark-reveals");
   const revealedLandmarks = new Set(
-    unrestored.sort((a, b) => a.landmark!.act - b.landmark!.act || distance(a) - distance(b))
+    unrestored.map(({ landmark }) => ({ landmark: landmark!, rank: order.fork(landmark!.id).next() }))
+      .sort((a, b) => a.landmark.act - b.landmark.act || a.rank - b.rank || a.landmark.order - b.landmark.order)
       .slice(0, goldStars)
-      .map((region) => region.landmark!.id),
+      .map(({ landmark }) => landmark.id),
   );
   if (
     revealedLandmarks.size === state.revealedLandmarks.size &&
@@ -129,6 +131,11 @@ export function recordGetaUse(state: GameState): GameState {
   return state.getaUsed ? state : { ...state, getaUsed: true };
 }
 
+/** Records the first lighting of the lantern. */
+export function recordLanternUse(state: GameState): GameState {
+  return state.lanternUsed ? state : { ...state, lanternUsed: true };
+}
+
 /** Records the first time the walking sticks are drawn on a mountain. */
 export function recordClimbUse(state: GameState): GameState {
   return state.climbingUsed ? state : { ...state, climbingUsed: true };
@@ -144,8 +151,8 @@ export function unrestoreShrine(state: GameState, region: Region): GameState {
 
 /** Un-restores every shrine, keeping what has been explored. For debugging. */
 export function resetShrines(state: GameState): GameState {
-  if (state.restored.size === 0 && state.revealedLandmarks.size === 0 && state.shrineCredits === 0 && !state.boatLaunched && !state.snowshoesUsed && !state.climbingUsed && !state.getaUsed) return state;
-  return { ...state, restored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false };
+  if (state.restored.size === 0 && state.revealedLandmarks.size === 0 && state.shrineCredits === 0 && !state.boatLaunched && !state.snowshoesUsed && !state.climbingUsed && !state.getaUsed && !state.lanternUsed) return state;
+  return { ...state, restored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false, lanternUsed: false };
 }
 
 /** Back to a brand-new game on the same seed. For debugging. */
@@ -201,6 +208,7 @@ export interface SaveV4 extends Omit<SaveV3, "v"> {
   readonly snowshoesUsed?: boolean;
   readonly climbingUsed?: boolean;
   readonly getaUsed?: boolean;
+  readonly lanternUsed?: boolean;
   readonly v: 4;
   readonly revealedLandmarks: readonly string[];
   readonly shrineCredits: number;
@@ -221,6 +229,7 @@ export function serialize(state: GameState): SaveV4 {
     snowshoesUsed: state.snowshoesUsed,
     climbingUsed: state.climbingUsed,
     getaUsed: state.getaUsed,
+    lanternUsed: state.lanternUsed,
   };
 }
 
@@ -243,6 +252,7 @@ export function deserialize(data: SaveData, world?: World): GameState {
       snowshoesUsed: data.snowshoesUsed === true,
       climbingUsed: data.climbingUsed === true,
       getaUsed: data.getaUsed === true,
+      lanternUsed: data.lanternUsed === true,
     }, current);
   }
   if (state.restored.size === 0) return revealLandmarks(state, current);

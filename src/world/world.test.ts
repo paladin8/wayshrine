@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { neighborsOf, REGION_REACH } from "./coords";
+import { neighborsOf, regionId, REGION_REACH } from "./coords";
 import {
   CAPABILITY_THRESHOLDS,
   HOME_RADIUS,
@@ -151,22 +151,33 @@ describe("landmarks", () => {
     }
   });
 
-  it("spreads acts around the start rather than in one direction", () => {
+  it("spreads acts around the start and varies the direction between successive acts", () => {
     // The bearing of the act centroids should not all fall in one half-plane.
+    const acts = [...new Set(LANDMARKS.map((l) => l.act))];
     let spread = 0;
+    let clockwise = 0;
+    let turns = 0;
     for (const seed of SEEDS.slice(0, 100)) {
       const w = createWorld(seed);
-      const bearings = [2, 3, 4].map((act) => {
+      const bearings = acts.map((act) => {
         const rs = w.landmarks.filter((r) => r.landmark!.act === act);
         const x = rs.reduce((p, r) => p + r.coord.rx, 0);
         const z = rs.reduce((p, r) => p + r.coord.rz, 0);
         return Math.atan2(z, x);
       });
-      const unit = bearings.map((b) => ({ x: Math.cos(b), z: Math.sin(b) }));
+      const unit = bearings.slice(1, 4).map((b) => ({ x: Math.cos(b), z: Math.sin(b) }));
       const sum = Math.hypot(unit.reduce((p, u) => p + u.x, 0), unit.reduce((p, u) => p + u.z, 0));
       if (sum < 2.5) spread++;
+      for (let i = 1; i < bearings.length; i++) {
+        const turn = Math.sin(bearings[i]! - bearings[i - 1]!);
+        if (turn === 0) continue;
+        turns++;
+        if (turn > 0) clockwise++;
+      }
     }
     expect(spread).toBeGreaterThan(50);
+    expect(clockwise / turns).toBeGreaterThan(0.35);
+    expect(clockwise / turns).toBeLessThan(0.65);
   });
 });
 
@@ -231,17 +242,22 @@ describe("biome distribution", () => {
     }
   });
 
-  it("keeps the later biomes out of the inner world, so the early acts stay as they were", () => {
+  it("limits later biomes in the inner world to the surroundings of matching landmarks", () => {
     // A cluster takes its biome from its site's distance, and reaches about a cluster's width either side.
     const inner = OUTER_START - CLUSTER_SPACING;
     const outer = new Set(["marsh", "forest", "volcanic", "sea"]);
     for (const seed of SEEDS.slice(0, 20)) {
       const w = createWorld(seed);
+      const outerLandmarks = w.landmarks.filter((r) => outer.has(r.biome));
       for (let rx = -inner; rx <= inner; rx++) {
         for (let rz = -inner; rz <= inner; rz++) {
           if (Math.hypot(rx, rz) > inner) continue;
           const r = w.region(rx, rz);
-          if (!r.landmark) expect(outer.has(r.biome), `${seed} ${r.id}`).toBe(false);
+          if (r.landmark || !outer.has(r.biome)) continue;
+          const nearLandmark = outerLandmarks.some(({ biome, coord }) =>
+            biome === r.biome && Math.hypot(rx - coord.rx, rz - coord.rz) <= 3,
+          );
+          expect(nearLandmark, `${seed} ${r.id}`).toBe(true);
         }
       }
     }
@@ -267,14 +283,15 @@ describe("biome distribution", () => {
     expect(same / pairs).toBeGreaterThan(0.5);
   });
 
-  it("gives most ordinary regions bordering a landmark the landmark's biome", () => {
+  it("gives every sampled landmark a same-biome edge neighbor and matches most borders", () => {
     let same = 0;
     let pairs = 0;
     for (const seed of SEEDS.slice(0, 20)) {
       const world = createWorld(seed);
       for (const landmark of world.landmarks) {
-        for (const { rx, rz } of neighborsOf(landmark.coord)) {
-          const neighbor = world.region(rx, rz);
+        const neighbors = neighborsOf(landmark.coord).map(({ rx, rz }) => world.region(rx, rz));
+        expect(neighbors.some((neighbor) => neighbor.biome === landmark.biome), `${seed} ${landmark.landmark!.id}`).toBe(true);
+        for (const neighbor of neighbors) {
           if (neighbor.landmark) continue;
           pairs++;
           if (neighbor.biome === landmark.biome) same++;
@@ -282,6 +299,27 @@ describe("biome distribution", () => {
       }
     }
     expect(same / pairs).toBeGreaterThan(0.8);
+  });
+
+  it("forms connected biome patches around landmarks of every biome", () => {
+    for (const seed of SEEDS.slice(0, 20)) {
+      const world = createWorld(seed);
+      for (const landmark of world.landmarks) {
+        const connected = new Set([landmark.id]);
+        const queue = [landmark.coord];
+        for (const coord of queue) {
+          for (const neighbor of neighborsOf(coord)) {
+            const { rx, rz } = neighbor;
+            if (Math.hypot(rx - landmark.coord.rx, rz - landmark.coord.rz) > 3) continue;
+            const id = regionId(rx, rz);
+            if (connected.has(id) || world.region(rx, rz).biome !== landmark.biome) continue;
+            connected.add(id);
+            queue.push(neighbor);
+          }
+        }
+        expect(connected.size, `${seed} ${landmark.landmark!.id}`).toBeGreaterThanOrEqual(4);
+      }
+    }
   });
 
   it("fades the later biomes in to their share, and every biome occurs", () => {
@@ -293,7 +331,7 @@ describe("biome distribution", () => {
       for (let rx = -28; rx <= 28; rx++) {
         for (let rz = -28; rz <= 28; rz++) {
           const r = w.region(rx, rz);
-          if (r.biome === "dunes") expect(Math.hypot(rx - dunes.coord.rx, rz - dunes.coord.rz)).toBeLessThanOrEqual(2);
+          if (r.biome === "dunes") expect(Math.hypot(rx - dunes.coord.rx, rz - dunes.coord.rz)).toBeLessThanOrEqual(3);
           if (r.landmark || Math.hypot(rx, rz) < OUTER_START + 4) continue;
           far++;
           seen.set(r.biome, (seen.get(r.biome) ?? 0) + 1);

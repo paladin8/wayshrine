@@ -8,9 +8,11 @@ describe("musicSetFor", () => {
     expect(musicSetFor(true, true).background).toBe("snowline-walk");
     expect(musicSetFor(true, true, true).background).toBe("ridgewalk");
     expect(musicSetFor(true, true, true, true).background).toBe("marshwalk");
+    expect(musicSetFor(true, true, true, true, true).background).toBe("lantern-trail");
   });
 
   it("lets the latest first use win", () => {
     expect(musicSetFor(false, false, true)).toBe(MUSIC_SETS[3]);
+    expect(musicSetFor(false, false, false, false, true)).toBe(MUSIC_SETS[5]);
   });
 });

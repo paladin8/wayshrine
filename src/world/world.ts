@@ -1,5 +1,5 @@
 import { createNoise, createRng, type Rng } from "../core";
-import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
+import { REGION_SIZE, neighborsOf, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
 import { footprintHalf, HOME_RADIUS, LANDMARK_BLEND, LANDMARK_REACH_MARGIN, planRegions, type Landmark, type LandmarkLayout } from "./landmarks";
 import type { Biome } from "./terrain";
 
@@ -74,7 +74,7 @@ export function ambientWeights(d: number): ReadonlyArray<readonly [Biome, number
  */
 export const CLUSTER_SPACING = 3;
 export const CLUSTER_NOISE = 0.1;
-const LANDMARK_BIOME_RADIUS = 2;
+const LANDMARK_BIOME_RADIUS = 3;
 
 function pickBiome(rng: Rng, d: number): Biome {
   let roll = rng.next();
@@ -149,35 +149,64 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
     return hit;
   }
 
-  function nearbyBiomes(landmarks: ReadonlyMap<string, Landmark>) {
-    const candidates = new Map<string, RegionCoord & { biome: Biome; distanceSquared: number }>();
+  function* nearbyBiomes(
+    landmarks: ReadonlyMap<string, Landmark>,
+    biomeAt: (rx: number, rz: number) => Biome,
+  ): Generator<RegionCoord & { biome: Biome }> {
+    const radius = LANDMARK_BIOME_RADIUS;
+    const candidates = new Map<string, RegionCoord & { biome: Biome; center: RegionCoord; distanceSquared: number }>();
     for (const [id, { biome }] of landmarks) {
       const center = parseRegionId(id);
-      const isOuter = OUTER_BIOME_SHARES.some(([outer]) => biome === outer);
-      for (let dz = -LANDMARK_BIOME_RADIUS; dz <= LANDMARK_BIOME_RADIUS; dz++) {
-        for (let dx = -LANDMARK_BIOME_RADIUS; dx <= LANDMARK_BIOME_RADIUS; dx++) {
+      for (let dz = -radius; dz <= radius; dz++) {
+        for (let dx = -radius; dx <= radius; dx++) {
           const distanceSquared = dx * dx + dz * dz;
-          if (distanceSquared === 0 || distanceSquared > LANDMARK_BIOME_RADIUS ** 2) continue;
+          if (distanceSquared === 0 || distanceSquared > radius ** 2) continue;
           const rx = center.rx + dx;
           const rz = center.rz + dz;
-          const distanceFromHome = Math.hypot(rx, rz);
-          if (distanceFromHome <= HOME_RADIUS || (isOuter && distanceFromHome <= OUTER_START - CLUSTER_SPACING)) continue;
+          if (Math.hypot(rx, rz) <= HOME_RADIUS) continue;
           const neighbor = regionId(rx, rz);
           if (landmarks.has(neighbor)) continue;
           // The nearest landmark wins; equal distances keep the earlier landmark.
           if (distanceSquared < (candidates.get(neighbor)?.distanceSquared ?? Infinity)) {
-            candidates.set(neighbor, { rx, rz, biome, distanceSquared });
+            candidates.set(neighbor, { rx, rz, biome, center, distanceSquared });
           }
         }
       }
     }
-    return [...candidates.entries()]
-      .filter(([id, { distanceSquared }]) => {
-        const chance = distanceSquared === 1 ? 1 : distanceSquared === 2 ? 0.85 : 0.55;
-        return root.fork(`landmark-biome:${id}`).next() < chance;
-      })
-      .map(([, candidate]) => candidate)
-      .sort((a, b) => a.distanceSquared - b.distanceSquared);
+    // Extend each patch from its center. A region can join only along a matching edge toward the landmark.
+    const ranked = [...candidates.entries()].sort(([, a], [, b]) => a.distanceSquared - b.distanceSquared);
+    for (const [id, candidate] of ranked) {
+      const { biome, center, distanceSquared } = candidate;
+      const chance = 1 - Math.max(0, distanceSquared - 4) * 0.07;
+      if (chance < 1 && root.fork(`landmark-biome:${id}`).next() >= chance) continue;
+      const hasMatchingEdge = neighborsOf(candidate).some(({ rx, rz }) =>
+        (rx - center.rx) ** 2 + (rz - center.rz) ** 2 < distanceSquared && biomeAt(rx, rz) === biome,
+      );
+      if (hasMatchingEdge) yield candidate;
+    }
+
+    // Competing landmarks and protected routes can leave a landmark without an edge neighbor.
+    // Try another neighbor once the planner has accepted or rejected the first pass.
+    for (const [id, { biome }] of landmarks) {
+      const neighbors = neighborsOf(parseRegionId(id));
+      if (neighbors.some(({ rx, rz }) => biomeAt(rx, rz) === biome)) continue;
+      neighbors.sort((a, b) => Math.hypot(b.rx, b.rz) - Math.hypot(a.rx, a.rz));
+      for (const neighbor of neighbors) {
+        const { rx, rz } = neighbor;
+        const neighborId = regionId(rx, rz);
+        if (landmarks.has(neighborId) || Math.hypot(rx, rz) <= HOME_RADIUS) continue;
+        const previous = biomeAt(rx, rz);
+        const wouldIsolate = neighborsOf(neighbor).some((other) =>
+          landmarks.get(regionId(other.rx, other.rz))?.biome === previous &&
+          !neighborsOf(other).some((support) =>
+            (support.rx !== rx || support.rz !== rz) && biomeAt(support.rx, support.rz) === previous,
+          ),
+        );
+        if (wouldIsolate) continue;
+        yield { rx, rz, biome };
+        if (biomeAt(rx, rz) === biome) break;
+      }
+    }
   }
 
   let plan: ReturnType<typeof planRegions> | null = null;

@@ -8,7 +8,7 @@ import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
-import type { CharacterVariant, GearId } from "./character";
+import type { CharacterVariant, GearId, LanternLighting } from "./character";
 import { createFootprints } from "./footprints";
 import { buildPlayer } from "./player-mesh";
 import { buildLandmark } from "./landmark-mesh";
@@ -71,6 +71,8 @@ export interface StageView {
   readonly strapGear?: GearId;
   /** While the walking sticks are first drawn on a mountain: progress through that moment, 0 to 1. */
   readonly drawing?: number;
+  /** First lighting of the lantern, including how much the flame has caught. */
+  readonly lighting?: LanternLighting;
   /** Which traveller body to show (default female). */
   readonly character?: CharacterVariant;
   /** Abilities held, so the traveller wears or carries the gear the ground underfoot calls for. */
@@ -272,7 +274,7 @@ export function createStage(
     camera.top = size / 2;
     camera.bottom = -size / 2;
     camera.updateProjectionMatrix();
-    const half = SHADOW_NEAR + (SHADOW_WIDE - SHADOW_NEAR) * zoom;
+    const half = SHADOW_NEAR + (SHADOW_WIDE - SHADOW_NEAR) * Math.max(0, zoom);
     Object.assign(sun.shadow.camera, { left: -half, right: half, top: half, bottom: -half });
     sun.shadow.camera.updateProjectionMatrix();
   }
@@ -308,14 +310,16 @@ export function createStage(
       const awakening = view.awakening ?? null;
       awakeningRegion = awakening?.regionId ?? null;
       awakeningProgress = awakening?.progress ?? 0;
-      const zoom = awakening?.zoom ?? Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0);
+      const lighting = view.lighting;
+      const closeUp = lighting ? smooth(lighting.progress / 0.28) * (1 - smooth((lighting.progress - 0.67) / 0.33)) : 0;
+      const zoom = awakening?.zoom ?? (Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0) - 0.17 * closeUp);
       const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       const pos = view.player;
       setLifeTime(clock);
 
       // The camera follows the player, or the shrine being restored.
       const focus = awakening ? world.regionById(awakening.regionId).shrine : pos;
-      const elevation = terrain.groundAt(focus.x, focus.z);
+      const elevation = terrain.groundAt(focus.x, focus.z) + 0.65 * closeUp;
       if (!targetReady) {
         target.set(focus.x, elevation, focus.z);
         targetReady = true;
@@ -378,8 +382,11 @@ export function createStage(
       } else {
         player.setDraw(null);
       }
+      if (worn === "lantern" && !view.state.lanternUsed) worn = null;
+      if (lighting) worn = lighting.progress >= 0.10 ? "lantern" : null;
       player.setGear(worn);
-      for (const step of player.animate(dt, strapping === undefined && drawing === undefined && (view.moving ?? false))) {
+      player.setLanternLighting(lighting);
+      for (const step of player.animate(dt, strapping === undefined && drawing === undefined && !lighting && (view.moving ?? false))) {
         if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);
       }
       footprints.update(dt);

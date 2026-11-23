@@ -22,6 +22,7 @@ import {
   recordBoatLaunch,
   recordClimbUse,
   recordGetaUse,
+  recordLanternUse,
   recordSnowshoeUse,
   nextShrine,
   requirementOf,
@@ -57,6 +58,7 @@ import { createSettingsPanel } from "./settings-panel";
 const HINT_SECONDS = 1.5;
 const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   meadow: "walk-meadow",
+  forest: "walk-meadow",
   snow: "walk-snow",
   mountain: "walk-mountain",
   marsh: "walk-marsh",
@@ -78,7 +80,7 @@ const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
   shrine: "dawn-reverence",
   landmark: "radiant-arrival",
 };
-/** Alternate shrine swell shared by the Snowline and Marshwalk music sets. */
+/** Alternate shrine swell shared by the Snowline, Marshwalk, and Lantern music sets. */
 const WINTER_SHRINE_SWELL: CueId = "winter-light-restored";
 const WINTER_SHRINE_FADE_IN = 2.4;
 const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), WINTER_SHRINE_SWELL, "haiku-bell"] as const;
@@ -93,6 +95,8 @@ const SNOWSHOE_MOMENT_SECONDS = 4.6;
 const GETA_MOMENT_SECONDS = 4.2;
 /** How long the walking sticks take to come off the pack and be planted the first time. */
 const CLIMB_MOMENT_SECONDS = 5.2;
+const LANTERN_MOMENT_SECONDS = 4.6;
+const LANTERN_IGNITION_AT = 0.32;
 /** Length of the slow crossfade between background themes when gear is first used. */
 const GEAR_FADE_SECONDS = 5;
 const KEY_UP = ["KeyW", "ArrowUp"];
@@ -246,9 +250,11 @@ export function startApp(container: HTMLElement): void {
   let climbMusicPreview = false;
   let getaMoment: { t: number } | null = null;
   let getaMusicPreview = false;
+  let lanternMoment: { t: number } | null = null;
+  let lanternMusicPreview = false;
   /** True while a debug preview waits (negative time) for the previous theme to fade back before it starts. */
-  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0;
-  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null;
+  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0;
+  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
@@ -265,9 +271,13 @@ export function startApp(container: HTMLElement): void {
     const afterClimb = geta || (climbMoment && climbMoment.t < 0 ? false
       : climbMusicPreview || (!boatTrial && !earlierPreview && state.climbingUsed));
     const earlierThanGeta = earlierPreview || climbMoment !== null || climbMusicPreview;
-    const afterGeta = getaMoment && getaMoment.t < 0 ? false
-      : getaMusicPreview || (!boatTrial && !earlierThanGeta && state.getaUsed);
-    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta);
+    const afterGeta = lanternMusicPreview || (getaMoment && getaMoment.t < 0 ? false
+      : getaMusicPreview || (!boatTrial && !earlierThanGeta && state.getaUsed));
+    const earlierGearPreview = boatTrial || snowshoeMusicPreview || climbMusicPreview || getaMusicPreview;
+    const afterLantern = lanternMoment
+      ? lanternMoment.t >= LANTERN_MOMENT_SECONDS * LANTERN_IGNITION_AT
+      : lanternMusicPreview || (!earlierGearPreview && state.lanternUsed);
+    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta, afterLantern);
   };
 
   const startVoyage = (path: BoatLaunch, preview = false): void => {
@@ -281,6 +291,7 @@ export function startApp(container: HTMLElement): void {
     snowshoeMusicPreview = false;
     climbMusicPreview = false;
     getaMusicPreview = false;
+    lanternMusicPreview = false;
   };
 
   const stopGearMoments = (): void => {
@@ -289,10 +300,12 @@ export function startApp(container: HTMLElement): void {
     snowshoeMoment = null;
     climbMoment = null;
     getaMoment = null;
+    lanternMoment = null;
     boatTrial = false;
     snowshoeMusicPreview = false;
     climbMusicPreview = false;
     getaMusicPreview = false;
+    lanternMusicPreview = false;
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
@@ -409,6 +422,7 @@ export function startApp(container: HTMLElement): void {
       previewSnowshoeUnlock: () => previewGearUnlock("snowshoes"),
       previewClimbUnlock: () => previewGearUnlock("climbing"),
       previewGetaUnlock: () => previewGearUnlock("geta"),
+      previewLanternUnlock: () => previewGearUnlock("lantern"),
       previewClimbUse: () => {
         beginPreview();
         // If this save is already on the ridge theme, let the preview fade back to the snow theme first.
@@ -424,6 +438,13 @@ export function startApp(container: HTMLElement): void {
         const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[3].background ? -3.1 : 0;
         getaMusicPreview = true;
         getaMoment = { t: lead };
+      },
+      previewLanternUse: () => {
+        beginPreview();
+        const playing = music.status().track;
+        const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[4].background ? -3.1 : 0;
+        lanternMusicPreview = true;
+        lanternMoment = { t: lead };
       },
       previewFirstVoyage,
       previewSnowshoeUse: () => {
@@ -510,14 +531,17 @@ export function startApp(container: HTMLElement): void {
           const unlocksGear = count === CAPABILITY_THRESHOLDS.boat ? "boat"
             : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes"
             : count === CAPABILITY_THRESHOLDS.climbing ? "climbing"
-            : count === CAPABILITY_THRESHOLDS.geta ? "geta" : null;
+            : count === CAPABILITY_THRESHOLDS.geta ? "geta"
+            : count === CAPABILITY_THRESHOLDS.lantern ? "lantern" : null;
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
           const backgroundTrack = selectedMusicSet().background;
           awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false, unlocksGear, backgroundTrack };
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           cues.play(AWAKENING_BURST);
-          const useWinterSwell = kind === "shrine" && (backgroundTrack === "snowline-walk" || backgroundTrack === "marshwalk");
+          const useWinterSwell = kind === "shrine" && (
+            backgroundTrack === "snowline-walk" || backgroundTrack === "marshwalk" || backgroundTrack === "lantern-trail"
+          );
           if (useWinterSwell) cues.play(WINTER_SHRINE_SWELL, WINTER_SHRINE_FADE_IN);
           else cues.play(AWAKENING_SWELLS[kind]);
         } else {
@@ -579,6 +603,11 @@ export function startApp(container: HTMLElement): void {
       facing = Math.atan2(dir.x, dir.z);
       if (caps.has("boat") && !state.boatLaunched && !boatTrial && !onWater(terrain, from) && onWater(terrain, pos)) {
         startVoyage(planBoatLaunch(terrain, caps, obstacles, from, pos));
+      } else if (moving && caps.has("lantern") && !state.lanternUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "forest") {
+        state = recordLanternUse(state);
+        saveGame(state);
+        lanternMoment = { t: 0 };
+        overviewTime = OVERVIEW_SECONDS;
       } else if (moving && caps.has("snowshoes") && !state.snowshoesUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "snow") {
         state = recordSnowshoeUse(state);
         saveGame(state);
@@ -626,6 +655,10 @@ export function startApp(container: HTMLElement): void {
     if (getaMoment) {
       getaMoment.t += dt;
       if (getaMoment.t >= GETA_MOMENT_SECONDS) getaMoment = null;
+    }
+    if (lanternMoment) {
+      lanternMoment.t += dt;
+      if (lanternMoment.t >= LANTERN_MOMENT_SECONDS) lanternMoment = null;
     }
     if (snowshoeMoment) {
       snowshoeMoment.t += dt;
@@ -721,8 +754,8 @@ export function startApp(container: HTMLElement): void {
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     // Keep the background steady through a restoration if debug selects another track.
-    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview) ? GEAR_FADE_SECONDS : undefined);
-    const nextMovementCue = moving && !voyageFrame
+    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview || lanternMusicPreview) ? GEAR_FADE_SECONDS : undefined);
+    const nextMovementCue = moving && !voyageFrame && !lanternMoment
       ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
       : undefined;
     if (nextMovementCue !== movementCue) {
@@ -736,8 +769,14 @@ export function startApp(container: HTMLElement): void {
     music.setDuck(swellDuck);
     music.update(dt);
 
+    const lightingProgress = lanternMoment ? Math.max(0, lanternMoment.t / LANTERN_MOMENT_SECONDS) : undefined;
+    const lighting = lightingProgress === undefined ? undefined : {
+      progress: lightingProgress,
+      flame: Math.min(1, Math.max(0, (lightingProgress - LANTERN_IGNITION_AT) / 0.12)),
+    };
     stage.render(dt, {
       player: pos, facing, state, moving, drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : undefined, strapGear: getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      lighting,
       voyage: voyageFrame,
     });
     requestAnimationFrame(frame);

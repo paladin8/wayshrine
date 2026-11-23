@@ -52,6 +52,44 @@ describe("landmark model sidecars", () => {
         expect(g.reach).toBeGreaterThan(0);
       });
 
+      it("lets the player walk from the arrival spot out of the footprint", () => {
+        // Flood-fill a fine grid of spots a player (radius 0.3, as in game/player) can occupy, from the arrival
+        // spot; some must lie beyond the footprint edge. Catches arrival spots boxed in by solids.
+        // Islands in a water region are left by boat, so they're exempt.
+        if (landmarkWaterLevel(spec.biome) !== undefined) return;
+        const R = 0.3;
+        const step = 0.2;
+        const lim = g.half + 1.0;
+        const n = Math.ceil((2 * lim) / step);
+        const buckets = new Map<string, (readonly [number, number, number])[]>();
+        for (const s of g.solids) {
+          const key = `${Math.floor(s[0])},${Math.floor(s[1])}`;
+          (buckets.get(key) ?? buckets.set(key, []).get(key)!).push(s);
+        }
+        const free = (x: number, z: number): boolean => {
+          for (let bx = Math.floor(x) - 1; bx <= Math.floor(x) + 1; bx++)
+            for (let bz = Math.floor(z) - 1; bz <= Math.floor(z) + 1; bz++)
+              for (const [sx, sz, r] of buckets.get(`${bx},${bz}`) ?? []) if (Math.hypot(x - sx, z - sz) < r + R) return false;
+          return true;
+        };
+        const at = (i: number) => -lim + i * step;
+        const start = [Math.round((g.stand[0] + lim) / step), Math.round((g.stand[1] + lim) / step)] as const;
+        const seen = new Set<number>([start[0] * n + start[1]]);
+        const queue: (readonly [number, number])[] = [start];
+        let out = false;
+        while (queue.length && !out) {
+          const [i, j] = queue.pop()!;
+          if (Math.max(Math.abs(at(i)), Math.abs(at(j))) > g.half + 0.5) out = true;
+          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const a = i + di, b = j + dj;
+            if (a < 0 || b < 0 || a > n || b > n || seen.has(a * n + b) || !free(at(a), at(b))) continue;
+            seen.add(a * n + b);
+            queue.push([a, b]);
+          }
+        }
+        expect(out).toBe(true);
+      });
+
       it("keeps every solid inside the footprint", () => {
         for (const [x, z] of g.solids) {
           expect(Math.abs(x)).toBeLessThanOrEqual(g.half + 0.5);

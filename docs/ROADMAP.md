@@ -6,11 +6,11 @@
 - World core: seeded RNG and noise, regions, biomes, landmark progression, no-soft-lock property tests (region level and tile level).
 - Game state: restore, capabilities, save format, player movement.
 - **Monuments and rubbings:** 1,009 Japanese texts on standing stones, spread 0 to 2 per region; worn until the region is restored; a glimmer when one is on screen; reading adds a loose sheet to the rubbing box (B). Haiku match their region's biome. See ADR 0005.
-- **Haiku scenery:** thirty-eight tagged rubbing sites have their own scenery, from an old pond and cherry bell to a windblown bamboo grove, foxfire in wheat, the Mogami rapids, footprints in fresh snow, a clouded moon reflected in water, a sparrow making way for a horse, and starlight on the rough sea toward Sado. The local effects follow the restoration wave.
+- **Haiku scenery:** all 59 tagged haiku have an authored scene beside their rubbing site. Local motion, lighting and effects follow the restoration wave.
 - **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap and compass toggles), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, three scores tied to first uses of gear, volume/mute controls.
 - **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 13, 20, 30, 41 and 49 restored landmarks instead of at shrines, and far sight at 56; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; compass points at the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
-- **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order (by act, then distance from the start), exploration tracking, corner map and expanded map (M), and debug reset tools.
+- **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Ordinary shrines:** biome-specific gates and shelters. Land shrines sit on flat terraces that blend into the surrounding hill, lake shrines stand on pilings, and coastal torii rise directly from the sea. Water shrines can be restored from the boat.
 - **Scenery:** seeded regional palettes and brushwork, cedar forests, reed beds and marsh pools, basalt and ash seams, separate lake ripples and ocean breakers. Lighting, mist, spray, and cinders vary by biome; the restoration wave brings the details to life.
 - **Rare wildlife:** roughly one in four regions has a seeded large-animal sighting after restoration. Sika deer graze and stroll, foxes dart, and boars rest between charges. Serow pick their way along slopes, cranes wade and peck, otters paddle in bursts, dolphins leap, and whales surface and dive. Nara and Itsukushima share the sika deer model with wild herds.
@@ -21,7 +21,7 @@
 
 ## Next
 0. Landmarks: screen-edge glow and compass guidance for revealed landmarks, skyline peek for tall landmarks, real looks, props and player visuals for the later biomes and abilities (placeholders now), more landmark models.
-1. Extend haiku scenery to more tags in `content/haiku-scenery.json` and refine biome edge shapes.
+1. Refine biome edge shapes.
 2. **Ability acquisition.** The boat prototype announces the unlock at three restored landmarks and uses the first boarding to transition between two themes. The first step on snow with snowshoes plays a cue and brings in Snowline Walk. Extend the reward and first-use pattern to the other abilities. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.

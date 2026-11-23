@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { blade, branch, TAU, TIMBER, type BuildScene, type Scenery } from "./haiku-scenery";
 
-function buildHorse(art: Scenery) {
+export function buildHorse(art: Scenery) {
   const chestnut = 0x9c6547;
   const mane = 0x52403a;
   const horse = new THREE.Group();

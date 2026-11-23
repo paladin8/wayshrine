@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { buildBoat, buildScullingOar, buildWake } from "./boat-mesh";
-import { buildCharacter, type Character, type CharacterVariant, type FootStep, type GearId } from "./character";
+import { buildCharacter, type Character, type CharacterVariant, type FootStep, type GearId, type LanternLighting } from "./character";
 
 export interface PlayerMesh {
   readonly group: THREE.Group;
@@ -12,6 +12,7 @@ export interface PlayerMesh {
   /** Advance the walk cycle: `walking` is whether the player is moving this frame. Returns the feet that landed. */
   /** Draw the walking sticks from the pack: progress 0 to 1, or null. */
   setDraw(progress: number | null): void;
+  setLanternLighting(lighting: LanternLighting | undefined): void;
   /** Crouch to strap on gear (see `Character.setCrouch`). */
   setCrouch(amount: number, fuss: number): void;
   animate(dt: number, walking: boolean): readonly FootStep[];
@@ -32,6 +33,7 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
   let seated = 0;
   let crouch = 0;
   let draw: number | null = null;
+  let lighting: LanternLighting | undefined;
   let fuss = 0;
 
   const hull = new THREE.Group();
@@ -54,6 +56,7 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       character.setGear(gear);
       character.setCrouch(crouch, fuss);
       character.setDraw(draw);
+      character.setLanternLighting(lighting);
       rider.add(character.root);
     },
     setGear(next) {
@@ -64,6 +67,10 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
     setDraw(progress) {
       draw = progress;
       character.setDraw(progress);
+    },
+    setLanternLighting(next) {
+      lighting = next;
+      character.setLanternLighting(next);
     },
     setCrouch(amount, fussing) {
       crouch = amount;

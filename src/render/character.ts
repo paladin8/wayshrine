@@ -13,6 +13,11 @@ export interface FootStep {
   readonly z: number;
 }
 
+export interface LanternLighting {
+  readonly progress: number;
+  readonly flame: number;
+}
+
 export interface Character {
   readonly root: THREE.Group;
   /**
@@ -23,6 +28,7 @@ export interface Character {
   setGear(gear: GearId | null): void;
   /** Draw the walking sticks from the pack: progress 0 to 1, or null when not drawing. */
   setDraw(progress: number | null): void;
+  setLanternLighting(lighting: LanternLighting | undefined): void;
   /** Crouch to strap on gear: 0 stands normally, 1 is fully crouched. `fuss` moves the hands about the feet. */
   setCrouch(amount: number, fuss: number): void;
   dispose(): void;
@@ -41,6 +47,7 @@ const ASH = 0x8a7f7c;
 const CADENCE = 1.45;
 const TAU = Math.PI * 2;
 const footPoint = new THREE.Vector3();
+const smooth = (value: number): number => THREE.MathUtils.smoothstep(value, 0, 1);
 
 const mat = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters> = {}): THREE.MeshStandardMaterial =>
   new THREE.MeshStandardMaterial({ color, flatShading: true, ...extra });
@@ -273,13 +280,27 @@ export function buildCharacter(variant: CharacterVariant): Character {
   };
   registerGear("ashSandals", legs.map((l) => sandal(l.sole)));
 
-  // A paper lantern hanging from a short pole carried in the right hand.
+  // A chōchin with pleated paper, bamboo ribs, dark caps, and a loop handle.
   const lantern = group(arms[0].hand);
-  mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.34, 5), woodDark, lantern, 0, 0.03, 0.04);
-  const bodyMat = m(palette.glow, { emissive: palette.glow, emissiveIntensity: 0.9 });
-  mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.13, 7), bodyMat, lantern, 0, -0.15, 0.04);
-  mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.025, 7), m(palette.roof), lantern, 0, -0.225, 0.04);
-  mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.025, 7), m(palette.roof), lantern, 0, -0.085, 0.04);
+  const frame = m(0x4c3026);
+  const bamboo = m(0xa77345);
+  const paper = m(0xd9ba83, { emissive: 0xffad4b, emissiveIntensity: 0 });
+  const pleats = [
+    [0.075, -0.349], [0.092, -0.332], [0.119, -0.297], [0.134, -0.259],
+    [0.139, -0.219], [0.134, -0.179], [0.119, -0.141], [0.092, -0.106], [0.075, -0.089],
+  ];
+  mesh(new THREE.LatheGeometry(pleats.map(([radius, y]) => new THREE.Vector2(radius, y)), 12), paper, lantern);
+  for (const [radius, y] of pleats.slice(2, -1).filter((_, i) => i % 2 === 0)) {
+    const rib = new THREE.TorusGeometry(radius, 0.005, 4, 12);
+    rib.rotateX(Math.PI / 2);
+    mesh(rib, bamboo, lantern, 0, y, 0);
+  }
+  mesh(new THREE.CylinderGeometry(0.074, 0.091, 0.026, 12), frame, lantern, 0, -0.085, 0);
+  mesh(new THREE.CylinderGeometry(0.092, 0.073, 0.030, 12), frame, lantern, 0, -0.352, 0);
+  mesh(new THREE.TorusGeometry(0.072, 0.009, 4, 14, Math.PI), frame, lantern, 0, -0.079, 0);
+  const lanternLight = new THREE.PointLight(0xffb15e, 0, 4);
+  lanternLight.position.y = -0.25;
+  lantern.add(lanternLight);
   registerGear("lantern", [lantern]);
 
   // Two walking sticks, pilgrim style, and a coil of rope, shown only on mountains. The sticks are held
@@ -320,6 +341,8 @@ export function buildCharacter(variant: CharacterVariant): Character {
   let crouch = 0;
   let fuss = 0;
   let draw: number | null = null;
+  let lighting: LanternLighting | undefined;
+  let lanternTime = 0;
   const refreshSticks = (): void => placeSticks(gear === "climbing" ? "held" : "hidden");
   /** How far gear raises the feet, so the hips follow it. */
   const FOOT_LIFT: Readonly<Partial<Record<GearId, number>>> = { geta: 0.095, snowshoes: 0.03, ashSandals: 0.012 };
@@ -337,6 +360,9 @@ export function buildCharacter(variant: CharacterVariant): Character {
     },
     setDraw(progress) {
       draw = progress;
+    },
+    setLanternLighting(next) {
+      lighting = next;
     },
     setCrouch(amount, fussing) {
       crouch = amount;
@@ -377,15 +403,6 @@ export function buildCharacter(variant: CharacterVariant): Character {
         arm.shoulder.rotation.x = lerp(ph * 0.8 * w, -0.7, t);
         arm.shoulder.rotation.z = (i === 0 ? -1 : 1) * 0.08;
         arm.elbow.rotation.x = lerp(-0.3 - 0.5 * Math.max(0, -ph) * w, -0.55, t);
-      }
-      if (gear === "lantern" && t < 1) {
-        // Hold the lantern pole out ahead, steady against the swing.
-        const hold = 1 - t;
-        arms[0].shoulder.rotation.x = lerp(arms[0].shoulder.rotation.x, -0.5 + s * 0.08 * w, hold);
-        arms[0].elbow.rotation.x = lerp(arms[0].elbow.rotation.x, -1.0, hold);
-        lantern.rotation.x = -(arms[0].shoulder.rotation.x + arms[0].elbow.rotation.x) - 0.05 + Math.sin(phase * 2) * 0.05 * w;
-      } else {
-        lantern.rotation.set(0, 0, 0);
       }
 
       const bob = (0.5 - 0.5 * Math.cos(phase * 2)) * 0.045 * w;
@@ -449,6 +466,28 @@ export function buildCharacter(variant: CharacterVariant): Character {
         }
         torso.rotation.x += 0.18 * plantW - 0.12 * reachW;
         head.rotation.x -= 0.1 * plantW;
+      }
+      if (gear === "lantern" || lighting) {
+        lanternTime += dt;
+        const right = arms[0];
+        const left = arms[1];
+        const progress = lighting?.progress ?? 1;
+        const raise = smooth(progress / 0.22);
+        const inspect = smooth((progress - 0.14) / 0.18) * (1 - smooth((progress - 0.72) / 0.25));
+        const shield = smooth((progress - 0.12) / 0.15) * (1 - smooth((progress - 0.38) / 0.23));
+        right.shoulder.rotation.x = lerp(right.shoulder.rotation.x, -0.52 - inspect * 0.36 + s * 0.05 * w, raise);
+        right.shoulder.rotation.z -= inspect * 0.15;
+        right.elbow.rotation.x = lerp(right.elbow.rotation.x, -0.92 - inspect * 0.32, raise);
+        left.shoulder.rotation.x = lerp(left.shoulder.rotation.x, -0.75, shield);
+        left.shoulder.rotation.z = lerp(left.shoulder.rotation.z, 0.63, shield);
+        left.elbow.rotation.x = lerp(left.elbow.rotation.x, -1.03, shield);
+        head.rotation.y += inspect * 0.32;
+        head.rotation.x += inspect * 0.13;
+        lantern.rotation.x = -(right.shoulder.rotation.x + right.elbow.rotation.x + torso.rotation.x) + 0.09 * Math.sin(lanternTime * 3.1);
+        lantern.rotation.z = -right.shoulder.rotation.z + 0.07 * Math.sin(lanternTime * 2.2);
+        const flame = smooth(lighting?.flame ?? 1) * (0.95 + 0.03 * Math.sin(lanternTime * 13) + 0.02 * Math.sin(lanternTime * 21));
+        paper.emissiveIntensity = flame * 1.5;
+        lanternLight.intensity = flame * 8;
       }
       if (stickState === "held") {
         // Keep each stick at a steady angle from the ground whatever the arm is doing.
