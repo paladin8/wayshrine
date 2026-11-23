@@ -4,7 +4,7 @@ const MOVEMENT_GAIN = 0.32;
 const FOOTSTEP_GAIN = MOVEMENT_GAIN * 0.75;
 
 /** Sound effects, separate from background music. */
-export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "walk-meadow", "walk-snow", "walk-mountain", "row-water"] as const;
+export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "walk-meadow", "walk-snow", "walk-mountain", "walk-marsh", "row-water"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -29,6 +29,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: FOOTSTEP_GAIN },
   "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: FOOTSTEP_GAIN * 1.75 },
   "walk-mountain": { url: `${base}audio/cues/walk-mountain.wav`, loop: true, gain: FOOTSTEP_GAIN },
+  "walk-marsh": { url: `${base}audio/cues/walk-marsh.wav`, loop: true, gain: FOOTSTEP_GAIN },
   "row-water": { url: `${base}audio/cues/row-water.wav`, loop: true, gain: MOVEMENT_GAIN },
   "box-flip": { url: `${base}audio/cues/box-flip.mp3` },
 };

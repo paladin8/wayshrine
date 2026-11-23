@@ -21,6 +21,7 @@ import {
   planBoatLaunch,
   recordBoatLaunch,
   recordClimbUse,
+  recordGetaUse,
   recordSnowshoeUse,
   nextShrine,
   requirementOf,
@@ -58,6 +59,7 @@ const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   meadow: "walk-meadow",
   snow: "walk-snow",
   mountain: "walk-mountain",
+  marsh: "walk-marsh",
   water: "row-water",
 };
 const MOVEMENT_FADE_IN = 0.65;
@@ -84,6 +86,8 @@ const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
 /** How long the player crouches to strap on snowshoes and steps off the first time. */
 const SNOWSHOE_MOMENT_SECONDS = 4.6;
+/** How long the player takes to slip into geta and step off the first time. */
+const GETA_MOMENT_SECONDS = 4.2;
 /** How long the walking sticks take to come off the pack and be planted the first time. */
 const CLIMB_MOMENT_SECONDS = 5.2;
 /** Length of the slow crossfade between background themes when gear is first used. */
@@ -237,23 +241,30 @@ export function startApp(container: HTMLElement): void {
   let snowshoeMoment: { t: number } | null = null;
   let climbMoment: { t: number } | null = null;
   let climbMusicPreview = false;
+  let getaMoment: { t: number } | null = null;
+  let getaMusicPreview = false;
   /** True while a debug preview waits (negative time) for the previous theme to fade back before it starts. */
-  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0;
-  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null;
+  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0;
+  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
     // Climbing comes after snowshoes, so its moment starts on the snow theme and crosses over to the ridge one.
-    const climbing = climbMoment !== null;
+    // Geta come after climbing, so their moment starts on the ridge theme and crosses over to the marsh one.
+    const geta = getaMoment !== null;
+    const climbing = climbMoment !== null || geta;
     const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial || snowshoeMoment !== null || climbing;
     // A debug preview that is still waiting to start keeps the earlier theme.
     // A debug preview of an earlier gear ignores what the save has already unlocked later on.
     const earlierPreview = boatVoyage?.preview === true || snowshoeMoment !== null || snowshoeMusicPreview;
     const afterSnow = climbing || (snowshoeMoment && snowshoeMoment.t < 0 ? false
       : snowshoeMusicPreview || (!boatTrial && !(boatVoyage?.preview === true) && state.snowshoesUsed));
-    const afterClimb = climbMoment && climbMoment.t < 0 ? false
-      : climbMusicPreview || (!boatTrial && !earlierPreview && state.climbingUsed);
-    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb);
+    const afterClimb = geta || (climbMoment && climbMoment.t < 0 ? false
+      : climbMusicPreview || (!boatTrial && !earlierPreview && state.climbingUsed));
+    const earlierThanGeta = earlierPreview || climbMoment !== null || climbMusicPreview;
+    const afterGeta = getaMoment && getaMoment.t < 0 ? false
+      : getaMusicPreview || (!boatTrial && !earlierThanGeta && state.getaUsed);
+    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta);
   };
 
   const startVoyage = (path: BoatLaunch, preview = false): void => {
@@ -266,6 +277,7 @@ export function startApp(container: HTMLElement): void {
     overviewTime = OVERVIEW_SECONDS;
     snowshoeMusicPreview = false;
     climbMusicPreview = false;
+    getaMusicPreview = false;
   };
 
   const stopGearMoments = (): void => {
@@ -273,9 +285,11 @@ export function startApp(container: HTMLElement): void {
     boatVoyage = null;
     snowshoeMoment = null;
     climbMoment = null;
+    getaMoment = null;
     boatTrial = false;
     snowshoeMusicPreview = false;
     climbMusicPreview = false;
+    getaMusicPreview = false;
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
@@ -391,6 +405,7 @@ export function startApp(container: HTMLElement): void {
       previewBoatUnlock: () => previewGearUnlock("boat"),
       previewSnowshoeUnlock: () => previewGearUnlock("snowshoes"),
       previewClimbUnlock: () => previewGearUnlock("climbing"),
+      previewGetaUnlock: () => previewGearUnlock("geta"),
       previewClimbUse: () => {
         beginPreview();
         // If this save is already on the ridge theme, let the preview fade back to the snow theme first.
@@ -398,6 +413,14 @@ export function startApp(container: HTMLElement): void {
         const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[2].background ? -3.1 : 0;
         climbMusicPreview = true;
         climbMoment = { t: lead };
+      },
+      previewGetaUse: () => {
+        beginPreview();
+        // If this save is already on the marsh theme, let the preview fade back to the ridge theme first.
+        const playing = music.status().track;
+        const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[3].background ? -3.1 : 0;
+        getaMusicPreview = true;
+        getaMoment = { t: lead };
       },
       previewFirstVoyage,
       previewSnowshoeUse: () => {
@@ -483,7 +506,8 @@ export function startApp(container: HTMLElement): void {
           const count = kind === "landmark" ? landmarksRestored(state, world) : 0;
           const unlocksGear = count === CAPABILITY_THRESHOLDS.boat ? "boat"
             : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes"
-            : count === CAPABILITY_THRESHOLDS.climbing ? "climbing" : null;
+            : count === CAPABILITY_THRESHOLDS.climbing ? "climbing"
+            : count === CAPABILITY_THRESHOLDS.geta ? "geta" : null;
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
           const backgroundTrack = selectedMusicSet().background;
@@ -555,6 +579,11 @@ export function startApp(container: HTMLElement): void {
         saveGame(state);
         snowshoeMoment = { t: 0 };
         facing = Math.atan2(dir.x, dir.z);
+      } else if (moving && caps.has("geta") && !state.getaUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "marsh") {
+        state = recordGetaUse(state);
+        saveGame(state);
+        getaMoment = { t: 0 };
+        facing = Math.atan2(dir.x, dir.z);
       } else if (moving && caps.has("climbing") && !state.climbingUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "mountain") {
         state = recordClimbUse(state);
         saveGame(state);
@@ -588,6 +617,10 @@ export function startApp(container: HTMLElement): void {
     if (climbMoment) {
       climbMoment.t += dt;
       if (climbMoment.t >= CLIMB_MOMENT_SECONDS) climbMoment = null;
+    }
+    if (getaMoment) {
+      getaMoment.t += dt;
+      if (getaMoment.t >= GETA_MOMENT_SECONDS) getaMoment = null;
     }
     if (snowshoeMoment) {
       snowshoeMoment.t += dt;
@@ -699,7 +732,7 @@ export function startApp(container: HTMLElement): void {
     music.update(dt);
 
     stage.render(dt, {
-      player: pos, facing, state, moving, drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : undefined, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      player: pos, facing, state, moving, drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : undefined, strapGear: getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       voyage: voyageFrame,
     });
     requestAnimationFrame(frame);

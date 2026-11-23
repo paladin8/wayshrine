@@ -10,7 +10,9 @@ export interface DebugActions {
   readonly previewFirstVoyage: () => void;
   readonly previewSnowshoeUnlock: () => void;
   readonly previewSnowshoeUse: () => void;
+  readonly previewGetaUse: () => void;
   readonly previewClimbUnlock: () => void;
+  readonly previewGetaUnlock: () => void;
   readonly previewClimbUse: () => void;
   readonly cycleMusic: () => string;
   /** Switches gear transitions between their cue and a plain slow crossfade; returns the new mode. */
@@ -107,6 +109,8 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   preview("Preview snowshoe use", actions.previewSnowshoeUse);
   preview("Preview climbing unlock", actions.previewClimbUnlock);
   preview("Preview climbing use", actions.previewClimbUse);
+  preview("Preview geta unlock", actions.previewGetaUnlock);
+  preview("Preview geta use", actions.previewGetaUse);
   dialog.appendChild(content);
   container.append(style, panel, dialog);
 

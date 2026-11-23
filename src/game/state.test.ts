@@ -13,6 +13,7 @@ import {
   isRestored,
   newGame,
   recordClimbUse,
+  recordGetaUse,
   recordSnowshoeUse,
   resetGame,
   resetShrines,
@@ -87,6 +88,18 @@ describe("game state", () => {
     expect(deserialize(serialize(used), world).climbingUsed).toBe(true);
     expect(resetShrines(used).climbingUsed).toBe(false);
     expect(resetGame(used).climbingUsed).toBe(false);
+  });
+
+  it("records the first geta step once, survives reload, and defaults old saves to unused", () => {
+    const original = withLandmarks(CAPABILITY_THRESHOLDS.geta);
+    expect(original.getaUsed).toBe(false);
+    const used = recordGetaUse(original);
+    expect(recordGetaUse(used)).toBe(used);
+    const { getaUsed: _absent, ...old } = serialize(used);
+    expect(deserialize(old, world).getaUsed).toBe(false);
+    expect(deserialize(serialize(used), world).getaUsed).toBe(true);
+    expect(resetShrines(used).getaUsed).toBe(false);
+    expect(resetGame(used).getaUsed).toBe(false);
   });
 
   it("records snowshoe first use once, survives reload, and defaults old saves to unused", () => {

@@ -49,8 +49,14 @@ The first moving step onto a mountain after earning the walking sticks crossfade
 
 In **Gear acquisition**, **Preview climbing use** plays the moment from the snow theme (fading back to it first if the save is already on Ridgewalk) without updating the save.
 
+## First geta use
+
+The first moving step into marsh after earning geta crouches the traveller to slip them on, then crossfades the background from **Ridgewalk in E Major** to **Marshwalk** over 5 s. There is no cue. The first step is saved immediately and Marshwalk remains the background on reload. The track slot is `marshwalk` (`public/audio/music/marshwalk.mp3`, not supplied yet, so the background is silent after the crossfade until it lands) and the marsh footstep loop is `walk-marsh` (`public/audio/cues/walk-marsh.wav`, also pending; a missing file is skipped silently).
+
+In **Gear acquisition**, **Preview geta unlock** and **Preview geta use** play the reveal and the slip-on moment without updating the save, fading back to Ridgewalk first if the save is already on Marshwalk.
+
 ## Code
-- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed)`, the set selection for each stage.
+- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
 - `src/app/settings.ts`, `src/app/settings-panel.ts`: persisted settings and the dialog that edits them.
 

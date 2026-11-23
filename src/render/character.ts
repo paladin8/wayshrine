@@ -241,6 +241,12 @@ export function buildCharacter(variant: CharacterVariant): Character {
     mesh(new THREE.BoxGeometry(0.13, 0.03, 0.26), wood, g, 0, -0.025, 0);
     for (const z of [-0.07, 0.08]) mesh(new THREE.BoxGeometry(0.13, 0.07, 0.035), woodDark, g, 0, -0.075, z);
     mesh(new THREE.BoxGeometry(0.14, 0.03, 0.04), scarfMat, g, 0, 0.005, 0.03);
+    // The thong (hanao): a loop rising from the toe post that the big toe hooks.
+    const thong = new THREE.TorusGeometry(0.05, 0.012, 4, 8, Math.PI);
+    thong.rotateZ(Math.PI);
+    thong.scale(1, 0.7, 1);
+    mesh(thong, scarfMat, g, 0, 0.01, 0.05);
+    mesh(new THREE.BoxGeometry(0.02, 0.025, 0.02), woodDark, g, 0, -0.005, 0.07);
     return g;
   };
   registerGear("geta", legs.map((l) => geta(l.sole)));

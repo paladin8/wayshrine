@@ -67,6 +67,8 @@ export interface StageView {
   readonly moving?: boolean;
   /** While the traveller straps on snowshoes for the first time: progress through that moment, 0 to 1. */
   readonly strapping?: number;
+  /** Which gear the strapping moment puts on (default snowshoes). */
+  readonly strapGear?: GearId;
   /** While the walking sticks are first drawn on a mountain: progress through that moment, 0 to 1. */
   readonly drawing?: number;
   /** Which traveller body to show (default female). */
@@ -362,7 +364,7 @@ export function createStage(
       let worn = seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null;
       if (strapping !== undefined) {
         // Crouch to tie them on, stand, then they are on.
-        worn = strapping >= STRAP_ON_AT ? "snowshoes" : null;
+        worn = strapping >= STRAP_ON_AT ? view.strapGear ?? "snowshoes" : null;
         const down = smooth(strapping / 0.22) * (1 - smooth((strapping - 0.62) / 0.22));
         player.setCrouch(down, Math.sin(strapping * 55));
       } else {
