@@ -82,6 +82,8 @@ export interface MapInput {
   readonly labels: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };
   /** Names for the legend of the expanded map, in the player's language. */
   readonly names: {
+    /** A landmark's name, in the current language. */
+    readonly landmark: (id: string) => string;
     readonly terrain: Readonly<Record<Biome, string>>;
     readonly capability: Readonly<Record<Capability, string>>;
     readonly needs: (gear: string) => string;
@@ -360,6 +362,23 @@ export function createMinimap(
         ctx.strokeStyle = "#fffaf0";
         ctx.lineWidth = 2;
         ctx.stroke();
+        if (h.region.landmark && isRestored(state, h.region)) {
+          // A restored landmark's name, on a small plate above it (below it when too near the top edge).
+          const label = input.names.landmark(h.region.landmark.id);
+          ctx.font = `600 13px ${UI_FONT}`;
+          const w = ctx.measureText(label).width + 16;
+          const x = Math.min(size - w / 2 - 6, Math.max(w / 2 + 6, h.x));
+          const above = h.y - starR - 12 > 22;
+          const y = above ? h.y - starR - 12 : h.y + starR + 12;
+          ctx.fillStyle = "#2a2424ee";
+          ctx.beginPath();
+          ctx.roundRect(x - w / 2, y - 11, w, 22, 6);
+          ctx.fill();
+          ctx.fillStyle = "#f2ede0";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, x, y + 0.5);
+        }
       }
     }
     if (target && (!target.landmark || isLandmarkRevealed(state, target))) {

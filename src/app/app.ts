@@ -718,7 +718,7 @@ export function startApp(container: HTMLElement): void {
       messages: t,
       showCompass: prefs.showCompass,
     });
-    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
+    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     if (climbMusicPreview && climbMoment === null && cues.elapsed("first-climb") === null) climbMusicPreview = false;
     if (snowshoeMusicPreview && snowshoeMoment === null && cues.elapsed("first-snowshoe") === null) snowshoeMusicPreview = false;
