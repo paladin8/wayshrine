@@ -2,7 +2,7 @@ const base = import.meta.env.BASE_URL;
 const MOVEMENT_GAIN = 0.32;
 
 /** Sound effects, separate from background music. */
-export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "first-voyage", "first-snowshoe", "first-climb", "walk-meadow", "walk-snow", "row-water"] as const;
+export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "first-voyage", "first-snowshoe", "first-climb", "walk-meadow", "walk-snow", "walk-mountain", "row-water"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -27,6 +27,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "first-climb": { url: `${base}audio/cues/ridge-within-reach.mp3` },
   "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: MOVEMENT_GAIN },
   "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: MOVEMENT_GAIN * 1.75 },
+  "walk-mountain": { url: `${base}audio/cues/walk-mountain.wav`, loop: true, gain: MOVEMENT_GAIN },
   "row-water": { url: `${base}audio/cues/row-water.wav`, loop: true, gain: MOVEMENT_GAIN },
   "box-flip": { url: `${base}audio/cues/box-flip.mp3` },
 };

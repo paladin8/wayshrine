@@ -57,6 +57,7 @@ const HINT_SECONDS = 1.5;
 const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   meadow: "walk-meadow",
   snow: "walk-snow",
+  mountain: "walk-mountain",
   water: "row-water",
 };
 const MOVEMENT_FADE_IN = 0.65;
