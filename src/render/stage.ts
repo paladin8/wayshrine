@@ -40,8 +40,6 @@ const FORWARD = new THREE.Vector3(-1, 0, -1).normalize();
 
 /** Fraction of the draw moment at which the walking sticks reach the hands. */
 const DRAW_AT = 0.3;
-const CLIMBING_KIT: ReadonlySet<GearId> = new Set<GearId>(["climbing"]);
-const NO_KIT: ReadonlySet<GearId> = new Set<GearId>();
 
 /** Fraction of the strap-on moment at which the snowshoes appear on the feet. */
 const STRAP_ON_AT = 0.4;
@@ -363,13 +361,12 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       }
       const drawing = view.drawing;
       if (drawing !== undefined) {
-        // The sticks come off the pack a third of the way in, and are in the hands from then on.
+        // The sticks come out of the pack a third of the way in, and are in the hands from then on.
         worn = drawing >= DRAW_AT ? "climbing" : null;
         player.setDraw(drawing);
       } else {
         player.setDraw(null);
       }
-      player.setKit(view.capabilities?.has("climbing") ? CLIMBING_KIT : NO_KIT);
       player.setGear(worn);
       for (const step of player.animate(dt, strapping === undefined && drawing === undefined && (view.moving ?? false))) {
         if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);

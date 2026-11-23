@@ -10,8 +10,6 @@ export interface PlayerMesh {
   /** What the traveller wears or carries right now, or null for plain boots. */
   setGear(gear: GearId | null): void;
   /** Advance the walk cycle: `walking` is whether the player is moving this frame. Returns the feet that landed. */
-  /** Gear carried but not in use. */
-  setKit(kit: ReadonlySet<GearId>): void;
   /** Draw the walking sticks from the pack: progress 0 to 1, or null. */
   setDraw(progress: number | null): void;
   /** Crouch to strap on gear (see `Character.setCrouch`). */
@@ -33,7 +31,6 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
   let gear: GearId | null = null;
   let seated = 0;
   let crouch = 0;
-  let kit: ReadonlySet<GearId> = new Set();
   let draw: number | null = null;
   let fuss = 0;
 
@@ -56,7 +53,6 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       character = buildCharacter(variant);
       character.setGear(gear);
       character.setCrouch(crouch, fuss);
-      character.setKit(kit);
       character.setDraw(draw);
       rider.add(character.root);
     },
@@ -64,10 +60,6 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       if (next === gear) return;
       gear = next;
       character.setGear(gear);
-    },
-    setKit(next) {
-      kit = next;
-      character.setKit(next);
     },
     setDraw(progress) {
       draw = progress;

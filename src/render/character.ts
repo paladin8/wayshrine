@@ -21,8 +21,6 @@ export interface Character {
    */
   update(dt: number, walk: number, seated: number): readonly FootStep[];
   setGear(gear: GearId | null): void;
-  /** Gear carried but not in use: walking sticks ride lashed to the pack. */
-  setKit(kit: ReadonlySet<GearId>): void;
   /** Draw the walking sticks from the pack: progress 0 to 1, or null when not drawing. */
   setDraw(progress: number | null): void;
   /** Crouch to strap on gear: 0 stands normally, 1 is fully crouched. `fuss` moves the hands about the feet. */
@@ -264,8 +262,8 @@ export function buildCharacter(variant: CharacterVariant): Character {
   mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.025, 7), m(palette.roof), lantern, 0, -0.085, 0.04);
   registerGear("lantern", [lantern]);
 
-  // Two walking sticks, pilgrim style, and a coil of rope. They ride lashed to the pack until they are
-  // needed, and are held in the hands on mountains.
+  // Two walking sticks, pilgrim style, and a coil of rope, shown only on mountains. The sticks are held
+  // in the hands; the rope hangs on the pack.
   const makeStick = (): THREE.Group => {
     const g = group(root);
     const shaft = new THREE.CylinderGeometry(0.017, 0.021, 0.9, 5);
@@ -283,26 +281,16 @@ export function buildCharacter(variant: CharacterVariant): Character {
   const coilGeo = new THREE.TorusGeometry(0.1, 0.028, 5, 12);
   mesh(coilGeo, m(ROPE), rope);
   mesh(new THREE.BoxGeometry(0.05, 0.05, 0.03), scarfMat, rope, 0, 0.0, 0.0);
-  let stickState: "hidden" | "stowed" | "held" = "hidden";
-  const placeSticks = (next: "hidden" | "stowed" | "held"): void => {
-    rope.visible = next !== "hidden";
-    sticks.forEach((stick, i) => {
-      stick.visible = next !== "hidden";
-      if (next === stickState) return;
-      const side = i === 0 ? 1 : -1;
-      if (next === "held") {
-        arms[i]!.hand.add(stick);
-        stick.position.set(0, 0.02, 0.01);
-        stick.rotation.set(0, 0, 0);
-      } else {
-        pack.add(stick);
-        stick.position.set(side * 0.15, 0.4, -0.1);
-        stick.rotation.set(0.04, 0, -side * 0.1);
-      }
-    });
+  sticks.forEach((stick, i) => {
+    arms[i]!.hand.add(stick);
+    stick.position.set(0, 0.02, 0.01);
+  });
+  let stickState: "hidden" | "held" = "hidden";
+  const placeSticks = (next: "hidden" | "held"): void => {
+    rope.visible = next === "held";
+    sticks.forEach((stick) => (stick.visible = next === "held"));
     stickState = next;
   };
-  placeSticks("stowed");
   placeSticks("hidden");
 
   let gear: GearId | null = null;
@@ -312,8 +300,7 @@ export function buildCharacter(variant: CharacterVariant): Character {
   let crouch = 0;
   let fuss = 0;
   let draw: number | null = null;
-  let kit: ReadonlySet<GearId> = new Set();
-  const refreshSticks = (): void => placeSticks(gear === "climbing" ? "held" : kit.has("climbing") ? "stowed" : "hidden");
+  const refreshSticks = (): void => placeSticks(gear === "climbing" ? "held" : "hidden");
   /** How far gear raises the feet, so the hips follow it. */
   const FOOT_LIFT: Readonly<Partial<Record<GearId, number>>> = { geta: 0.095, snowshoes: 0.03, ashSandals: 0.012 };
 
@@ -326,10 +313,6 @@ export function buildCharacter(variant: CharacterVariant): Character {
       for (const [id, groups] of Object.entries(gearGroups) as Array<[GearId, THREE.Group[]]>) {
         for (const g of groups) g.visible = id === next;
       }
-      refreshSticks();
-    },
-    setKit(next) {
-      kit = next;
       refreshSticks();
     },
     setDraw(progress) {
