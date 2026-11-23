@@ -84,12 +84,12 @@ const GEAR_MUSIC_DUCK = 0.16;
 // The supplied cue has a long decay. Bring the new score up while the tail is still audible.
 const VOYAGE_RELEASE_START = 3.3;
 const VOYAGE_RELEASE_SECONDS = 3.2;
-const SNOWSHOE_RELEASE_START = 3.2;
-const SNOWSHOE_RELEASE_SECONDS = 2;
+const SNOWSHOE_RELEASE_START = 6.2;
+const SNOWSHOE_RELEASE_SECONDS = 3;
 /** How long the player crouches to strap on snowshoes and steps off the first time. */
 const SNOWSHOE_MOMENT_SECONDS = 4.6;
-/** Seconds into the moment at which the background score crosses from the sea theme to the snow theme, under the cue. */
-const SNOWSHOE_MUSIC_SWITCH = 0.8;
+/** Seconds into the unlock cue at which the background score crosses from the sea theme to the snow theme, still under the ducked cue. */
+const SNOWSHOE_MUSIC_SWITCH = 5.5;
 
 function gearMusicDuck(elapsed: number | null, start: number, duration: number): number {
   if (elapsed === null) return 1;
@@ -242,8 +242,12 @@ export function startApp(container: HTMLElement): void {
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
-    const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial || snowshoeMoment !== null;
-    const afterSnow = snowshoeMoment ? snowshoeMoment.t >= SNOWSHOE_MUSIC_SWITCH : snowshoeMusicPreview || (!boatTrial && state.snowshoesUsed);
+    const snowCue = cues.elapsed("first-snowshoe");
+    const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial || snowshoeMoment !== null || snowCue !== null;
+    // The snow theme waits for the cue to play out; before a delayed cue starts it is still the sea theme.
+    const afterSnow = snowshoeMoment && snowshoeMoment.t < 0 ? false
+      : snowCue !== null ? snowCue >= SNOWSHOE_MUSIC_SWITCH
+      : snowshoeMusicPreview || (!boatTrial && state.snowshoesUsed);
     return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow);
   };
 
