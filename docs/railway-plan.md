@@ -2,7 +2,7 @@
 
 Wayshrine's technology thread takes the form of five short rail lines. Each has two stations, an existing landmark at its heart, and a view designed for the window seat. The player discovers the stations through ordinary exploration and restores the shrines that power them. A ride is an optional reward and a chance to see a familiar place from a different angle.
 
-Defer railway work while the current priorities move forward. When the project is ready for railways, start with a Mount Fuji prototype.
+The Mount Fuji prototype runs on the dedicated `fuji-rail` seed. The other lines and seeded route placement are future work.
 
 ## Station discovery and restoration
 
@@ -34,6 +34,10 @@ Use the seed to choose a suitable position and orientation near the landmark's e
 Keep the placement stable for a given seed and derive service from the existing restored regions. Before extending the landmark planner, check how any change in landmark locations would affect existing saves.
 
 ## Mount Fuji prototype
+
+Run `npm run dev` and open `/?seed=fuji-rail&debug`. Choose **Preview Mount Fuji ride** to try the roughly 18-second ride immediately. The preview returns you to your starting point. On `/?seed=fuji-rail`, restore Mount Fuji and the ordinary shrine by the far platform, then press **E** at either station to board. **E**, **Esc**, or **Skip ride** ends the sequence.
+
+The stations and three-car shinkansen are simple Three.js models. The side camera uses the real world terrain in the foreground and frames the authored Fuji mountain at a larger scale across the valley. Train motion, doors, and the ride timing live in code so the models can be replaced independently during an art pass.
 
 1. On one fixed seed, give the existing Fuji model a short track past its foothills, two temporary platforms, and a fixed mountain-side seat. Start with a 15–20 second ride. Tune speed and framing until the foreground conveys the speed and the summit holds comfortably in view.
 2. Use a dedicated seat camera with a simple window frame and quiet rolling audio. Follow the boat launch pattern for timed control and return to the isometric view. Preload the route, visible terrain beside it, the Fuji model, and the arrival platform before departure. [Boat prototype](music.md#boat-prototype) · [Terrain streaming](ARCHITECTURE.md#terrain-and-streaming)

@@ -36,6 +36,13 @@ export interface Messages {
   readonly promptRestore: string;
   readonly promptRestoreLandmark: string;
   readonly promptSkip: string;
+  readonly railway: {
+    readonly board: string;
+    readonly dormant: string;
+    readonly preparing: string;
+    readonly unavailable: string;
+    readonly skip: string;
+  };
   readonly compassHere: string;
   readonly compassNearest: (distance: number) => string;
   readonly map: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };

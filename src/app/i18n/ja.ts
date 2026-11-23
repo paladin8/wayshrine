@@ -117,6 +117,13 @@ export const ja: Messages = {
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",
   promptSkip: "Eキーでスキップ",
+  railway: {
+    board: "E · 新幹線に乗る",
+    dormant: "両駅の祠をよみがえらせると列車が走ります",
+    preparing: "出発の準備中…",
+    unavailable: "車窓を表示できませんでした。もう一度お試しください。",
+    skip: "乗車をスキップ",
+  },
   compassHere: "祠はここ",
   compassNearest: (distance) => `最寄りの祠 · ${distance}`,
   map: { expand: "M: 拡大", close: "M: 閉じる", travel: "蘇った祠をクリックで移動", zoom: "俯瞰 (Z)" },

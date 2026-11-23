@@ -8,6 +8,7 @@ export interface DebugActions {
   readonly readRubbing: () => void;
   readonly previewBoatUnlock: () => void;
   readonly previewFirstVoyage: () => void;
+  readonly previewFujiRide?: () => void;
   readonly previewSnowshoeUnlock: () => void;
   readonly previewSnowshoeUse: () => void;
   readonly previewGetaUse: () => void;
@@ -76,6 +77,7 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   more.setAttribute("aria-label", "Gear acquisition tests");
   more.setAttribute("aria-haspopup", "dialog");
   more.title = "Gear acquisition tests";
+  if (actions.previewFujiRide) add(panel, "Preview Mount Fuji ride", actions.previewFujiRide);
   add(panel, "Restore all landmarks", actions.restoreLandmarks);
   add(panel, "Un-restore here (U)", actions.unrestoreHere);
   add(panel, "Reset shrines", actions.resetShrines);

@@ -1,4 +1,6 @@
-import { createNoise, createRng } from "../core";
+import { createNoise } from "../core";
+import { createIsletRelief } from "./islets";
+import { createRegionalRelief } from "./landforms";
 import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import { isWater, type Biome } from "./terrain";
@@ -11,7 +13,7 @@ export const CHUNK_SIZE = 16;
 export const PLATEAU_RADIUS = 2.5;
 /** Keep the gate above the nearby slope, then blend its terrace into the hill. */
 const SHRINE_SURVEY_RADIUS = 6.75;
-const SHRINE_APPROACH = 8;
+const SHRINE_APPROACH = 9.25;
 
 /**
  * Distance from a point to the edge of its region's flat plateau; negative on
@@ -93,74 +95,36 @@ export function createTerrain(world: World): Terrain {
   const broad = createNoise(`${world.seed}:broad`);
   const fine = createNoise(`${world.seed}:fine`);
   const relief = createNoise(`${world.seed}:landforms`);
-  const coast = createNoise(`${world.seed}:coast`);
-  const root = createRng(world.seed).fork("islets");
-  type Islet = { x: number; z: number; width: number; depth: number; rise: number };
-  const islets = new WeakMap<Region, Islet[]>();
-
-  function islandsOf(region: Region): Islet[] {
-    const cached = islets.get(region);
-    if (cached) return cached;
-    const islands: Islet[] = [];
-    islets.set(region, islands);
-    if (region.landmark) return islands;
-    const rng = root.fork(region.id);
-    const count = rng.next() < 0.25 ? 2 : 1;
-    for (let i = 0; i < 10 && islands.length < count; i++) {
-      const angle = rng.range(0, Math.PI * 2);
-      const distance = rng.range(13, 24);
-      const x = region.site.x + Math.cos(angle) * distance;
-      const z = region.site.z + Math.sin(angle) * distance;
-      const width = rng.range(4.5, 8);
-      const depth = rng.range(3.5, 6.5);
-      const rise = rng.range(0.9, 1.8);
-      // Leave room to bring a boat alongside the shrine from any direction.
-      const islandClearance = Math.max(12, 5.5 + 1.2 * Math.max(width, depth));
-      if (Math.hypot(x - region.shrine.x, z - region.shrine.z) < islandClearance) continue;
-      if (islands.some((other) => Math.hypot(x - other.x, z - other.z) < 13)) continue;
-      const points = [[x, z], [x - width - 2, z], [x + width + 2, z], [x, z - depth - 2], [x, z + depth + 2]] as const;
-      if (points.some(([px, pz]) => world.regionAt(px, pz) !== region)) continue;
-      islands.push({ x, z, width, depth, rise });
-    }
-    return islands;
-  }
-
-  function islandRelief(region: Region, x: number, z: number): number {
-    let h = 0;
-    for (const island of islandsOf(region)) {
-      const distance = Math.hypot((x - island.x) / island.width, (z - island.z) / island.depth);
-      if (distance > 1.2) continue;
-      const roughness = (coast(x / 4, z / 4) - 0.5) * 0.32;
-      h = Math.max(h, island.rise * Math.max(0, 1.14 + roughness - distance));
-    }
-    return h;
-  }
+  const regionalRelief = createRegionalRelief(world.seed);
+  const islandRelief = createIsletRelief(world);
 
   /** Height of the natural ground of a biome, before any plateau. */
-  function natural(x: number, z: number, biome: Biome): number {
+  function natural(x: number, z: number, region: Region): number {
+    const biome = region.biome;
     const n = broad(x * 0.1, z * 0.1) * 0.76 + fine(x * 0.4, z * 0.4) * 0.24;
     const contour = relief(x / 23, z / 23);
     const rise = Math.max(0, (contour - 0.53) / 0.47) ** 1.35;
     const hollow = Math.max(0, (0.4 - contour) / 0.4);
+    const formation = regionalRelief(region, x, z, n);
     switch (biome) {
       case "water":
         return 0.4;
       case "meadow":
-        return 0.95 + quantize(n * 0.22 + rise * 1.75 - hollow * 0.54, 0.22);
+        return 0.95 + quantize(n * 0.22 + rise * 1.75 - hollow * 0.54 + formation, 0.22);
       case "snow":
-        return 1.15 + quantize(n * 0.5 + rise * 2.6 - hollow * 0.48, 0.3);
+        return 1.15 + quantize(n * 0.5 + rise * 2.6 - hollow * 0.48 + formation, 0.3);
       case "mountain":
-        return 1.5 + quantize(n ** 1.7 * 2.4 + rise * 4.4, 0.4);
+        return 1.5 + quantize(n ** 1.7 * 2.4 + rise * 4.4 + formation, 0.4);
       case "sea":
         return 0.25;
       case "marsh":
-        return 0.78 + quantize(n * 0.24 + rise * 0.36 - hollow * 0.36, 0.12);
+        return 0.78 + quantize(n * 0.24 + rise * 0.36 - hollow * 0.36 + formation, 0.12);
       case "forest":
-        return 1.05 + quantize(n * 0.46 + rise * 2 - hollow * 0.6, 0.22);
+        return 1.05 + quantize(n * 0.46 + rise * 2 - hollow * 0.6 + formation, 0.22);
       case "volcanic":
-        return 1.45 + quantize(n * 1.25 + rise * 4.8, 0.38);
+        return 1.45 + quantize(n * 1.25 + rise * 4.8 + formation, 0.38);
       case "dunes":
-        return 0.94 + quantize(n * 0.44 + rise * 2.2 - hollow * 0.45, 0.2);
+        return 0.94 + quantize(n * 0.44 + rise * 2.2 - hollow * 0.45 + formation, 0.2);
     }
   }
 
@@ -177,8 +141,8 @@ export function createTerrain(world: World): Terrain {
         const px = tx + 0.5;
         const pz = tz + 0.5;
         if ((px - x) ** 2 + (pz - z) ** 2 > SHRINE_SURVEY_RADIUS ** 2) continue;
-        const biome = world.regionAt(px, pz).biome;
-        if (!isWater(biome)) height = Math.max(height, natural(px, pz, biome));
+        const nearby = world.regionAt(px, pz);
+        if (!isWater(nearby.biome)) height = Math.max(height, natural(px, pz, nearby));
       }
     }
     height += 0.06;
@@ -213,11 +177,11 @@ export function createTerrain(world: World): Terrain {
       const base = shrineTerrace(region);
       const t = Math.max(0, away / SHRINE_APPROACH);
       const k = t * t * (3 - 2 * t);
-      height = base + (natural(x, z, biome) - base) * k;
+      height = base + (natural(x, z, region) - base) * k;
       skirt = !onPlateau;
     } else if (onPlateau) {
       if (open) {
-        height = natural(x, z, region.biome);
+        height = natural(x, z, region);
         shore = true;
       } else if (model?.terrainSurface) {
         height = plateauBase(region);
@@ -230,13 +194,13 @@ export function createTerrain(world: World): Terrain {
       const t = Math.max(0, away) / LANDMARK_BLEND;
       const k = t * t * (3 - 2 * t);
       const edge = plateauBase(region) + (model && !model.terrainSurface ? surfaceHeight(model, dx, dz) : 0);
-      height = edge + (natural(x, z, region.biome) - edge) * k;
+      height = edge + (natural(x, z, region) - edge) * k;
       // The slope down to water becomes shore, then water.
       if (isWater(region.biome)) {
         biome = height > 0.55 ? "meadow" : region.biome;
         // Open water is flat at the natural level, so the slope above it can meet it without a step.
         if (isWater(biome)) {
-          height = natural(x, z, region.biome);
+          height = natural(x, z, region);
           shore = true;
         }
       }
@@ -244,17 +208,18 @@ export function createTerrain(world: World): Terrain {
     } else if (isWater(biome)) {
       height = PLATEAU_HEIGHT[biome];
       const landmarkRim = region.landmark && !model ? Math.max(0, 0.72 - away * 0.25) : 0;
-      const rise = Math.max(islandRelief(region, x, z), landmarkRim);
+      const { height: islandHeight, shelf } = islandRelief(region, x, z);
+      const rise = Math.max(islandHeight, landmarkRim);
       if (rise > 0.24) {
         height += rise;
         biome = "meadow";
         skirt = true;
-      } else if (rise > 0.03) {
-        shore = true;
-        shoal = rise / 0.24;
+      } else {
+        shore = rise > 0.03 || shelf > 0.16;
+        shoal = Math.max(rise / 0.24, shelf * 0.84);
       }
     } else {
-      height = natural(x, z, biome);
+      height = natural(x, z, region);
     }
     return { region, biome, height, skirt, shore, shoal, terrace: landShrine && onPlateau };
   }

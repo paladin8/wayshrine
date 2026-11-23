@@ -24,6 +24,15 @@ import oze from "./landmark-grounds/oze.json";
 import yanagawa from "./landmark-grounds/yanagawa.json";
 import kurashikiBikan from "./landmark-grounds/kurashiki-bikan.json";
 import byodoIn from "./landmark-grounds/byodo-in.json";
+import sensoJi from "./landmark-grounds/senso-ji.json";
+import kamakuraDaibutsu from "./landmark-grounds/kamakura-daibutsu.json";
+import tokyoTower from "./landmark-grounds/tokyo-tower.json";
+import osakaCastle from "./landmark-grounds/osaka-castle.json";
+import jomonSugi from "./landmark-grounds/jomon-sugi.json";
+import shirataniUnsuikyo from "./landmark-grounds/shiratani-unsuikyo.json";
+import arashiyama from "./landmark-grounds/arashiyama.json";
+import nachiFalls from "./landmark-grounds/nachi-falls.json";
+import meijiJingu from "./landmark-grounds/meiji-jingu.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -81,6 +90,15 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   yanagawa: yanagawa as unknown as LandmarkGround,
   "kurashiki-bikan": kurashikiBikan as unknown as LandmarkGround,
   "byodo-in": byodoIn as unknown as LandmarkGround,
+  "senso-ji": sensoJi as unknown as LandmarkGround,
+  "kamakura-daibutsu": kamakuraDaibutsu as unknown as LandmarkGround,
+  "tokyo-tower": tokyoTower as unknown as LandmarkGround,
+  "osaka-castle": osakaCastle as unknown as LandmarkGround,
+  "jomon-sugi": jomonSugi as unknown as LandmarkGround,
+  "shiratani-unsuikyo": shirataniUnsuikyo as unknown as LandmarkGround,
+  arashiyama: arashiyama as unknown as LandmarkGround,
+  "nachi-falls": nachiFalls as unknown as LandmarkGround,
+  "meiji-jingu": meijiJingu as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {

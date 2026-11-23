@@ -2,6 +2,8 @@ import { Color } from "three";
 import { createNoise, createRng } from "../core";
 import type { Biome, Region, Terrain, Tile } from "../world";
 
+import { PATTERNS_BY_BIOME } from "./ground-patterns";
+
 /** Three regional palettes each, from shaded ground through the base to highlights. */
 const PALETTES = {
   meadow: [[0x526f3e, 0x86ad5f, 0xc0c77c], [0x536e4a, 0x799e60, 0xacbf85], [0x6a8047, 0x99b05c, 0xd0c383]],
@@ -21,6 +23,9 @@ interface ArtProfile {
   readonly scale: number;
   readonly phase: number;
   readonly density: number;
+  readonly motif: (typeof PATTERNS_BY_BIOME)[Biome][number];
+  readonly cos: number;
+  readonly sin: number;
 }
 
 const colors = Object.fromEntries(Object.entries(PALETTES).map(([biome, palettes]) =>
@@ -43,7 +48,13 @@ export function createBiomeArt(terrain: Terrain) {
     let art = profiles.get(region);
     if (!art) {
       const rng = root.fork(region.id);
-      art = { palette: rng.int(0, 3), angle: rng.range(0, Math.PI * 2), scale: rng.range(8, 21), phase: rng.range(0, 12), density: rng.range(0.45, 1.55) };
+      const palette = rng.int(0, 3);
+      const angle = rng.range(0, Math.PI * 2);
+      art = {
+        palette, angle, scale: rng.range(7, 22), phase: rng.range(0, 12), density: rng.range(0.34, 1.72),
+        motif: rng.pick(PATTERNS_BY_BIOME[region.biome]),
+        cos: Math.cos(angle), sin: Math.sin(angle),
+      };
       profiles.set(region, art);
     }
     return art;
@@ -103,7 +114,17 @@ export function createBiomeArt(terrain: Terrain) {
       const ember = Math.max(0, (seam - 0.68) / 0.32) ** 1.8 * (field > 0.49 ? 0.44 : 0.13);
       c.lerp(bogInk, seam * 0.095).lerp(ochre, ember);
     }
-    if (tile.shoal) c.lerp(tile.biome === "sea" ? seaShallows : lakeShallows, tile.shoal * 0.72);
+    if (tile.biome === region.biome) {
+      const { cos, sin, motif } = art;
+      const dx = tx - region.site.x;
+      const dz = tz - region.site.z;
+      const spacing = (tile.biome === "water" || tile.biome === "sea" ? 11 : 5) + art.scale * 0.39;
+      const u = (dx * cos + dz * sin) / spacing;
+      const v = (dz * cos - dx * sin) / spacing;
+      const fade = Math.max(0, Math.min(1, 2.5 - Math.hypot(dx, dz) / 20));
+      c.lerp(motif.color, motif.field(u, v, field) * motif.strength * fade);
+    }
+    if (tile.shoal) c.lerp(tile.biome === "sea" ? seaShallows : lakeShallows, tile.shoal * 0.86);
     if (tile.biome === "meadow" && (region.biome === "water" || region.biome === "sea")) {
       c.lerp(region.biome === "sea" ? ashSand : lakeSand, Math.min(0.95, Math.max(0, 1.16 - tile.height) * 1.6));
     }

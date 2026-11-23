@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Monument } from "../world";
 import { at, box, cone, cylinder, ico, type Part } from "./shapes";
 import { palette } from "./palette";
+import { RUBBING_FORMS, block, incisions } from "./rubbing-forms";
 import { VitalityBuilder } from "./vitality-mesh";
 
 const STONE = 0xbdb8ae;
@@ -12,10 +13,14 @@ const PARCHMENT = 0xddc69d;
 const ROOF = 0x56514c;
 const BRONZE = 0x817450;
 const FORMS = ["stone", "stone", "plaqueTree", "shelter", "boundRock", "trailPost", "bell", "stack", "pairedStones"] as const;
-type Form = (typeof FORMS)[number];
-const formOf = (m: Monument): Form => FORMS[Math.floor(m.variant * FORMS.length)] ?? "stone";
+type ClassicForm = (typeof FORMS)[number];
+type NewForm = keyof typeof RUBBING_FORMS;
+type Form = ClassicForm | NewForm;
+const allForms: readonly Form[] = [...FORMS, ...Object.keys(RUBBING_FORMS) as NewForm[]];
+const formOf = (m: Monument): Form => allForms[Math.floor(m.variant * allForms.length)] ?? "stone";
+const isNewForm = (form: Form): form is NewForm => Object.hasOwn(RUBBING_FORMS, form);
 
-const glowHeight: Readonly<Record<Form, number>> = {
+const glowHeight: Readonly<Record<ClassicForm, number>> = {
   stone: 2.3,
   plaqueTree: 2.85,
   shelter: 2.35,
@@ -26,7 +31,10 @@ const glowHeight: Readonly<Record<Form, number>> = {
   pairedStones: 2.05,
 };
 
-export const monumentGlowHeight = (monument: Monument): number => glowHeight[formOf(monument)];
+export function monumentGlowHeight(monument: Monument): number {
+  const form = formOf(monument);
+  return isNewForm(form) ? RUBBING_FORMS[form].glow : glowHeight[form];
+}
 
 /**
  * Each kind of text has its own silhouette, so a traveller can tell what they
@@ -71,24 +79,7 @@ function stoneParts(kind: string): Part[] {
   }
 }
 
-function block(color: number, w: number, h: number, d: number, x: number, y: number, z: number): Part {
-  return { geometry: box(w, h, d), color, matrix: at(x, y, z) };
-}
-
-/** Short incised marks are visible in the diorama; the readable text lives in the rubbing. */
-function incisions(x: number, y: number, z: number, columns: number, spacing = 0.105): Part[] {
-  const marks: Part[] = [];
-  for (let column = 0; column < columns; column++) {
-    const cx = x + (column - (columns - 1) / 2) * spacing;
-    for (let row = 0; row < 3; row++) {
-      const cy = y + (1 - row) * 0.085;
-      marks.push(block(INK, 0.051 - ((column + row) % 3) * 0.01, 0.017, 0.01, cx, cy, z));
-    }
-  }
-  return marks;
-}
-
-function variants(form: Form, kind: string): Part[] {
+function variants(form: ClassicForm, kind: string): Part[] {
   const plaque = (x: number, y: number, z: number, width = 0.43): Part[] => [
     block(palette.wood, width + 0.1, 0.49, 0.09, x, y, z),
     block(PARCHMENT, width, 0.4, 0.018, x, y, z + 0.05),
@@ -172,7 +163,7 @@ export function addMonument(builder: VitalityBuilder, m: Monument): void {
   const key = form === "stone" ? m.kind : form;
   let parts = cache.get(key);
   if (!parts) {
-    parts = variants(form, m.kind);
+    parts = isNewForm(form) ? RUBBING_FORMS[form].build() : variants(form, m.kind);
     cache.set(key, parts);
   }
   place.compose(

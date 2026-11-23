@@ -62,3 +62,4 @@ export { FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vita
 export { MONUMENT_REACH, isLegible, monumentInReach } from "./monuments";
 
 export { BOAT_PUSH_OFF_SECONDS, boatLaunchFrame, onWater, planBoatLaunch, type BoatLaunch } from "./boat";
+export { otherStation, railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS, type StationIndex, type TrainFrame } from "./train";

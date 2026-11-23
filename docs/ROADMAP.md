@@ -13,6 +13,7 @@
 - **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Ordinary shrines:** biome-specific gates and shelters. Land shrines sit on flat terraces that blend into the surrounding hill, lake shrines stand on pilings, and coastal torii rise directly from the sea. Water shrines can be restored from the boat.
 - **Scenery:** seeded regional palettes and brushwork, cedar forests, reed beds and marsh pools, basalt and ash seams, separate lake ripples and ocean breakers. Lighting, mist, spray, and cinders vary by biome; the restoration wave brings the details to life.
+- **Regional variety:** changing boundary shapes, biome-specific relief, island and shoal forms, and lake and seabed colour patterns. Restored regions mix clustered plant species with local birds and fish. Rubbings use a wider range of stone, wood, ceramic, and bronze forms.
 - **Rare wildlife:** roughly one in four regions has a seeded large-animal sighting after restoration. Sika deer graze and stroll, foxes dart, and boars rest between charges. Serow pick their way along slopes, cranes wade and peck, otters paddle in bursts, dolphins leap, and whales surface and dive. Nara and Itsukushima share the sika deer model with wild herds.
 - **Awakening swell:** one-shot cue player, music ducking under it, background music halved.
 - **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.
@@ -25,7 +26,7 @@
 2. **Ability acquisition.** The boat prototype announces the unlock at three restored landmarks and uses the first boarding to transition between two themes. The first step on snow with snowshoes plays a cue and brings in Snowline Walk. Extend the reward and first-use pattern to the other abilities. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.
-5. **Technology thread.** Five shrine-powered scenic rail lines centred on landmark views. Deferred while current priorities move forward. The first prototype is a Mount Fuji window ride. See the [scenic railway plan](railway-plan.md).
+5. **Technology thread.** The Mount Fuji window ride is playable on the `fuji-rail` seed. Tune the prototype and validate seeded placement before building the other four landmark lines. See the [scenic railway plan](railway-plan.md).
 6. **Livelier world.** Extend rare sightings with responses to nearby players, and eventually add people.
 7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, walking sticks and the rest) given the same treatment.
 8. **Footsteps.** Moving across different terrain should make different sounds.

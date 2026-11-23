@@ -1,5 +1,6 @@
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
+import { fujiRailway, RAIL_HALF_LENGTH } from "./fuji-railway";
 import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
 import { isWater, type Biome } from "./terrain";
 
@@ -22,6 +23,8 @@ export interface Prop {
   readonly rotation: number;
   /** In [0, 1): picks between visual variants and small colour shifts. */
   readonly variant: number;
+  /** Spatially correlated selector for species, independent of model details. */
+  readonly family?: number;
   readonly regionId: string;
 }
 
@@ -33,27 +36,33 @@ const SCATTER: Readonly<Record<Biome, ReadonlyArray<readonly [PropKind, number]>
     ["flower", 0.07],
   ],
   snow: [
-    ["pine", 0.06],
+    ["pine", 0.059],
+    ["bush", 0.018],
+    ["flower", 0.009],
     ["rock", 0.02],
   ],
   mountain: [
     ["rock", 0.06],
     ["crag", 0.03],
+    ["bush", 0.024],
+    ["flower", 0.02],
   ],
   marsh: [
-    ["bush", 0.09],
-    ["flower", 0.03],
+    ["bush", 0.115],
+    ["tree", 0.018],
+    ["flower", 0.065],
     ["rock", 0.01],
   ],
   forest: [
     ["tree", 0.1],
-    ["bush", 0.04],
+    ["bush", 0.074],
+    ["flower", 0.018],
   ],
   volcanic: [
     ["rock", 0.05],
     ["crag", 0.04],
   ],
-  dunes: [["rock", 0.008]],
+  dunes: [["rock", 0.012], ["bush", 0.015]],
   water: [],
   sea: [],
 };
@@ -65,7 +74,8 @@ const LANTERN_ANGLES = [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * 
 interface ScatterFields {
   readonly groves: ReturnType<typeof createNoise>;
   readonly drifts: ReturnType<typeof createNoise>;
-  readonly profiles: Map<string, readonly [number, number, number]>;
+  readonly families: ReturnType<typeof createNoise>;
+  readonly profiles: Map<string, readonly [number, number, number, number, number]>;
 }
 const cache = new WeakMap<Terrain, ScatterFields>();
 
@@ -86,6 +96,7 @@ export function propsInChunk(
     shared = {
       groves: createNoise(`${world.seed}:groves`),
       drifts: createNoise(`${world.seed}:scenery-drifts`),
+      families: createNoise(`${world.seed}:scenery-families`),
       profiles: new Map(),
     };
     cache.set(terrain, shared);
@@ -94,6 +105,7 @@ export function propsInChunk(
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   const props: Prop[] = [];
+  const railway = fujiRailway(terrain);
 
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
@@ -110,18 +122,29 @@ export function propsInChunk(
       const region = world.regionAt(x, z);
       const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;
+      if (railway) {
+        const dx = x - railway.origin.x;
+        const dz = z - railway.origin.z;
+        const along = dx * railway.along.x + dz * railway.along.z;
+        const across = dx * railway.across.x + dz * railway.across.z;
+        const onRailway = Math.abs(along) < RAIL_HALF_LENGTH && Math.abs(across) < 2.6;
+        const onPlatform = Math.abs(across - 3) < 3.2 && railway.stations.some((station) => Math.abs(along - station.distance) < 10.5);
+        if (onRailway || onPlatform) continue;
+      }
       if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius)) continue;
 
       let profile = shared.profiles.get(region.id);
       if (!profile) {
         const local = createRng(world.seed).fork(`scenery:${region.id}`);
-        profile = [local.range(0.45, 1.5), local.range(0.55, 1.75), local.range(0.5, 1.6)];
+        profile = [local.range(0.45, 1.5), local.range(0.55, 1.75), local.range(0.5, 1.6), local.next(), local.next()];
         shared.profiles.set(region.id, profile);
       }
       const canopy = shared.groves(x / 11, z / 11) * 0.8 + shared.groves(x / 4, z / 4) * 0.2;
       const drift = shared.drifts(x / 8, z / 8);
       const groveDensity = 0.15 + Math.max(0, (canopy - 0.32) / 0.68) ** 2 * 3.8 * profile[0];
-      const bloomDensity = 0.12 + Math.max(0, (drift - 0.34) / 0.66) ** 2 * 4.2 * profile[1];
+      const meadowPatch = shared.drifts(x / 15 + 170, z / 15 - 75);
+      const patch = drift * 0.52 + meadowPatch * 0.48;
+      const bloomDensity = 0.035 + Math.max(0, (patch - 0.43) / 0.57) ** 2 * 18 * profile[1];
       const stoneDensity = 0.23 + drift ** 3 * 2.8 * profile[2];
       for (const [kind, chance] of table) {
         const woody = kind === "tree" || kind === "pine" || kind === "bush";
@@ -132,7 +155,9 @@ export function propsInChunk(
             : kind === "rock" || kind === "crag"
               ? 0.6 + 1.95 * size ** 3
               : 0.65 + 0.95 * size;
-          props.push({ kind, x, y: terrain.groundAt(x, z), z, scale, rotation, variant, regionId: tile.regionId });
+          const familyField = shared.families(x / 13 + profile[3] * 47, z / 13 + profile[4] * 61);
+          const family = ((kind === "flower" ? profile[3] : profile[4]) + familyField * 0.68 + (variant - 0.5) * 0.18 + 1) % 1;
+          props.push({ kind, x, y: terrain.groundAt(x, z), z, scale, rotation, variant, family, regionId: tile.regionId });
           break;
         }
         roll -= chance * density;

@@ -18,6 +18,14 @@ import {
   movePlayer,
   newGame,
   onWater,
+  otherStation,
+  railwayPowered,
+  stationInReach,
+  trainFrame,
+  TRAIN_BOARD_SECONDS,
+  TRAIN_RUN_SECONDS,
+  type StationIndex,
+  type TrainFrame,
   planBoatLaunch,
   recordBoatLaunch,
   recordClimbUse,
@@ -45,13 +53,14 @@ import {
 import { createCuePlayer, createMusic, MUSIC_SETS, musicSetFor, type CueId, type MusicSet, type TrackId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { CAPABILITY_THRESHOLDS, capabilitiesForCount, createObstacles, createTerrain, createWorld, planMonuments, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
+import { CAPABILITY_THRESHOLDS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, planMonuments, railPoint, standPoint, stationFloor, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor, type Messages } from "./i18n";
 import { createMinimap } from "./minimap";
 import { createMonumentUi } from "./monuments-ui";
 import { createNotebook } from "./notebook";
+import { createRailwayView } from "./railway-view";
 import { createSettingsStore } from "./settings";
 import { createSettingsPanel } from "./settings-panel";
 
@@ -142,6 +151,7 @@ export function startApp(container: HTMLElement): void {
   const seed = params.get("seed") ?? "wayshrine";
   const world = createWorld(seed);
   const terrain = createTerrain(world);
+  const railway = fujiRailway(terrain);
   const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
   const sceneryObstacles = createObstacles(terrain, monuments);
@@ -152,7 +162,7 @@ export function startApp(container: HTMLElement): void {
       if (audible) cues.play("haiku-cicadas", 1.1);
       else cues.stop("haiku-cicadas", 1.35);
     },
-  });
+  }, railway);
   const obstacles: Obstacles = {
     near(x, z, reach) {
       const nearby = sceneryObstacles.near(x, z, reach);
@@ -242,6 +252,16 @@ export function startApp(container: HTMLElement): void {
   } | null = null;
   let gearReveal: { gear: GearReveal; left: number } | null = null;
   let boatVoyage: { readonly path: BoatLaunch; readonly preview: boolean; t: number } | null = null;
+  let trainRide: {
+    readonly from: StationIndex;
+    readonly boardingFrom: Point;
+    readonly preview: boolean;
+    readonly visibleState: GameState;
+    wait: number;
+    t: number;
+  } | null = null;
+  let parkedTrain: StationIndex = 0;
+  let trainLoadNotice = 0;
   // A debug voyage gives temporary water access, without writing that voyage to the save.
   let boatTrial = false;
   let snowshoeMusicPreview = false;
@@ -254,7 +274,7 @@ export function startApp(container: HTMLElement): void {
   let lanternMusicPreview = false;
   /** True while a debug preview waits (negative time) for the previous theme to fade back before it starts. */
   const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0;
-  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null;
+  const momentBusy = (): boolean => trainRide !== null || awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
@@ -294,7 +314,38 @@ export function startApp(container: HTMLElement): void {
     lanternMusicPreview = false;
   };
 
+  const startTrainRide = (from: StationIndex, preview = false): void => {
+    if (!railway) return;
+    const visibleState = preview
+      ? railway.stations.reduce((next, station) => restoreShrine(next, world.regionById(station.shrineId)), state)
+      : state;
+    trainRide = {
+      from, preview, visibleState, t: 0, wait: 0,
+      boardingFrom: preview ? railway.stations[from].stand : pos,
+    };
+    facing = Math.atan2(-railway.across.x, -railway.across.z);
+    overviewTime = OVERVIEW_SECONDS;
+    trainLoadNotice = 0;
+    down.clear();
+  };
+  const finishTrainRide = (arrived: boolean): void => {
+    if (!railway || !trainRide) return;
+    if (arrived && !trainRide.preview) {
+      parkedTrain = otherStation(trainRide.from);
+      pos = railway.stations[parkedTrain].stand;
+      facing = Math.atan2(railway.across.x, railway.across.z);
+    }
+    if (document.activeElement instanceof HTMLButtonElement && document.activeElement.closest(".fuji-ride")) {
+      document.activeElement.blur();
+    }
+    trainRide = null;
+    down.clear();
+    cues.stop("rail-roll", 0.55);
+  };
+  const railView = railway && createRailwayView(container, () => finishTrainRide(stage.railwayReady()));
+
   const stopGearMoments = (): void => {
+    finishTrainRide(false);
     gearReveal = null;
     boatVoyage = null;
     snowshoeMoment = null;
@@ -447,6 +498,10 @@ export function startApp(container: HTMLElement): void {
         lanternMoment = { t: lead };
       },
       previewFirstVoyage,
+      previewFujiRide: railway ? () => {
+        beginPreview();
+        startTrainRide(0, true);
+      } : undefined,
       previewSnowshoeUse: () => {
         beginPreview();
         // If this save is already on the snow theme, let the preview fade back to the sea theme first.
@@ -464,7 +519,7 @@ export function startApp(container: HTMLElement): void {
     debugPanel = createDebugPanel(container, actions, () => down.clear());
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
-      wayshrine: { world, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => { stopGearMoments(); pos = { x, z }; }, restore, ...actions },
+      wayshrine: { world, railway, railRideTime: () => trainRide?.t ?? null, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => { stopGearMoments(); pos = { x, z }; }, restore, ...actions },
     });
   }
 
@@ -476,7 +531,14 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener(
     "keydown",
     (e) => {
-      if (e.code !== "Escape" || !minimap.isExpanded() || panel.isOpen()) return;
+      if (e.code !== "Escape") return;
+      if (trainRide) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!e.repeat) finishTrainRide(stage.railwayReady());
+        return;
+      }
+      if (!minimap.isExpanded() || panel.isOpen()) return;
       e.stopImmediatePropagation();
       if (!e.repeat) minimap.toggleExpanded();
     },
@@ -487,6 +549,15 @@ export function startApp(container: HTMLElement): void {
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
     music.unlock(); // browsers allow audio only after a user gesture
+    if (trainRide) {
+      if (KEY_ACT.includes(e.code) && (e.code === "KeyE" || !(e.target instanceof HTMLButtonElement))) {
+        e.preventDefault();
+        finishTrainRide(stage.railwayReady());
+      } else if (e.code === KEY_MUTE) {
+        settings.update({ muted: !settings.get().muted });
+      }
+      return;
+    }
     if (e.code === KEY_RUBBING_BOX && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey
         && (monumentUi.isBoxOpen() || !modalOpen())) {
       down.clear();
@@ -545,6 +616,12 @@ export function startApp(container: HTMLElement): void {
           if (useWinterSwell) cues.play(WINTER_SHRINE_SWELL, WINTER_SHRINE_FADE_IN);
           else cues.play(AWAKENING_SWELLS[kind]);
         } else {
+          const station = stationInReach(railway, pos);
+          if (station !== null && railway && railwayPowered(railway, state)) {
+            if (minimap.isExpanded()) minimap.toggleExpanded();
+            startTrainRide(station);
+            return;
+          }
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
             readMonument(stone.id);
@@ -583,8 +660,8 @@ export function startApp(container: HTMLElement): void {
     if (boatTrial && !boatVoyage && !onWater(terrain, pos)) boatTrial = false;
     const sailingCaps = boatTrial ? new Set<Capability>([...caps, "boat"]) : caps;
     // Losing a capability (a reset, an old save) must never strand the player.
-    if (!boatVoyage) pos = clearOfObstacles(terrain, sailingCaps, obstacles, safePosition(terrain, sailingCaps, pos));
-    const seen = boatTrial ? state : discoverNear(state, world, pos);
+    if (!boatVoyage && !trainRide) pos = clearOfObstacles(terrain, sailingCaps, obstacles, safePosition(terrain, sailingCaps, pos));
+    const seen = boatTrial || trainRide ? state : discoverNear(state, world, pos);
     if (seen !== state) {
       state = seen;
       saveGame(state);
@@ -648,6 +725,46 @@ export function startApp(container: HTMLElement): void {
         }
       }
     }
+    let railFrame: TrainFrame | undefined;
+    let railPlayer = pos;
+    let boardingHeight: number | undefined;
+    let railPreparing = false;
+    trainLoadNotice = Math.max(0, trainLoadNotice - dt);
+    if (railway && trainRide) {
+      const ride = trainRide;
+      railPreparing = !stage.railwayReady();
+      if (railPreparing) {
+        ride.wait += dt;
+        if (ride.wait > 8) {
+          finishTrainRide(false);
+          trainLoadNotice = 4;
+        }
+      } else {
+        const previous = ride.t;
+        ride.t += dt;
+        if (previous < TRAIN_BOARD_SECONDS && ride.t >= TRAIN_BOARD_SECONDS) cues.play("rail-roll", 1.1);
+        const brakeAt = TRAIN_BOARD_SECONDS + TRAIN_RUN_SECONDS - 1.2;
+        if (previous < brakeAt && ride.t >= brakeAt) cues.stop("rail-roll", 1.7);
+      }
+      if (trainRide) {
+        railFrame = trainFrame(railway, ride.from, ride.t);
+        if (railFrame.done) {
+          finishTrainRide(true);
+          railPlayer = pos;
+          railFrame = undefined;
+        } else if (ride.t >= TRAIN_BOARD_SECONDS + TRAIN_RUN_SECONDS) {
+          railPlayer = railway.stations[otherStation(ride.from)].stand;
+        } else {
+          const from = ride.boardingFrom;
+          const door = railPoint(railway, railway.stations[ride.from].distance + 1.4, 0.9);
+          const step = railFrame.boarding;
+          railPlayer = { x: from.x + (door.x - from.x) * step, z: from.z + (door.z - from.z) * step };
+          const ground = stationFloor(railway, terrain, from) ?? terrain.groundAt(from.x, from.z);
+          boardingHeight = ground + (railway.height + 0.42 - ground) * step;
+        }
+      }
+    }
+
     if (climbMoment) {
       climbMoment.t += dt;
       if (climbMoment.t >= CLIMB_MOMENT_SECONDS) climbMoment = null;
@@ -707,6 +824,7 @@ export function startApp(container: HTMLElement): void {
     const hint = blockedBy && needed ? t.blocked(t.capability[needed], t.terrain[blockedBy]) : null;
     const reach = shrineInReach(terrain, pos);
     const stone = momentBusy() ? null : monumentInReach(monuments, pos);
+    const station = momentBusy() ? null : stationInReach(railway, pos);
     const prompt = awakening
       ? awakening.t > timingOf(awakening.kind).zoomOut
         ? t.promptSkip
@@ -717,6 +835,8 @@ export function startApp(container: HTMLElement): void {
         ? reach.landmark
           ? t.promptRestoreLandmark
           : t.promptRestore
+        : station !== null && railway
+          ? railwayPowered(railway, state) ? t.railway.board : t.railway.dormant
         : stone
           ? isLegible(state, stone)
             ? t.monuments.promptRead
@@ -744,7 +864,7 @@ export function startApp(container: HTMLElement): void {
       restoredLandmarks,
       compass,
       prompt: reading ? null : prompt,
-      hint: reading || momentBusy() ? null : hint,
+      hint: reading || momentBusy() ? null : trainLoadNotice > 0 ? t.railway.unavailable : hint,
       gearReveal: gearReveal && { gear: gearReveal.gear, locale: prefs.language },
       landmarkName: nameModel,
       nearLandmarkName: nearModel,
@@ -765,7 +885,7 @@ export function startApp(container: HTMLElement): void {
     }
     cues.update(dt);
     const audible = cues.playing();
-    const swellDuck = ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : 1;
+    const swellDuck = ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : railFrame?.windowView ? 0.3 : 1;
     music.setDuck(swellDuck);
     music.update(dt);
 
@@ -774,10 +894,15 @@ export function startApp(container: HTMLElement): void {
       progress: lightingProgress,
       flame: Math.min(1, Math.max(0, (lightingProgress - LANTERN_IGNITION_AT) / 0.12)),
     };
+    railView?.(railFrame, railPreparing, t.railway);
     stage.render(dt, {
-      player: pos, facing, state, moving, drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : undefined, strapGear: getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      player: railPlayer, facing, state: trainRide?.visibleState ?? state,
+      moving: moving || (railFrame !== undefined && railFrame.boarding > 0 && railFrame.boarding < 1), drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : undefined, strapGear: getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       lighting,
       voyage: voyageFrame,
+      train: railFrame,
+      parkedTrain: railway?.stations[parkedTrain].distance,
+      boardingHeight,
     });
     requestAnimationFrame(frame);
   };

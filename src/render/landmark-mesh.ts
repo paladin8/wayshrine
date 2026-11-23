@@ -188,6 +188,7 @@ export function buildLandmark(id: string): ShrineMesh {
 
   return {
     group,
+    modelReady: () => model !== null,
     appendObstaclesNear(x, z, reach, out: Obstacle[]) {
       if (!model) return;
       for (const animal of deer) appendAnimalObstacles(animal.model.group, "deer", x, z, reach, out);

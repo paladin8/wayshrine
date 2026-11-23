@@ -9,7 +9,8 @@ GLB=ROOT+"/public/models/landmarks/mount-fuji.glb"
 BLEND=ROOT+"/content/landmarks/mount-fuji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"fuji":"5f6878","hill":"6f8a50","snow":"f2f5f5","greige":"8d837b","slate":"837d77","vermilion":"d96b59","roof":"3a3634","blossom":"f2b6c4","foliage":"779555","bark":"4e3a30","glow_cream":"e8dcb0"}
+PAL={"mountain_foot":"637887","mountain_slope":"536c87","mountain_gully":"485e77","mountain_rib":"617a92",
+     "mountain_snow":"edf3f8","mountain_snow_ice":"d7e6f2","mountain_snow_shade":"c1d3e5","hill":"6f8a50","greige":"8d837b","slate":"837d77","vermilion":"d96b59","roof":"3a3634","blossom":"f2b6c4","foliage":"779555","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -117,35 +118,66 @@ FH=16.8   # footprint half-width (the sidecar's half): Fuji is huge
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 
-# ---- Mount Fuji: a concave cone, gentle in its wide skirt and steep toward the top, the summit cut off at the
-# crater; snow on the upper slopes reaching down the gullies in a ragged line
-FX,FY=-3.2,3.2; FR=12.4; FHT=8.2   # wide, with a smooth gradual slope, like the real mountain
-NA=28; NK=12
-def fuji_r(z,a):
-    t=min(1.0,z/(FHT*0.95))
-    ridge=1.0+0.035*math.sin(9*a+1.2)*(1-t)+0.02*math.sin(17*a)                # gullies down the flanks
-    return (1.4+(FR-1.4)*(1.0-t)**1.25)*ridge                                 # a smooth, gradual cone, only slightly concave, truncated at the rim
-def snowline(a):
-    return FHT*(0.5+0.06*math.sin(5*a+0.8)+0.05*math.sin(11*a+2.1)+0.035*math.sin(23*a))
-levels=[FHT*(k/NK)**0.85*0.95 for k in range(NK+1)]
-verts=[]; faces=[]; mats=[]
-for k,z in enumerate(levels):
-    for i in range(NA):
-        a=2*math.pi*i/NA; r=fuji_r(z,a)
-        verts.append((FX+r*math.cos(a),FY+r*math.sin(a),z-(0.25 if k==0 else 0.0)))
-for k in range(NK):
-    for i in range(NA):
-        j=(i+1)%NA; a=2*math.pi*(i+0.5)/NA
-        q=[k*NA+i,k*NA+j,(k+1)*NA+j,(k+1)*NA+i]
-        zm=(levels[k]+levels[k+1])/2
-        faces+=[[q[0],q[1],q[2]],[q[0],q[2],q[3]]]
-        m="snow" if zm>snowline(a) else "fuji"
-        mats+=[m,m]
-# the crater: the summit ring dips into a shallow bowl
-top=NK*NA; c=len(verts); verts.append((FX,FY,levels[-1]-0.3))
-for i in range(NA):
-    faces.append([top+i,top+(i+1)%NA,c]); mats.append("snow")
-emit(verts,faces,mats)
+# ---- Mount Fuji: a broad skirt, radial erosion gullies and an uneven crater rim.
+# The snow boundary is a shared contour in the mesh. It follows the gullies without stair steps.
+FX, FY = -3.2, 3.2
+FR, FHT = 12.8, 10.7
+SECTORS, LOWER, UPPER = 88, 20, 15
+
+def gully(angle):
+    return (0.5 + 0.5 * math.sin(11 * angle + 0.4 * math.sin(3 * angle))) ** 3
+
+def snowline(angle):
+    return 0.59 + 0.037 * math.sin(5 * angle + 0.3) + 0.021 * math.sin(17 * angle) - 0.105 * gully(angle)
+
+def mountain_point(angle, t):
+    # The lower flank spreads much faster than the upper flank. Radial cuts die out at both ends.
+    rim = 1.48 + 0.12 * math.sin(3 * angle + 0.8) + 0.07 * math.sin(7 * angle)
+    skirt = FR * (1 + 0.028 * math.sin(3 * angle) + 0.016 * math.sin(5 * angle + 1.2))
+    flank = 0.38 * (1 - t) + 0.62 * (1 - t) ** 1.65
+    radius = rim + (skirt - rim) * flank
+    erosion = math.sin(math.pi * t) * (0.45 * gully(angle + 0.039 * t) - 0.12 * math.cos(6 * angle + 0.2))
+    radius -= erosion
+    crown = 0.16 * math.cos(angle + 0.65) + 0.10 * math.sin(2 * angle) + 0.065 * math.sin(5 * angle - 0.5)
+    z = FHT * t + crown * t ** 5 - 0.27 * (1 - t) ** 24
+    return (FX + radius * math.cos(angle), FY + 0.94 * radius * math.sin(angle), z)
+
+verts, faces, colors = [], [], []
+angles = [math.tau * i / SECTORS for i in range(SECTORS)]
+for ring in range(LOWER + UPPER + 1):
+    for angle in angles:
+        line = snowline(angle)
+        t = line * (ring / LOWER) ** 1.18 if ring <= LOWER else line + (1 - line) * ((ring - LOWER) / UPPER)
+        verts.append(mountain_point(angle, t))
+
+for ring in range(LOWER + UPPER):
+    for i, angle in enumerate(angles):
+        j = (i + 1) % SECTORS
+        a, b, c, d = ring * SECTORS + i, ring * SECTORS + j, (ring + 1) * SECTORS + j, (ring + 1) * SECTORS + i
+        cut = gully(angle + math.pi / SECTORS)
+        illumination = math.sin(8 * angle + ring * 0.13) + 0.35 * math.sin(19 * angle - ring * 0.39)
+        if ring >= LOWER:
+            color = "mountain_snow_shade" if cut > 0.84 and ring < LOWER + 10 else (
+                "mountain_snow_ice" if cut > 0.42 or illumination < -0.63 else "mountain_snow")
+        elif ring < 4 + 1.6 * math.sin(4 * angle):
+            color = "mountain_foot"
+        else:
+            color = "mountain_gully" if cut > 0.52 else ("mountain_rib" if illumination > 0.72 else "mountain_slope")
+        faces.extend(([a, b, c], [a, c, d]) if (ring + i) % 2 == 0 else ([a, b, d], [b, c, d]))
+        colors.extend([color, color])
+
+# An inner rim and a shallow dark bowl give the summit a crater in the overhead view.
+rim = (LOWER + UPPER) * SECTORS
+inner = len(verts)
+for vx, vy, vz in verts[rim:]:
+    verts.append((FX + (vx - FX) * 0.54, FY + (vy - FY) * 0.54, vz - 0.38))
+centre = len(verts)
+verts.append((FX - 0.08, FY + 0.12, FHT - 0.71))
+for i in range(SECTORS):
+    j = (i + 1) % SECTORS
+    faces.extend(([rim + i, rim + j, inner + j], [rim + i, inner + j, inner + i], [inner + i, inner + j, centre]))
+    colors.extend(["mountain_snow", "mountain_snow_ice", "mountain_snow_shade"])
+emit(verts, faces, colors)
 
 # ---- the Chureito pagoda on its hill: five vermilion storeys under dark roofs, steps climbing to it from a torii
 HX,HY=8.0,-6.0
@@ -254,17 +286,23 @@ def getmat(name):
     m.diffuse_color=lin(PAL[name]); m.roughness=1.0
     mats[name]=m; return m
 col=bpy.context.scene.collection
+mountain=bpy.data.objects.new("fuji_mountain",None)
+mountain.location=(FX,FY,0)
+col.objects.link(mountain)
 stats={}; allv=[]
 for key in sorted(B):
     vs,fs=B[key]
     matname="glow_cream" if key.startswith("glow_") else key
     objname=key if key.startswith("glow_") else "fuji_"+key
-    me=bpy.data.meshes.new(objname); me.from_pydata(vs,[],fs); me.validate(); me.update()
+    mountain_part=key.startswith("mountain_")
+    local_vs=[(x-FX,y-FY,z) for x,y,z in vs] if mountain_part else vs
+    me=bpy.data.meshes.new(objname); me.from_pydata(local_vs,[],fs); me.validate(); me.update()
     for p in me.polygons: p.use_smooth=False
     me.materials.append(getmat(matname))
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
+    if mountain_part: ob.parent=mountain
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
-    allv+= [v.co.copy() for v in me.vertices]
+    allv+= [Vector(v) for v in vs]
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,

@@ -1,4 +1,5 @@
-import { createNoise, createRng, type Rng } from "../core";
+import { createRegionBend } from "./landforms";
+import { createRng, type Rng } from "../core";
 import { REGION_SIZE, neighborsOf, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
 import { footprintHalf, HOME_RADIUS, LANDMARK_BLEND, LANDMARK_REACH_MARGIN, planRegions, type Landmark, type LandmarkLayout } from "./landmarks";
 import type { Biome } from "./terrain";
@@ -93,14 +94,7 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
   const root = createRng(seed);
   const cache = new Map<string, Region>();
   const ambientCache = new Map<string, Biome>();
-  const bendX = createNoise(`${seed}:region-bend-x`);
-  const bendZ = createNoise(`${seed}:region-bend-z`);
-  const ripple = createNoise(`${seed}:region-edge-detail`);
-
-  /** Broad bends vary the area of each cell, with a shorter ripple along its edge. */
-  function bend(x: number, z: number, noise: ReturnType<typeof createNoise>, offset: number): number {
-    return (noise(x / 39, z / 39) - 0.5) * 9 + (ripple(x / 15 + offset, z / 15) - 0.5) * 3;
-  }
+  const bend = createRegionBend(seed);
 
   /** The loose grid of cluster sites: one per `CLUSTER_SPACING` square, jittered within it. */
   const clusterSites = new Map<string, { x: number; z: number; biome: Biome }>();
@@ -246,8 +240,7 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
   }
 
   function regionAt(x: number, z: number): Region {
-    const warpedX = x + bend(x, z, bendX, 0);
-    const warpedZ = z + bend(x, z, bendZ, 91);
+    const { x: warpedX, z: warpedZ } = bend(x, z);
     const cx = Math.floor(warpedX / REGION_SIZE);
     const cz = Math.floor(warpedZ / REGION_SIZE);
     let best = region(cx, cz);

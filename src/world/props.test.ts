@@ -7,14 +7,14 @@ import { isWater, type Biome } from "./terrain";
 
 const ALLOWED: Record<Biome, readonly PropKind[]> = {
   meadow: ["tree", "bush", "flower", "lantern"],
-  snow: ["pine", "rock", "lantern"],
-  mountain: ["rock", "crag", "lantern"],
+  snow: ["pine", "rock", "bush", "flower", "lantern"],
+  mountain: ["rock", "crag", "bush", "flower", "lantern"],
   water: ["lantern"],
-  marsh: ["bush", "flower", "rock", "lantern"],
-  forest: ["tree", "bush", "lantern"],
+  marsh: ["bush", "tree", "flower", "rock", "lantern"],
+  forest: ["tree", "bush", "flower", "lantern"],
   volcanic: ["rock", "crag", "lantern"],
   sea: ["lantern"],
-  dunes: ["rock", "lantern"],
+  dunes: ["rock", "bush", "lantern"],
 };
 
 describe("propsInChunk", () => {

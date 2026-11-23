@@ -4,6 +4,7 @@ import { biomePropLook, biomePropParts } from "./biome-props";
 import { addMonument } from "./monument-mesh";
 import { palette } from "./palette";
 import { at, box, cone, cylinder, ico, type Part } from "./shapes";
+import { vegetationHeight, vegetationLook, vegetationParts } from "./vegetation-forms";
 import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
 const LEAF = 0x5f9a52;
@@ -72,7 +73,7 @@ function cachedParts(kind: PropKind, look: string, variant: number): Part[] {
   const key = `${look}:${bucket}`;
   let parts = partCache.get(key);
   if (!parts) {
-    parts = biomePropParts(look, bucket) ?? partsFor(kind, bucket);
+    parts = vegetationParts(look, bucket) ?? biomePropParts(look, bucket) ?? partsFor(kind, bucket);
     partCache.set(key, parts);
   }
   return parts;
@@ -90,8 +91,8 @@ const SWAY_HEIGHT: Partial<Record<PropKind, number>> = {
 };
 
 function addProp(builder: VitalityBuilder, p: Prop, biome: Biome): void {
-  const look = biomePropLook(biome, p.kind);
-  const height = look === "cedar" ? 4.2 : look === "cattail" ? 1 : SWAY_HEIGHT[p.kind];
+  const look = vegetationLook(biome, p.kind, p.family ?? p.variant) ?? biomePropLook(biome, p.kind);
+  const height = vegetationHeight(look) ?? (look === "cedar" ? 4.2 : look === "cattail" ? 1 : SWAY_HEIGHT[p.kind]);
   const motion = height ? {
     sway: { baseY: p.y, height: height * p.scale },
     bloomBase: p.kind === "flower" ? p.y : undefined,

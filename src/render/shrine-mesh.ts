@@ -10,6 +10,8 @@ export interface ShrineMesh {
   readonly group: THREE.Group;
   /** Restoration progress: 0 is dead and grey with the orb dark; 1 is restored and glowing. */
   setVitality(progress: number): void;
+  /** True when a streamed landmark has installed its model. */
+  modelReady?(): boolean;
   /** Append colliders attached to the current model pose. */
   appendObstaclesNear?(x: number, z: number, reach: number, out: Obstacle[]): void;
   /** Animates the shrine or landmark. */

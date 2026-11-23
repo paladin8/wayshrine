@@ -117,6 +117,13 @@ export const en: Messages = {
   promptRestore: "Press E to restore the shrine",
   promptRestoreLandmark: "Press E to restore the landmark",
   promptSkip: "Press E to skip",
+  railway: {
+    board: "E · Board the shinkansen",
+    dormant: "Restore both station shrines to run the train",
+    preparing: "Preparing the ride…",
+    unavailable: "The train view could not load. Try boarding again.",
+    skip: "Skip ride",
+  },
   compassHere: "Shrine here",
   compassNearest: (distance) => `Nearest shrine · ${distance}`,
   map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel", zoom: "Zoom out (Z)" },
