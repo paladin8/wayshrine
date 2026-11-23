@@ -21,6 +21,10 @@ export interface Character {
    */
   update(dt: number, walk: number, seated: number): readonly FootStep[];
   setGear(gear: GearId | null): void;
+  /** Gear carried but not in use: walking sticks ride lashed to the pack. */
+  setKit(kit: ReadonlySet<GearId>): void;
+  /** Draw the walking sticks from the pack: progress 0 to 1, or null when not drawing. */
+  setDraw(progress: number | null): void;
   /** Crouch to strap on gear: 0 stands normally, 1 is fully crouched. `fuss` moves the hands about the feet. */
   setCrouch(amount: number, fuss: number): void;
   dispose(): void;
@@ -260,17 +264,46 @@ export function buildCharacter(variant: CharacterVariant): Character {
   mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.025, 7), m(palette.roof), lantern, 0, -0.085, 0.04);
   registerGear("lantern", [lantern]);
 
-  // A coil of rope over the shoulder and an ice axe lashed to the pack.
-  const climbing = group(torso);
-  const coil = new THREE.TorusGeometry(0.15, 0.03, 5, 12);
-  coil.rotateY(Math.PI / 2);
-  const coilMesh = mesh(coil, m(ROPE), climbing, 0, 0.26, 0);
-  coilMesh.rotation.z = 0.5;
-  coilMesh.scale.set(1, 1, 0.8);
-  const axe = group(pack, 0.17, 0, -0.04);
-  mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.5, 5), woodDark, axe, 0, 0.05, 0);
-  mesh(new THREE.BoxGeometry(0.1, 0.025, 0.025), m(0x9a9aa0), axe, 0, 0.3, 0);
-  registerGear("climbing", [climbing, axe]);
+  // Two walking sticks, pilgrim style, and a coil of rope. They ride lashed to the pack until they are
+  // needed, and are held in the hands on mountains.
+  const makeStick = (): THREE.Group => {
+    const g = group(root);
+    const shaft = new THREE.CylinderGeometry(0.017, 0.021, 0.9, 5);
+    shaft.translate(0, -0.35, 0);
+    mesh(shaft, wood, g);
+    mesh(new THREE.IcosahedronGeometry(0.032, 0), woodDark, g, 0, 0.11, 0);
+    mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.035, 6), scarfMat, g, 0, -0.06, 0);
+    const tip = new THREE.ConeGeometry(0.02, 0.06, 5);
+    tip.rotateX(Math.PI);
+    mesh(tip, m(0x9a9aa0), g, 0, -0.83, 0);
+    return g;
+  };
+  const sticks = [makeStick(), makeStick()] as const;
+  const rope = group(pack, 0, -0.1, -0.1);
+  const coilGeo = new THREE.TorusGeometry(0.1, 0.028, 5, 12);
+  mesh(coilGeo, m(ROPE), rope);
+  mesh(new THREE.BoxGeometry(0.05, 0.05, 0.03), scarfMat, rope, 0, 0.0, 0.0);
+  let stickState: "hidden" | "stowed" | "held" = "hidden";
+  const placeSticks = (next: "hidden" | "stowed" | "held"): void => {
+    rope.visible = next !== "hidden";
+    sticks.forEach((stick, i) => {
+      stick.visible = next !== "hidden";
+      if (next === stickState) return;
+      const side = i === 0 ? 1 : -1;
+      if (next === "held") {
+        arms[i]!.hand.add(stick);
+        stick.position.set(0, 0.02, 0.01);
+        stick.rotation.set(0, 0, 0);
+      } else {
+        pack.add(stick);
+        stick.position.set(side * 0.15, 0.4, -0.1);
+        stick.rotation.set(0.04, 0, -side * 0.1);
+      }
+    });
+    stickState = next;
+  };
+  placeSticks("stowed");
+  placeSticks("hidden");
 
   let gear: GearId | null = null;
   let phase = 0;
@@ -278,6 +311,9 @@ export function buildCharacter(variant: CharacterVariant): Character {
   let seatedSmooth = 0;
   let crouch = 0;
   let fuss = 0;
+  let draw: number | null = null;
+  let kit: ReadonlySet<GearId> = new Set();
+  const refreshSticks = (): void => placeSticks(gear === "climbing" ? "held" : kit.has("climbing") ? "stowed" : "hidden");
   /** How far gear raises the feet, so the hips follow it. */
   const FOOT_LIFT: Readonly<Partial<Record<GearId, number>>> = { geta: 0.095, snowshoes: 0.03, ashSandals: 0.012 };
 
@@ -290,6 +326,14 @@ export function buildCharacter(variant: CharacterVariant): Character {
       for (const [id, groups] of Object.entries(gearGroups) as Array<[GearId, THREE.Group[]]>) {
         for (const g of groups) g.visible = id === next;
       }
+      refreshSticks();
+    },
+    setKit(next) {
+      kit = next;
+      refreshSticks();
+    },
+    setDraw(progress) {
+      draw = progress;
     },
     setCrouch(amount, fussing) {
       crouch = amount;
@@ -373,6 +417,33 @@ export function buildCharacter(variant: CharacterVariant): Character {
         torso.rotation.x = lerp(torso.rotation.x, 0.85, a);
         torso.rotation.y *= 1 - a;
         head.rotation.x = lerp(head.rotation.x, -0.55, a);
+      }
+
+      if (draw !== null) {
+        // Reach back for the sticks, bring them round, then plant them a couple of times.
+        const sm = (x: number): number => {
+          const u = Math.min(1, Math.max(0, x));
+          return u * u * (3 - 2 * u);
+        };
+        const reachW = sm(draw / 0.16) * (1 - sm((draw - 0.24) / 0.1));
+        const plantW = sm((draw - 0.3) / 0.12) * (1 - sm((draw - 0.88) / 0.1));
+        const tap = (draw - 0.5) * Math.PI * 9;
+        for (const [i, arm] of arms.entries()) {
+          const alt = i === 0 ? Math.max(0, Math.sin(tap)) : Math.max(0, -Math.sin(tap));
+          arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, 2.4, reachW);
+          arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -0.45, reachW);
+          arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, -0.85 + alt * 0.3, plantW);
+          arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -0.5, plantW);
+        }
+        torso.rotation.x += 0.18 * plantW - 0.12 * reachW;
+        head.rotation.x -= 0.1 * plantW;
+      }
+      if (stickState === "held") {
+        // Keep each stick at a steady angle from the ground whatever the arm is doing.
+        sticks.forEach((stick, i) => {
+          const arm = arms[i]!;
+          stick.rotation.x = -(arm.shoulder.rotation.x + arm.elbow.rotation.x + torso.rotation.x) - 0.62;
+        });
       }
 
       // A foot is flat under the hip when its swing crosses zero: the right leg at half a cycle, the left at a full one.

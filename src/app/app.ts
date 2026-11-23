@@ -20,6 +20,7 @@ import {
   onWater,
   planBoatLaunch,
   recordBoatLaunch,
+  recordClimbUse,
   recordSnowshoeUse,
   nextShrine,
   requirementOf,
@@ -90,6 +91,8 @@ const SNOWSHOE_RELEASE_SECONDS = 3;
 const SNOWSHOE_MOMENT_SECONDS = 4.6;
 /** Seconds into the unlock cue at which the background score crosses from the sea theme to the snow theme, still under the ducked cue. */
 const SNOWSHOE_MUSIC_SWITCH = 5.5;
+/** How long the walking sticks take to come off the pack and be planted the first time. */
+const CLIMB_MOMENT_SECONDS = 5.2;
 
 function gearMusicDuck(elapsed: number | null, start: number, duration: number): number {
   if (elapsed === null) return 1;
@@ -238,7 +241,8 @@ export function startApp(container: HTMLElement): void {
   let boatTrial = false;
   let snowshoeMusicPreview = false;
   let snowshoeMoment: { t: number } | null = null;
-  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null;
+  let climbMoment: { t: number } | null = null;
+  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
@@ -268,14 +272,22 @@ export function startApp(container: HTMLElement): void {
     gearReveal = null;
     boatVoyage = null;
     snowshoeMoment = null;
+    climbMoment = null;
     boatTrial = false;
     snowshoeMusicPreview = false;
     cues.stop("first-voyage", 0.25);
     cues.stop("first-snowshoe", 0.25);
+    cues.stop("first-climb", 0.25);
   };
   const playSnowshoeCue = (): void => {
     cues.stop("first-voyage", 0.25);
+    cues.stop("first-climb", 0.25);
     cues.play("first-snowshoe");
+  };
+  const playClimbCue = (): void => {
+    cues.stop("first-voyage", 0.25);
+    cues.stop("first-snowshoe", 0.25);
+    cues.play("first-climb");
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
@@ -390,6 +402,12 @@ export function startApp(container: HTMLElement): void {
       goToTarget: goToNextShrine,
       previewBoatUnlock: () => previewGearUnlock("boat"),
       previewSnowshoeUnlock: () => previewGearUnlock("snowshoes"),
+      previewClimbUnlock: () => previewGearUnlock("climbing"),
+      previewClimbUse: () => {
+        beginPreview();
+        climbMoment = { t: 0 };
+        playClimbCue();
+      },
       previewFirstVoyage,
       previewSnowshoeUse: () => {
         beginPreview();
@@ -474,7 +492,8 @@ export function startApp(container: HTMLElement): void {
           const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
           const count = kind === "landmark" ? landmarksRestored(state, world) : 0;
           const unlocksGear = count === CAPABILITY_THRESHOLDS.boat ? "boat"
-            : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes" : null;
+            : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes"
+            : count === CAPABILITY_THRESHOLDS.climbing ? "climbing" : null;
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
           const backgroundTrack = selectedMusicSet().background;
@@ -547,6 +566,12 @@ export function startApp(container: HTMLElement): void {
         snowshoeMoment = { t: 0 };
         facing = Math.atan2(dir.x, dir.z);
         playSnowshoeCue();
+      } else if (moving && caps.has("climbing") && !state.climbingUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "mountain") {
+        state = recordClimbUse(state);
+        saveGame(state);
+        climbMoment = { t: 0 };
+        facing = Math.atan2(dir.x, dir.z);
+        playClimbCue();
       }
       if (moved.blockedBy) {
         blockedBy = moved.blockedBy;
@@ -573,6 +598,10 @@ export function startApp(container: HTMLElement): void {
           boatVoyage = null;
         }
       }
+    }
+    if (climbMoment) {
+      climbMoment.t += dt;
+      if (climbMoment.t >= CLIMB_MOMENT_SECONDS) climbMoment = null;
     }
     if (snowshoeMoment) {
       const before = snowshoeMoment.t;
@@ -687,11 +716,13 @@ export function startApp(container: HTMLElement): void {
       swellDuck,
       gearMusicDuck(cues.elapsed("first-voyage"), VOYAGE_RELEASE_START, VOYAGE_RELEASE_SECONDS),
       gearMusicDuck(cues.elapsed("first-snowshoe"), SNOWSHOE_RELEASE_START, SNOWSHOE_RELEASE_SECONDS),
+      // Placeholder timing until the climbing cue is supplied.
+      gearMusicDuck(cues.elapsed("first-climb"), SNOWSHOE_RELEASE_START, SNOWSHOE_RELEASE_SECONDS),
     ));
     music.update(dt);
 
     stage.render(dt, {
-      player: pos, facing, state, moving, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : undefined, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      player: pos, facing, state, moving, drawing: climbMoment ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : undefined, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       voyage: voyageFrame,
     });
     requestAnimationFrame(frame);

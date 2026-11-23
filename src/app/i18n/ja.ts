@@ -110,6 +110,7 @@ export const ja: Messages = {
   gearReveal: {
     boat: { title: "小舟を手に入れた", hint: "水辺から水に入ると、舟に乗れます。" },
     snowshoes: { title: "かんじきを手に入れた", hint: "雪の上を歩くと、かんじきを使えます。" },
+    climbing: { title: "金剛杖を手に入れた", hint: "山に足を踏み入れると、杖を使えます。" },
   },
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",

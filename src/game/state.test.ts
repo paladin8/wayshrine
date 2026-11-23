@@ -12,6 +12,7 @@ import {
   isLandmarkRevealed,
   isRestored,
   newGame,
+  recordClimbUse,
   recordSnowshoeUse,
   resetGame,
   resetShrines,
@@ -74,6 +75,18 @@ describe("game state", () => {
     const loaded = deserialize(JSON.parse(JSON.stringify(serialize(s))));
     expect(loaded.seed).toBe(s.seed);
     expect([...loaded.restored].sort()).toEqual([...s.restored].sort());
+  });
+
+  it("records the first climb once, survives reload, and defaults old saves to unused", () => {
+    const original = withLandmarks(CAPABILITY_THRESHOLDS.climbing);
+    expect(original.climbingUsed).toBe(false);
+    const used = recordClimbUse(original);
+    expect(recordClimbUse(used)).toBe(used);
+    const { climbingUsed: _absent, ...old } = serialize(used);
+    expect(deserialize(old, world).climbingUsed).toBe(false);
+    expect(deserialize(serialize(used), world).climbingUsed).toBe(true);
+    expect(resetShrines(used).climbingUsed).toBe(false);
+    expect(resetGame(used).climbingUsed).toBe(false);
   });
 
   it("records snowshoe first use once, survives reload, and defaults old saves to unused", () => {

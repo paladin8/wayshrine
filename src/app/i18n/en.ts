@@ -110,6 +110,7 @@ export const en: Messages = {
   gearReveal: {
     boat: { title: "Boat unlocked", hint: "Walk into the water to launch." },
     snowshoes: { title: "Snowshoes unlocked", hint: "Walk onto snow to use them." },
+    climbing: { title: "Walking sticks unlocked", hint: "Walk onto the mountains to use them." },
   },
   promptRestore: "Press E to restore the shrine",
   promptRestoreLandmark: "Press E to restore the landmark",
