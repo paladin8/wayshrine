@@ -87,7 +87,7 @@ const SNOWSHOE_MOMENT_SECONDS = 4.6;
 /** How long the walking sticks take to come off the pack and be planted the first time. */
 const CLIMB_MOMENT_SECONDS = 5.2;
 /** Length of the slow crossfade between background themes when gear is first used. */
-const GEAR_FADE_SECONDS = 9;
+const GEAR_FADE_SECONDS = 5;
 const KEY_UP = ["KeyW", "ArrowUp"];
 const KEY_DOWN = ["KeyS", "ArrowDown"];
 const KEY_LEFT = ["KeyA", "ArrowLeft"];

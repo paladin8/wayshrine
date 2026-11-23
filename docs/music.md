@@ -35,17 +35,17 @@ In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze)
 
 ## Boat prototype
 
-The score stays on **Homeward Breeze** after earning the boat. At the first boarding the background crossfades to **Waves Beyond the Headlands** over 9 s as the skiff pushes off; there is no cue or duck (the earlier *Crossing at Dawn* cue was dropped, its file is unused). The second theme persists in the save once the launch finishes. Click **…** in the debug box to open **Gear acquisition**. Choosing a preview closes the dialog before it starts.
+The score stays on **Homeward Breeze** after earning the boat. At the first boarding the background crossfades to **Waves Beyond the Headlands** over 5 s as the skiff pushes off; there is no cue or duck (the earlier *Crossing at Dawn* cue was dropped, its file is unused). The second theme persists in the save once the launch finishes. Click **…** in the debug box to open **Gear acquisition**. Choosing a preview closes the dialog before it starts.
 
 ## First snowshoe use
 
-The first moving step on snow after earning snowshoes starts the strap-on moment and crossfades the background from the sea theme to **Snowline Walk** over 9 s, with no cue or duck (*Trail Through Fresh Snow* was dropped, its file is unused). The first step is saved immediately, and Snowline remains the background theme on reload or after leaving snow.
+The first moving step on snow after earning snowshoes starts the strap-on moment and crossfades the background from the sea theme to **Snowline Walk** over 5 s, with no cue or duck (*Trail Through Fresh Snow* was dropped, its file is unused). The first step is saved immediately, and Snowline remains the background theme on reload or after leaving snow.
 
 In **Gear acquisition**, **Preview snowshoe use** plays the strap-on moment and the crossfade without updating the save, fading back to the sea theme first if the save is already further along. Choose **Snowline** in the music selector to keep auditioning the background track.
 
 ## First climb
 
-The first moving step onto a mountain after earning the walking sticks crossfades the background from **Snowline Walk** to **Ridgewalk in E Major** over 9 s, with no cue or duck (*Ridge Within Reach* was dropped, its file is unused). The first climb is saved immediately and Ridgewalk remains the background on reload.
+The first moving step onto a mountain after earning the walking sticks crossfades the background from **Snowline Walk** to **Ridgewalk in E Major** over 5 s, with no cue or duck (*Ridge Within Reach* was dropped, its file is unused). The first climb is saved immediately and Ridgewalk remains the background on reload.
 
 In **Gear acquisition**, **Preview climbing use** plays the moment from the snow theme (fading back to it first if the save is already on Ridgewalk) without updating the save.
 
