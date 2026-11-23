@@ -21,6 +21,8 @@ export interface Character {
    */
   update(dt: number, walk: number, seated: number): readonly FootStep[];
   setGear(gear: GearId | null): void;
+  /** Crouch to strap on gear: 0 stands normally, 1 is fully crouched. `fuss` moves the hands about the feet. */
+  setCrouch(amount: number, fuss: number): void;
   dispose(): void;
 }
 
@@ -274,6 +276,8 @@ export function buildCharacter(variant: CharacterVariant): Character {
   let phase = 0;
   let walkSmooth = 0;
   let seatedSmooth = 0;
+  let crouch = 0;
+  let fuss = 0;
   /** How far gear raises the feet, so the hips follow it. */
   const FOOT_LIFT: Readonly<Partial<Record<GearId, number>>> = { geta: 0.095, snowshoes: 0.03, ashSandals: 0.012 };
 
@@ -286,6 +290,10 @@ export function buildCharacter(variant: CharacterVariant): Character {
       for (const [id, groups] of Object.entries(gearGroups) as Array<[GearId, THREE.Group[]]>) {
         for (const g of groups) g.visible = id === next;
       }
+    },
+    setCrouch(amount, fussing) {
+      crouch = amount;
+      fuss = fussing;
     },
     update(dt, walk, seated) {
       const k = Math.min(1, dt * 9);
@@ -346,6 +354,26 @@ export function buildCharacter(variant: CharacterVariant): Character {
       head.rotation.z = c * 0.03 * w;
       pack.rotation.z = -c * 0.03 * w;
       scarfTail.rotation.x = 0.35 + 0.5 * w + Math.sin(phase * 2 + 1) * 0.12 * w + Math.sin(performance.now() / 700) * 0.03;
+
+      if (crouch > 0) {
+        // Squat and reach for the feet, overriding the walk.
+        const a = crouch;
+        for (const [i, leg] of legs.entries()) {
+          leg.hip.rotation.x = lerp(leg.hip.rotation.x, -1.15, a);
+          leg.knee.rotation.x = lerp(leg.knee.rotation.x, 1.7, a);
+          leg.hip.rotation.z *= 1 - a;
+          leg.sole.rotation.x = lerp(leg.sole.rotation.x, -0.55, a);
+          const reach = i === 0 ? 1 : -1;
+          arms[i]!.shoulder.rotation.x = lerp(arms[i]!.shoulder.rotation.x, -0.95 + fuss * 0.18 * reach, a);
+          arms[i]!.elbow.rotation.x = lerp(arms[i]!.elbow.rotation.x, -0.55 + fuss * 0.12 * reach, a);
+        }
+        pelvis.position.y = lerp(pelvis.position.y, HIP_Y * 0.67 + lift * 0.5, a);
+        pelvis.position.x *= 1 - a;
+        pelvis.rotation.y *= 1 - a;
+        torso.rotation.x = lerp(torso.rotation.x, 0.85, a);
+        torso.rotation.y *= 1 - a;
+        head.rotation.x = lerp(head.rotation.x, -0.55, a);
+      }
 
       // A foot is flat under the hip when its swing crosses zero: the right leg at half a cycle, the left at a full one.
       const steps: FootStep[] = [];

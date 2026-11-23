@@ -38,6 +38,13 @@ const GLIMMER_RADIUS = 17;
 const RIGHT = new THREE.Vector3(1, 0, -1).normalize();
 const FORWARD = new THREE.Vector3(-1, 0, -1).normalize();
 
+/** Fraction of the strap-on moment at which the snowshoes appear on the feet. */
+const STRAP_ON_AT = 0.4;
+const smooth = (x: number): number => {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+};
+
 /** The gear shown for each ability, worn on the biome that needs it. */
 const WORN_GEAR: Readonly<Partial<Record<Capability, GearId>>> = {
   snowshoes: "snowshoes",
@@ -54,6 +61,8 @@ export interface StageView {
   readonly state: GameState;
   readonly voyage?: ReturnType<typeof boatLaunchFrame>;
   readonly moving?: boolean;
+  /** While the traveller straps on snowshoes for the first time: progress through that moment, 0 to 1. */
+  readonly strapping?: number;
   /** Which traveller body to show (default female). */
   readonly character?: CharacterVariant;
   /** Abilities held, so the traveller wears or carries the gear the ground underfoot calls for. */
@@ -335,9 +344,18 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       player.setPose(seated, voyage?.lift ?? 0);
       const needed = BIOME_REQUIRES[tile.biome];
       player.setCharacter(view.character ?? "female");
-      const worn = seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null;
+      const strapping = view.strapping;
+      let worn = seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null;
+      if (strapping !== undefined) {
+        // Crouch to tie them on, stand, then they are on.
+        worn = strapping >= STRAP_ON_AT ? "snowshoes" : null;
+        const down = smooth(strapping / 0.22) * (1 - smooth((strapping - 0.62) / 0.22));
+        player.setCrouch(down, Math.sin(strapping * 55));
+      } else {
+        player.setCrouch(0, 0);
+      }
       player.setGear(worn);
-      for (const step of player.animate(dt, view.moving ?? false)) {
+      for (const step of player.animate(dt, strapping === undefined && (view.moving ?? false))) {
         if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);
       }
       footprints.update(dt);

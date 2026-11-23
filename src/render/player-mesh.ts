@@ -10,6 +10,8 @@ export interface PlayerMesh {
   /** What the traveller wears or carries right now, or null for plain boots. */
   setGear(gear: GearId | null): void;
   /** Advance the walk cycle: `walking` is whether the player is moving this frame. Returns the feet that landed. */
+  /** Crouch to strap on gear (see `Character.setCrouch`). */
+  setCrouch(amount: number, fuss: number): void;
   animate(dt: number, walking: boolean): readonly FootStep[];
   setPose(seated: number, lift: number): void;
   setBoat(visible: boolean, wake: number, seconds: number): void;
@@ -26,6 +28,8 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
   rider.add(character.root);
   let gear: GearId | null = null;
   let seated = 0;
+  let crouch = 0;
+  let fuss = 0;
 
   const hull = new THREE.Group();
   const boat = buildBoat();
@@ -45,12 +49,18 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       character.dispose();
       character = buildCharacter(variant);
       character.setGear(gear);
+      character.setCrouch(crouch, fuss);
       rider.add(character.root);
     },
     setGear(next) {
       if (next === gear) return;
       gear = next;
       character.setGear(gear);
+    },
+    setCrouch(amount, fussing) {
+      crouch = amount;
+      fuss = fussing;
+      character.setCrouch(amount, fussing);
     },
     animate(dt, walking) {
       return character.update(dt, walking ? 1 : 0, seated);
