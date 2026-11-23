@@ -2,7 +2,7 @@ const base = import.meta.env.BASE_URL;
 const MOVEMENT_GAIN = 0.32;
 
 /** Sound effects, separate from background music. */
-export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "awakening-burst", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "first-voyage", "first-snowshoe", "walk-meadow", "walk-snow", "row-water"] as const;
+export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "awakening-burst", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "first-voyage", "first-snowshoe", "walk-meadow", "walk-snow", "row-water"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -15,6 +15,7 @@ export interface CueInfo {
 export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "dawn-reverence": { url: `${base}audio/cues/dawn-reverence.mp3` },
   "radiant-arrival": { url: `${base}audio/cues/radiant-arrival.mp3` },
+  "winter-light-restored": { url: `${base}audio/cues/winter-light-restored.mp3` },
   "awakening-burst": { url: `${base}audio/cues/awakening-burst.mp3` },
   "monument-read": { url: `${base}audio/cues/monument-read.mp3` },
   "book-open": { url: `${base}audio/cues/book-open.mp3` },

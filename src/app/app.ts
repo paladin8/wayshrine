@@ -74,7 +74,9 @@ const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
   shrine: "dawn-reverence",
   landmark: "radiant-arrival",
 };
-const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS)] as const;
+/** Shrine swell used instead of `dawn-reverence` while the snow theme is playing. */
+const SNOW_SHRINE_SWELL: CueId = "winter-light-restored";
+const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), SNOW_SHRINE_SWELL] as const;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
@@ -447,7 +449,7 @@ export function startApp(container: HTMLElement): void {
             awakening.t = target;
           }
           cues.stop(AWAKENING_BURST, SWELL_SKIP_FADE);
-          cues.stop(AWAKENING_SWELLS[awakening.kind], SWELL_SKIP_FADE);
+          for (const id of ALL_AWAKENING_CUES) if (id !== AWAKENING_BURST) cues.stop(id, SWELL_SKIP_FADE);
           if (awakening.caption < 0.05) awakening.captionOff = true;
         }
       } else if (!momentBusy()) {
@@ -464,7 +466,7 @@ export function startApp(container: HTMLElement): void {
           awakening = { regionId: region.id, kind, t: 0, initialZoom, caption: 0, captionOff: false, unlocksGear, backgroundTrack };
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           cues.play(AWAKENING_BURST);
-          cues.play(AWAKENING_SWELLS[kind]);
+          cues.play(kind === "shrine" && backgroundTrack === "snowline-walk" ? SNOW_SHRINE_SWELL : AWAKENING_SWELLS[kind]);
         } else {
           const stone = monumentInReach(monuments, pos);
           if (stone && isLegible(state, stone)) {
