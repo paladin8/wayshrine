@@ -23,7 +23,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "first-voyage": { url: `${base}audio/cues/crossing-at-dawn.mp3` },
   "first-snowshoe": { url: `${base}audio/cues/trail-through-fresh-snow.mp3` },
   "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: MOVEMENT_GAIN },
-  "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: MOVEMENT_GAIN },
+  "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: MOVEMENT_GAIN * 1.75 },
   "row-water": { url: `${base}audio/cues/row-water.wav`, loop: true, gain: MOVEMENT_GAIN },
   "box-flip": { url: `${base}audio/cues/box-flip.mp3` },
 };
