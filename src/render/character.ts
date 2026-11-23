@@ -267,13 +267,13 @@ export function buildCharacter(variant: CharacterVariant): Character {
   const makeStick = (): THREE.Group => {
     const g = group(root);
     const shaft = new THREE.CylinderGeometry(0.017, 0.021, 0.9, 5);
-    shaft.translate(0, -0.35, 0);
+    shaft.translate(0, -0.15, 0);
     mesh(shaft, wood, g);
-    mesh(new THREE.IcosahedronGeometry(0.032, 0), woodDark, g, 0, 0.11, 0);
+    mesh(new THREE.IcosahedronGeometry(0.032, 0), woodDark, g, 0, 0.31, 0);
     mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.035, 6), scarfMat, g, 0, -0.06, 0);
     const tip = new THREE.ConeGeometry(0.02, 0.06, 5);
     tip.rotateX(Math.PI);
-    mesh(tip, m(0x9a9aa0), g, 0, -0.83, 0);
+    mesh(tip, m(0x9a9aa0), g, 0, -0.63, 0);
     return g;
   };
   const sticks = [makeStick(), makeStick()] as const;
@@ -425,7 +425,7 @@ export function buildCharacter(variant: CharacterVariant): Character {
         // Keep each stick at a steady angle from the ground whatever the arm is doing.
         sticks.forEach((stick, i) => {
           const arm = arms[i]!;
-          stick.rotation.x = -(arm.shoulder.rotation.x + arm.elbow.rotation.x + torso.rotation.x) - 0.62;
+          stick.rotation.x = -(arm.shoulder.rotation.x + arm.elbow.rotation.x + torso.rotation.x) - 0.3;
         });
       }
 
