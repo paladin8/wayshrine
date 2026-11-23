@@ -35,6 +35,6 @@ export type { Terrain, Tile } from "./terrain-grid";
 export { PROP_KINDS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";
 export { MONUMENT_CLEARING, MONUMENT_EDGE_MARGIN, monumentsAroundChunk, planMonuments } from "./monuments";
-export type { Monument, MonumentPlan, MonumentSpec } from "./monuments";
+export type { HaikuSceneKind, Monument, MonumentPlan, MonumentSpec } from "./monuments";
 export { SHRINE_PILLAR_OFFSET, createObstacles } from "./obstacles";
 export type { Obstacle, Obstacles } from "./obstacles";

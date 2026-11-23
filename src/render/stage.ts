@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { lifeAt, vitality, type boatLaunchFrame, type GameState } from "../game";
-import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Point, type Terrain, type Capability } from "../world";
+import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability } from "../world";
 import { createAmbient } from "./ambient";
 import { lightBiome } from "./biome-light";
+import { createHaikuScenes } from "./haiku-scenes";
 import { createGlimmer } from "./glimmer";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
@@ -104,7 +105,13 @@ export interface Stage {
   render(dtSeconds: number, view: StageView): void;
 }
 
-export function createStage(container: HTMLElement, terrain: Terrain, monuments: MonumentPlan): Stage {
+export function createStage(
+  container: HTMLElement,
+  terrain: Terrain,
+  monuments: MonumentPlan,
+  obstacles: Obstacles,
+  onHaikuBell: () => void,
+): Stage {
   const world = terrain.world;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -250,7 +257,8 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
     renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720));
   const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
   const sightings = createLargeWildlife(terrain, lifeAtPoint);
-  scene.add(sightings.root);
+  const haiku = createHaikuScenes(terrain, monuments, obstacles, lifeAtPoint, onHaikuBell);
+  scene.add(sightings.root, haiku.root);
 
   const glimmer = createGlimmer(scene);
 
@@ -320,6 +328,7 @@ export function createStage(container: HTMLElement, terrain: Terrain, monuments:
       streamChunks(centre, zoom);
       streamShrines(centre);
       updateProgress(dt);
+      haiku.update(dt, centre, viewSize, awakening);
       ambient.update(dt, {
         focus: centre,
         zoom,

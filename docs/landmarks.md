@@ -4,7 +4,7 @@ Landmarks are hand-crafted places emblematic of Japan, one per special region, b
 
 Sixty-six are planned, in nine **acts**. An act is a band: its landmarks sit in a ring farther from the start than the act before, on a bearing that is rotated per seed, so the world grows outward in a spiral rather than along a chain. Geography is loose: an act's biome is the main constraint, and real-world location only decides order within it.
 
-Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for eighteen; the rest use the placeholder. The looks of the later biomes are still placeholders too. ## Models
+Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for nineteen; the rest use the placeholder. The looks of the later biomes are still placeholders too. ## Models
 
 A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one unit = one world unit), centred on the region's site and sitting on its flat plateau. Without a file, the landmark shows a plain placeholder. Conventions the loader relies on:
 
@@ -15,7 +15,7 @@ A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one
 - **Walkable surfaces.** Anything the player climbs (steps, platforms, bridges) is not terrain: register it in the generator as a floor, `(x0, x1, y0, y1, top)`, so the ground grid includes it, and keep solids to what stands above the floor (the generator takes geometry in a band 0.35 to 1.6 above the local ground; up-facing hill triangles are ignored). Leave a clear arrival spot at `stand`. Landmarks can be activated anywhere on their footprint and up to 3.5 units beyond each edge.
 - Without a sidecar, the landmark gets a flat plateau and one solid disc.
 
-Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii, himeji-castle, kiyomizu-dera, meoto-iwa, enoshima-lighthouse, horyu-ji, hirosaki-castle, shirakawa-go, matsumoto-castle, zao-juhyo, kenroku-en, mount-fuji, nikko-toshogu, kegon-falls, kappa-bashi. Everything else uses the placeholder.
+Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii, himeji-castle, kiyomizu-dera, meoto-iwa, enoshima-lighthouse, horyu-ji, hirosaki-castle, shirakawa-go, matsumoto-castle, zao-juhyo, kenroku-en, mount-fuji, nikko-toshogu, kegon-falls, kappa-bashi, tateyama-kurobe. Everything else uses the placeholder.
 
 ## Abilities
 

@@ -1,9 +1,15 @@
-import type { MonumentSpec } from "../world";
+import type { HaikuSceneKind, MonumentSpec } from "../world";
 import index from "./text-index.json";
 import notes from "./landmark-notes.json";
 import type { IndexEntry, TextEntry, TextKind } from "./build";
 
 export type { SceneryBiome, Season, TextEntry, TextKind } from "./build";
+
+const haikuScenes: Readonly<Partial<Record<string, HaikuSceneKind>>> = {
+  "old pond, frog": "old-pond",
+  "cherry blossoms, temple bell": "cherry-bell",
+  "first snow, bridge": "snow-bridge",
+};
 
 /** What the world needs to place the monuments: small, so it ships with the main bundle. */
 export const monumentSpecs: readonly MonumentSpec[] = (index as IndexEntry[]).map((e) => ({
@@ -11,6 +17,7 @@ export const monumentSpecs: readonly MonumentSpec[] = (index as IndexEntry[]).ma
   kind: e.kind,
   biome: e.biome,
   landmark: e.landmark,
+  scene: e.scene ? haikuScenes[e.scene] : undefined,
 }));
 
 export const TEXT_COUNT = monumentSpecs.length;

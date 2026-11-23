@@ -5,6 +5,8 @@ import { monumentClearance } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
+export type HaikuSceneKind = "old-pond" | "cherry-bell" | "snow-bridge";
+
 /** What the world needs to know about a text in order to place its monument. */
 export interface MonumentSpec {
   readonly id: string;
@@ -13,6 +15,7 @@ export interface MonumentSpec {
   readonly biome?: Biome;
   /** If set, the monument stands in this landmark's region (a haiku about the place), whatever its biome. */
   readonly landmark?: string;
+  readonly scene?: HaikuSceneKind;
 }
 
 /** A standing stone carrying one text. */
@@ -29,6 +32,7 @@ export interface Monument {
   readonly rotation: number;
   /** In [0, 1): picks small visual variation. */
   readonly variant: number;
+  readonly scene?: HaikuSceneKind;
 }
 
 /** Chance of a region holding 0, 1 or 2 monuments. Most of the world is peacefully empty. */
@@ -234,6 +238,7 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
       regionId: region.id,
       rotation,
       variant,
+      ...(spec.scene && { scene: spec.scene }),
     };
   });
 

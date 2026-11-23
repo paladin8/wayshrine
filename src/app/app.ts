@@ -78,7 +78,7 @@ const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
 };
 /** Shrine swell used instead of `dawn-reverence` while the snow theme is playing. */
 const SNOW_SHRINE_SWELL: CueId = "winter-light-restored";
-const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), SNOW_SHRINE_SWELL] as const;
+const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), SNOW_SHRINE_SWELL, "haiku-bell"] as const;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0.04;
 const SWELL_SKIP_FADE = 1.5;
@@ -152,7 +152,8 @@ export function startApp(container: HTMLElement): void {
   const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
   const sceneryObstacles = createObstacles(terrain, monuments);
-  const stage = createStage(container, terrain, monuments);
+  const cues = createCuePlayer();
+  const stage = createStage(container, terrain, monuments, sceneryObstacles, () => cues.play("haiku-bell"));
   const obstacles: Obstacles = {
     near(x, z, reach) {
       const nearby = sceneryObstacles.near(x, z, reach);
@@ -181,7 +182,6 @@ export function startApp(container: HTMLElement): void {
   }
   const hud = createHud(container);
   const music = createMusic();
-  const cues = createCuePlayer();
   const settings = createSettingsStore(undefined, navigator.languages);
   const applyAudio = (s = settings.get()): void => {
     music.setVolume(s.musicVolume);
