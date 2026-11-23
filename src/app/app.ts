@@ -94,6 +94,8 @@ const SNOWSHOE_MOMENT_SECONDS = 4.6;
 const SNOWSHOE_MUSIC_SWITCH = 5.5;
 /** How long the walking sticks take to come off the pack and be planted the first time. */
 const CLIMB_MOMENT_SECONDS = 5.2;
+/** Length of the slow crossfade used when gear cues are skipped. */
+const GEAR_FADE_SECONDS = 9;
 /** Seconds into the climbing cue at which the background crosses from the snow theme to the ridge theme. */
 const CLIMB_MUSIC_SWITCH = 4.2;
 /** The climbing cue is busy until about 5.5 s, then thins out; the ridge theme comes up in the tail. */
@@ -153,7 +155,13 @@ export function startApp(container: HTMLElement): void {
   const monuments = planMonuments(terrain, monumentSpecs);
   const sceneryObstacles = createObstacles(terrain, monuments);
   const cues = createCuePlayer();
-  const stage = createStage(container, terrain, monuments, sceneryObstacles, () => cues.play("haiku-bell"));
+  const stage = createStage(container, terrain, monuments, sceneryObstacles, {
+    bell: () => cues.play("haiku-bell"),
+    cicadas(audible) {
+      if (audible) cues.play("haiku-cicadas", 1.1);
+      else cues.stop("haiku-cicadas", 1.35);
+    },
+  });
   const obstacles: Obstacles = {
     near(x, z, reach) {
       const nearby = sceneryObstacles.near(x, z, reach);
@@ -249,6 +257,13 @@ export function startApp(container: HTMLElement): void {
   let snowshoeMoment: { t: number } | null = null;
   let climbMoment: { t: number } | null = null;
   let climbMusicPreview = false;
+  /** Experiment: skip the gear cues and move between the background themes with one slow crossfade. */
+  let gearMusicFade = false;
+  /** True while a debug preview waits (negative time) for the previous theme to fade back before it starts. */
+  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0;
+  const playGearCue = (id: CueId): void => {
+    if (!gearMusicFade) cues.play(id);
+  };
   const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
@@ -280,7 +295,7 @@ export function startApp(container: HTMLElement): void {
     climbMusicPreview = false;
     cues.stop("first-snowshoe", 0.25);
     cues.stop("first-climb", 0.25);
-    if (lead === 0) cues.play("first-voyage");
+    if (lead === 0) playGearCue("first-voyage");
   };
 
   const stopGearMoments = (): void => {
@@ -298,12 +313,12 @@ export function startApp(container: HTMLElement): void {
   const playSnowshoeCue = (): void => {
     cues.stop("first-voyage", 0.25);
     cues.stop("first-climb", 0.25);
-    cues.play("first-snowshoe");
+    playGearCue("first-snowshoe");
   };
   const playClimbCue = (): void => {
     cues.stop("first-voyage", 0.25);
     cues.stop("first-snowshoe", 0.25);
-    cues.play("first-climb");
+    playGearCue("first-climb");
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
@@ -437,6 +452,10 @@ export function startApp(container: HTMLElement): void {
         snowshoeMusicPreview = true; // keeps the snow theme once the moment ends, until the cue does
         snowshoeMoment = { t: lead };
         if (lead === 0) playSnowshoeCue();
+      },
+      toggleGearMusic: () => {
+        gearMusicFade = !gearMusicFade;
+        return gearMusicFade ? "slow fade" : "cue";
       },
       cycleMusic: () => {
         music.unlock();
@@ -606,7 +625,7 @@ export function startApp(container: HTMLElement): void {
     if (boatVoyage) {
       const before = boatVoyage.t;
       boatVoyage.t += dt;
-      if (before < 0 && boatVoyage.t >= 0) cues.play("first-voyage");
+      if (before < 0 && boatVoyage.t >= 0) playGearCue("first-voyage");
       if (boatVoyage.t >= 0) {
         voyageFrame = boatLaunchFrame(boatVoyage.path, boatVoyage.t);
         pos = voyageFrame.rider;
@@ -720,10 +739,10 @@ export function startApp(container: HTMLElement): void {
     });
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
-    if (climbMusicPreview && climbMoment === null && cues.elapsed("first-climb") === null) climbMusicPreview = false;
-    if (snowshoeMusicPreview && snowshoeMoment === null && cues.elapsed("first-snowshoe") === null) snowshoeMusicPreview = false;
+    if (!gearMusicFade && climbMusicPreview && climbMoment === null && cues.elapsed("first-climb") === null) climbMusicPreview = false;
+    if (!gearMusicFade && snowshoeMusicPreview && snowshoeMoment === null && cues.elapsed("first-snowshoe") === null) snowshoeMusicPreview = false;
     // Keep the background steady through a restoration if debug selects another track.
-    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background);
+    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, gearMusicFade && !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview) ? GEAR_FADE_SECONDS : undefined);
     const nextMovementCue = moving && !voyageFrame
       ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
       : undefined;

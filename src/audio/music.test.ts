@@ -189,4 +189,16 @@ describe("music", () => {
     run(music, 2);
     expect(made[0]!.volume).toBeCloseTo(1);
   });
+
+  it("crossfades over a custom duration when one is given", () => {
+    const { music, made } = setup({ fade: 2 });
+    music.setVolume(1);
+    music.unlock();
+    music.setTrack("a" as never);
+    run(music, 3);
+    music.setTrack("b" as never, 10);
+    run(music, 5);
+    expect(made[0]!.volume).toBeCloseTo(0.5, 1);
+    expect(made[1]!.volume).toBeCloseTo(0.5, 1);
+  });
 });

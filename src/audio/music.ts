@@ -42,8 +42,8 @@ export interface MusicStatus {
 export interface Music {
   /** Call from a user gesture (key, click): browsers block audio before one. */
   unlock(): void;
-  /** Crossfades to a track. Does nothing if it is already the current one. */
-  setTrack(id: TrackId): void;
+  /** Crossfades to a track, over `fadeSeconds` if given. Does nothing if it is already the current one. */
+  setTrack(id: TrackId, fadeSeconds?: number): void;
   /** Master volume in [0, 1]. */
   setVolume(volume: number): void;
   setMuted(muted: boolean): void;
@@ -82,7 +82,8 @@ const defaultFactory: PlayerFactory = (url) => {
 export function createMusic(options: MusicOptions = {}): Music {
   const tracks = options.tracks ?? TRACKS;
   const createPlayer = options.createPlayer ?? defaultFactory;
-  const fadeSeconds = options.fadeSeconds ?? 3;
+  const defaultFade = options.fadeSeconds ?? 3;
+  let fadeSeconds = defaultFade;
   const gapSeconds = options.gapSeconds ?? 4;
   const gain = options.gain ?? DEFAULT_GAIN;
   const duckSeconds = options.duckSeconds ?? 0.8;
@@ -127,8 +128,9 @@ export function createMusic(options: MusicOptions = {}): Music {
       unlocked = true;
       if (!voices.some((v) => v.id === desired && v.target === 1)) begin();
     },
-    setTrack(id) {
+    setTrack(id, seconds) {
       if (id === desired) return;
+      fadeSeconds = Math.max(0.1, seconds ?? defaultFade);
       desired = id;
       begin();
     },
