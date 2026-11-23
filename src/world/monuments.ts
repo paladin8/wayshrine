@@ -5,7 +5,15 @@ import { monumentClearance } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
-export type HaikuSceneKind = "old-pond" | "cherry-bell" | "snow-bridge";
+export type HaikuSceneKind =
+  | "old-pond"
+  | "cherry-bell"
+  | "snow-bridge"
+  | "bamboo-thicket"
+  | "roadside-jizo"
+  | "silver-grass"
+  | "river-houses"
+  | "daffodil-snow";
 
 /** What the world needs to know about a text in order to place its monument. */
 export interface MonumentSpec {

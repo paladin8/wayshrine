@@ -1,62 +1,8 @@
 import * as THREE from "three";
-import { createRng, type Rng } from "../core";
+import { createRng } from "../core";
 import type { HaikuSceneKind, Monument, MonumentPlan, Obstacles, Point, Terrain } from "../world";
-import { deadOf } from "./vitality-mesh";
-
-const TAU = 2 * Math.PI;
-const FACET = new THREE.IcosahedronGeometry(1);
-const TIMBER = 0x64473b;
-
-function scenery() {
-  const root = new THREE.Group();
-  const materials = new Map<number, { material: THREE.MeshStandardMaterial; live: THREE.Color; dead: THREE.Color }>();
-  let lastLife = -1;
-
-  function mesh(geometry: THREE.BufferGeometry, hex: number, x: number, y: number, z: number) {
-    let colors = materials.get(hex);
-    if (!colors) {
-      const live = new THREE.Color(hex);
-      colors = { material: new THREE.MeshStandardMaterial({ flatShading: true }), live, dead: deadOf(live) };
-      materials.set(hex, colors);
-    }
-    const piece = new THREE.Mesh(geometry, colors.material);
-    piece.position.set(x, y, z);
-    root.add(piece);
-    return piece;
-  }
-
-  return {
-    root,
-    box(w: number, h: number, d: number, color: number, x: number, y: number, z: number) {
-      return mesh(new THREE.BoxGeometry(w, h, d), color, x, y, z);
-    },
-    cylinder(top: number, base: number, height: number, sides: number, color: number, x: number, y: number, z: number) {
-      return mesh(new THREE.CylinderGeometry(top, base, height, sides), color, x, y, z);
-    },
-    facet(color: number, x: number, y: number, z: number, w: number, h: number, d: number) {
-      const piece = mesh(FACET, color, x, y, z);
-      piece.scale.set(w, h, d);
-      return piece;
-    },
-    tint(life: number) {
-      if (life === lastLife) return;
-      lastLife = life;
-      for (const { material, live, dead } of materials.values()) material.color.copy(dead).lerp(live, life);
-    },
-  };
-}
-
-type Scenery = ReturnType<typeof scenery>;
-type SceneFrame = (life: number, age: number, bellAge: number) => void;
-type BuildScene = (art: Scenery, rng: Rng, ground: (x: number, z: number) => number) => SceneFrame;
-
-function branch(art: Scenery, from: THREE.Vector3, to: THREE.Vector3, radius: number, color: number) {
-  const direction = to.clone().sub(from);
-  const mid = from.clone().lerp(to, 0.5);
-  const beam = art.cylinder(radius * 0.65, radius, direction.length(), 6, color, mid.x, mid.y, mid.z);
-  beam.quaternion.setFromUnitVectors(THREE.Object3D.DEFAULT_UP, direction.normalize());
-  beam.castShadow = true;
-}
+import { bambooThicket, daffodilSnow, riverHouses, roadsideJizo, silverGrass } from "./haiku-landscapes";
+import { branch, scenery, TAU, TIMBER, type BuildScene } from "./haiku-scenery";
 
 const oldPond: BuildScene = (art, rng) => {
   // The curved bank is open toward the monument, leaving a gap for the boat.
@@ -252,6 +198,11 @@ const BUILDERS: Readonly<Record<HaikuSceneKind, BuildScene>> = {
   "old-pond": oldPond,
   "cherry-bell": cherryBell,
   "snow-bridge": snowBridge,
+  "bamboo-thicket": bambooThicket,
+  "roadside-jizo": roadsideJizo,
+  "silver-grass": silverGrass,
+  "river-houses": riverHouses,
+  "daffodil-snow": daffodilSnow,
 };
 
 function sceneAnchor(terrain: Terrain, obstacles: Obstacles, monument: Monument): Point {

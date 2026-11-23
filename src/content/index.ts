@@ -9,6 +9,11 @@ const haikuScenes: Readonly<Partial<Record<string, HaikuSceneKind>>> = {
   "old pond, frog": "old-pond",
   "cherry blossoms, temple bell": "cherry-bell",
   "first snow, bridge": "snow-bridge",
+  "bamboo thicket, wind": "bamboo-thicket",
+  "roadside jizo, lamp, dusk": "roadside-jizo",
+  "silver grass, twilight, mountains": "silver-grass",
+  "great river, two houses, rain": "river-houses",
+  "first snow, daffodils": "daffodil-snow",
 };
 
 /** What the world needs to place the monuments: small, so it ships with the main bundle. */
