@@ -86,6 +86,8 @@ const VOYAGE_RELEASE_START = 3.3;
 const VOYAGE_RELEASE_SECONDS = 3.2;
 const SNOWSHOE_RELEASE_START = 4;
 const SNOWSHOE_RELEASE_SECONDS = 3.2;
+/** How long the player crouches to strap on snowshoes and steps off the first time. */
+const SNOWSHOE_MOMENT_SECONDS = 3.4;
 
 function gearMusicDuck(elapsed: number | null, start: number, duration: number): number {
   if (elapsed === null) return 1;
@@ -233,7 +235,8 @@ export function startApp(container: HTMLElement): void {
   // A debug voyage gives temporary water access, without writing that voyage to the save.
   let boatTrial = false;
   let snowshoeMusicPreview = false;
-  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null;
+  let snowshoeMoment: { t: number } | null = null;
+  const momentBusy = (): boolean => awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial;
@@ -257,6 +260,7 @@ export function startApp(container: HTMLElement): void {
   const stopGearMoments = (): void => {
     gearReveal = null;
     boatVoyage = null;
+    snowshoeMoment = null;
     boatTrial = false;
     snowshoeMusicPreview = false;
     cues.stop("first-voyage", 0.25);
@@ -383,6 +387,7 @@ export function startApp(container: HTMLElement): void {
       previewSnowshoeMusic: () => {
         beginPreview();
         snowshoeMusicPreview = true;
+        snowshoeMoment = { t: 0 };
         playSnowshoeCue();
       },
       cycleMusic: () => {
@@ -529,6 +534,8 @@ export function startApp(container: HTMLElement): void {
       } else if (moving && caps.has("snowshoes") && !state.snowshoesUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "snow") {
         state = recordSnowshoeUse(state);
         saveGame(state);
+        snowshoeMoment = { t: 0 };
+        facing = Math.atan2(dir.x, dir.z);
         playSnowshoeCue();
       }
       if (moved.blockedBy) {
@@ -556,6 +563,10 @@ export function startApp(container: HTMLElement): void {
           boatVoyage = null;
         }
       }
+    }
+    if (snowshoeMoment) {
+      snowshoeMoment.t += dt;
+      if (snowshoeMoment.t >= SNOWSHOE_MOMENT_SECONDS) snowshoeMoment = null;
     }
     if (gearReveal) {
       gearReveal.left -= dt;
@@ -668,7 +679,7 @@ export function startApp(container: HTMLElement): void {
     music.update(dt);
 
     stage.render(dt, {
-      player: pos, facing, state, moving, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      player: pos, facing, state, moving, strapping: snowshoeMoment ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : undefined, character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       voyage: voyageFrame,
     });
     requestAnimationFrame(frame);
