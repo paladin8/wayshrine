@@ -361,7 +361,7 @@ for key,(bv,bf) in B.items():
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=PROM[len(PROM)//2]   # the promenade, facing the rocks
-STAND=(J0[0]+jx*0.3,J0[1]+jy*0.3)   # on the landing
+STAND=(5.55,-1.05)   # on the shore beside the landing, clear of the posts and statues
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[round(INTERACT[0],2),round(-INTERACT[1],2)],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/meoto-iwa.json"
