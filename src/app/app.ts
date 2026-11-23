@@ -274,12 +274,14 @@ export function startApp(container: HTMLElement): void {
     const climbing = climbMoment !== null || climbCue !== null;
     const afterLaunch = boatVoyage ? boatVoyage.t >= BOAT_PUSH_OFF_SECONDS : state.boatLaunched || boatTrial || snowshoeMoment !== null || snowCue !== null || climbing;
     // The snow theme waits for the cue to play out; before a delayed cue starts it is still the sea theme.
+    // A debug preview of an earlier gear ignores what the save has already unlocked later on.
+    const earlierPreview = boatVoyage?.preview === true || snowshoeMoment !== null || snowshoeMusicPreview;
     const afterSnow = climbing || (snowshoeMoment && snowshoeMoment.t < 0 ? false
       : snowCue !== null ? snowCue >= SNOWSHOE_MUSIC_SWITCH
-      : snowshoeMusicPreview || (!boatTrial && state.snowshoesUsed));
+      : snowshoeMusicPreview || (!boatTrial && !(boatVoyage?.preview === true) && state.snowshoesUsed));
     const afterClimb = climbMoment && climbMoment.t < 0 ? false
       : climbCue !== null ? climbCue >= CLIMB_MUSIC_SWITCH
-      : climbMusicPreview || (!boatTrial && state.climbingUsed);
+      : climbMusicPreview || (!boatTrial && !earlierPreview && state.climbingUsed);
     return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb);
   };
 
