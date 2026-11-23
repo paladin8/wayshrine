@@ -169,7 +169,9 @@ describe("exploration", () => {
 
 describe("landmark map reveals", () => {
   const start = world.region(0, 0).site;
+  // Reveals follow the story: by act, then nearest the start within an act.
   const central = [...world.landmarks].sort((a, b) =>
+    a.landmark!.act - b.landmark!.act ||
     Math.hypot(a.site.x - start.x, a.site.z - start.z) - Math.hypot(b.site.x - start.x, b.site.z - start.z));
   const names = (from: number, to: number) => central.slice(from, to).map((region) => region.landmark!.id);
   const rubbings = (count: number) => Array.from({ length: count }, (_, i) => `rubbing-${i}`);

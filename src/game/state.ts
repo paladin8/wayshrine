@@ -50,7 +50,7 @@ export function isLandmarkRevealed(state: GameState, region: Region): boolean {
   return region.landmark !== null && state.revealedLandmarks.has(region.landmark.id);
 }
 
-/** Spend one slot per restored landmark, then mark the unrestored landmarks nearest the start; far sight marks them all. */
+/** Spend one slot per restored landmark, then mark the unrestored landmarks in story order (by act, nearest the start within an act), so a star never points past the gear the player has; far sight marks them all. */
 export function revealLandmarks(state: GameState, world: World): GameState {
   const unrestored = world.landmarks.filter((region) => !isRestored(state, region));
   const restored = world.landmarks.length - unrestored.length;
@@ -59,7 +59,7 @@ export function revealLandmarks(state: GameState, world: World): GameState {
   const start = world.region(0, 0).site;
   const distance = (region: Region): number => Math.hypot(region.site.x - start.x, region.site.z - start.z);
   const revealedLandmarks = new Set(
-    unrestored.sort((a, b) => distance(a) - distance(b))
+    unrestored.sort((a, b) => a.landmark!.act - b.landmark!.act || distance(a) - distance(b))
       .slice(0, goldStars)
       .map((region) => region.landmark!.id),
   );
