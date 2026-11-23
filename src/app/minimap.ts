@@ -120,6 +120,7 @@ const CSS = `
 .map.large .legend{pointer-events:auto}
 .map .legend:hover .need{display:inline}
 .map.large canvas{cursor:grab;touch-action:none}
+.map.large canvas.travel{cursor:pointer}
 .map.large canvas.dragging{cursor:grabbing}
 `;
 
