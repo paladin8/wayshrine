@@ -4,7 +4,7 @@ export const ja: Messages = {
   capability: {
     boat: "ボート",
     snowshoes: "かんじき",
-    climbing: "登山道具",
+    climbing: "金剛杖",
     geta: "下駄",
     lantern: "提灯",
     ashSandals: "灰よけの草履",

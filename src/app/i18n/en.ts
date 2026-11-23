@@ -4,7 +4,7 @@ export const en: Messages = {
   capability: {
     boat: "Boat",
     snowshoes: "Snowshoes",
-    climbing: "Climbing gear",
+    climbing: "Walking sticks",
     geta: "Geta",
     lantern: "Lantern",
     ashSandals: "Ash sandals",

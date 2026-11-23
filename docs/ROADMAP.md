@@ -26,7 +26,7 @@
 4. Tile placing: decide whether it earns a place.
 5. **Technology thread.** Work out how it fits in. The long-term aim is skyscrapers and a shinkansen, but they have to arrive in a way that feels natural, not as a jump. Related: item 3 and tying the rubbing collection to technological advancement (item 1). Open question; needs a design pass before any building.
 6. **Livelier world.** Extend rare sightings with responses to nearby players, and eventually add people.
-7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, climbing gear and the rest) given the same treatment.
+7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, walking sticks and the rest) given the same treatment.
 8. **Footsteps.** Moving across different terrain should make different sounds.
 9. **Terrain variety.** More diversity in the world and the terrain, to reward exploring. Starting points:
    - Bridges, both the brown wooden arched kind and the vermilion kind famous in Japan, plus plain plank bridges and stepping stones.
