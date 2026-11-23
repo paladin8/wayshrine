@@ -25,7 +25,7 @@ const ROPE = 0xd9c79a;
 const ASH = 0x8a7f7c;
 
 /** Walk cycles per second at full speed. */
-const CADENCE = 2.1;
+const CADENCE = 1.45;
 
 const mat = (color: number, extra: Partial<THREE.MeshStandardMaterialParameters> = {}): THREE.MeshStandardMaterial =>
   new THREE.MeshStandardMaterial({ color, flatShading: true, ...extra });
@@ -41,8 +41,8 @@ interface Shape {
 }
 
 const SHAPES: Readonly<Record<CharacterVariant, Shape>> = {
-  female: { chest: 0.145, hip: 0.15, headR: 0.185, scale: 0.92, skirt: true, hair: 0x3a2a26 },
-  male: { chest: 0.185, hip: 0.14, headR: 0.18, scale: 1, skirt: false, hair: 0x4a3c37 },
+  female: { chest: 0.185, hip: 0.185, headR: 0.185, scale: 0.92, skirt: true, hair: 0x3a2a26 },
+  male: { chest: 0.235, hip: 0.17, headR: 0.18, scale: 1, skirt: false, hair: 0x4a3c37 },
 };
 
 /**
@@ -104,10 +104,10 @@ export function buildCharacter(variant: CharacterVariant): Character {
     readonly sole: THREE.Group;
   }
   const makeLeg = (side: 1 | -1): Leg => {
-    const hip = group(pelvis, side * 0.085, -0.02, 0);
-    limb(0.085, 0.07, THIGH, trousers, hip);
+    const hip = group(pelvis, side * shape.hip * 0.55, -0.02, 0);
+    limb(0.1, 0.08, THIGH, trousers, hip);
     const knee = group(hip, 0, -THIGH, 0);
-    limb(0.07, 0.055, SHIN, trousers, knee);
+    limb(0.08, 0.06, SHIN, trousers, knee);
     const ankle = group(knee, 0, -SHIN, 0);
     mesh(new THREE.BoxGeometry(0.115, BOOT_H, 0.22), boot, ankle, 0, -BOOT_H / 2 + 0.01, 0.045);
     const sole = group(ankle, 0, -BOOT_H + 0.01, 0.04);
@@ -120,7 +120,7 @@ export function buildCharacter(variant: CharacterVariant): Character {
   const chestGeo = new THREE.CylinderGeometry(shape.chest, shape.hip * 0.85, 0.42, 6);
   chestGeo.translate(0, 0.21, 0);
   const chest = mesh(chestGeo, shirt, torso);
-  chest.scale.z = 0.72;
+  chest.scale.z = 0.82;
   if (shape.skirt) {
     // A loose tunic hem that swings out over the thighs.
     const skirtGeo = new THREE.CylinderGeometry(shape.hip * 0.95, shape.hip * 1.45, 0.2, 6, 1, true);
@@ -174,9 +174,9 @@ export function buildCharacter(variant: CharacterVariant): Character {
   }
   const makeArm = (side: 1 | -1): Arm => {
     const shoulder = group(torso, side * (shape.chest + 0.03), 0.38, 0);
-    limb(0.055, 0.05, 0.19, shirt, shoulder);
+    limb(0.065, 0.058, 0.19, shirt, shoulder);
     const elbow = group(shoulder, 0, -0.19, 0);
-    limb(0.05, 0.04, 0.17, shirt, elbow);
+    limb(0.058, 0.045, 0.17, shirt, elbow);
     const hand = group(elbow, 0, -0.18, 0);
     mesh(new THREE.IcosahedronGeometry(0.05, 0), skin, hand);
     return { shoulder, elbow, hand };
@@ -285,7 +285,7 @@ export function buildCharacter(variant: CharacterVariant): Character {
       const s = Math.sin(phase);
       const c = Math.cos(phase);
       const wide = gear === "snowshoes" ? 1.5 : 1;
-      const stride = gear === "snowshoes" ? 0.5 : gear === "geta" ? 0.4 : 0.6;
+      const stride = gear === "snowshoes" ? 0.55 : gear === "geta" ? 0.45 : 0.68;
       const lift = (gear && FOOT_LIFT[gear]) || 0;
       const t = seatedSmooth;
 
@@ -294,10 +294,10 @@ export function buildCharacter(variant: CharacterVariant): Character {
         const ph = i === 0 ? s : -s;
         const phc = i === 0 ? c : -c;
         const thigh = -ph * stride * w;
-        const shin = Math.max(0, phc) * (gear === "snowshoes" ? 1.25 : 0.95) * w + 0.04 * w;
+        const shin = Math.max(0, phc) * (gear === "snowshoes" ? 1.25 : 0.95) * w + 0.12 * w;
         leg.hip.rotation.x = lerp(thigh, -1.4, t);
         leg.hip.rotation.z = side * (wide - 1) * 0.09 * w;
-        leg.hip.position.x = side * 0.085 * (1 + (wide - 1) * 0.5);
+        leg.hip.position.x = side * shape.hip * 0.55 * (1 + (wide - 1) * 0.5);
         leg.knee.rotation.x = lerp(shin, 1.4, t);
         // Keep the sole level while the leg swings (snowshoes and geta stay flat, boots toe off a little).
         const level = gear === "snowshoes" || gear === "geta" ? 0.85 : 0.55;
@@ -307,9 +307,9 @@ export function buildCharacter(variant: CharacterVariant): Character {
       for (const [i, arm] of arms.entries()) {
         const ph = i === 0 ? s : -s;
         // Arms swing against the legs: the right arm goes forward with the left leg.
-        arm.shoulder.rotation.x = lerp(ph * 0.55 * w, -0.7, t);
+        arm.shoulder.rotation.x = lerp(ph * 0.8 * w, -0.7, t);
         arm.shoulder.rotation.z = (i === 0 ? -1 : 1) * 0.08;
-        arm.elbow.rotation.x = lerp(-0.25 - 0.3 * Math.max(0, -ph) * w, -0.55, t);
+        arm.elbow.rotation.x = lerp(-0.3 - 0.5 * Math.max(0, -ph) * w, -0.55, t);
       }
       if (gear === "lantern" && t < 1) {
         // Hold the lantern pole out ahead, steady against the swing.
@@ -321,15 +321,17 @@ export function buildCharacter(variant: CharacterVariant): Character {
         lantern.rotation.set(0, 0, 0);
       }
 
-      const bob = Math.abs(s) * 0.035 * w;
+      const bob = (0.5 - 0.5 * Math.cos(phase * 2)) * 0.045 * w;
       const sit = HIP_Y - 0.17;
       pelvis.position.y = lerp(HIP_Y + lift + bob, sit + lift * 0.3, t);
-      pelvis.rotation.y = s * 0.07 * w;
-      torso.rotation.y = -s * 0.09 * w;
+      pelvis.rotation.y = s * 0.13 * w;
+      pelvis.position.x = c * 0.025 * w;
+      torso.rotation.y = -s * 0.17 * w;
       torso.rotation.x = 0.05 * w + 0.12 * t;
-      torso.rotation.z = c * 0.025 * w;
+      torso.rotation.z = -c * 0.06 * w;
       head.rotation.x = -0.04 * w - 0.08 * t;
-      head.rotation.y = -torso.rotation.y * 0.6;
+      head.rotation.y = -(torso.rotation.y + pelvis.rotation.y) * 0.7;
+      head.rotation.z = c * 0.03 * w;
       pack.rotation.z = -c * 0.03 * w;
       scarfTail.rotation.x = 0.35 + 0.5 * w + Math.sin(phase * 2 + 1) * 0.12 * w + Math.sin(performance.now() / 700) * 0.03;
     },
