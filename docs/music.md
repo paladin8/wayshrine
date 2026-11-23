@@ -41,7 +41,7 @@ The score stays on **Homeward Breeze** after earning the boat. The first boardin
 
 The first moving step on snow after earning snowshoes plays **Trail Through Fresh Snow** (`public/audio/cues/trail-through-fresh-snow.mp3`, supplied by the project owner, 10 s). **Snowline Walk** starts crossfading underneath it. The duck releases from 4.0 to 7.2 s of cue playback, as the cue tails off. The first step is saved immediately, and Snowline remains the background theme on reload or after leaving snow.
 
-In **Gear acquisition**, **Preview snowshoe music** auditions the transition without updating the save. In Auto, the normal score returns when the preview cue ends. Choose **Snowline** in the music selector to keep auditioning the background track.
+In **Gear acquisition**, **Preview snowshoe use** plays the strap-on moment and its transition music without updating the save. In Auto, the normal score returns when the preview cue ends. Choose **Snowline** in the music selector to keep auditioning the background track.
 
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed)`, the set selection for each stage.

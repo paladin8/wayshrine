@@ -384,7 +384,7 @@ export function startApp(container: HTMLElement): void {
       previewBoatUnlock: () => previewGearUnlock("boat"),
       previewSnowshoeUnlock: () => previewGearUnlock("snowshoes"),
       previewFirstVoyage,
-      previewSnowshoeMusic: () => {
+      previewSnowshoeUse: () => {
         beginPreview();
         snowshoeMusicPreview = true;
         snowshoeMoment = { t: 0 };

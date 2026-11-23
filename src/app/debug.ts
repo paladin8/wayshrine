@@ -9,7 +9,7 @@ export interface DebugActions {
   readonly previewBoatUnlock: () => void;
   readonly previewFirstVoyage: () => void;
   readonly previewSnowshoeUnlock: () => void;
-  readonly previewSnowshoeMusic: () => void;
+  readonly previewSnowshoeUse: () => void;
   readonly cycleMusic: () => string;
 }
 
@@ -101,7 +101,7 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   preview("Preview boat unlock", actions.previewBoatUnlock);
   preview("Preview first voyage", actions.previewFirstVoyage);
   preview("Preview snowshoe unlock", actions.previewSnowshoeUnlock);
-  preview("Preview snowshoe music", actions.previewSnowshoeMusic);
+  preview("Preview snowshoe use", actions.previewSnowshoeUse);
   dialog.appendChild(content);
   container.append(style, panel, dialog);
 
