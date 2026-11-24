@@ -7,6 +7,8 @@ export interface MusicButtonModel {
   readonly total: number;
   /** The tooltip and accessible name. */
   readonly label: string;
+  /** Whether the button is shown: there is a choice to make and the music can be heard. */
+  readonly visible: boolean;
 }
 
 export interface MusicButton {
@@ -48,6 +50,7 @@ export function createMusicButton(actions: HTMLElement, onCycle: () => void): Mu
   return {
     element,
     update(model) {
+      element.style.display = model.visible ? "" : "none";
       const key = `${model.number}/${model.total}/${model.label}`;
       if (key === shown) return;
       shown = key;

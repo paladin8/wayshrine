@@ -173,6 +173,7 @@ export function startApp(container: HTMLElement): void {
   const monuments = planMonuments(terrain, monumentSpecs);
   const sceneryObstacles = createObstacles(terrain, monuments);
   const cues = createCuePlayer();
+  const playShrineTravel = (): void => cues.play("shrine-travel");
   const stage = createStage(container, terrain, monuments, sceneryObstacles, {
     bell: () => cues.play("haiku-bell"),
     cicadas(audible) {
@@ -769,8 +770,6 @@ export function startApp(container: HTMLElement): void {
     overviewTime = OVERVIEW_SECONDS;
     pos = destination;
     shrineArrival = true;
-    // Start in the initiating click or key press so the browser can play the sound.
-    cues.play("shrine-travel");
     return true;
   }
 
@@ -1074,7 +1073,13 @@ export function startApp(container: HTMLElement): void {
     music.update(dt);
     const unlockedThemes = unlockedMusicSets();
     const themeNumber = unlockedThemes.indexOf(MUSIC_SETS.findIndex((set) => set === selectedMusicSet())) + 1;
-    musicButton.update({ number: themeNumber, total: unlockedThemes.length, label: messagesFor(settings.get().language).musicTrack(themeNumber, unlockedThemes.length) });
+    const heard = settings.get();
+    musicButton.update({
+      number: themeNumber,
+      total: unlockedThemes.length,
+      label: messagesFor(heard.language).musicTrack(themeNumber, unlockedThemes.length),
+      visible: unlockedThemes.length > 1 && heard.musicVolume > 0 && !heard.muted,
+    });
 
     const lightingProgress = lanternMoment ? Math.max(0, lanternMoment.t / LANTERN_MOMENT_SECONDS) : undefined;
     const lighting = lightingProgress === undefined ? undefined : {
@@ -1089,6 +1094,7 @@ export function startApp(container: HTMLElement): void {
       voyage: voyageFrame,
       train: railFrame,
       shrineArrival,
+      onShrineShimmer: playShrineTravel,
       parkedTrain: railway?.stations[parkedTrain].distance,
       boardingHeight,
     });
