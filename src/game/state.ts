@@ -56,17 +56,21 @@ export function isLandmarkRevealed(state: GameState, region: Region): boolean {
   return region.landmark !== null && state.revealedLandmarks.has(region.landmark.id);
 }
 
-/** Spend one slot per restored landmark, then mark the unrestored landmarks by act in a seeded order. Far sight marks them all. */
+/**
+ * Landmarks are hinted in one fixed order (by act, then a seeded rank): every seven rubbings cover the next
+ * landmark in that order, and the unrestored ones among the covered get a gold star. Restoring a landmark that
+ * is not yet covered (found out of order) never uncovers one that is. Far sight marks them all.
+ */
 export function revealLandmarks(state: GameState, world: World): GameState {
   const unrestored = world.landmarks.filter((region) => !isRestored(state, region));
   const restored = world.landmarks.length - unrestored.length;
-  const goldStars =
-    restored >= FAR_SIGHT_STARS ? unrestored.length : Math.max(0, Math.floor(state.collected.length / RUBBINGS_PER_REVEAL) - restored);
+  const covered = restored >= FAR_SIGHT_STARS ? world.landmarks.length : Math.floor(state.collected.length / RUBBINGS_PER_REVEAL);
   const order = createRng(world.seed).fork("landmark-reveals");
   const revealedLandmarks = new Set(
-    unrestored.map(({ landmark }) => ({ landmark: landmark!, rank: order.fork(landmark!.id).next() }))
+    world.landmarks.map((region) => ({ landmark: region.landmark!, restored: isRestored(state, region), rank: order.fork(region.landmark!.id).next() }))
       .sort((a, b) => a.landmark.act - b.landmark.act || a.rank - b.rank || a.landmark.order - b.landmark.order)
-      .slice(0, goldStars)
+      .slice(0, covered)
+      .filter((entry) => !entry.restored)
       .map(({ landmark }) => landmark.id),
   );
   if (

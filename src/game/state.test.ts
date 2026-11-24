@@ -238,10 +238,15 @@ describe("landmark map reveals", () => {
 
     state = revealLandmarks(restoreShrine(state, landmark(1)), world);
     expect(state.revealedLandmarks).toEqual(names(2, 3));
+    // Finding a landmark out of order (one the rubbings have not covered yet) must not hide one already marked.
     state = revealLandmarks(restoreShrine(state, landmark(4)), world);
-    expect(state.revealedLandmarks.size).toBe(0);
+    expect(state.revealedLandmarks).toEqual(names(2, 3));
     state = revealLandmarks(unrestoreShrine(state, landmark(4)), world);
     expect(state.revealedLandmarks).toEqual(names(2, 3));
+    // Restoring a marked one does take its star, and the next covered one is not pulled in early.
+    state = revealLandmarks(restoreShrine(state, landmark(2)), world);
+    expect(state.revealedLandmarks.size).toBe(0);
+    state = revealLandmarks(unrestoreShrine(state, landmark(2)), world);
     expect(revealLandmarks(resetShrines(state), world).revealedLandmarks).toEqual(names(0, 3));
   });
 
