@@ -80,6 +80,36 @@ interface ScatterFields {
 }
 const cache = new WeakMap<Terrain, ScatterFields>();
 
+/** Rough height of each tall kind at scale 1 (the tallest looks, like cedars, are taller still). */
+const TALL_HEIGHT: Partial<Record<PropKind, number>> = { tree: 2.4, pine: 2.6, cherry: 2.5, crag: 1 };
+/** Foliage radius per unit scale of the tall kinds. */
+const CANOPY_RADIUS = 0.45;
+/** The camera looks along (-1, -1) from the +x +z side, so scenery on that side stands in front of a landmark. */
+const MAX_SIGHT_BLOCK = 6.5;
+
+/**
+ * True when a prop at (x, z) would stand on, crowd, or hide a clearing's centre: inside its radius plus the
+ * prop's own foliage, or in the strip toward the camera where it would cover the stone on screen.
+ */
+export function blocksClearing(
+  kind: PropKind,
+  scale: number,
+  x: number,
+  z: number,
+  c: { readonly x: number; readonly z: number; readonly radius: number },
+): boolean {
+  const height = TALL_HEIGHT[kind];
+  if (!height) return Math.hypot(x - c.x, z - c.z) < c.radius;
+  const canopy = CANOPY_RADIUS * scale;
+  const dx = x - c.x;
+  const dz = z - c.z;
+  if (Math.hypot(dx, dz) < c.radius + canopy) return true;
+  const toward = (dx + dz) / Math.SQRT2;
+  const across = (dx - dz) / Math.SQRT2;
+  const reach = Math.min(MAX_SIGHT_BLOCK, Math.SQRT2 * height * scale);
+  return toward > 0 && toward < reach && Math.abs(across) < c.radius * 0.6 + canopy;
+}
+
 /**
  * All props within a chunk: a pure function of (seed, chunk coordinates),
  * so chunks can be built in any order and always agree.
@@ -152,6 +182,7 @@ export function propsInChunk(
               : 0.65 + 0.95 * size;
           const familyField = shared.families(x / 13 + profile[3] * 47, z / 13 + profile[4] * 61);
           const family = ((kind === "flower" ? profile[3] : profile[4]) + familyField * 0.68 + (variant - 0.5) * 0.18 + 1) % 1;
+          if (clearings.some((c) => blocksClearing(kind, scale, x, z, c))) break;
           props.push({ kind, x, y: terrain.groundAt(x, z), z, scale, rotation, variant, family, regionId: tile.regionId });
           break;
         }
@@ -164,7 +195,7 @@ export function propsInChunk(
     const { x, z } = prop;
     if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
     const radius = prop.kind === "farmhouse" ? 2.6 : 0.5;
-    if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + radius)) continue;
+    if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + radius || blocksClearing(prop.kind, prop.scale, x, z, c))) continue;
     props.push({ ...prop, y: terrain.groundAt(x, z), regionId: terrain.tileAtPoint(x, z).regionId });
   }
 

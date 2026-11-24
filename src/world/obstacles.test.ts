@@ -4,7 +4,8 @@ import { createWorld } from "./world";
 import { createTerrain, CHUNK_SIZE } from "./terrain-grid";
 import { planMonuments, type MonumentSpec } from "./monuments";
 import { createObstacles } from "./obstacles";
-import { propsInChunk } from "./props";
+import { blocksClearing, propsInChunk } from "./props";
+import { MONUMENT_CLEARING } from "./monuments";
 
 const specs: MonumentSpec[] = Array.from({ length: 300 }, (_, i) => ({ id: `t${i}`, kind: "proverb" }));
 const PLAYER = 0.3;
@@ -92,5 +93,29 @@ describe("createObstacles", () => {
       best = Math.max(best, count);
     }
     expect(best / freeCount).toBeGreaterThan(0.97);
+  });
+
+  it("keeps trees and crags from standing on or in front of any monument", () => {
+    for (const m of plan.all.slice(0, 80)) {
+      const clearing = { x: m.x, z: m.z, radius: MONUMENT_CLEARING };
+      const cx = Math.floor(m.x / CHUNK_SIZE);
+      const cz = Math.floor(m.z / CHUNK_SIZE);
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (const p of propsInChunk(terrain, cx + dx, cz + dz, [clearing])) {
+            expect(blocksClearing(p.kind, p.scale, p.x, p.z, clearing)).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
+  it("treats a tree between a monument and the camera as blocking, and one behind it as fine", () => {
+    const c = { x: 0, z: 0, radius: MONUMENT_CLEARING };
+    expect(blocksClearing("tree", 1, 2.2, 2.2, c)).toBe(true);
+    expect(blocksClearing("tree", 1, -2.2, -2.2, c)).toBe(false);
+    expect(blocksClearing("tree", 1, 4.5, -4.5, c)).toBe(false);
+    expect(blocksClearing("flower", 1, 1.0, 1.0, c)).toBe(true);
+    expect(blocksClearing("flower", 1, 2.2, 2.2, c)).toBe(false);
   });
 });
