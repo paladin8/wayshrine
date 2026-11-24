@@ -95,7 +95,7 @@ const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
 const WINTER_SHRINE_SWELL: CueId = "winter-light-restored";
 const WINTER_SHRINE_FADE_IN = 2.4;
 /** Volcanic shrines have their own swell; the winter and landmark ones did not suit the basalt theme. */
-const VOLCANIC_SHRINE_SWELL: CueId = "light-returns";
+const VOLCANIC_SHRINE_SWELL: CueId = "basalt-restoration";
 const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), WINTER_SHRINE_SWELL, VOLCANIC_SHRINE_SWELL, "haiku-bell"] as const;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0;
