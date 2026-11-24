@@ -2,7 +2,7 @@
 
 Wayshrine’s scenic railway is a single line at Mount Fuji, with two stations and a view designed for the window seat. The player discovers the stations through ordinary exploration and restores the shrines that power them. A ride is an optional reward and a chance to see a familiar place from a different angle.
 
-The Mount Fuji line runs in generated worlds. The hand-placed `fuji-rail` seed is also available for comparison. The line uses a small local train and rural Japanese stations. The starting kit is a two-car train, at-grade single platforms, timber waiting shelters, pitched tile roofs, a bench, and warm platform lamps. Fujikyu's wooden stations at Mitsutoge and Higashi-Katsura are useful references. [Fujikyu station guide](https://www.fujikyu-railway.jp/en/stroll-map/)
+The Mount Fuji line runs in generated worlds (the hand-placed `fuji-rail` pilot seed was retired when Fuji moved to the 30th landmark, which changed where it stands). The line uses a small local train and rural Japanese stations. The starting kit is a two-car train, at-grade single platforms, timber waiting shelters, pitched tile roofs, a bench, and warm platform lamps. Fujikyu's wooden stations at Mitsutoge and Higashi-Katsura are useful references. [Fujikyu station guide](https://www.fujikyu-railway.jp/en/stroll-map/)
 
 ## Station discovery and restoration
 

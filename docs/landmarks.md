@@ -51,7 +51,7 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 11 | | hirosaki-castle | Hirosaki Castle | 弘前城 | ひろさきじょう | the castle keep | snow |
 | 12 | | zao-juhyo | Zao snow monsters | 蔵王の樹氷 | ざおうのじゅひょう | rime-frosted trees | snow |
 | 13 | | kenroku-en | Kenroku-en | 兼六園 | けんろくえん | the garden in winter ropes | snow |
-| 14 | IV Mountain | mount-fuji | Mount Fuji | 富士山 | ふじさん | the mountain, seen past the Chureito pagoda | mountain |
+| 14 | IV Mountain | horyu-ji | Horyu-ji | 法隆寺 | ほうりゅうじ | the oldest wooden pagoda and Golden Hall | meadow |
 | 15 | | nikko-toshogu | Nikko Toshogu | 日光東照宮 | にっこうとうしょうぐう | the shrine | mountain |
 | 16 | | kegon-falls | Kegon Falls | 華厳の滝 | けごんのたき | the waterfall | mountain |
 | 17 | | kappa-bashi | Kappa-bashi, Kamikochi | 上高地の河童橋 | かみこうちのかっぱばし | the suspension bridge | mountain |
@@ -67,7 +67,7 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 27 | | kamakura-daibutsu | Great Buddha of Kamakura | 鎌倉の大仏 | かまくらのだいぶつ | the bronze Buddha sitting in the open | meadow |
 | 28 | | tokyo-tower | Tokyo Tower | 東京タワー | とうきょうたわー | the red-and-white lattice tower | meadow |
 | 29 | | osaka-castle | Osaka Castle | 大阪城 | おおさかじょう | the keep on its stone walls and moat | meadow |
-| 30 | | horyu-ji | Horyu-ji | 法隆寺 | ほうりゅうじ | the oldest wooden pagoda and Golden Hall | meadow |
+| 30 | | mount-fuji | Mount Fuji | 富士山 | ふじさん | the mountain, seen past the Chureito pagoda | mountain |
 | 31 | VI Forest | jomon-sugi | Jomon Sugi | 縄文杉 | じょうもんすぎ | the ancient cedar | forest |
 | 32 | | shiratani-unsuikyo | Shiratani Unsuikyo | 白谷雲水峡 | しらたにうんすいきょう | moss forest | forest |
 | 33 | | arashiyama | Arashiyama bamboo grove | 嵐山の竹林 | あらしやまのちくりん | bamboo grove path | forest |
@@ -107,7 +107,7 @@ Names, in English and Japanese, are what people commonly call each place (they a
 
 ## Chosen and left out
 
-The aim is the places most Japanese people would name, plus a few that make distinctive dioramas, without regard to biome balance. Acts I to IV are fixed by the code (ids are in saves); Enoshima Sea Candle is the weakest of them, and the Great Buddha of Kamakura would replace it well if those acts are revisited. Mount Fuji is meant to be modelled with the Chureito pagoda, the most familiar view of it.
+The aim is the places most Japanese people would name, plus a few that make distinctive dioramas, without regard to biome balance. Acts I to IV are fixed by the code (ids are in saves); Enoshima Sea Candle is the weakest of them, and the Great Buddha of Kamakura would replace it well if those acts are revisited. Mount Fuji is meant to be modelled with the Chureito pagoda, the most familiar view of it. It is the 30th landmark, the one that ends act V and earns the lantern, so the mountain is a late reward instead of the middle of the climbing act; Horyu-ji took its place in act IV.
 
 Left out on purpose:
 

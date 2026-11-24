@@ -5,7 +5,6 @@ import { reachableRegions } from "./progression";
 import { isWater } from "./terrain";
 import type { Region, World } from "./world";
 
-export const FUJI_RAIL_SEED = "fuji-rail";
 export const RAIL_HALF_LENGTH = 60;
 export const RAIL_HALF_WIDTH = 0.97;
 export const PLATFORM_TOP = -0.12;
@@ -109,36 +108,9 @@ const plans = new WeakMap<World, FujiRailway | null>();
 export function fujiRailway(world: World): FujiRailway | null {
   const cached = plans.get(world);
   if (cached !== undefined) return cached;
-  const plan = world.seed === FUJI_RAIL_SEED ? planPilot(world) : planSeededRailway(world);
+  const plan = planSeededRailway(world);
   plans.set(world, plan);
   return plan;
-}
-
-function planPilot(world: World): FujiRailway | null {
-  const fuji = world.regionById("-7,-2");
-  const valleyShrine = world.regionById("-6,-2");
-  const foothillShrine = world.regionById("-7,-3");
-  if (fuji.landmark?.id !== "mount-fuji" || valleyShrine.landmark || foothillShrine.landmark) return null;
-  const angle = 237.5 * Math.PI / 180;
-  const along = { x: Math.cos(angle), z: Math.sin(angle) };
-  const across = { x: -along.z, z: along.x };
-  const offset = 49;
-  const origin = { x: fuji.site.x - 3.2 + across.x * offset, z: fuji.site.z - 3.2 + across.z * offset };
-  const alignment = { origin, along, across };
-  const stations = [
-    { distance: -48, shrineId: valleyShrine.id, stand: railPoint(alignment, -46.6, 3.05) },
-    { distance: 48, shrineId: foothillShrine.id, stand: railPoint(alignment, 49.4, 3.05) },
-  ] as const;
-  const route = { ...alignment, start: -RAIL_HALF_LENGTH, end: RAIL_HALF_LENGTH, stations };
-  if (!hasShrineClearance(world, route)) return null;
-  const crossed = crossedRegions(world, route, route.start, route.end);
-  return {
-    ...route,
-    height: 3.30,
-    landmarkId: fuji.id,
-    crossedRegions: crossed,
-    requiredRegions: [...new Set([...crossed, valleyShrine.id, foothillShrine.id, fuji.id])],
-  };
 }
 
 interface Approach {

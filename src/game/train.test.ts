@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
-  capabilitiesForCount, createTerrain, createWorld, footprintHalf, FUJI_RAIL_SEED, fujiRailway, isWater,
+  capabilitiesForCount, createTerrain, createWorld, footprintHalf, fujiRailway, isWater,
   landmarksBeforeAct, LANDMARK_WINDOW, reachableRegions, railPoint, railwayClearance, PLATFORM_TOP, RAIL_HALF_LENGTH,
 } from "../world";
 import { blockerAt } from "./player";
 import { newGame, restoreShrine } from "./state";
 import { railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS } from "./train";
 
-const world = createWorld(FUJI_RAIL_SEED);
+const world = createWorld("wayshrine");
 const terrain = createTerrain(world);
 const line = fujiRailway(world)!;
 
-describe("Mount Fuji railway prototype", () => {
+describe("Mount Fuji railway", () => {
   it("keeps its track and both station approaches on the chosen seed", () => {
     expect(world.regionById(line.landmarkId).landmark?.id).toBe("mount-fuji");
-    const caps = capabilitiesForCount(13);
+    const caps = capabilitiesForCount(landmarksBeforeAct(world.regionById(line.landmarkId).landmark!.act));
     const accessible = new Set(reachableRegions(world, caps, 28).map((region) => region.id));
     for (const [index, station] of line.stations.entries()) {
       const region = world.regionById(station.shrineId);
@@ -25,7 +25,7 @@ describe("Mount Fuji railway prototype", () => {
       const nearestRail = railPoint(line, along);
       expect(Math.hypot(nearestRail.x - region.shrine.x, nearestRail.z - region.shrine.z)).toBeGreaterThan(5.3);
       expect(stationInReach(line, station.stand)).toBe(index);
-      expect(terrain.tileAtPoint(station.stand.x, station.stand.z).biome).toBe("mountain");
+      expect(isWater(terrain.tileAtPoint(station.stand.x, station.stand.z).biome)).toBe(false);
       expect(blockerAt(terrain, caps, station.stand.x, station.stand.z)).toBeNull();
       expect(terrain.groundAt(station.stand.x, station.stand.z)).toBeCloseTo(line.height + PLATFORM_TOP, 2);
       expect(accessible.has(station.shrineId)).toBe(true);
@@ -46,7 +46,7 @@ describe("Mount Fuji railway prototype", () => {
       ...line.crossedRegions, ...line.stations.map((station) => station.shrineId), line.landmarkId,
     ]));
     expect(line.crossedRegions.length).toBeGreaterThan(2);
-    const caps = capabilitiesForCount(13);
+    const caps = capabilitiesForCount(landmarksBeforeAct(world.regionById(line.landmarkId).landmark!.act));
     const reachable = new Set(reachableRegions(world, caps, 28).map((region) => region.id));
     expect(sites.every((id) => reachable.has(id))).toBe(true);
     for (const last of sites) {
@@ -70,7 +70,7 @@ describe("Mount Fuji railway prototype", () => {
       expect(board.windowView).toBe(false);
       expect(midway.windowView).toBe(true);
       expect(midway.routeProgress).toBeCloseTo(0.5);
-      expect(midway.distance).toBeCloseTo(0);
+      expect(midway.distance).toBeCloseTo((line.stations[0].distance + line.stations[1].distance) / 2);
       expect(midway.direction).toBe(from === 0 ? 1 : -1);
       expect(arrival.windowView).toBe(false);
       expect(arrival.routeProgress).toBe(to);
