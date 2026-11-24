@@ -55,6 +55,12 @@ The first moving step into marsh after earning geta crouches the traveller to sl
 
 In **Gear acquisition**, **Preview geta unlock** and **Preview geta use** play the reveal and the slip-on moment without updating the save, fading back to Ridgewalk first if the save is already on Marshwalk.
 
+## First ash sandals use
+
+The first moving step onto volcanic ground after earning ash sandals crouches the traveller to bind them on, then kicks up a small puff of ash as she steps off, and crossfades the background from **Lantern Trail** to **Basalt Crossing** over 5 s. There is no cue. The first step is saved immediately and Basalt Crossing remains the background on reload. The track is `basalt-crossing` (`public/audio/music/basalt-crossing.mp3`, supplied by the project owner, three minutes, about -18.6 LUFS, so it carries a track gain of 1.25 like Lantern Trail). Restoration swells on this theme use the alternate (winter) swell, as the Snowline, Marshwalk and Lantern sets do.
+
+The unlock reveal reads "Ash sandals unlocked" (English and Japanese). In **Gear acquisition**, **Preview ash sandals unlock** and **Preview ash sandals use** play the reveal and the bind-on moment without updating the save, fading back to the lantern theme first if the save is already on the basalt one.
+
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.

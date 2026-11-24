@@ -1,5 +1,5 @@
 /** Every piece of music the game can play. */
-export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk", "marshwalk", "lantern-trail"] as const;
+export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk", "marshwalk", "lantern-trail", "basalt-crossing"] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface TrackInfo {
@@ -17,6 +17,7 @@ export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "ridgewalk": { url: `${base}audio/music/ridgewalk.mp3` },
   "marshwalk": { url: `${base}audio/music/marshwalk.mp3` },
   "lantern-trail": { url: `${base}audio/music/lantern-trail.mp3`, gain: 1.25 },
+  "basalt-crossing": { url: `${base}audio/music/basalt-crossing.mp3`, gain: 1.25 },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 
@@ -39,10 +40,12 @@ export const MUSIC_SETS = [
   { label: "Ridgewalk", background: "ridgewalk" },
   { label: "Marshwalk", background: "marshwalk" },
   { label: "Lantern", background: "lantern-trail" },
+  { label: "Basalt", background: "basalt-crossing" },
 ] as const satisfies readonly MusicSet[];
 
 /** First uses open new background themes across the world. */
-export function musicSetFor(launched: boolean, snowshoesUsed: boolean, climbingUsed = false, getaUsed = false, lanternUsed = false): MusicSet {
+export function musicSetFor(launched: boolean, snowshoesUsed: boolean, climbingUsed = false, getaUsed = false, lanternUsed = false, ashSandalsUsed = false): MusicSet {
+  if (ashSandalsUsed) return MUSIC_SETS[6];
   if (lanternUsed) return MUSIC_SETS[5];
   if (getaUsed) return MUSIC_SETS[4];
   if (climbingUsed) return MUSIC_SETS[3];

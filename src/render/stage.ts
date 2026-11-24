@@ -11,6 +11,7 @@ import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import type { CharacterVariant, GearId, LanternLighting } from "./character";
+import { createAshPuff } from "./ash-puff";
 import { createFootprints } from "./footprints";
 import { buildPlayer } from "./player-mesh";
 import { buildLandmark } from "./landmark-mesh";
@@ -164,6 +165,9 @@ export function createStage(
   scene.add(player.group, player.hull);
   const footprints = createFootprints();
   scene.add(footprints.root);
+  const ashPuff = createAshPuff();
+  scene.add(ashPuff.root);
+  let ashPuffed = false;
 
   const chunks = new Map<string, VitalityMesh>();
   const shrines = new Map<string, ShrineMesh>();
@@ -457,6 +461,13 @@ export function createStage(
       for (const step of player.animate(dt, strapping === undefined && drawing === undefined && !lighting && (view.moving ?? false))) {
         if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);
       }
+      // Stepping off in ash sandals kicks up a puff of ash, once per strap-on moment.
+      if (strapping === undefined) ashPuffed = false;
+      else if (view.strapGear === "ashSandals" && strapping >= 0.82 && !ashPuffed) {
+        ashPuffed = true;
+        ashPuff.burst(pos.x, terrain.groundAt(pos.x, pos.z), pos.z);
+      }
+      ashPuff.update(dt);
       footprints.update(dt);
 
       const hull = voyage?.hull ?? pos;

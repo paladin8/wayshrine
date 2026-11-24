@@ -29,6 +29,7 @@ import {
   planBoatLaunch,
   recordBoatLaunch,
   recordClimbUse,
+  recordAshSandalsUse,
   recordGetaUse,
   recordLanternUse,
   recordSnowshoeUse,
@@ -104,6 +105,8 @@ const SNOWSHOE_MOMENT_SECONDS = 4.6;
 const GETA_MOMENT_SECONDS = 4.2;
 /** How long the walking sticks take to come off the pack and be planted the first time. */
 const CLIMB_MOMENT_SECONDS = 5.2;
+/** How long the player takes to bind on ash sandals and step off the first time. */
+const ASH_MOMENT_SECONDS = 4.4;
 const LANTERN_MOMENT_SECONDS = 4.6;
 const LANTERN_IGNITION_AT = 0.32;
 /** Length of the slow crossfade between background themes when gear is first used. */
@@ -272,9 +275,11 @@ export function startApp(container: HTMLElement): void {
   let getaMusicPreview = false;
   let lanternMoment: { t: number } | null = null;
   let lanternMusicPreview = false;
+  let ashMoment: { t: number } | null = null;
+  let ashMusicPreview = false;
   /** True while a debug preview waits (negative time) for the previous theme to fade back before it starts. */
-  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0;
-  const momentBusy = (): boolean => trainRide !== null || awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null;
+  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0 || (ashMoment?.t ?? 0) < 0;
+  const momentBusy = (): boolean => trainRide !== null || awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null || ashMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
@@ -294,10 +299,15 @@ export function startApp(container: HTMLElement): void {
     const afterGeta = lanternMusicPreview || (getaMoment && getaMoment.t < 0 ? false
       : getaMusicPreview || (!boatTrial && !earlierThanGeta && state.getaUsed));
     const earlierGearPreview = boatTrial || snowshoeMusicPreview || climbMusicPreview || getaMusicPreview;
-    const afterLantern = lanternMoment
+    // Ash sandals come after the lantern, so their moment starts on the lantern theme and crosses over to the basalt one.
+    const ash = ashMoment !== null;
+    const afterLantern = ash || (lanternMoment
       ? lanternMoment.t >= LANTERN_MOMENT_SECONDS * LANTERN_IGNITION_AT
-      : lanternMusicPreview || (!earlierGearPreview && state.lanternUsed);
-    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta, afterLantern);
+      : lanternMusicPreview || (!earlierGearPreview && state.lanternUsed));
+    const earlierThanAsh = earlierGearPreview || lanternMusicPreview || lanternMoment !== null;
+    const afterAsh = ashMoment && ashMoment.t < 0 ? false
+      : ash || ashMusicPreview || (!earlierThanAsh && state.ashSandalsUsed);
+    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta, afterLantern, afterAsh);
   };
 
   const startVoyage = (path: BoatLaunch, preview = false): void => {
@@ -312,6 +322,7 @@ export function startApp(container: HTMLElement): void {
     climbMusicPreview = false;
     getaMusicPreview = false;
     lanternMusicPreview = false;
+    ashMusicPreview = false;
   };
 
   const startTrainRide = (from: StationIndex, preview = false): void => {
@@ -352,11 +363,13 @@ export function startApp(container: HTMLElement): void {
     climbMoment = null;
     getaMoment = null;
     lanternMoment = null;
+    ashMoment = null;
     boatTrial = false;
     snowshoeMusicPreview = false;
     climbMusicPreview = false;
     getaMusicPreview = false;
     lanternMusicPreview = false;
+    ashMusicPreview = false;
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
@@ -474,6 +487,7 @@ export function startApp(container: HTMLElement): void {
       previewClimbUnlock: () => previewGearUnlock("climbing"),
       previewGetaUnlock: () => previewGearUnlock("geta"),
       previewLanternUnlock: () => previewGearUnlock("lantern"),
+      previewAshSandalsUnlock: () => previewGearUnlock("ashSandals"),
       previewClimbUse: () => {
         beginPreview();
         // If this save is already on the ridge theme, let the preview fade back to the snow theme first.
@@ -496,6 +510,14 @@ export function startApp(container: HTMLElement): void {
         const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[4].background ? -3.1 : 0;
         lanternMusicPreview = true;
         lanternMoment = { t: lead };
+      },
+      previewAshSandalsUse: () => {
+        beginPreview();
+        // If this save is already on the basalt theme, let the preview fade back to the lantern theme first.
+        const playing = music.status().track;
+        const lead = debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[5].background ? -3.1 : 0;
+        ashMusicPreview = true;
+        ashMoment = { t: lead };
       },
       previewFirstVoyage,
       previewFujiRide: railway ? () => {
@@ -603,7 +625,8 @@ export function startApp(container: HTMLElement): void {
             : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes"
             : count === CAPABILITY_THRESHOLDS.climbing ? "climbing"
             : count === CAPABILITY_THRESHOLDS.geta ? "geta"
-            : count === CAPABILITY_THRESHOLDS.lantern ? "lantern" : null;
+            : count === CAPABILITY_THRESHOLDS.lantern ? "lantern"
+            : count === CAPABILITY_THRESHOLDS.ashSandals ? "ashSandals" : null;
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
           const backgroundTrack = selectedMusicSet().background;
@@ -611,7 +634,7 @@ export function startApp(container: HTMLElement): void {
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           cues.play(AWAKENING_BURST);
           const useWinterSwell = kind === "shrine" && (
-            backgroundTrack === "snowline-walk" || backgroundTrack === "marshwalk" || backgroundTrack === "lantern-trail"
+            backgroundTrack === "snowline-walk" || backgroundTrack === "marshwalk" || backgroundTrack === "lantern-trail" || backgroundTrack === "basalt-crossing"
           );
           if (useWinterSwell) cues.play(WINTER_SHRINE_SWELL, WINTER_SHRINE_FADE_IN);
           else cues.play(AWAKENING_SWELLS[kind]);
@@ -685,6 +708,11 @@ export function startApp(container: HTMLElement): void {
         saveGame(state);
         lanternMoment = { t: 0 };
         overviewTime = OVERVIEW_SECONDS;
+      } else if (moving && caps.has("ashSandals") && !state.ashSandalsUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "volcanic") {
+        state = recordAshSandalsUse(state);
+        saveGame(state);
+        ashMoment = { t: 0 };
+        facing = Math.atan2(dir.x, dir.z);
       } else if (moving && caps.has("snowshoes") && !state.snowshoesUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "snow") {
         state = recordSnowshoeUse(state);
         saveGame(state);
@@ -768,6 +796,10 @@ export function startApp(container: HTMLElement): void {
     if (climbMoment) {
       climbMoment.t += dt;
       if (climbMoment.t >= CLIMB_MOMENT_SECONDS) climbMoment = null;
+    }
+    if (ashMoment) {
+      ashMoment.t += dt;
+      if (ashMoment.t >= ASH_MOMENT_SECONDS) ashMoment = null;
     }
     if (getaMoment) {
       getaMoment.t += dt;
@@ -874,7 +906,7 @@ export function startApp(container: HTMLElement): void {
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     // Keep the background steady through a restoration if debug selects another track.
-    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview || lanternMusicPreview) ? GEAR_FADE_SECONDS : undefined);
+    music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview || lanternMusicPreview || ashMusicPreview) ? GEAR_FADE_SECONDS : undefined);
     const nextMovementCue = moving && !voyageFrame && !lanternMoment
       ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
       : undefined;
@@ -897,7 +929,7 @@ export function startApp(container: HTMLElement): void {
     railView?.(railFrame, railPreparing, t.railway);
     stage.render(dt, {
       player: railPlayer, facing, state: trainRide?.visibleState ?? state,
-      moving: moving || (railFrame !== undefined && railFrame.boarding > 0 && railFrame.boarding < 1), drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : undefined, strapGear: getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
+      moving: moving || (railFrame !== undefined && railFrame.boarding > 0 && railFrame.boarding < 1), drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : ashMoment && ashMoment.t >= 0 ? ashMoment.t / ASH_MOMENT_SECONDS : undefined, strapGear: ashMoment ? "ashSandals" : getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene,
       lighting,
       voyage: voyageFrame,
       train: railFrame,

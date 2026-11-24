@@ -14,6 +14,7 @@ export {
   newGame,
   recordBoatLaunch,
   recordClimbUse,
+  recordAshSandalsUse,
   recordGetaUse,
   recordLanternUse,
   recordSnowshoeUse,

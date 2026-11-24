@@ -113,6 +113,7 @@ export const ja: Messages = {
     climbing: { title: "金剛杖を手に入れた", hint: "山に足を踏み入れると、杖を使えます。" },
     geta: { title: "下駄を手に入れた", hint: "湿地に足を踏み入れると、下駄を履けます。" },
     lantern: { title: "提灯を手に入れた", hint: "暗い森に足を踏み入れると、提灯に火を灯せます。" },
+    ashSandals: { title: "灰よけの草履を手に入れた", hint: "火山の大地に足を踏み入れると、草履を履けます。" },
   },
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",

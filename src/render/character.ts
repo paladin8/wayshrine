@@ -272,10 +272,26 @@ export function buildCharacter(variant: CharacterVariant): Character {
   };
   registerGear("geta", legs.map((l) => geta(l.sole)));
 
+  // Waraji-style ash sandals: a thick woven sole over a charred underlayer, an upturned toe guard, cords that cross
+  // the instep and wrap the ankle in sulphur-yellow cloth.
+  const charcoal = m(0x2f2b2c);
+  const strawAsh = m(ASH);
+  const cord = m(0xd0a647);
   const sandal = (parent: THREE.Object3D): THREE.Group => {
     const g = group(parent);
-    mesh(new THREE.BoxGeometry(0.125, 0.02, 0.25), m(ASH), g, 0, -0.012, 0.01);
-    mesh(new THREE.BoxGeometry(0.13, 0.025, 0.035), woodDark, g, 0, 0.005, 0.03);
+    mesh(new THREE.BoxGeometry(0.12, 0.016, 0.265), charcoal, g, 0, -0.022, 0.01);
+    mesh(new THREE.BoxGeometry(0.13, 0.03, 0.27), strawAsh, g, 0, -0.003, 0.01);
+    for (const z of [-0.08, -0.02, 0.04, 0.1]) mesh(new THREE.BoxGeometry(0.134, 0.008, 0.018), charcoal, g, 0, 0.014, z); // woven ridges
+    const toe = mesh(new THREE.BoxGeometry(0.12, 0.03, 0.05), strawAsh, g, 0, 0.012, 0.15);
+    toe.rotation.x = -0.45; // the toe curls up against the ash
+    for (const side of [1, -1]) {
+      const strap = mesh(new THREE.BoxGeometry(0.018, 0.012, 0.15), cord, g, side * 0.03, 0.045, 0.01);
+      strap.rotation.set(0.0, -side * 0.28, -side * 0.35);
+    }
+    const cuff = new THREE.TorusGeometry(0.068, 0.014, 4, 10);
+    cuff.rotateX(Math.PI / 2);
+    mesh(cuff, cord, g, 0, 0.1, -0.01);
+    mesh(new THREE.BoxGeometry(0.03, 0.04, 0.02), cord, g, 0, 0.07, 0.06); // knot
     return g;
   };
   registerGear("ashSandals", legs.map((l) => sandal(l.sole)));

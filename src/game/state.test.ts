@@ -12,6 +12,7 @@ import {
   isLandmarkRevealed,
   isRestored,
   newGame,
+  recordAshSandalsUse,
   recordClimbUse,
   recordGetaUse,
   recordLanternUse,
@@ -113,6 +114,18 @@ describe("game state", () => {
     expect(deserialize(serialize(used), world).lanternUsed).toBe(true);
     expect(resetShrines(used).lanternUsed).toBe(false);
     expect(resetGame(used).lanternUsed).toBe(false);
+  });
+
+  it("records the first ash sandal step once, survives reload, and defaults old saves to unused", () => {
+    const original = withLandmarks(CAPABILITY_THRESHOLDS.ashSandals);
+    expect(original.ashSandalsUsed).toBe(false);
+    const used = recordAshSandalsUse(original);
+    expect(recordAshSandalsUse(used)).toBe(used);
+    const { ashSandalsUsed: _absent, ...old } = serialize(used);
+    expect(deserialize(old, world).ashSandalsUsed).toBe(false);
+    expect(deserialize(serialize(used), world).ashSandalsUsed).toBe(true);
+    expect(resetShrines(used).ashSandalsUsed).toBe(false);
+    expect(resetGame(used).ashSandalsUsed).toBe(false);
   });
 
   it("records snowshoe first use once, survives reload, and defaults old saves to unused", () => {
