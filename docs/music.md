@@ -68,7 +68,7 @@ Earning the ship (49 landmarks) shows "Ship unlocked" (English and Japanese). Th
 
 In **Gear acquisition**, **Preview ship unlock** and **Preview first sailing** play the reveal and the departure without updating the save (the preview finds a clear bank beside a sea landmark), fading back to the basalt theme first if the save is already on Open sea.
 
-There is no sound yet for the ship under way (the sea has no movement cue) or for the gangway and casting off.
+Under way the ship uses the same rowing loop as the skiff (`MOVEMENT_CUES.sea`); there is no sound yet for the gangway or casting off.
 
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed, lanternUsed, ashSandalsUsed, shipLaunched)`, the set selection for each stage.
@@ -85,7 +85,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
 | `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
 | `marshwalk` | `marshwalk.mp3` | Supplied by the project owner (`Still_Water_Reeds`). Three minutes, stereo MP3, about -16.7 LUFS. Becomes the background after the first geta step. |
-| `open-sea` | `open-sea.mp3` | Becomes the background after the first sailing. **Placeholder:** the file in place is a copy of `waves-beyond-the-headlands.mp3` until the project owner's own track replaces it (same file name). |
+| `open-sea` | `open-sea.mp3` | Supplied by the project owner (`Beyond_The_Headland`). Three minutes, stereo MP3, about -12 LUFS, so it plays at gain 0.65 to sit level with the others. Becomes the background after the first sailing. |
 
 Record the origin and licence of each track here when it is added.
 

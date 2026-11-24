@@ -18,7 +18,8 @@ export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "marshwalk": { url: `${base}audio/music/marshwalk.mp3` },
   "lantern-trail": { url: `${base}audio/music/lantern-trail.mp3`, gain: 1.25 },
   "basalt-crossing": { url: `${base}audio/music/basalt-crossing.mp3`, gain: 1.25 },
-  "open-sea": { url: `${base}audio/music/open-sea.mp3` },
+  // Mastered louder than the other themes (about -12 LUFS against -16); 35% down brings it level.
+  "open-sea": { url: `${base}audio/music/open-sea.mp3`, gain: 0.65 },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 

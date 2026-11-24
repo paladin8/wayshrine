@@ -80,6 +80,7 @@ const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   marsh: "walk-marsh",
   volcanic: "walk-mountain",
   water: "row-water",
+  sea: "row-water",
 };
 const MOVEMENT_FADE_IN = 0.65;
 const MOVEMENT_FADE_OUT = 0.85;
