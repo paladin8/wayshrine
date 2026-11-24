@@ -57,6 +57,29 @@ function partsFor(kind: PropKind, variant: number): Part[] {
         { geometry: new THREE.OctahedronGeometry(1, 0), color: palette.rock, matrix: at(0, 0.55, 0, 0.35, 0.7, 0.3) },
         { geometry: ico(), color: palette.rock, matrix: at(0.35, 0.15, 0.1, 0.25, 0.18, 0.22) },
       ];
+    case "cherry": {
+      const blossom = [0xf2b6c4, 0xe5a3b4, 0xffcad1, 0xedacbc][variant]!;
+      return [
+        { geometry: cylinder(0.09, 0.15, 1.4, 6), color: 0x785c50, matrix: at(0, 0.7, 0) },
+        ...[[-0.43, 1.45, 0.14], [0.42, 1.61, -0.19], [0, 1.99, 0], [0.12, 1.64, 0.42]].map(([x, y, z]) =>
+          ({ geometry: ico(), color: blossom, matrix: at(x!, y!, z!, 0.71, 0.55, 0.65) })),
+      ];
+    }
+    case "farmhouse": {
+      const roof = [0x45545c, 0x555152, 0x4f5c59, 0x66605d][variant]!;
+      const timber = 0x7f6951;
+      return [
+        { geometry: box(3.8, 0.75, 2.65), color: 0x989078, matrix: at(0, -0.28, 0) },
+        { geometry: box(3.65, 1.62, 2.5), color: 0xdad0ac, matrix: at(0, 0.88, 0) },
+        { geometry: box(4.05, 0.19, 0.22), color: roof, matrix: at(0, 2.36, 0) },
+        ...[-1, 1].flatMap((side) => [
+          { geometry: box(4.17, 0.13, 1.63).rotateX(side * 0.43), color: roof, matrix: at(0, 2.03, side * 0.71) },
+          { geometry: box(3.66, 0.14, 0.05), color: timber, matrix: at(0, 0.40, side * 1.26) },
+          { geometry: box(1.33, 0.54, 0.05), color: 0x4f6364, matrix: at(side * 0.68, 1.08, side * 1.28) },
+          { geometry: box(0.56, 1.12, 0.07), color: timber, matrix: at(-side * 1.01, 0.59, side * 1.27) },
+        ]),
+      ];
+    }
     case "lantern":
       return [
         { geometry: box(0.3, 0.12, 0.3), color: STONE, matrix: at(0, 0.06, 0) },
@@ -69,7 +92,7 @@ function partsFor(kind: PropKind, variant: number): Part[] {
 
 const partCache = new Map<string, Part[]>();
 function cachedParts(kind: PropKind, look: string, variant: number): Part[] {
-  const bucket = look !== kind || kind === "tree" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
+  const bucket = look !== kind || kind === "tree" || kind === "cherry" || kind === "farmhouse" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
   const key = `${look}:${bucket}`;
   let parts = partCache.get(key);
   if (!parts) {
@@ -85,6 +108,7 @@ const instance = new THREE.Matrix4();
 /** How tall each kind's swaying part is, before the prop's own scale. Rigid props are absent. */
 const SWAY_HEIGHT: Partial<Record<PropKind, number>> = {
   tree: 1.5,
+  cherry: 2.15,
   bush: 0.4,
   flower: 0.35,
   pine: 1.7,

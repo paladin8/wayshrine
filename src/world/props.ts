@@ -1,10 +1,11 @@
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
+import { fujiValley } from "./fuji-valley";
 import { fujiRailway, railwayClearance } from "./fuji-railway";
 import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
 import { isWater, type Biome } from "./terrain";
 
-export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern"] as const;
+export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern", "cherry", "farmhouse"] as const;
 export type PropKind = (typeof PROP_KINDS)[number];
 
 /**
@@ -106,6 +107,7 @@ export function propsInChunk(
   const z0 = cz * CHUNK_SIZE;
   const props: Prop[] = [];
   const railway = fujiRailway(world);
+  const valleyProps = fujiValley(world)?.props ?? [];
 
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
@@ -119,6 +121,7 @@ export function propsInChunk(
       const variant = rng.next();
       let roll = rng.next();
 
+      if (tile.fujiField || valleyProps.some((p) => p.kind === "farmhouse" && Math.hypot(x - p.x, z - p.z) < 2.8)) continue;
       const region = world.regionAt(x, z);
       const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;
@@ -137,7 +140,7 @@ export function propsInChunk(
       const meadowPatch = shared.drifts(x / 15 + 170, z / 15 - 75);
       const patch = drift * 0.52 + meadowPatch * 0.48;
       const bloomDensity = 0.035 + Math.max(0, (patch - 0.43) / 0.57) ** 2 * 18 * profile[1];
-      const stoneDensity = 0.23 + drift ** 3 * 2.8 * profile[2];
+      const stoneDensity = (0.23 + drift ** 3 * 2.8 * profile[2]) * (1 - (tile.fujiVerge ?? 0) * 0.78);
       for (const [kind, chance] of table) {
         const woody = kind === "tree" || kind === "pine" || kind === "bush";
         const density = woody ? groveDensity : kind === "flower" ? bloomDensity : stoneDensity;
@@ -155,6 +158,14 @@ export function propsInChunk(
         roll -= chance * density;
       }
     }
+  }
+
+  for (const prop of valleyProps) {
+    const { x, z } = prop;
+    if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
+    const radius = prop.kind === "farmhouse" ? 2.6 : 0.5;
+    if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + radius)) continue;
+    props.push({ ...prop, y: terrain.groundAt(x, z), regionId: terrain.tileAtPoint(x, z).regionId });
   }
 
   // Freestanding lanterns for land shrines whose lanterns fall in this chunk.

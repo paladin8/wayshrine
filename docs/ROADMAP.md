@@ -26,7 +26,7 @@
 2. **Ability acquisition.** The boat prototype announces the unlock at three restored landmarks and uses the first boarding to transition between two themes. The first step on snow with snowshoes plays a cue and brings in Snowline Walk. Extend the reward and first-use pattern to the other abilities. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.
-5. **Technology thread.** The Mount Fuji window ride has a seeded five-region route. Build the other four landmark lines using the shared stations and train. See the [scenic railway plan](railway-plan.md).
+5. **Technology thread.** Mount Fuji is the scenic railway. Its five-region corridor echoes the ride with trackside farmhouses, paddies, and cherry trees. See the [scenic railway plan](railway-plan.md).
 6. **Livelier world.** Extend rare sightings with responses to nearby players, and eventually add people.
 7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, walking sticks and the rest) given the same treatment.
 8. **Footsteps.** Moving across different terrain should make different sounds.

@@ -22,15 +22,16 @@ describe("createObstacles", () => {
 
   it("gives a placeholder landmark one solid disc, and a crafted model its own solids", () => {
     const world = terrain.world;
-    const placeholder = world.landmarks.find((r) => !groundOf(r.landmark!.id))!;
-    expect(obstacles.near(placeholder.site.x, placeholder.site.z, 0).length).toBeGreaterThan(0);
+    // Every landmark may have its model by now; the placeholder checks apply only while one is still missing.
+    const placeholder = world.landmarks.find((r) => !groundOf(r.landmark!.id));
+    if (placeholder) expect(obstacles.near(placeholder.site.x, placeholder.site.z, 0).length).toBeGreaterThan(0);
     const crafted = world.landmarks.find((r) => groundOf(r.landmark!.id))!;
     const model = groundOf(crafted.landmark!.id)!;
     for (const [sx, sz] of model.solids.slice(0, 40)) {
       expect(obstacles.near(crafted.site.x + sx, crafted.site.z + sz, 0).length).toBeGreaterThan(0);
     }
     // No gate pillars at a landmark.
-    expect(obstacles.near(placeholder.site.x + 0.9, placeholder.site.z + 4.5, 0).length).toBe(0);
+    if (placeholder) expect(obstacles.near(placeholder.site.x + 0.9, placeholder.site.z + 4.5, 0).length).toBe(0);
   });
 
   it("makes trees and shrine pillars solid but not flowers", () => {

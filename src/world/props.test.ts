@@ -6,9 +6,9 @@ import { propsInChunk, type PropKind } from "./props";
 import { isWater, type Biome } from "./terrain";
 
 const ALLOWED: Record<Biome, readonly PropKind[]> = {
-  meadow: ["tree", "bush", "flower", "lantern"],
+  meadow: ["tree", "bush", "flower", "lantern", "cherry", "farmhouse"],
   snow: ["pine", "rock", "bush", "flower", "lantern"],
-  mountain: ["rock", "crag", "bush", "flower", "lantern"],
+  mountain: ["rock", "crag", "bush", "flower", "lantern", "cherry", "farmhouse"],
   water: ["lantern"],
   marsh: ["bush", "tree", "flower", "rock", "lantern"],
   forest: ["tree", "bush", "flower", "lantern"],
@@ -73,7 +73,7 @@ describe("propsInChunk", () => {
     }
   });
 
-  it("uses every scenery kind across meadow, snow and mountain regions", () => {
+  it("uses every ambient scenery kind across meadow, snow and mountain regions", () => {
     const seen = new Set<PropKind>();
     const big = createTerrain(createWorld("variety"));
     for (const biome of ["meadow", "snow", "mountain"] as const) {
@@ -81,7 +81,11 @@ describe("propsInChunk", () => {
       const x = Math.floor(shrine.x / CHUNK_SIZE);
       const z = Math.floor(shrine.z / CHUNK_SIZE);
       for (let cz = z - 1; cz <= z + 1; cz++) {
-        for (let cx = x - 1; cx <= x + 1; cx++) propsInChunk(big, cx, cz).forEach((p) => seen.add(p.kind));
+        for (let cx = x - 1; cx <= x + 1; cx++) {
+          for (const { kind } of propsInChunk(big, cx, cz)) {
+            if (kind !== "cherry" && kind !== "farmhouse") seen.add(kind);
+          }
+        }
       }
     }
     expect([...seen].sort()).toEqual(["bush", "crag", "flower", "lantern", "pine", "rock", "tree"]);

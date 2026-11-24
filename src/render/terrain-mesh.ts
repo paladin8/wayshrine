@@ -1,8 +1,16 @@
+import { Color } from "three";
 import { CHUNK_SIZE, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
 import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
 const SIDE_SHADE = 0.8;
+const fujiGrass = new Color(0x90a96a);
+const fieldColors = {
+  bank: 0x81965a,
+  paddy: 0x8fae9f,
+  rice: 0x70984b,
+  channel: 0x6f9faf,
+};
 
 type V = readonly [number, number, number];
 
@@ -36,15 +44,29 @@ export function buildTerrainChunk(
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
       const tile = terrain.tileAt(tx, tz);
-      const top = art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
+      const field = tile.fujiField;
+      const top = field ? new Color(fieldColors[field]) : art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
+      if (!field && tile.fujiVerge) top.lerp(fujiGrass, tile.fujiVerge * 0.90);
       const side = top.clone().multiplyScalar(SIDE_SHADE);
       const c = terrain.corners(tx, tz);
       builder.addTriangles(
         quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]),
         top,
         tile.regionId,
-        tile.biome === "water" || tile.biome === "sea" ? { water: tile.biome } : undefined,
+        tile.biome === "water" || tile.biome === "sea" ? { water: tile.biome }
+          : field === "channel" ? { water: "water" } : undefined,
       );
+
+      if (field === "rice") {
+        const plants: number[] = [];
+        for (const [dx, dz] of [[0.25, 0.28], [0.67, 0.59]] as const) {
+          const x = tx + dx, z = tz + dz;
+          const y = terrain.groundAt(x, z);
+          plants.push(x - 0.09, y, z, x + 0.04, y + 0.36, z + 0.13, x + 0.08, y, z,
+            x, y, z - 0.09, x - 0.14, y + 0.29, z, x, y, z + 0.075);
+        }
+        builder.addTriangles(plants, new Color(0x8faf5b), tile.regionId, { sway: { baseY: tile.height, height: 0.35 } });
+      }
 
       // A side face wherever this tile's edge stands above its neighbour's, down to the neighbour's edge.
       const n1 = terrain.corners(tx + 1, tz);

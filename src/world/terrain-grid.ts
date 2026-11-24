@@ -1,5 +1,6 @@
 import { createNoise } from "../core";
 import { fujiRailway, railwayBank, railwayGround } from "./fuji-railway";
+import { fujiFieldAt, fujiValley, fujiVergeAt, type FujiField } from "./fuji-valley";
 import { createIsletRelief } from "./islets";
 import { createRegionalRelief } from "./landforms";
 import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
@@ -47,6 +48,8 @@ export interface Tile {
   readonly biome: Biome;
   /** Height of the tile's top surface. */
   readonly height: number;
+  readonly fujiField?: FujiField;
+  readonly fujiVerge?: number;
   readonly regionId: string;
   /** Light shallows over the submerged edge of an islet. */
   readonly shoal?: number;
@@ -99,6 +102,7 @@ export function createTerrain(world: World): Terrain {
   const regionalRelief = createRegionalRelief(world.seed);
   const islandRelief = createIsletRelief(world);
   const railway = fujiRailway(world);
+  const valley = fujiValley(world);
   const waterStations = railway?.stations.filter(({ shrineId }) => isWater(world.regionById(shrineId).biome)) ?? [];
 
   /** Height of the natural ground of a biome, before any plateau. */
@@ -242,12 +246,21 @@ export function createTerrain(world: World): Terrain {
         }
       }
     }
-    return { region, biome, height, skirt, shore, shoal, terrace: landShrine && onPlateau };
+    const field = valley && !onPlateau && !isWater(biome) ? fujiFieldAt(valley, x, z) : undefined;
+    if (field && valley) {
+      const t = Math.min(1, field.inset / 1.8);
+      height += (valley.line.height - 0.31 - height) * t * t * (3 - 2 * t);
+      skirt = true;
+    }
+    const fujiVerge = railway && biome === "mountain" && away > (region.landmark ? LANDMARK_BLEND + 1 : 3)
+      ? fujiVergeAt(railway, x, z)
+      : undefined;
+    return { region, biome, height, skirt, shore, shoal, fujiField: field?.kind, fujiVerge, terrace: landShrine && onPlateau };
   }
 
   function tileAt(tx: number, tz: number): Tile {
-    const { region, biome, height, skirt, shoal } = sample(tx, tz);
-    return { biome, height, regionId: region.id, skirt, shoal };
+    const { region, biome, height, skirt, shoal, fujiField, fujiVerge } = sample(tx, tz);
+    return { biome, height, regionId: region.id, skirt, shoal, fujiField, fujiVerge };
   }
 
   /**

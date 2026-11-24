@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { FUJI_RAIL_SEED, railPoint, PLATFORM_END, PLATFORM_TOP, RAIL_HALF_WIDTH, type FujiRailway, type Obstacle, type Terrain } from "../world";
+import { railPoint, PLATFORM_END, PLATFORM_TOP, RAIL_HALF_WIDTH, type FujiRailway, type Obstacle, type Terrain } from "../world";
 import { lifeAt, type TrainFrame } from "../game";
 import { combine, deadOf, VitalityBuilder } from "./vitality-mesh";
 
@@ -263,7 +263,6 @@ export function buildFujiTrain(line: FujiRailway, terrain: Terrain) {
     addLight(x - 7.4, 2.16, 3.39, 0.18, 0.19, 0.04, true);
   }
 
-  if (terrain.world.seed === FUJI_RAIL_SEED) addPilotScenery(scenery, line, posts, ground);
   root.updateMatrix();
   scenery.applyMatrix4(root.matrix);
   const restoredScenery = bakeRailScenery(scenery, terrain);
@@ -287,33 +286,4 @@ export function buildFujiTrain(line: FujiRailway, terrain: Terrain) {
       }
     },
   };
-}
-
-function addPilotScenery(
-  root: THREE.Group, line: FujiRailway, posts: Obstacle[], ground: (distance: number, across: number) => number,
-): void {
-  // A few houses at the ends frame the open stretch at the foot of the mountain.
-  for (const [x, z, w] of [[-36, -6, 3.4], [-31, -8.5, 2.9], [32, -7.1, 4.3], [38, -5.8, 3.4]] as const) {
-    const y = ground(x, z);
-    box(root, 0xb4a395, x, y + 0.9, z, w, 1.8, 2.36).castShadow = true;
-    for (const side of [-1, 1]) {
-      box(root, roof, x, y + 2.08, z + side * 0.61, w + 0.36, 0.12, 1.44).rotation.x = side * 0.44;
-    }
-    posts.push({ ...railPoint(line, x, z), r: 1.28 });
-  }
-
-  // Low planted rows provide a near layer of motion as the mountain comes into view.
-  const teaGeometry = new THREE.SphereGeometry(0.5, 6, 4);
-  const rows = 4;
-  const plantsPerRow = 18;
-  for (let row = 0; row < rows; row++) {
-    for (let i = 0; i < plantsPerRow; i++) {
-      const x = (i - (plantsPerRow - 1) / 2) * 1.35 + (row % 2) * 0.5;
-      const z = -4.1 - row * 1.55;
-      const tea = new THREE.Mesh(teaGeometry, material(0x688d51));
-      tea.scale.set(1.25, 0.46, 0.9);
-      tea.position.set(x, ground(x, z) + 0.13, z);
-      root.add(tea);
-    }
-  }
 }

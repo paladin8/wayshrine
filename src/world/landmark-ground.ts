@@ -55,6 +55,15 @@ import matsushima from "./landmark-grounds/matsushima.json";
 import amanohashidate from "./landmark-grounds/amanohashidate.json";
 import tottoriDunes from "./landmark-grounds/tottori-dunes.json";
 import shiretoko from "./landmark-grounds/shiretoko.json";
+import otaruCanal from "./landmark-grounds/otaru-canal.json";
+import goryokaku from "./landmark-grounds/goryokaku.json";
+import bluePond from "./landmark-grounds/blue-pond.json";
+import furano from "./landmark-grounds/furano.json";
+import ouchiJuku from "./landmark-grounds/ouchi-juku.json";
+import ginzanOnsen from "./landmark-grounds/ginzan-onsen.json";
+import chusonJi from "./landmark-grounds/chuson-ji.json";
+import yamadera from "./landmark-grounds/yamadera.json";
+import snowMonkeys from "./landmark-grounds/snow-monkeys.json";
 
 /**
  * What the world needs to know about a crafted landmark model, exported by the
@@ -143,6 +152,15 @@ const GROUNDS: Readonly<Record<string, LandmarkGround>> = {
   amanohashidate: amanohashidate as unknown as LandmarkGround,
   "tottori-dunes": tottoriDunes as unknown as LandmarkGround,
   shiretoko: shiretoko as unknown as LandmarkGround,
+  "otaru-canal": otaruCanal as unknown as LandmarkGround,
+  goryokaku: goryokaku as unknown as LandmarkGround,
+  "blue-pond": bluePond as unknown as LandmarkGround,
+  furano: furano as unknown as LandmarkGround,
+  "ouchi-juku": ouchiJuku as unknown as LandmarkGround,
+  "ginzan-onsen": ginzanOnsen as unknown as LandmarkGround,
+  "chuson-ji": chusonJi as unknown as LandmarkGround,
+  yamadera: yamadera as unknown as LandmarkGround,
+  "snow-monkeys": snowMonkeys as unknown as LandmarkGround,
 };
 
 export function groundOf(id: string): LandmarkGround | undefined {
