@@ -39,7 +39,7 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [
   a[2] + (b[2] - a[2]) * t,
 ];
 
-/** A five-point star: gold until the landmark is restored, then the shrine red. */
+/** A five-point star: gold until the landmark is restored, then the shrine red with a light outline. */
 function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, restored: boolean): void {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
@@ -48,9 +48,21 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
     ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
   }
   ctx.closePath();
-  ctx.fillStyle = restored ? "#e04b3a" : "#ffd23f";
+  if (restored) {
+    // A dark outer edge and a cream inner one keep the red readable on warm biomes like the volcanic one.
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#2a2424";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.strokeStyle = "#f6ead2";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#e04b3a";
+    ctx.fill();
+    return;
+  }
+  ctx.fillStyle = "#ffd23f";
   ctx.fill();
-  if (restored) return;
   ctx.strokeStyle = "#2a2424";
   ctx.lineWidth = 1.5;
   ctx.stroke();
