@@ -23,14 +23,14 @@ Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii, himeji-ca
 | --- | --- | --- | --- |
 | Boat | 3 landmarks | water | in code |
 | Snowshoes | 8 | snow | in code |
-| Climbing gear | 13 | mountain | in code |
-| Geta | 20 | marsh | in code |
+| Walking sticks | 14 | mountain | in code |
+| Geta | 22 | marsh | in code |
 | Lantern | 30 | dark forest | in code |
-| Ash sandals | 41 | volcanic ground | in code |
-| Ship | 49 | open sea | in code |
-| Far sight | 56 | nothing: marks every remaining landmark on the map | in code |
+| Ash sandals | 39 | volcanic ground | in code |
+| Ship | 48 | open sea | in code |
+| Far sight | 58 | nothing: marks every remaining landmark on the map | in code |
 
-Each threshold sits at the end of an act, so an act's landmarks never need the ability they unlock. The HUD shows every threshold in stars. Far sight opens no terrain, so it never constrains placement.
+Each terrain ability unlocks at the end of an act. The landmark planner uses the abilities available at the start of each act. Far sight arrives during Act IX, after 58 restorations, and affects the map only.
 
 ## The list
 
@@ -51,19 +51,19 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 11 | | hirosaki-castle | Hirosaki Castle | 弘前城 | ひろさきじょう | the castle keep | snow |
 | 12 | | zao-juhyo | Zao snow monsters | 蔵王の樹氷 | ざおうのじゅひょう | rime-frosted trees | snow |
 | 13 | | kenroku-en | Kenroku-en | 兼六園 | けんろくえん | the garden in winter ropes | snow |
-| 14 | IV Mountain | horyu-ji | Horyu-ji | 法隆寺 | ほうりゅうじ | the oldest wooden pagoda and Golden Hall | meadow |
-| 15 | | nikko-toshogu | Nikko Toshogu | 日光東照宮 | にっこうとうしょうぐう | the shrine | mountain |
+| 14 | | horyu-ji | Horyu-ji | 法隆寺 | ほうりゅうじ | the oldest wooden pagoda and Golden Hall | meadow |
+| 15 | IV Mountain | nikko-toshogu | Nikko Toshogu | 日光東照宮 | にっこうとうしょうぐう | the shrine | mountain |
 | 16 | | kegon-falls | Kegon Falls | 華厳の滝 | けごんのたき | the waterfall | mountain |
 | 17 | | kappa-bashi | Kappa-bashi, Kamikochi | 上高地の河童橋 | かみこうちのかっぱばし | the suspension bridge | mountain |
 | 18 | | tateyama-kurobe | Yuki-no-Otani | 雪の大谷 | ゆきのおおたに | the Tateyama Kurobe snow corridor | mountain |
 | 19 | | koyasan-okunoin | Koyasan Okunoin | 高野山奥之院 | こうやさんおくのいん | the cemetery | mountain |
 | 20 | | yoshino-yama | Yoshino-yama | 吉野山 | よしのやま | cherry slopes | meadow |
-| 21 | V Marsh | kushiro-shitsugen | Kushiro Wetland | 釧路湿原 | くしろしつげん | the wetland and its cranes | marsh |
-| 22 | | oze | Oze | 尾瀬 | おぜ | boardwalks across the marsh | marsh |
-| 23 | | yanagawa | Yanagawa river cruise | 柳川の川下り | やながわのかわくだり | canals and punt boats | marsh |
-| 24 | | kurashiki-bikan | Kurashiki Bikan Historical Quarter | 倉敷美観地区 | くらしきびかんちく | willow-lined canal and white storehouses | marsh |
-| 25 | | byodo-in | Byodo-in | 平等院 | びょうどういん | the Phoenix Hall over its pond | water |
-| 26 | | senso-ji | Senso-ji | 浅草寺 | せんそうじ | the Kaminarimon lantern gate and pagoda | meadow |
+| 21 | | byodo-in | Byodo-in | 平等院 | びょうどういん | the Phoenix Hall over its pond | water |
+| 22 | | senso-ji | Senso-ji | 浅草寺 | せんそうじ | the Kaminarimon lantern gate and pagoda | meadow |
+| 23 | V Marsh | kushiro-shitsugen | Kushiro Wetland | 釧路湿原 | くしろしつげん | the wetland and its cranes | marsh |
+| 24 | | oze | Oze | 尾瀬 | おぜ | boardwalks across the marsh | marsh |
+| 25 | | yanagawa | Yanagawa river cruise | 柳川の川下り | やながわのかわくだり | canals and punt boats | marsh |
+| 26 | | kurashiki-bikan | Kurashiki Bikan Historical Quarter | 倉敷美観地区 | くらしきびかんちく | willow-lined canal and white storehouses | marsh |
 | 27 | | kamakura-daibutsu | Great Buddha of Kamakura | 鎌倉の大仏 | かまくらのだいぶつ | the bronze Buddha sitting in the open | meadow |
 | 28 | | tokyo-tower | Tokyo Tower | 東京タワー | とうきょうたわー | the red-and-white lattice tower | meadow |
 | 29 | | osaka-castle | Osaka Castle | 大阪城 | おおさかじょう | the keep on its stone walls and moat | meadow |
@@ -77,17 +77,17 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 37 | | izumo-taisha | Izumo Taisha | 出雲大社 | いずもたいしゃ | the hall and its giant rope | forest |
 | 38 | | takachiho | Takachiho Gorge | 高千穂峡 | たかちほきょう | basalt gorge, waterfall and rowboats | forest |
 | 39 | | iya-kazurabashi | Iya vine bridge | 祖谷のかずら橋 | いやのかずらばし | the vine bridge over the gorge | forest |
-| 40 | | ginkaku-ji | Ginkaku-ji | 銀閣寺 | ぎんかくじ | the Silver Pavilion and sand garden | meadow |
+| 40 | VII Volcanic | ginkaku-ji | Ginkaku-ji | 銀閣寺 | ぎんかくじ | the Silver Pavilion and sand garden | meadow |
 | 41 | | ryoan-ji | Ryoan-ji | 龍安寺 | りょうあんじ | the rock garden | meadow |
-| 42 | VII Volcanic | sakurajima | Sakurajima | 桜島 | さくらじま | the smoking volcano across the bay | volcanic |
+| 42 | | sakurajima | Sakurajima | 桜島 | さくらじま | the smoking volcano across the bay | volcanic |
 | 43 | | mount-aso | Mount Aso | 阿蘇山 | あそさん | the caldera | volcanic |
 | 44 | | beppu-hells | Beppu hells | 別府地獄めぐり | べっぷじごくめぐり | the hot-spring hells | volcanic |
 | 45 | | owakudani | Owakudani | 大涌谷 | おおわくだに | the steaming volcanic valley | volcanic |
 | 46 | | kumamoto-castle | Kumamoto Castle | 熊本城 | くまもとじょう | the black keep on curved stone walls | meadow |
 | 47 | | dazaifu | Dazaifu Tenmangu | 太宰府天満宮 | だざいふてんまんぐう | the shrine, drum bridge and plum trees | meadow |
 | 48 | | dogo-onsen | Dogo Onsen | 道後温泉 | どうごおんせん | the wooden bathhouse | meadow |
-| 49 | | kintaikyo | Kintaikyo Bridge | 錦帯橋 | きんたいきょう | five wooden arches over the river | water |
-| 50 | VIII Open sea | gunkanjima | Battleship Island | 軍艦島 | ぐんかんじま | Hashima's abandoned buildings | sea |
+| 49 | VIII Open sea | kintaikyo | Kintaikyo Bridge | 錦帯橋 | きんたいきょう | five wooden arches over the river | water |
+| 50 | | gunkanjima | Battleship Island | 軍艦島 | ぐんかんじま | Hashima's abandoned buildings | sea |
 | 51 | | naruto | Naruto whirlpools | 鳴門の渦潮 | なるとのうずしお | the whirlpools under the bridge | sea |
 | 52 | | shuri-castle | Shuri Castle | 首里城 | しゅりじょう | the red main hall | sea |
 | 53 | | taketomi | Taketomi Island | 竹富島 | たけとみじま | red-tiled village, coral walls, ox cart | sea |
@@ -107,7 +107,7 @@ Names, in English and Japanese, are what people commonly call each place (they a
 
 ## Chosen and left out
 
-The aim is the places most Japanese people would name, plus a few that make distinctive dioramas, without regard to biome balance. Acts I to IV are fixed by the code (ids are in saves); Enoshima Sea Candle is the weakest of them, and the Great Buddha of Kamakura would replace it well if those acts are revisited. Mount Fuji is meant to be modelled with the Chureito pagoda, the most familiar view of it. It is the 30th landmark, the one that ends act V and earns the lantern, so the mountain is a late reward instead of the middle of the climbing act; Horyu-ji took its place in act IV.
+The aim is the places most Japanese people would name, plus a few that make distinctive dioramas, without regard to biome balance. Enoshima Sea Candle is the weakest choice in the opening acts, and the Great Buddha of Kamakura would replace it well if those acts are revisited. Mount Fuji is meant to be modelled with the Chureito pagoda, the most familiar view of it. It is listed 30th, in Act V, which ends at the lantern unlock.
 
 Left out on purpose:
 

@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/mount-fuji.glb"
 BLEND=ROOT+"/content/landmarks/mount-fuji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"mountain_foot":"637887","mountain_slope":"536c87","mountain_gully":"485e77","mountain_rib":"617a92",
+PAL={"mountain_foot":"777c83","mountain_slope":"536c87","mountain_gully":"485e77","mountain_rib":"617a92",
      "mountain_snow":"edf3f8","mountain_snow_ice":"d7e6f2","mountain_snow_shade":"c1d3e5","hill":"6f8a50","greige":"8d837b","slate":"837d77","vermilion":"d96b59","roof":"3a3634","blossom":"f2b6c4","foliage":"779555","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
@@ -134,12 +134,17 @@ def mountain_point(angle, t):
     # The lower flank spreads much faster than the upper flank. Radial cuts die out at both ends.
     rim = 1.48 + 0.12 * math.sin(3 * angle + 0.8) + 0.07 * math.sin(7 * angle)
     skirt = FR * (1 + 0.028 * math.sin(3 * angle) + 0.016 * math.sin(5 * angle + 1.2))
+    skirt *= 1 + 0.32 * math.cos(angle - math.pi / 4) ** 2      # the lower slopes run out sideways across the view
+    ca, sa = math.cos(angle), 0.94 * math.sin(angle)            # ...but stop short of the footprint's edge
+    reach = min(((FH - 0.7) - FX * (1 if ca > 0 else -1)) / abs(ca) if abs(ca) > 1e-6 else 1e9,
+                ((FH - 0.7) - FY * (1 if sa > 0 else -1)) / abs(sa) if abs(sa) > 1e-6 else 1e9)
+    skirt = min(skirt, reach)
     flank = 0.38 * (1 - t) + 0.62 * (1 - t) ** 1.65
     radius = rim + (skirt - rim) * flank
     erosion = math.sin(math.pi * t) * (0.45 * gully(angle + 0.039 * t) - 0.12 * math.cos(6 * angle + 0.2))
     radius -= erosion
     crown = 0.16 * math.cos(angle + 0.65) + 0.10 * math.sin(2 * angle) + 0.065 * math.sin(5 * angle - 0.5)
-    z = FHT * t + crown * t ** 5 - 0.27 * (1 - t) ** 24
+    z = FHT * t ** 1.3 + crown * t ** 5 - 0.27 * (1 - t) ** 24   # concave near the foot: it eases into the ground
     return (FX + radius * math.cos(angle), FY + 0.94 * radius * math.sin(angle), z)
 
 verts, faces, colors = [], [], []
@@ -159,7 +164,7 @@ for ring in range(LOWER + UPPER):
         if ring >= LOWER:
             color = "mountain_snow_shade" if cut > 0.84 and ring < LOWER + 10 else (
                 "mountain_snow_ice" if cut > 0.42 or illumination < -0.63 else "mountain_snow")
-        elif ring < 4 + 1.6 * math.sin(4 * angle):
+        elif ring < 6 + 1.6 * math.sin(4 * angle):
             color = "mountain_foot"
         else:
             color = "mountain_gully" if cut > 0.52 else ("mountain_rib" if illumination > 0.72 else "mountain_slope")
@@ -180,7 +185,7 @@ for i in range(SECTORS):
 emit(verts, faces, colors)
 
 # ---- the Chureito pagoda on its hill: five vermilion storeys under dark roofs, steps climbing to it from a torii
-HX,HY=8.0,-6.0
+HX,HY=9.4,-7.6    # set further out from the cone than before
 def mound(cx,cy,R,Hm,n=14):
     rings=[]
     for z,r in [(-0.2,1.0),(0.25*Hm,0.92),(0.6*Hm,0.75),(0.88*Hm,0.55),(Hm,0.42)]:
@@ -221,8 +226,8 @@ def sakura(cx,cy,s,z=0.0):
     ico("blossom",0,0,1.95,1.25,1.15,0.85,T)
     ico("blossom",0.65,0.35,1.55,0.75,0.7,0.55,T)
     ico("blossom",-0.6,-0.3,1.6,0.7,0.65,0.5,T)
-for a in [(6.8,-4.8,0.9,0.4),(10.6,-4.0,0.95,1.0),(10.2,-8.8,0.9,0.7),(6.0,-8.4,0.85,0.5),(12.8,-10.0,1.0,0.0),(3.6,-10.2,0.95,0.0),(12.4,-13.8,0.9,0.0),(0.0,-12.8,0.95,0.0),(8.6,-13.4,0.9,0.0)]:
-    sakura(*a)
+for a in [(6.8,-4.8,0.9,0.4),(10.6,-4.0,0.95,1.0),(10.2,-8.8,0.9,0.7),(6.0,-8.4,0.85,0.5),(12.8,-10.0,1.0,0.0),(3.6,-10.2,0.95,0.0),(12.4,-13.4,0.9,0.0),(0.0,-12.8,0.95,0.0),(8.6,-13.2,0.9,0.0)]:
+    sakura(a[0]+1.4,a[1]-1.6,a[2],a[3])
 def pine(cx,cy,s):
     T=dict(cx=cx,cy=cy,cz=0.0,s=s)
     prism("bark",0,0,-0.3,0.9,0.2,0.18,6,0,T)
@@ -263,8 +268,8 @@ for key,(bv,bf) in B.items():
                     solid_cells.add((int((x+HALF)/CELL),int((y+HALF)/CELL)))
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
-INTERACT=(9.6,-12.2)  # the torii at the foot of the pagoda stairs
-STAND=(7.0,-14.4)     # the approach to the torii
+INTERACT=(10.2,-12.6)  # just inside the torii at the foot of the pagoda stairs
+STAND=(7.8,-13.0)      # the approach to the torii
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/mount-fuji.json"

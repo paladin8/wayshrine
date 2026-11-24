@@ -64,7 +64,7 @@ The unlock reveal reads "Ash sandals unlocked" (English and Japanese). In **Gear
 
 ## First sailing
 
-Earning the ship (49 landmarks) shows "Ship unlocked" (English and Japanese). The first time the traveller walks from the bank onto open sea (`sea` biome, from land or from a lake) the ship comes into play: it glides in along the bank while she waits, she crosses its gangway to the deck, and it casts off, swinging bow-out. The background crossfades from **Basalt Crossing** to **Open sea** over 5 s as the ship casts off (`SHIP_PUSH_OFF_SECONDS`), with no cue or duck. The first sailing is saved when it finishes (`shipLaunched`) and Open sea remains the background on reload. Open water is crossed in the ship; lakes still take the skiff.
+Earning the ship (48 landmarks) shows "Ship unlocked" (English and Japanese). The first time the traveller walks from the bank onto open sea (`sea` biome, from land or from a lake) the ship comes into play: it glides in along the bank while she waits, she crosses its gangway to the deck, and it casts off, swinging bow-out. The background crossfades from **Basalt Crossing** to **Open sea** over 5 s as the ship casts off (`SHIP_PUSH_OFF_SECONDS`), with no cue or duck. The first sailing is saved when it finishes (`shipLaunched`) and Open sea remains the background on reload. Open water is crossed in the ship; lakes still take the skiff.
 
 In **Gear acquisition**, **Preview ship unlock** and **Preview first sailing** play the reveal and the departure without updating the save (the preview finds a clear bank beside a sea landmark), fading back to the basalt theme first if the save is already on Open sea.
 

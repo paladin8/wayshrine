@@ -27,7 +27,7 @@ Fuji has an authored 3D scene for the window. Its camera follows the ride's prog
 
 ### Trackside village and fields
 
-The map echoes the ride’s sequence with timber farmhouses near the platforms, small flooded rice plots and irrigation channels in the middle, and a cherry grove on the far approach. Placement follows the actual rail alignment and fits the terrain available in each seed. Scenery avoids shrine approaches and platform clearings. The small field channels are walkable, and their colors and the nearby houses and trees follow local restoration.
+The map echoes the ride’s sequence with timber farmhouses near the platforms, small flooded rice plots and irrigation channels in the middle, and a cherry grove on the far approach. Placement follows the mountain side of the actual rail alignment and fits the terrain available in each seed. Scenery avoids shrine approaches and platform clearings. The small field channels are walkable, and their colors and the nearby houses and trees follow local restoration.
 
 ## Mount Fuji ride
 

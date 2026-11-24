@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/todai-ji-daibutsu.glb"
 BLEND=ROOT+"/content/landmarks/todai-ji-daibutsu.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","foliage":"5f9a52","darkwood":"6e5442","bronze":"9c7a45","gold":"e2b34c","glow_cream":"e8dcb0","glow_gold":"e2b34c"}
+PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","foliage":"5f9a52","darkwood":"6e5442","bronze":"5e5244","gold":"e2b34c","glow_cream":"e8dcb0","glow_gold":"e2b34c"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -126,10 +126,13 @@ box("stone",0,-6.0,-0.05,0.045,0.9,3.4)
 # ---- Daibutsuden (Great Buddha Hall)
 KW=3.0   # half-width of the curved gable (karahafu) lifted into the front eave
 def kara(x,bm): return bm*max(0.0,math.cos(0.5*math.pi*min(1.0,abs(x)/KW)))**1.3
-def roof_rings(spec,ox,oy,bump):
-    sg=[(-1,-1),(1,-1),(1,1),(-1,1)]; TS=[i/8 for i in range(8)]
+KR=4.2   # half-width of the cut-back in the front eave
+def cutb(x,rc): return rc*max(0.0,math.cos(0.5*math.pi*min(1.0,abs(x)/KR)))**0.8
+def roof_rings(spec,ox,oy,bump,rec=None):
+    sg=[(-1,-1),(1,-1),(1,1),(-1,1)]; TS=[i/16 for i in range(16)]
     rings=[]
-    for (hx,hy,z,lift),bm in zip(spec,bump):
+    rec=rec or [0.0]*len(spec)
+    for (hx,hy,z,lift),bm,rc in zip(spec,bump,rec):
         cs=[(-hx,-hy),(hx,-hy),(hx,hy),(-hx,hy)]; r=[]
         for k in range(4):
             (x0,y0),(x1,y1)=cs[k],cs[(k+1)%4]
@@ -137,14 +140,14 @@ def roof_rings(spec,ox,oy,bump):
                 x=x0+(x1-x0)*t; y=y0+(y1-y0)*t
                 if t==0.0: x+=sg[k][0]*0.45*lift; y+=sg[k][1]*0.45*lift
                 zz=z+lift*abs(2*t-1)**2.5
-                if k==0 and t>0: zz+=kara(x,bm)
+                if k==0 and t>0: zz+=kara(x,bm); y+=cutb(x,rc)     # the curved gable, cut back over the Buddha
                 r.append((ox+x,oy+y,zz))
         rings.append(r)
     return rings
-def flared_roof_b(spec,mat,ox,oy,bump):
+def flared_roof_b(spec,mat,ox,oy,bump,rec=None):
     """flared_roof with the front eave lifted into a curved gable (karahafu) over the middle;
     bump[i] is the extra lift of ring i at the front centre."""
-    rings=roof_rings(spec,ox,oy,bump)
+    rings=roof_rings(spec,ox,oy,bump,rec)
     n=len(rings[0]); verts=[p for r in rings for p in r]; faces=[]
     for k in range(len(rings)-1):
         for i in range(n):
@@ -181,10 +184,11 @@ for sx in (-1,1):
 extrude_x("roof",[(6.85,2.9),(6.0,3.48),(6.0,3.6),(6.85,3.02)],-5.85,5.85)
 # main roof: wide and flared, its front eave lifted into a gilded curved gable (karahafu) over the opening,
 # high enough that the game camera sees the Buddha's face beneath it; gilded shibi on the ridge
-RSPEC=[(6.0,3.9,5.9,0.4),(6.0,3.9,6.05,0.4),(5.2,3.1,6.4,0.15),(3.6,0.28,7.6,0.0)]; RBUMP=[1.7,1.7,0.9,0.0]
-flared_roof_b(RSPEC,"roof",0.0,3.0,RBUMP)
-eave=[p for p in roof_rings(RSPEC,0.0,3.0,RBUMP)[0][1:8] if abs(p[0])<=KW+0.01]
-solid([[(x,-0.97,z-0.06),(x,-0.84,z-0.06),(x,-0.84,z+0.17),(x,-0.97,z+0.17)] for x,y,z in eave],"gold")
+# The front eave is also cut back over the opening, so the face and the raised hand read together from the approach
+RSPEC=[(6.0,3.9,5.9,0.4),(6.0,3.9,6.05,0.4),(5.2,3.1,6.4,0.15),(3.6,0.28,7.6,0.0)]; RBUMP=[2.0,2.0,1.0,0.0]; RREC=[2.2,2.2,0.8,0.0]
+flared_roof_b(RSPEC,"roof",0.0,3.0,RBUMP,RREC)
+eave=[p for p in roof_rings(RSPEC,0.0,3.0,RBUMP,RREC)[0][1:16] if abs(p[0])<=KW+0.01]
+solid([[(x,y-0.07,z-0.06),(x,y+0.06,z-0.06),(x,y+0.06,z+0.17),(x,y-0.07,z+0.17)] for x,y,z in eave],"gold")
 box("roof",0,3.0,7.53,7.76,3.75,0.2)
 for sx in (-1,1):
     extrude_x("gold",[(2.72,7.7),(3.28,7.7),(3.32,7.95),(3.12,8.17),(2.96,7.97),(2.74,8.08)],sx*3.6-0.08,sx*3.6+0.08)

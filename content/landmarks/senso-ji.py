@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/senso-ji.glb"
 BLEND=ROOT+"/content/landmarks/senso-ji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"red":"c4402f","roof":"4a4d52","lantern":"9e2a22","pave":"c9c3b6","stone":"9a958c","white":"efeae0","black":"2a2a2e","bronze":"6b5a3a","gold":"d9b04a","foliage":"5f8a45","bark":"4e3a30","glow_cream":"e8dcb0"}
+PAL={"red":"c4402f","roof":"4a4d52","lantern":"b3302a","pave":"c9c3b6","stone":"9a958c","white":"efeae0","black":"2a2a2e","bronze":"6b5a3a","gold":"d9b04a","foliage":"5f8a45","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -136,11 +136,11 @@ for sx in (-1,1): box("black",sx*1.36,GY-0.63,0.5,1.8,0.22,0.01)  # their dark g
 box("red",0,GY,2.2,2.45,1.85,0.75)
 flared_roof([(2.35,1.35,2.45,0.26),(2.35,1.35,2.55,0.26),(1.45,0.55,2.9,0.06),(1.2,0.1,3.2,0.0)],"roof",0,GY)
 box("roof",0,GY,3.15,3.28,1.25,0.12)
-L=GY-0.25                                                      # the great lantern (chochin), hung forward in the passage
-prism("lantern",0,L,0.45,0.6,0.5,0.6,12,0); prism("lantern",0,L,0.6,1.9,0.6,0.6,12,0); prism("lantern",0,L,1.9,2.02,0.6,0.5,12,0)
-prism("black",0,L,0.36,0.47,0.44,0.44,12,0); prism("black",0,L,2.0,2.12,0.44,0.44,12,0)
-box("black",0,L-0.6,1.35,1.75,0.24,0.02); box("black",0,L-0.6,0.8,1.2,0.24,0.02)   # its two great characters
-prism("black",0,L,2.12,2.2,0.03,0.03,4,0)
+L=GY-1.0     # the great lantern (chochin), hung forward of the front posts under the eave so it reads at the entrance
+prism("lantern",0,L,0.5,0.66,0.44,0.6,12,0); prism("lantern",0,L,0.66,1.82,0.6,0.6,12,0); prism("lantern",0,L,1.82,1.98,0.6,0.44,12,0)
+prism("black",0,L,0.3,0.52,0.46,0.46,12,0); prism("black",0,L,1.96,2.18,0.46,0.46,12,0)          # its broad black rims
+box("black",0,L-0.61,1.3,1.72,0.34,0.02); box("black",0,L-0.61,0.74,1.16,0.34,0.02)   # its two great characters
+box("black",0,(L+GY-0.75)/2,2.18,2.3,0.05,(GY-0.75-L)/2+0.05)                         # hung from the front beam
 
 # ---- Nakamise-dori: long rows of little shops either side of the street, vermilion shutters under green roofs,
 # their fronts lit
@@ -254,6 +254,10 @@ solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 if TERRAIN_SURFACE: side["terrainSurface"]=True
+if "terrain_at" in globals():         # the terrain's own height where it differs from the walkable ground (a deck over a gorge)
+    terr=[[round(terrain_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+    for i in range(GN): terr[0][i]=terr[GN-1][i]=terr[i][0]=terr[i][GN-1]=EDGE_LEVEL
+    if terr!=ground: side["terrain"]=terr
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/senso-ji.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
 open(_p,"w").write(json.dumps(side,separators=(",",":")))

@@ -162,13 +162,20 @@ def shore(h_land,m,edge=0.9,fall=1.08):
     if m<1.0: return h_land+((LV+0.08)-h_land)*smooth(edge,1.0,m)
     return (LV+0.08)+(FLOOR-(LV+0.08))*smooth(1.0,fall,m)
 # ---- Amanohashidate, the bridge to heaven: a sandbar three kilometres long, lined with eight thousand pines and white
-# beaches, laid across Miyazu Bay. Here it curves across the footprint from a wooded hill (the Kasamatsu side, with the
-# torii of Kono shrine) to the swing bridge and Chionji's gate at its southern end, where the landing is
+# beaches, laid across Miyazu Bay. Here it runs most of the way across the footprint from a fragment of the wooded
+# northern shore (the Kasamatsu side, with the torii of Kono shrine) to the swing bridge and Chionji's gate at its
+# southern end, where the landing is, so it reads as spanning a bay rather than as an island
 def cl(v): return 1.6*math.sin(0.2*v+0.4)
 def bar_w(v): return 1.15+0.15*math.sin(0.7*v)
-V0,V1=-8.6,5.6
-HC=(-1.8,-8.4); HR=2.6                               # the hill at the northern end
-IC=(1.2,8.5); IR=1.35                                 # Chionji's islet at the southern end, across the channel
+V0,V1=-8.0,7.6
+HC=(-1.8,-8.4); HR=2.6                               # (unused) the old hill at the northern end
+VM=-7.6                                              # the northern shore begins here
+def main_m(u,v):
+    m1=1.0+(v-(VM-0.08*u*u))/1.6                    # past the shoreline, curving back from the bar
+    x,y=to_xy(u,v); m2=max(abs(x),abs(y))/10.3       # the footprint's open-water margin
+    return max(m1,m2)
+def main_h(u,v): return 0.25+2.0*smooth(VM-0.5,-12.0,v)*(1-smooth(1.5,5.0,abs(u)))
+IC=(1.0,10.4); IR=1.35                                 # Chionji's islet at the southern end, across the channel
 def H(x,y):
     u,v=to_uv(x,y)
     d=abs(u-cl(v))/bar_w(v)
@@ -176,15 +183,15 @@ def H(x,y):
     if V0<=v<=V1: hb=shore(0.1,d,0.72,1.12)
     elif v<V0: hb=shore(0.1,math.hypot(d,(V0-v)/1.0),0.6,1.2)
     elif v>V1: hb=shore(0.1,math.hypot(d,(v-V1)/0.6),0.6,1.2)
-    mh=math.hypot((u-HC[0])/HR,(v-HC[1])/(HR*1.15))
-    hh=shore(0.3+1.5*max(0.0,1-mh/0.75),mh,0.75,1.12)
+    hh=shore(main_h(u,v),main_m(u,v),0.8,1.04)
     mi=math.hypot(u-IC[0],v-IC[1])/IR
     hi=shore(0.15,mi,0.75,1.15)
     return max(hb,hh,hi)
 def water_disc(x,y): return False
 def gmat(x,y,h,sl):
     u,v=to_uv(x,y)
-    if h<0.02 or (abs(u-cl(v))>bar_w(v)*0.45 and math.hypot((u-HC[0])/HR,(v-HC[1])/(HR*1.15))>0.75 and math.hypot(u-IC[0],v-IC[1])>IR*0.7): return "sand"
+    if main_m(u,v)<1.0 and h>LV+0.35: return "grass"          # the wooded shore is green down to a thin beach
+    if h<0.02 or (abs(u-cl(v))>bar_w(v)*0.45 and main_m(u,v)>0.9 and math.hypot(u-IC[0],v-IC[1])>IR*0.7): return "sand"
     return "grass"
 draw_ground(H,gmat,0.5,0.1)
 draw_sea()
@@ -204,10 +211,13 @@ while v<V1-0.2:
             if abs(v-(-1.0))<1.1: continue                               # leave a clearing for the arrival
             pine(x,y,rng.uniform(0.75,1.0))
     v+=0.62
-for k in range(14):
-    a=rng.uniform(0,6.28); r=rng.uniform(0,0.65)*HR
-    u,v=HC[0]+r*math.cos(a),HC[1]+1.15*r*math.sin(a); x,y=to_xy(u,v)
-    if max(abs(x),abs(y))<FH-1.4: pine(x,y,rng.uniform(0.9,1.15))
+n_=0
+for k in range(120):                                   # the wooded shore
+    u,v=rng.uniform(-5.5,5.5),rng.uniform(-13.0,VM-0.5)
+    x,y=to_xy(u,v)
+    if main_m(u,v)>0.8 or max(abs(x),abs(y))>FH-1.4 or abs(u-cl(v))<0.6: continue
+    pine(x,y,rng.uniform(0.9,1.15)); n_+=1
+    if n_>=26: break
 # Kono shrine's torii at the foot of the hill, where the bar begins
 tu,tv=cl(V0+0.6)+0.1,V0+0.6; T=F(tu,tv,0.0,H(*to_xy(tu,tv)))
 for sx in (-1,1): prism("stone",*xf([(sx*0.55,0,0)],**T)[0][:2],T["cz"],T["cz"]+1.4,0.07,0.06,8)
@@ -257,7 +267,7 @@ def ground_at(x,y):
     return H(x,y)
 def terrain_at(x,y): return H(x,y)
 INTERACT=to_xy(cl(-1.0),-1.0)      # on the path halfway along the bar
-STAND=to_xy(cl(-1.0)-0.35,-0.6)
+STAND=(-0.68,-1.03)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/amanohashidate.json and read by the world layer (see docs/landmarks.md).

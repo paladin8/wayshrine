@@ -191,7 +191,9 @@ export function createTerrain(world: World): Terrain {
         height = natural(x, z, region);
         shore = true;
       } else if (model?.terrainSurface) {
-        height = plateauBase(region);
+        // The terrain is the model's visible ground: it follows the sidecar's surface, down into the model's
+        // channels, moats and pools and up its hills, so it never covers what the model sinks below the plateau.
+        height = plateauBase(region) + surfaceHeight(model, dx, dz);
         skirt = true;
       } else {
         height = model ? plateauBase(region) + surfaceHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
@@ -269,6 +271,13 @@ export function createTerrain(world: World): Terrain {
    * Undefined if no skirt tile meets there.
    */
   function cornerOf(cx: number, cz: number): number | undefined {
+    // Inside a footprint whose terrain is the model's ground, take the sidecar's surface at the corner itself:
+    // averaging tile centres would round a narrow canal or moat up towards its banks.
+    const region = world.regionAt(cx, cz);
+    const model = region.landmark ? groundOf(region.landmark.id) : undefined;
+    if (model?.terrainSurface && plateauDistance(region, cx, cz) < 0) {
+      return plateauBase(region) + surfaceHeight(model, cx - region.shrine.x, cz - region.shrine.z);
+    }
     let sum = 0;
     let n = 0;
     let shore = Infinity;

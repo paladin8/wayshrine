@@ -117,6 +117,11 @@ def smooth(e0,e1,x):
 FH=11.2   # footprint half-width (the sidecar's half): the middle size, the hall and its wings on their island
 LV=-0.6; FLOOR=LV-0.5; TERRAIN_SURFACE=False; EDGE_LEVEL=LV
 def water_disc(x,y): return False     # the pond is the region's own open water, crossed by boat
+# The garden is laid out in its own frame (front toward local -Y) and turned 45 degrees so the hall faces the game
+# camera squarely: both wing corridors then read as parts of one building, spread across the view.
+ROT=math.pi/4; CR,SR=math.cos(ROT),math.sin(ROT)
+def L2W(x,y): return (x*CR-y*SR,x*SR+y*CR)
+def W2L(x,y): return (x*CR+y*SR,-x*SR+y*CR)
 
 # ---- the island in the Aji-ike pond: a rounded garden island holding the hall, a pebble beach (suhama) sloping
 # into the water in front, and a small islet off to the side with the landing. Open water to the footprint edge.
@@ -124,17 +129,18 @@ IC=(0.0,0.9); IRX,IRY,IP=8.2,6.4,3.0
 def isl_m(x,y):
     dx=abs((x-IC[0])/IRX); dy=abs((y-IC[1])/IRY); th=math.atan2(y-IC[1],x-IC[0])
     return (dx**IP+dy**IP)**(1/IP)/(1+0.05*math.sin(3*th+0.4)+0.03*math.sin(5*th+1.3))
-LC=(7.8,-5.2); LR=1.5                                     # the landing islet
-def H(x,y):
+LC=(5.4,-7.6); LR=1.5                                     # the landing islet, off the front of the island
+def H_l(x,y):
     m=isl_m(x,y); ml=math.hypot(x-LC[0],y-LC[1])/LR
     land=0.0
     beach=smooth(-3.2,-5.6,y)*(1-abs(x)/9.0)              # the front of the island shelves gently into the pond
     hi=land-(0.5*beach)
-    h1=(LV+0.08)+(hi-(LV+0.08))*smooth(1.0,0.86-0.1*beach,m)
+    h1=(LV+0.08)+(hi-(LV+0.08))*smooth(1.0,0.72,m)        # a low garden shore, sloping gently to the water
     h1=h1 if m<1.0 else (LV+0.08)*(1-smooth(1.0,1.06,m))+FLOOR*smooth(1.0,1.06,m)
     h2=(LV+0.08)+(0.0-(LV+0.08))*smooth(1.0,0.7,ml) if ml<1.0 else (LV+0.08)*(1-smooth(1.0,1.15,ml))+FLOOR*smooth(1.0,1.15,ml)
     return max(h1,h2)
-def is_beach(x,y): return y<-2.9 and 0.78<isl_m(x,y)<1.02 and abs(x)<6.4    # a band of pebbles along the front shore
+def H(x,y): return H_l(*W2L(x,y))
+def is_beach(x,y): return False      # the front is a low garden shore, grass to the water
 GS=0.8; NG=int(round(2*FH/GS))
 gv={}
 for j in range(NG+1):
@@ -151,9 +157,10 @@ for j in range(NG):
         for t3 in ([(a,b,c),(a,c,d4)] if (i+j)%2==0 else [(a,b,d4),(b,c,d4)]):
             P=[gv[k] for k in t3]; cx=sum(p[0] for p in P)/3; cy=sum(p[1] for p in P)/3; cz=sum(p[2] for p in P)/3
             if max(p[2] for p in P)<LV-0.05: continue
-            gf.append([gid[k] for k in t3]); gm.append("pebble" if is_beach(cx,cy) else "grass")
+            gf.append([gid[k] for k in t3]); gm.append("pebble" if is_beach(*W2L(cx,cy)) else "grass")
 emit(gverts,gf,gm,orient=False)
 emit([(-FH,-FH,LV-0.04),(FH,-FH,LV-0.04),(FH,FH,LV-0.04),(-FH,FH,LV-0.04)],[[0,1,2,3]],["water"],orient=False)   # fills shore tiles the game keeps as land
+MARK={m:len(B[m][0]) for m in B}       # everything after this is built in the garden's frame and turned at the end
 
 # ---- the Phoenix Hall (Hoo-do): the central hall under a double roof (pent roof and hipped roof) with the gilt
 # phoenixes on the ridge, raised wing corridors to either side ending in corner towers that turn forward, and
@@ -213,7 +220,7 @@ LX,LY=0.0,-3.4
 box("stone",LX,LY,-0.35,0.05,0.32,0.32); prism("stone",LX,LY,0.05,0.75,0.1,0.1,8,0)
 box("stone",LX,LY,0.75,0.85,0.28,0.28); box("glow_lantern",LX,LY,0.85,1.15,0.18,0.18)
 solid([rect(0.38,0.38,1.15),rect(0.38,0.38,1.22),rect(0.08,0.08,1.45)],"stone",dict(cx=LX,cy=LY))
-B0=(5.9,-3.3); B1=(7.1,-4.4); BZ=0.0; BARCH=0.45
+B0=(5.15,-4.55); B1=(5.45,-6.35); BZ=0.0; BARCH=0.45
 ang=math.atan2(B1[1]-B0[1],B1[0]-B0[0]); BL=math.hypot(B1[0]-B0[0],B1[1]-B0[1])/2+0.55
 TB=dict(cx=(B0[0]+B1[0])/2,cy=(B0[1]+B1[1])/2,rot=ang)
 def bz(t): return BZ+0.05+BARCH*math.sin(math.pi*t)
@@ -227,7 +234,7 @@ def bridge_h(x,y):
     if abs(lx)<=BL and abs(ly)<=0.45: return bz((lx+BL)/(2*BL))
     return None
 # the landing: a short jetty off the islet where the boat comes in
-J0=(8.6,-6.1); J1=(9.3,-7.6); JD=LV+0.3
+J0=(4.3,-8.5); J1=(3.0,-9.3); JD=LV+0.3
 ja=math.atan2(J1[1]-J0[1],J1[0]-J0[0]); JL=math.hypot(J1[0]-J0[0],J1[1]-J0[1])/2
 TJ=dict(cx=(J0[0]+J1[0])/2,cy=(J0[1]+J1[1])/2,rot=ja)
 box("wood",0,0,JD-0.08,JD,JL+0.3,0.45,TJ)
@@ -239,20 +246,24 @@ def jetty_d(x,y):
 
 # ---- garden pines on the island and the islet
 def pine(x,y,s):
-    z=H(x,y); T=dict(cx=x,cy=y,cz=z,s=s,rot=rng.uniform(0,6.28))
+    z=H_l(x,y); T=dict(cx=x,cy=y,cz=z,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.13,-0.3,5),ngon(0.11,1.1,5,0,0.3,0),ngon(0.08,1.9,5,0,0.1,0.1)],"bark",T)
     for (px,py,pz,r) in [(0.1,0.1,1.95,0.85),(0.55,-0.1,1.4,0.65),(-0.35,0.25,1.25,0.55)]: ico("foliage",px,py,pz,r,r*0.9,0.3,T)
-for x,y,s in [(-7.0,-1.6,0.9),(-6.6,3.6,1.0),(-3.4,5.6,0.95),(3.6,5.6,0.9),(6.8,3.2,1.0),(7.2,-0.8,0.85),(-4.0,-3.4,0.85),(4.2,-3.6,0.8),(8.0,-4.6,0.75),
-              (-1.6,6.2,1.05),(1.6,6.4,1.0),(-5.4,5.6,0.95),(5.4,5.4,1.0),(-7.4,1.0,0.9),(7.4,1.2,0.9),(-2.4,4.4,0.8),(2.6,4.6,0.85)]:
+for x,y,s in [(-7.0,-1.6,0.9),(-6.6,3.2,1.0),(-3.6,5.4,0.95),(3.8,5.4,0.9),(6.8,3.0,1.0),(7.2,-0.9,0.85),(-5.0,-3.6,0.8),(6.3,-8.1,0.75),
+              (-1.4,6.0,1.0),(1.6,6.2,0.95)]:     # fewer behind the hall than before, so the open front shore has room
     pine(x,y,s)
+for m,(bv,bf) in B.items():                                     # turn the garden's frame into the footprint
+    for i in range(MARK.get(m,0),len(bv)):
+        x,y,z=bv[i]; X,Y=L2W(x,y); bv[i]=(X,Y,z)
 
 def ground_at(x,y):
+    x,y=W2L(x,y)
     h=bridge_h(x,y)
     if h is not None: return h
     if jetty_d(x,y): return JD
-    return max(LV,H(x,y))
-INTERACT=(LX,LY-0.8)   # the pebble beach before the hall
-STAND=(2.6,-3.8)       # on the beach, beside the lantern
+    return max(LV,H_l(x,y))
+INTERACT=L2W(LX,LY-0.8)   # the shore before the hall
+STAND=L2W(2.6,-3.8)       # on the shore, beside the lantern
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/byodo-in.json and read by the world layer (see docs/landmarks.md).
@@ -292,6 +303,10 @@ solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 if TERRAIN_SURFACE: side["terrainSurface"]=True
+if "terrain_at" in globals():         # the terrain's own height where it differs from the walkable ground (a deck over a gorge)
+    terr=[[round(terrain_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+    for i in range(GN): terr[0][i]=terr[GN-1][i]=terr[i][0]=terr[i][GN-1]=EDGE_LEVEL
+    if terr!=ground: side["terrain"]=terr
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/byodo-in.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
 open(_p,"w").write(json.dumps(side,separators=(",",":")))

@@ -182,13 +182,10 @@ describe("landmarks", () => {
 });
 
 describe("unlock thresholds", () => {
-  it("are ordered like the abilities and reachable from the landmark list", () => {
-    let last = 0;
-    for (const cap of CAPABILITIES) {
-      expect(CAPABILITY_THRESHOLDS[cap]).toBeGreaterThan(last);
-      last = CAPABILITY_THRESHOLDS[cap];
+  it("end the first seven acts in capability order", () => {
+    for (const [i, cap] of CAPABILITIES.entries()) {
+      expect(CAPABILITY_THRESHOLDS[cap]).toBe(landmarksBeforeAct(i + 2));
     }
-    expect(last).toBeLessThanOrEqual(LANDMARKS.length);
   });
 
   it("only ever need what the previous acts unlocked", () => {

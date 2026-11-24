@@ -45,6 +45,7 @@ export function fujiValley(world: World): Valley | null {
   const distanceAt = (progress: number) => line.stations[0].distance
     + (line.stations[1].distance - line.stations[0].distance) * progress;
 
+  // The railway alignment puts Mount Fuji on the negative across side.
   function fits(distance: number, across: number, halfLength: number, halfWidth: number, shrineClearance = 10): boolean {
     for (let dx = -halfLength; dx <= halfLength; dx += 1) {
       for (let dz = -halfWidth; dz <= halfWidth; dz += 1) {
@@ -62,27 +63,28 @@ export function fujiValley(world: World): Valley | null {
     return true;
   }
 
-  for (const progress of [0.24, 0.36, 0.48, 0.60, 0.71]) {
-    const distance = distanceAt(progress);
-    for (const across of [-10.5, 12, -22, 23]) {
-      const halfLength = Math.min(7, (line.stations[1].distance - line.stations[0].distance) * 0.052);
-      if (!fits(distance, across, halfLength + 1, 6, 12.5)) continue;
-      plots.push({ distance, across, halfLength, halfWidth: 5 });
+  function addPlot(distance: number, across: number, halfLength: number, halfWidth: number): boolean {
+    if (plots.some((plot) => Math.abs(plot.distance - distance) < plot.halfLength + halfLength + 1
+      && Math.abs(plot.across - across) < plot.halfWidth + halfWidth + 1)) return false;
+    if (!fits(distance, across, halfLength + 1, halfWidth + 1, 12.5)) return false;
+    plots.push({ distance, across, halfLength, halfWidth });
+    return true;
+  }
+
+  const halfLength = Math.min(7, (line.stations[1].distance - line.stations[0].distance) * 0.052);
+  for (const progress of [0.23, 0.34, 0.45, 0.57, 0.68, 0.77]) {
+    for (const across of [-9, -15, -22, -26]) {
+      addPlot(distanceAt(progress), across, halfLength, 5);
       if (plots.length >= 7) break;
     }
     if (plots.length >= 7) break;
   }
 
-  // Fit smaller plots on tighter corridors without enlarging the reserved landscape.
+  // Fit smaller plots between shrine approaches and the foot of Fuji on tighter corridors.
   if (plots.length < 2) {
-    for (const progress of [0.32, 0.43, 0.55, 0.65]) {
-      const distance = distanceAt(progress);
-      for (const across of [-8, 8, -16, 16]) {
-        if (plots.some((plot) => Math.abs(plot.distance - distance) < plot.halfLength + 5
-          && Math.abs(plot.across - across) < plot.halfWidth + 4)) continue;
-        if (!fits(distance, across, 5, 5, 12.5)) continue;
-        plots.push({ distance, across, halfLength: 4, halfWidth: 4 });
-        break;
+    for (const progress of [0.31, 0.4, 0.51, 0.61, 0.69, 0.76, 0.22, 0.16, 0.84]) {
+      for (const across of [-7, -10, -14, -18, -22, -26]) {
+        if (addPlot(distanceAt(progress), across, 3.5, 3.5)) break;
       }
       if (plots.length >= 2) break;
     }
@@ -90,7 +92,7 @@ export function fujiValley(world: World): Valley | null {
 
   for (const progress of [0.05, 0.095, 0.145, 0.855, 0.905, 0.95]) {
     const distance = distanceAt(progress);
-    for (const across of [-9, 10, -16, 17]) {
+    for (const across of [-8, -12, -17, -23]) {
       if (!fits(distance, across, 3, 3)) continue;
       const point = railPoint(line, distance, across);
       if (props.some((p) => Math.hypot(p.x - point.x, p.z - point.z) < 6)) continue;
@@ -100,7 +102,7 @@ export function fujiValley(world: World): Valley | null {
   }
   for (const progress of [0.73, 0.76, 0.79, 0.82, 0.85, 0.88, 0.91, 0.94]) {
     const distance = distanceAt(progress);
-    for (const across of [-5.5, 7.5, -13]) {
+    for (const across of [-5.5, -8, -13, -19]) {
       if (!fits(distance, across, 2, 2)) continue;
       const point = railPoint(line, distance, across);
       if (props.some((p) => Math.hypot(p.x - point.x, p.z - point.z) < 3.8)) continue;
@@ -119,13 +121,13 @@ export function fujiFieldAt(valley: Valley, x: number, z: number): { kind: FujiF
   const dx = x - line.origin.x, dz = z - line.origin.z;
   const distance = dx * line.along.x + dz * line.along.z;
   const across = dx * line.across.x + dz * line.across.z;
-  if (Math.abs(across) > 28 || distance < line.start || distance > line.end) return;
+  if (across >= 0 || across < -32 || distance < line.start || distance > line.end) return;
   for (const plot of plots) {
     const u = distance - plot.distance, v = across - plot.across;
     const inset = Math.min(plot.halfLength - Math.abs(u), plot.halfWidth - Math.abs(v));
     if (inset < 0) continue;
     if (inset < 0.9) return { kind: "bank", inset };
-    if (v > 2.4) return { kind: "channel", inset };
+    if (v > plot.halfWidth - 2.6) return { kind: "channel", inset };
     return { kind: Math.floor(u + plot.halfLength) % 3 === 0 ? "rice" : "paddy", inset };
   }
 }
@@ -134,9 +136,10 @@ export function fujiFieldAt(valley: Valley, x: number, z: number): { kind: FujiF
 export function fujiVergeAt(line: FujiRailway, x: number, z: number): number {
   const dx = x - line.origin.x, dz = z - line.origin.z;
   const along = dx * line.along.x + dz * line.along.z;
-  const across = Math.abs(dx * line.across.x + dz * line.across.z);
+  const across = dx * line.across.x + dz * line.across.z;
   const beyond = Math.max(0, line.start - along, along - line.end);
-  const edge = Math.max(across - 4, beyond * 1.35);
+  // A narrow verge beside the platforms blends out before the broader foothills.
+  const edge = Math.max(-across - 4, (across - 4) * 2.75, beyond * 1.35);
   const t = Math.min(1, Math.max(0, 1 - edge / 14));
   return t * t * (3 - 2 * t);
 }

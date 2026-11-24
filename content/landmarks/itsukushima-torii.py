@@ -180,8 +180,9 @@ for k in range(4):
         px=J0[0]+jx*t-math.sin(jh)*sy*0.36; py=J0[1]+jy*t+math.cos(jh)*sy*0.36
         prism("wood",px,py,FLOOR,JD+0.12,0.06,0.06,6,0)
 
-# ---- the great torii (O-torii), ryobu style, standing in the bay on the shrine's axis
-T=dict(cx=0.0,cy=-5.4,s=0.9)
+# ---- the great torii (O-torii), ryobu style, standing out in the bay on the shrine's axis, far enough forward that
+# a band of water opens behind its legs and its top beam stands clear of the shrine's roofs in the game view
+T=dict(cx=0.4,cy=-7.9,s=0.9,rot=-0.3)     # turned a little toward the camera, which narrows it on screen
 for sx in (-1,1):
     solid([ngon(0.5,-1.3,8,math.pi/8,sx*2.45,0),ngon(0.42,6.3,8,math.pi/8,sx*2.33,0)],"vermilion",T)   # main pillars, leaning in
     for sy in (-1,1):

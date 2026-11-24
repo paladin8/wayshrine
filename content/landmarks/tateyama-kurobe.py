@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/tateyama-kurobe.glb"
 BLEND=ROOT+"/content/landmarks/tateyama-kurobe.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"f3f6f7","band":"aab4bc","dirt":"928a80","asphalt":"3e3f44","line":"e2b53c","rock":"6b6767","pine":"3f5a3e","white":"eef0f0"}
+PAL={"snow":"f3f6f7","band":"aab4bc","dirt":"928a80","asphalt":"3e3f44","line":"e2b53c","rock":"6b6767","pine":"3f5a3e","white":"eef0f0","stripe":"3f7a52","glass":"2b3238"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -150,15 +150,16 @@ ribbon("dirt",RW,W,0.03,0.06)                       # the walkway along the far 
 for sg in (-1,1): ribbon("white",sg*RW-0.03,sg*RW+0.03,0.03,0.045)   # edge lines
 
 # ---- the snow walls: sheer faces banded with the winter's layers, a rounded lip, the snowfield beyond falling to
-# the footprint edge. The far wall stands taller; the near one is kept lower so the road shows past it.
+# the footprint edge. The far wall stands taller. The near one is low at the entrance and through the first bend, so
+# the road shows past it there, then rises along the middle of the cut so the road reads as running between walls.
 SEG=["snow","dirt","snow","band","snow","dirt","snow","band","snow","snow","snow","snow","snow"]
-def wall(sg,Hmax):
+def wall(sg,Hmax,hof=None):
     rings=[]
     CL=FH-0.25
     for k in range(NS):
         t=0.035+0.93*k/(NS-1); px,py=path(t); _,_,nx,ny=frame_t(t); ox,oy=nx*sg,ny*sg
         env=max(0.03,smooth(0.035,0.24,t)*smooth(0.035,0.24,1-t))   # the walls rise from nothing at each end of the cut
-        H=Hmax*env*(0.92+0.08*math.sin(7*t+sg))
+        H=(hof(t) if hof else Hmax)*env*(0.92+0.08*math.sin(7*t+sg))
         oo=max(W+3.0,min(W+6.4,edge_out(px,py,ox,oy)))     # twin berms, the bare ground showing beyond them
         j=0.03*math.sin(13*t+2*sg)
         prof=[(W,-0.1),(W+0.02+j,0.2*H),(W-0.01+j,0.25*H),(W+0.04,0.4*H),(W+0.0,0.45*H),(W+0.05+j,0.62*H),(W+0.01+j,0.67*H),
@@ -176,7 +177,7 @@ def wall(sg,Hmax):
     faces.append(list(range(n))); fm.append("snow"); faces.append([(NS-1)*n+i for i in range(n)]); fm.append("snow")
     emit(verts,faces,fm)
     return rings
-FAR=wall(1,4.6); NEAR=wall(-1,2.5)
+FAR=wall(1,4.6); NEAR=wall(-1,0,lambda t: 2.2+1.9*smooth(0.3,0.46,t)*smooth(0.98,0.8,t))
 def snow_top(rings,k):
     r=rings[k]; return r[11]           # a point on the snowfield top
 # rocks and creeping pine (haimatsu) breaking through the snowfield where it thins toward the edges
@@ -203,6 +204,16 @@ for k in (7,13,18,24):
     x,y,z=FAR[k][11]; x2,y2,z2=FAR[k][10]
     rock((x+x2)/2,(y+y2)/2,(z+z2)/2-0.1,0.6)
 
+# ---- a Tateyama highland bus coming through the first bend, for the height of the walls and the width of the road
+BT=0.24; bx,by=path(BT); tx,ty,nx_,ny_=frame_t(BT); BR=math.atan2(ty,tx)
+TB=dict(cx=bx-nx_*0.5,cy=by-ny_*0.5,rot=BR)
+box("white",0,0,0.16,0.95,1.5,0.36,TB)
+box("stripe",0,0,0.3,0.42,1.51,0.37,TB)
+box("glass",-0.15,0,0.55,0.82,1.3,0.37,TB)                 # the side windows
+box("glass",1.5,0,0.45,0.85,0.01,0.3,TB)                   # the windscreen, leading
+box("white",0,0,0.95,1.0,1.4,0.3,TB)
+for wx in (-1.0,0.95):
+    for wy in (-0.33,0.33): box("glass",wx,wy,0.0,0.3,0.17,0.05,TB)
 STAND=path(0.08); STAND=(STAND[0]+frame(2)[2]*0.4,STAND[1]+frame(2)[3]*0.4)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
@@ -269,7 +280,9 @@ solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 INTERACT=path(0.5)   # the middle of the corridor
 # STAND (set above): the walkway at the near entrance
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
-      "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True}
+      "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True,
+      # the terrain stays at the plateau under the snow walls: the climbable berm is the model's own snow
+      "terrain":[[0.0]*GN for _ in range(GN)]}
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/tateyama-kurobe.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
 open(_p,"w").write(json.dumps(side,separators=(",",":")))

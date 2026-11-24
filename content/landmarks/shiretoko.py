@@ -140,8 +140,11 @@ def mtn(u,v):
         h=max(h,ph*max(0.0,1-d/pr)**1.3)
     h+=1.0*smooth(-3.5,-6.5,u)
     return h*smooth(14.8,11.8,abs(u)+abs(v))
-LAKES=[(1.4,-3.8,2.6,1.9),(0.8,2.8,2.1,1.7),(-2.4,-0.4,1.5,1.2)]
-def lake_d(u,v): return min(math.hypot((u-a)/c,(v-b)/d) for a,b,c,d in LAKES)
+# the first lake, where the boardwalk ends, is large and open with a ragged shore; two more lie tucked in the treeline
+LAKES=[(1.2,-3.6,3.1,2.5),(-2.9,3.9,1.3,1.0),(-3.3,-5.0,1.1,0.85)]
+def lwob(i,t): return 1+(0.14*math.sin(3*t+0.5)+0.08*math.sin(5*t+1.9)+0.05*math.sin(7*t+0.3) if i==0 else 0.06*math.sin(3*t+i))
+def lake_d(u,v):
+    return min(math.hypot((u-a)/c,(v-b)/d)/lwob(i,math.atan2((v-b)/d,(u-a)/c)) for i,(a,b,c,d) in enumerate(LAKES))
 def H(x,y):
     u,v=to_uv(x,y)
     h=mtn(u,v)
@@ -172,11 +175,12 @@ for j in range(N):
             elif h<0.05 and lake_d(u,v)<1.25: m="reed"
             fs.append([ix[k] for k in t]); ms.append(m)
 emit(vs,fs,ms)
-for a,b,c,d in LAKES:                                    # the lakes: dark open water in the middle, a rim of pale ice
-    n=16; cx,cy=to_xy(a,b)
-    ring=[to_xy(a+c*0.82*math.cos(2*math.pi*k/n),b+d*0.82*math.sin(2*math.pi*k/n)) for k in range(n)]
+for i,(a,b,c,d) in enumerate(LAKES):                     # the lakes: open water to a thin broken edge of ice
+    n=24 if i==0 else 14; cx,cy=to_xy(a,b)
+    def lr(f,t): w=lwob(i,t); return to_xy(a+c*f*w*math.cos(t),b+d*f*w*math.sin(t))
+    ring=[lr(0.86,2*math.pi*k/n) for k in range(n)]
     emit([(x,y,-0.34) for x,y in ring]+[(cx,cy,-0.34)],[[k,(k+1)%n,n] for k in range(n)],["ice"]*n)
-    ring2=[to_xy(a+c*0.55*math.cos(2*math.pi*k/n+0.3),b+d*0.55*math.sin(2*math.pi*k/n+0.3)) for k in range(n)]
+    ring2=[lr(0.86-(0.04 if (k*5)%7<4 else 0.14),2*math.pi*k/n) for k in range(n)]
     emit([(x,y,-0.32) for x,y in ring2]+[(cx,cy,-0.32)],[[k,(k+1)%n,n] for k in range(n)],["water"]*n)
 # fir forest on the lower slopes, a few birches and firs round the marsh
 def fir(u,v,s):
@@ -189,7 +193,7 @@ for k in range(48):
     u,v=rng.uniform(-6.5,-2.2),rng.uniform(-9,9)
     if abs(u)+abs(v)>13.5: continue
     x,y=to_xy(u,v)
-    if H(x,y)>2.6: continue
+    if H(x,y)>2.6 or lake_d(u,v)<1.15: continue
     fir(u,v,rng.uniform(0.7,1.05))
 for u,v,s in [(4.6,-6.4,0.9),(5.6,4.6,0.85),(3.6,6.8,0.9),(-0.4,-7.0,0.85),(6.6,-2.6,0.8),(-1.0,6.4,0.8)]:
     fir(u,v,s)

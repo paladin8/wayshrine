@@ -125,7 +125,10 @@ def F(u,v,rot=0.0,cz=0.0): x,y=to_xy(u,v); return dict(cx=x,cy=y,cz=cz,rot=math.
 # to a beach and a strip of the Sea of Japan, held in by spits at either end. A pond (the oasis) lies in a hollow
 SEA=-0.55; SF=-1.0
 def ridge_u(v): return -2.0+0.6*math.sin(0.35*v+0.5)
-def sea_in(u,v): return -9.2<u<-6.4 and abs(v)<6.2-0.4*(u+7.8)**2
+# the Sea of Japan fills the whole back of the footprint behind one long beach, held in only by a low sand lip at
+# the footprint's edge, so it reads as the open sea the ridge falls toward and not as a pond
+SW=14.3
+def sea_in(u,v): return u<-6.4 and abs(u)+abs(v)<SW
 PO=(2.0,-3.6)
 def H(x,y):
     u,v=to_uv(x,y)
@@ -136,7 +139,8 @@ def H(x,y):
     if u<ru-3.0:
         b=0.12*smooth(-5.6,-6.4,u)
         h=max(h,0.0)-b
-        if sea_in(u,v): h=SF*smooth(-6.3,-6.8,u)*smooth(-9.3,-8.8,u)*smooth(6.2,5.4,abs(v))+(SEA+0.1)*(1-smooth(-6.3,-6.8,u)*smooth(-9.3,-8.8,u)*smooth(6.2,5.4,abs(v)))
+        if sea_in(u,v):
+            f=smooth(-6.3,-6.9,u)*smooth(SW,SW-0.7,abs(u)+abs(v)); h=SF*f+(SEA+0.1)*(1-f)
     h+=0.035*math.sin(5.5*u+1.3*v)*smooth(0.2,0.8,h)          # wind ripples
     d=math.hypot(u-PO[0],(v-PO[1])*0.8)
     h-=0.55*smooth(1.8,0.9,d)
@@ -164,14 +168,14 @@ for j in range(N):
             if hh<SEA-0.05: m="sanddk"
             fs.append([ix[k] for k in t]); ms.append(m)
 emit(vs,fs,ms)
-uu=[-9.4+0.4*k for k in range(9)]
+uu=[-6.6-0.4*k for k in range(19)]
 for ua,ub in zip(uu,uu[1:]):
-    wa=6.2-0.4*(ua+7.8)**2; wb=6.2-0.4*(ub+7.8)**2
+    wa=SW-0.1-abs(ua); wb=SW-0.1-abs(ub)
     if wa<0.3 or wb<0.3: continue
     q=[to_xy(ua,-wa),to_xy(ua,wa),to_xy(ub,wb),to_xy(ub,-wb)]
     emit([(*p,SEA) for p in q],[[0,1,2,3]],["sea"])
-for k in range(4):                                        # breakers rolling onto the beach
-    u=-6.75-0.55*k; w=6.2-0.4*(u+7.8)**2-0.6
+for k in range(1):                                        # one clean line of surf along the beach
+    u=-6.8; w=SW-abs(u)-0.8
     pts=[(u+0.12*math.sin(1.7*t+k),t) for t in [-w+2*w*q/12 for q in range(13)]]
     for (ua,va),(ub,vb) in zip(pts,pts[1:]):
         q=[to_xy(ua-0.07,va),to_xy(ua+0.07,va),to_xy(ub+0.07,vb),to_xy(ub-0.07,vb)]

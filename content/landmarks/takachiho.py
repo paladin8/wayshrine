@@ -144,10 +144,25 @@ for row,(u,t0) in enumerate(((-1.2,0.1),(-1.95,0.3),(-2.75,0.2))):
         if abs(v)>VL+0.6: continue
         if row==0 and abs(v-FV)<0.55: continue        # the notch the falls has cut
         column(u+uc(v)+(rng.uniform(-0.25,0.2) if row==0 else rng.uniform(-0.06,0.06)),v,t0+rng.uniform(-0.25,0.35),r=0.46 if row==0 else 0.5)
-# near side: a slope of forest floor down to the water, broken columns and boulders at the waterline
+# near side: basalt cliffs rise at both ends, so the river runs confined between walls; in the middle a lower break
+# (a slope of forest floor down to broken columns at the waterline) keeps the falls and a boat in view
+VC=-2.0
+def cliff(v): return smooth(2.5,3.6,abs(v-VC))
+for va,vb in zip(vs,vs[1:]):
+    ca,cb=cliff(va),cliff(vb)
+    if ca<0.05 and cb<0.05: continue
+    za,zb=(DEEP+0.4)+(-0.05-(DEEP+0.4))*ca,(DEEP+0.4)+(-0.05-(DEEP+0.4))*cb
+    a0=to_xy(uc(va)+1.35,va); a1=to_xy(uc(va)+3.6,va); b0=to_xy(uc(vb)+1.35,vb); b1=to_xy(uc(vb)+3.6,vb)
+    solid([[(a0[0],a0[1],DEEP-0.4),(a1[0],a1[1],DEEP-0.4),(a1[0],a1[1],za),(a0[0],a0[1],za)],[(b0[0],b0[1],DEEP-0.4),(b1[0],b1[1],DEEP-0.4),(b1[0],b1[1],zb),(b0[0],b0[1],zb)]],"basalt")
+for row,(du,t0) in enumerate(((1.3,0.05),(2.05,0.25))):
+    for k in range(-10,11):
+        v=k*0.78+(0.39 if row%2 else 0)+rng.uniform(-0.08,0.08)
+        c=cliff(v)
+        if abs(v)>VL+0.6 or c<0.3: continue
+        column(du+uc(v)+rng.uniform(-0.1,0.15),v,(DEEP+0.6)+(t0+rng.uniform(-0.25,0.3)-(DEEP+0.6))*c,r=0.46)
 for k in range(-9,10):
     v=k*0.82+rng.uniform(-0.15,0.15)
-    if abs(v)>VL-0.3: continue
+    if abs(v)>VL-0.3 or cliff(v)>0.4: continue
     u=uc(v)+1.75+rng.uniform(-0.1,0.2)
     column(u,v,DEEP+rng.uniform(0.3,0.9),r=0.42)
     if k%3==0:
@@ -192,7 +207,7 @@ pts=[]
 for _ in range(3000):
     u,v=rng.uniform(-14,-3.6),rng.uniform(-12,12)
     x,y=to_xy(u,v)
-    if abs(x)>FH-1.4 or abs(y)>FH-1.4: continue
+    if abs(x)>FH-1.8 or abs(y)>FH-1.8: continue
     if abs(v-FV)<1.0 and u>-7.8: continue
     if any((x-px)**2+(y-py)**2<1.7**2 for px,py in pts): continue
     pts.append((x,y))
@@ -212,6 +227,7 @@ def ground_at(x,y):
     if abs(v)<VL+0.2:
         d=u-uc(v)
         if -2.5<=d<=1.5: return DEEP          # under the far wall too, so the terrain's slope stays inside the rock
+        if cliff(v)>0.5: return DEEP if d<=3.3 else 0.0      # under the near cliffs, inside the rock
         if 1.5<d<5.5: return DEEP*(1-(d-1.5)/4.0)*smooth(VL+0.2,VL-1.0,abs(v))+0.0
     return 0.0
 INTERACT=to_xy(4.2,FV)        # on the near bank, looking across at the falls
@@ -255,6 +271,10 @@ solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 if TERRAIN_SURFACE: side["terrainSurface"]=True
+if "terrain_at" in globals():         # the terrain's own height where it differs from the walkable ground (a deck over a gorge)
+    terr=[[round(terrain_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+    for i in range(GN): terr[0][i]=terr[GN-1][i]=terr[i][0]=terr[i][GN-1]=EDGE_LEVEL
+    if terr!=ground: side["terrain"]=terr
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/takachiho.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
 open(_p,"w").write(json.dumps(side,separators=(",",":")))

@@ -142,8 +142,11 @@ def brackets(cx,cy,hx,hy,z0,z1,layers=3):
     # the dense, painted bracket sets under the eaves: alternating gold and green bands, each stepping out
     dz=(z1-z0)/layers
     for k in range(layers):
-        o=0.06*k
+        o=0.15*k                                            # stepping well out, so the tiers read from the game camera
         box("gold" if k%2==0 else "teal",cx,cy,z0+k*dz,z0+(k+1)*dz,hx+o,hy+o)
+        n=int(2*(hx+o)/0.45)
+        for i in range(n+1):                                # the carved bracket ends, dark against the paint
+            box("roof",cx-(hx+o)+2*(hx+o)*i/max(1,n),cy-(hy+o)-0.05,z0+k*dz+dz*0.25,z0+k*dz+dz*0.85,0.06,0.05)
 
 # ---- the precinct floor: gravel courts and the paved approach
 box("gravel",0,-5.0,-0.02,0.03,8.6,4.3)
@@ -163,6 +166,18 @@ for i in range(4):
         box("white",YX+(-1.5+i*1.0)*S,YY+(-0.75+j*0.75)*S,z0,z0+1.75*S,0.1*S,0.1*S)
 box("white",YX-1.6*S,YY,z0,z0+1.75*S,0.08*S,0.75*S); box("white",YX+1.6*S,YY,z0,z0+1.75*S,0.08*S,0.75*S)   # side walls
 for x in (-1.6,1.6): box("teal",YX+x*S,YY-0.76*S,z0+0.4*S,z0+1.4*S,0.06*S,0.02)                         # painted panels at the ends
+# the carved friezes above the passage: broad bands standing proud of the columns, teal and vermilion relief with
+# dark-and-gold medallions big enough to read from the game camera
+FY=YY-0.75*S-0.14
+box("teal",YX,FY,z0+1.18*S,z0+1.5*S,1.65*S,0.1)
+box("vermilion",YX,FY-0.03,z0+1.5*S,z0+1.75*S,1.7*S,0.12)
+for k in range(9): box("gold",YX+(-1.6+k*0.4)*S,FY-0.13,z0+1.54*S,z0+1.71*S,0.07*S,0.03)
+def medal(x,z,r,y):
+    oc=[(r*math.cos(math.pi/8+k*math.pi/4),r*math.sin(math.pi/8+k*math.pi/4)) for k in range(8)]
+    extrude_y("gold",[(x+a,z+b) for a,b in oc],y,y-0.08)
+    extrude_y("roof",[(x+0.62*a,z+0.62*b) for a,b in oc],y-0.08,y-0.14)
+    extrude_y("gold",[(x+0.25*a,z+0.25*b) for a,b in oc],y-0.14,y-0.17)
+for x in (-1.05,0.0,1.05): medal(YX+x*S,z0+1.34*S,0.2*S,FY-0.1)
 brackets(YX,YY,1.75*S,0.95*S,z0+1.75*S,z0+2.35*S,4)
 flared_roof([(2.55*S,1.75*S,z0+2.35*S,0.3*S),(2.55*S,1.75*S,z0+2.47*S,0.3*S),(1.7*S,0.95*S,z0+2.7*S,0.08*S),(1.4*S,0.75*S,z0+2.82*S,0.0)],"roof",YX,YY)
 box("gold",YX,YY-1.75*S-0.02,z0+2.35*S,z0+2.41*S,2.2*S,0.03)                                          # gilded eave line
@@ -174,6 +189,8 @@ for (x0,y0,x1,y1) in [(-1.6,-0.92,1.6,-0.92),(1.6,-0.92,1.6,0.92)]:
     for k in range(9): t=k/8; box("gold",YX+(x0+(x1-x0)*t)*S,YY+(y0+(y1-y0)*t)*S,z1+0.08*S,z1+0.4*S,0.03,0.03)
 box("white",YX,YY,z1+0.08*S,z1+1.2*S,1.3*S,0.68*S)
 for x in (-0.9,-0.3,0.3,0.9): box("teal",YX+x*S,YY-0.69*S,z1+0.35*S,z1+0.95*S,0.2*S,0.02)            # painted panels
+box("gold",YX,YY-0.68*S-0.08,z1+0.95*S,z1+1.2*S,1.35*S,0.08)                                    # the upper frieze
+for x in (-0.6,0.6): medal(YX+x*S,z1+1.075*S,0.14*S,YY-0.68*S-0.16)
 brackets(YX,YY,1.42*S,0.8*S,z1+1.2*S,z1+1.8*S,4)
 irimoya(YX,YY,[(2.35*S,1.65*S,z1+1.8*S,0.38*S),(2.35*S,1.65*S,z1+1.92*S,0.38*S),(1.45*S,0.95*S,z1+2.35*S,0.12*S),(1.15*S,0.18*S,z1+3.05*S,0.0)],1.12*S,0.85*S,z1+2.37*S,z1+3.0*S)
 box("gold",YX,YY-1.65*S-0.02,z1+1.8*S,z1+1.86*S,2.0*S,0.03)

@@ -12,14 +12,12 @@ const base = import.meta.env.BASE_URL;
 
 export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "waves-beyond-the-headlands": { url: `${base}audio/music/waves-beyond-the-headlands.mp3` },
-  // Mastered quieter than the other themes; 25% up brings it level.
-  "snowline-walk": { url: `${base}audio/music/snowline-walk.mp3`, gain: 1.25 },
-  "ridgewalk": { url: `${base}audio/music/ridgewalk.mp3` },
+  "snowline-walk": { url: `${base}audio/music/snowline-walk.mp3`, gain: 1.4 },
+  "ridgewalk": { url: `${base}audio/music/ridgewalk.mp3`, gain: 1.25 },
   "marshwalk": { url: `${base}audio/music/marshwalk.mp3` },
   "lantern-trail": { url: `${base}audio/music/lantern-trail.mp3`, gain: 1.25 },
-  "basalt-crossing": { url: `${base}audio/music/basalt-crossing.mp3`, gain: 1.25 },
-  // Mastered louder than the other themes (about -12 LUFS against -16); 35% down brings it level.
-  "open-sea": { url: `${base}audio/music/open-sea.mp3`, gain: 0.65 },
+  "basalt-crossing": { url: `${base}audio/music/basalt-crossing.mp3` },
+  "open-sea": { url: `${base}audio/music/open-sea.mp3`, gain: 0.8 },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 

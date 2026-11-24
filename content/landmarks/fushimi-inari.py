@@ -96,11 +96,12 @@ def edge_k(x,y,w):
     d=min(FH-abs(x),FH-abs(y),(2*FH-1.2-abs(x)-abs(y))/math.sqrt(2))
     return smooth(0.0,w,d)
 
-# ---- tunnel centreline: out of the gate, bend right, run up the slope, bend left to the summit
-SEGS=[(0.6,0.0),(3.4*math.radians(65),-1/3.4),(2.4,0.0),(3.4*math.radians(55),1/3.4)]
+# ---- tunnel centreline: straight up the gate platform from the top of the steps, bend right, run up the slope,
+# bend left to the summit
+SEGS=[(5.3,0.0),(3.4*math.radians(65),-1/3.4),(2.4,0.0),(3.4*math.radians(55),1/3.4)]
 PATH_L=sum(l for l,k in SEGS)
 def P(s):
-    x,y,h=0.0,-0.9,math.pi/2
+    x,y,h=0.0,-5.6,math.pi/2
     for l,k in SEGS:
         u=min(s,l)
         if k==0: x+=u*math.cos(h); y+=u*math.sin(h)
@@ -176,7 +177,9 @@ for i in range(5):
     FLOORS.append((-1.75,1.75,y0,-7.6,0.2*(i+1)))
 box("cream",0,-4.3,0.95,1.04,1.35,3.3)
 
-# ---- Romon gate (two storeys, dark hip roofs)
+# ---- Romon gate (two storeys, dark hip roofs), drawn at full size and then scaled down and set to the left of the
+# platform, off the approach: the opening of the torii tunnel is what the player sees first
+GMARK={m:len(B[m][0]) for m in B}
 GY=-4.4
 box("cream",0,GY,0.98,1.2,3.6,1.95)
 for x in (-3.0,-1.1,1.1,3.0):
@@ -196,6 +199,10 @@ for sx in (-1,1): box("snow",sx*2.85,GY,5.75,6.7,0.05,0.6)
 solid([rect(3.95,2.25,6.95,0,GY),rect(3.95,2.25,7.17,0,GY),rect(3.25,1.5,7.5,0,GY),rect(2.35,0.16,8.4,0,GY)],"roof")
 box("roof",0,GY,8.32,8.58,2.6,0.22)
 for sx in (-1,1): frus("roof",sx*2.6,GY,8.32,8.85,0.2,0.28,0.26,0.32)
+GS_,GXo,GYo=0.55,-3.7,-4.6          # turned to face the tunnel across the platform
+for m,(bv,bf) in B.items():
+    for i in range(GMARK.get(m,0),len(bv)):
+        x,y,z=bv[i]; bv[i]=(GXo-(y-GY)*GS_,GYo+x*GS_,1.0+(z-1.0)*GS_)
 
 # ---- torii: vermilion posts and nuki, dark kasagi, shimaki and post feet
 def torii(cx,cy,cz,s,rot=0,down=0.15):
@@ -207,25 +214,31 @@ def torii(cx,cy,cz,s,rot=0,down=0.15):
     box("vermilion",0,0,1.92,2.08,1.18,0.07,T)
     box("roof",0,0,2.34,2.50,1.24,0.11,T)
     extrude_y("roof",[(-1.36,2.50),(1.36,2.50),(1.56,2.75),(0.7,2.66),(-0.7,2.66),(-1.56,2.75)],-0.15,0.15,T)
-# tunnel: 14 torii along the curve, shrinking and closing up toward the summit,
-# with slight donor-to-donor variation in size and spacing
-N=18; s0=0.15; s1=PATH_L-0.35
-w=[(1-0.3*i/(N-2))*(1+rng.uniform(-0.08,0.08)) for i in range(N-1)]
-pos=[s0]
-for wi in w: pos.append(pos[-1]+(s1-s0)*wi/sum(w))
+# tunnel: a close-set run of torii straight up the platform framing the opening, then the line turns uphill,
+# shrinking and closing up toward the summit, with slight donor-to-donor variation in size and spacing
+def TG(x,y):
+    h=Hm(x,y) if y>=-1.0 else 0.0
+    if abs(x)<=5.0 and -7.6<=y<=-1.0: h=max(h,1.0)
+    return h
+NA=10; pos=[0.25+(5.0-0.25)*i/(NA-1) for i in range(NA)]
+N2=15; s0=5.5; s1=PATH_L-0.35
+w=[(1-0.3*i/(N2-2))*(1+rng.uniform(-0.08,0.08)) for i in range(N2-1)]
+p2=[s0]
+for wi in w: p2.append(p2[-1]+(s1-s0)*wi/sum(w))
+pos+=p2; N=len(pos)
 tun=[]
 for i,s in enumerate(pos):
     x,y,h=P(s); t=i/(N-1)
     sc=(1.0-0.2*t)*(1+rng.uniform(-0.025,0.025)); rot=h-math.pi/2
     ca,sa=math.cos(rot),math.sin(rot)
-    hc=Hm(x,y); hp=[Hm(x+sx*0.95*sc*ca,y+sx*0.95*sc*sa) for sx in (-1,1)]
+    hc=TG(x,y); hp=[TG(x+sx*0.95*sc*ca,y+sx*0.95*sc*sa) for sx in (-1,1)]
     torii(x,y,hc,sc,rot,down=max(0.15,hc-min(hp)+0.15))
     tun.append((round(x,2),round(y,2),round(hc,2),round(sc,2)))
 # stone steps under the tunnel
-s=0.25
+s=4.8
 while s<PATH_L-0.2:
     x,y,h=P(s); rot=h-math.pi/2; ca,sa=math.cos(rot),math.sin(rot)
-    hs=[Hm(x+ca*dx-sa*dy,y+sa*dx+ca*dy) for dx in (-0.62,0.62) for dy in (-0.2,0.2)]+[Hm(x,y)]
+    hs=[TG(x+ca*dx-sa*dy,y+sa*dx+ca*dy) for dx in (-0.62,0.62) for dy in (-0.2,0.2)]+[TG(x,y)]
     box("stone",0,0,min(hs)-0.12,max(hs)+0.04,0.62,0.2,dict(cx=x,cy=y,rot=rot),mt="cream")
     s+=0.42
 
@@ -312,6 +325,8 @@ def bush(cx,cy,s):
     ico("foliage",0,0,0.3,0.75,0.75,0.55,dict(cx=cx,cy=cy,cz=H(cx,cy),s=s))
 for a in [(-8.6,7.9,1.1,0),(-5.8,10.0,1.0,0.3),(-9.1,3.0,0.9,0.6),(-2.1,10.0,0.9,0.5),(0.9,10.0,0.85,0.2),(10.0,5.4,0.9,0.2),(10.0,8.6,0.85,0.8),(-9.4,-0.4,0.85,0.4),(4.0,10.1,0.9,0.6)]: conifer(*a)
 for a in [(-8.9,-8.4,1.0),(-9.3,-3.0,0.9),(-3.5,3.3,0.8),(-5.1,6.5,0.85),(-0.7,5.8,0.8)]: roundtree(*a)
+for f,sd,sc_ in [(0.62,1,0.8),(0.74,-1,0.85),(0.8,1,0.9),(0.9,-1,0.8),(0.93,1,0.85)]:   # the upper tunnel climbs away into the trees
+    x,y,h=P(PATH_L*f); conifer(x+sd*1.9*math.cos(h-math.pi/2),y+sd*1.9*math.sin(h-math.pi/2),sc_,f)
 for a in [(8.0,-9.6,1.0),(9.3,-7.5,0.8),(-6.8,-10.1,0.9),(7.7,-3.0,0.9),(-7.5,-4.9,0.8)]: bush(*a)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.

@@ -131,7 +131,7 @@ def tube(mat,pts,rs,n=6):
 
 # ---- the Nishiki river runs toward the camera between broad gravel beds; at low water it sinks into the gravel
 # before either edge, so it stays inside the footprint. Stone embankments hold the banks
-WZ=-0.2; RIV=-0.5; GRV=-0.1; GM=-0.25     # GM: the gravel's drawn surface, just above the terrain beneath it
+WZ=-0.2; RIV=-0.5; GRV=-0.32; GM=-0.25    # GM: the gravel's drawn surface, just above the terrain beneath it
 def rw(u): return 3.6*smooth(7.2,4.6,abs(u-0.6))+0.2      # half-width of the flowing water
 def in_water(u,v,m=0.0): return abs(v-0.25*math.sin(0.3*u))<rw(u)-m and -6.6<u<7.8
 def in_bed(u,v): return abs(v)<5.0 and -6.8<u<8.4
@@ -208,7 +208,11 @@ def ground_at(x,y):
     if on_bridge(u,v): return max(deck(v),G(u,v))
     return G(u,v)+hill(u,v)
 def terrain_at(x,y):
-    u,v=to_uv(x,y); return G(u,v)+hill(u,v)
+    # the game samples the terrain on 1-unit tiles: under the bed it sits well below the gravel, so it never
+    # rides up through it against the embankments
+    u,v=to_uv(x,y)
+    if in_bed(u,v): return min(G(u,v),-0.55)+hill(u,v)   # above the region water level (-0.6): not open water
+    return G(u,v)+hill(u,v)
 def water_disc(x,y): u,v=to_uv(x,y); return in_water(u,v,0.15) and not on_bridge(u,v)
 hx,hy=to_xy(*HC); NA=12
 rings=[]

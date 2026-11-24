@@ -36,19 +36,19 @@ export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
   { id: "hirosaki-castle", act: 3, biome: "snow" },
   { id: "zao-juhyo", act: 3, biome: "snow" },
   { id: "kenroku-en", act: 3, biome: "snow" },
-  { id: "horyu-ji", act: 4, biome: "meadow" },
+  { id: "horyu-ji", act: 3, biome: "meadow" },
   { id: "nikko-toshogu", act: 4, biome: "mountain" },
   { id: "kegon-falls", act: 4, biome: "mountain" },
   { id: "kappa-bashi", act: 4, biome: "mountain" },
   { id: "tateyama-kurobe", act: 4, biome: "mountain" },
   { id: "koyasan-okunoin", act: 4, biome: "mountain" },
   { id: "yoshino-yama", act: 4, biome: "meadow" },
+  { id: "byodo-in", act: 4, biome: "water" },
+  { id: "senso-ji", act: 4, biome: "meadow" },
   { id: "kushiro-shitsugen", act: 5, biome: "marsh" },
   { id: "oze", act: 5, biome: "marsh" },
   { id: "yanagawa", act: 5, biome: "marsh" },
   { id: "kurashiki-bikan", act: 5, biome: "marsh" },
-  { id: "byodo-in", act: 5, biome: "water" },
-  { id: "senso-ji", act: 5, biome: "meadow" },
   { id: "kamakura-daibutsu", act: 5, biome: "meadow" },
   { id: "tokyo-tower", act: 5, biome: "meadow" },
   { id: "osaka-castle", act: 5, biome: "meadow" },
@@ -62,8 +62,8 @@ export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
   { id: "izumo-taisha", act: 6, biome: "forest" },
   { id: "takachiho", act: 6, biome: "forest" },
   { id: "iya-kazurabashi", act: 6, biome: "forest" },
-  { id: "ginkaku-ji", act: 6, biome: "meadow" },
-  { id: "ryoan-ji", act: 6, biome: "meadow" },
+  { id: "ginkaku-ji", act: 7, biome: "meadow" },
+  { id: "ryoan-ji", act: 7, biome: "meadow" },
   { id: "sakurajima", act: 7, biome: "volcanic" },
   { id: "mount-aso", act: 7, biome: "volcanic" },
   { id: "beppu-hells", act: 7, biome: "volcanic" },
@@ -71,7 +71,7 @@ export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
   { id: "kumamoto-castle", act: 7, biome: "meadow" },
   { id: "dazaifu", act: 7, biome: "meadow" },
   { id: "dogo-onsen", act: 7, biome: "meadow" },
-  { id: "kintaikyo", act: 7, biome: "water" },
+  { id: "kintaikyo", act: 8, biome: "water" },
   { id: "gunkanjima", act: 8, biome: "sea" },
   { id: "naruto", act: 8, biome: "sea" },
   { id: "shuri-castle", act: 8, biome: "sea" },
@@ -94,24 +94,24 @@ export const LANDMARK_SPECS: readonly LandmarkSpec[] = [
 export const LANDMARKS: readonly Landmark[] = LANDMARK_SPECS.map((s, i) => ({ ...s, order: i + 1 }));
 
 /**
- * Landmarks that must be restored before each ability is held. Each threshold is the end of an
- * act (acts hold 3, 5, 5, 7, 10, 11, 8, 7, 10 landmarks), so an act never needs the ability it unlocks.
+ * Landmarks that must be restored before each ability is held. Each terrain threshold is the end of an
+ * act, so every landmark in that act can be reached with abilities from previous acts.
  */
 export const CAPABILITY_THRESHOLDS: Readonly<Record<Capability, number>> = {
   boat: 3,
   snowshoes: 8,
-  climbing: 13,
-  geta: 20,
+  climbing: 14,
+  geta: 22,
   lantern: 30,
-  ashSandals: 41,
-  ship: 49,
+  ashSandals: 39,
+  ship: 48,
 };
 
 /**
- * Far sight: at the end of act VIII every unrestored landmark is marked on the map. It opens no
+ * Far sight marks every unrestored landmark on the map after 58 restorations. It opens no
  * terrain, so it never affects where landmarks can be placed.
  */
-export const FAR_SIGHT_STARS = 56;
+export const FAR_SIGHT_STARS = 58;
 
 export function capabilitiesForCount(count: number): ReadonlySet<Capability> {
   const held = new Set<Capability>();

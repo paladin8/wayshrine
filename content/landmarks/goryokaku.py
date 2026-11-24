@@ -245,7 +245,11 @@ for x,y,s in [(-9.6,-9.4,1.0),(-8.0,-9.8,0.85),(9.4,-9.6,1.0),(9.8,-7.8,0.85),(-
 def ground_at(x,y):
     if on_bridge(x,y): return deckz(y)
     return G(x,y)
-def terrain_at(x,y): return G(x,y)
+def terrain_at(x,y):
+    # under the moat the terrain sinks well below the water: the game samples it on 1-unit tiles, and a shallow
+    # bed would ride up above the water against the walls
+    if inside(OUT,x,y) and not inside(IN,x,y): return -1.8
+    return G(x,y)
 def water_disc(x,y): return inside(OUT,x,y) and not inside(IN,x,y) and edist(IN,x,y)>0.15 and edist(OUT,x,y)>0.15 and not on_bridge(x,y)
 INTERACT=(0.0,-3.3)   # just inside the gate, on the walk to the magistrate's office
 STAND=(1.2,-3.6)

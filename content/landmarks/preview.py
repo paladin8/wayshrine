@@ -23,10 +23,16 @@ if os.environ.get("FI_GROUND"):
     side=os.path.join(D,"..","..","src","world","landmark-grounds",name+".json")
     gj=json.load(open(side)) if os.path.exists(side) else None
     if gj and gj.get("terrainSurface"):
-        # follow the sidecar's ground grid, drawn 0.2 low as the game draws it, so sunken ground (gorges, moats) shows
+        # follow the sidecar's surface as the game's terrain does: 1-unit tiles whose corners sample the grid
+        # bilinearly (terrain-grid.ts cornerOf), so sunken ground (gorges, moats) and hills show as in game
         gh,gs,gg=gj["half"],gj["step"],gj.get("terrain") or gj["ground"]; n=len(gg)
-        gm.from_pydata([(-gh+gs*ix,gh-gs*iz,gg[iz][ix]-0.2) for iz in range(n) for ix in range(n)],[],
-                       [[iz*n+ix,iz*n+ix+1,(iz+1)*n+ix+1,(iz+1)*n+ix] for iz in range(n-1) for ix in range(n-1)])
+        def surf(dx,dz):
+            fx=min(n-1,max(0.0,(dx+gh)/gs)); fz=min(n-1,max(0.0,(dz+gh)/gs))
+            x0=min(n-2,int(fx)); z0=min(n-2,int(fz)); tx=fx-x0; tz=fz-z0
+            return gg[z0][x0]*(1-tx)*(1-tz)+gg[z0][x0+1]*tx*(1-tz)+gg[z0+1][x0]*(1-tx)*tz+gg[z0+1][x0+1]*tx*tz
+        m=int(math.ceil(gh))+1; k=2*m+1
+        gm.from_pydata([(ix-m,-(iz-m),surf(ix-m,iz-m) if max(abs(ix-m),abs(iz-m))<gh else 0.0) for iz in range(k) for ix in range(k)],[],
+                       [[iz*k+ix,(iz+1)*k+ix,(iz+1)*k+ix+1,iz*k+ix+1] for iz in range(k-1) for ix in range(k-1)])
     else:
         gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])
     gc={"snow":(0.88,0.91,0.93,1),"mountain":(0.235,0.22,0.22,1),"marsh":(0.138,0.202,0.065,1),"forest":(0.031,0.087,0.055,1),"volcanic":(0.102,0.053,0.053,1)}.get(os.environ["FI_GROUND"],(0.195,0.42,0.15,1))   # FI_GROUND=snow|mountain|marsh|forest|volcanic for those regions (base tone of each biome palette, linear)

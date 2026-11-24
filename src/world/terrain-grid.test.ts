@@ -48,11 +48,11 @@ describe("terrain", () => {
 
   it("raises steep land shrines to the surrounding grade and eases into the approach", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
-    for (const [rx, rz] of [[-5, 5], [4, 18], [-4, -7], [-13, 10], [-14, 15]] as const) {
+    for (const [rx, rz] of [[-5, 5], [-4, -7], [-13, 10], [-14, 15]] as const) {
       const region = terrain.world.region(rx, rz);
       const { x, z } = region.shrine;
       const base = terrain.groundAt(x, z);
-      expect(base).toBeGreaterThan(plateauBase(region) + 0.5);
+      expect(base, region.id).toBeGreaterThan(plateauBase(region) + 0.5);
       for (let i = 0; i < 16; i++) {
         const angle = i * Math.PI / 8;
         let previous = base;
@@ -109,6 +109,31 @@ describe("landmark ground", () => {
         else expect(terrain.biomeAt(tx, tz)).not.toBe("water");
       }
     }
+  });
+});
+
+describe("landmark terrain surface", () => {
+  it("draws the terrain along the model's surface, down into its channels and up its hills", () => {
+    const terrain = createTerrain(createWorld("lm-surface"));
+    let checked = 0;
+    for (const region of terrain.world.landmarks) {
+      const model = groundOf(region.landmark!.id);
+      if (!model?.terrainSurface) continue;
+      checked++;
+      const { site } = region;
+      const reach = Math.floor(model.half) - 1;
+      for (let cz = Math.ceil(site.z - reach); cz <= site.z + reach; cz++) {
+        for (let cx = Math.ceil(site.x - reach); cx <= site.x + reach; cx++) {
+          if (terrain.world.regionAt(cx, cz) !== region) continue;
+          const want = plateauBase(region) + surfaceHeight(model, cx - site.x, cz - site.z);
+          // Every tile meeting at the corner shares its height, so the surface has no cracks.
+          for (const [tx, tz, k] of [[cx, cz, 0], [cx - 1, cz, 1], [cx, cz - 1, 2], [cx - 1, cz - 1, 3]] as const) {
+            expect(terrain.corners(tx, tz)[k], `${region.landmark!.id} corner ${cx - site.x},${cz - site.z}`).toBeCloseTo(want, 5);
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
 

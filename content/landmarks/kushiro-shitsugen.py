@@ -121,9 +121,8 @@ def to_xy(u,v): return (S2*(u+v),S2*(v-u))
 def to_uv(x,y): return (S2*(x-y),S2*(x+y))
 ROT=math.pi/4
 
-# ---- the Kushiro river meandering across the marsh, fading into the reed beds before either edge, with oxbow
-# ponds where old bends were cut off
-def ch_u(v): return -1.2+2.6*math.sin(0.42*v+0.5)
+# ---- the Kushiro river: one unbroken S-bend across the marsh, fading into the reed beds before either edge
+def ch_u(v): return -1.0+3.0*math.sin(0.3*v+0.2)
 def ch_w(v): return (0.75+0.2*math.sin(0.9*v))*smooth(-10.0,-7.6,v)*(1-smooth(7.6,10.0,v))+0.04
 rings=[]
 VS=[-10.0+20.0*k/47 for k in range(48)]
@@ -132,7 +131,7 @@ for v in VS:
     a=to_xy(u-w,v); b=to_xy(u+w,v)
     rings.append([(a[0],a[1],-0.05),(b[0],b[1],-0.05),(b[0],b[1],0.06),(a[0],a[1],0.06)])
 solid(rings,"water")
-PONDS=[(-6.2,-4.6,1.5,0.9,0.5),(4.6,6.2,1.3,0.8,-0.6),(-5.6,6.4,1.1,0.75,0.2),(5.2,-6.8,1.0,0.7,0.9)]   # (u,v,ru,rv,angle)
+PONDS=[]   # (u,v,ru,rv,angle): no scattered pools to compete with the meander
 for u0,v0,ru,rv,ang in PONDS:
     pts=[]
     for i in range(12):
@@ -155,7 +154,8 @@ BWH=0.3; BWW=0.55
 for (x0,y0),(x1,y1) in zip(BW,BW[1:]):
     L=math.hypot(x1-x0,y1-y0); a=math.atan2(y1-y0,x1-x0)
     T=dict(cx=(x0+x1)/2,cy=(y0+y1)/2,rot=a)
-    box("wood",0,0,BWH-0.08,BWH,L/2+BWW,BWW,T)
+    kz=0.006*(BW.index((x0,y0))%2)                         # alternate segments a hair apart where they overlap at the bends
+    box("wood",0,0,BWH-0.08+kz,BWH+kz,L/2+BWW,BWW,T)
     n=max(1,int(L/1.2))
     for k in range(n+1):
         lx=-L/2+L*k/n
@@ -201,11 +201,31 @@ CRANES=[(-3.6,-0.8,0.9,"dance"),(-3.2,0.4,-2.3,"dance"),(2.8,-4.4,2.2,"feed"),(3
 
 # ---- reed beds: golden mounds of reeds with seed heads standing above them, and alder trees dotted over the marsh
 placed=[(to_xy(u,v)[0],to_xy(u,v)[1],1.7) for u,v,_,_ in CRANES]+[(DX,DY,2.8)]
+placed+=[(to_xy(-3.4,-0.2)[0],to_xy(-3.4,-0.2)[1],2.6)]   # open ground round the displaying pair
 def free(x,y,d): return all(math.hypot(x-px,y-py)>=d+pr for px,py,pr in placed)
 def ok(x,y,r):
     if abs(x)>FH-0.4-r or abs(y)>FH-0.4-r: return False
     if in_water(x,y,0.25+r) or bw_dist(x,y)<BWW+0.35+r: return False
     return free(x,y,r)
+def mound(x,y,r):
+    T=dict(cx=x,cy=y,rot=rng.uniform(0,6.28))
+    m="reed" if rng.random()<0.75 else "reedg"
+    ico(m,0,0,0.05,r,r*rng.uniform(0.6,0.9),0.26,T)                       # the dense lower stems
+    for k in range(7):                                                      # tall blades fanning out of it
+        a=rng.uniform(0,6.28); d=rng.uniform(0,r*0.7); lean=rng.uniform(0.05,0.25)
+        bx,by=d*math.cos(a),d*math.sin(a)
+        cone(m if k%3 else "reed",ngon(0.045,0.15,3,a,bx,by),(bx+lean*math.cos(a),by+lean*math.sin(a),rng.uniform(0.75,1.25)),T)
+# the reeds stand in long bands following the river and the forest edge, not in evenly spaced clumps
+BANDS=[(lambda v: ch_u(v)+2.7,-9.5,7.0),(lambda v: ch_u(v)-2.9,-9.0,9.5),(lambda v: 6.6+0.6*math.sin(0.35*v),-10.0,2.0),
+       (lambda v: -6.2+0.4*math.sin(0.5*v),-9.5,9.5),(lambda v: 5.0+0.5*math.sin(0.4*v+1.0),4.5,10.5)]
+n=0
+for bu,v0,v1 in BANDS:
+    v=v0
+    while v<v1 and n<64:
+        u=bu(v)+rng.uniform(-0.25,0.25); x,y=to_xy(u,v); r=rng.uniform(0.75,1.1)
+        if ok(x,y,r*0.6) and max(abs(x),abs(y))<FH-0.6-r:
+            mound(x,y,r); placed.append((x,y,r*0.6)); n+=1
+        v+=rng.uniform(0.75,1.0)
 # the forest edge along the far side: the broadleaf woods round the marsh (oak, alder, birch), billowing crowns
 # standing thick at the footprint's back and thinning into alder scrub where the marsh begins
 def broadleaf(x,y,s):
@@ -245,19 +265,6 @@ while n<9 and tries<2000:
     if to_uv(x,y)[0]>2.0 and rng.random()<0.6: continue   # most alders near the forest side
     if not ok(x,y,0.9): continue
     alder(x,y,rng.uniform(0.8,1.1)); placed.append((x,y,0.9)); n+=1
-def mound(x,y,r):
-    T=dict(cx=x,cy=y,rot=rng.uniform(0,6.28))
-    m="reed" if rng.random()<0.75 else "reedg"
-    ico(m,0,0,0.05,r,r*rng.uniform(0.6,0.9),0.26,T)                       # the dense lower stems
-    for k in range(7):                                                      # tall blades fanning out of it
-        a=rng.uniform(0,6.28); d=rng.uniform(0,r*0.7); lean=rng.uniform(0.05,0.25)
-        bx,by=d*math.cos(a),d*math.sin(a)
-        cone(m if k%3 else "reed",ngon(0.045,0.15,3,a,bx,by),(bx+lean*math.cos(a),by+lean*math.sin(a),rng.uniform(0.75,1.25)),T)
-n=0; tries=0
-while n<54 and tries<6000:
-    tries+=1; x,y=rng.uniform(-FH,FH),rng.uniform(-FH,FH); r=rng.uniform(0.7,1.3)
-    if not ok(x,y,r*0.8): continue
-    mound(x,y,r); placed.append((x,y,r*0.8)); n+=1
 # single reed clumps along the water's edge
 n=0; tries=0
 while n<70 and tries<6000:

@@ -123,12 +123,20 @@ def to_uv(x,y): return (S2*(x-y),S2*(x+y))
 # ---- the landform: the ash cone of Nakadake, its crater a steep bowl of banded rock with a turquoise lake steaming
 # at the bottom, its near rim lower so the camera looks in; Kometsuka's green cinder cone; Kusasenri's meadow and pond
 C=(-2.8,0.9); RIM=3.0; FL=0.35
-def rimh(u,v):
-    r=max(1e-6,math.hypot(u-C[0],v-C[1])); return 3.7-1.0*(u-C[0])/r
+# The crater is an irregular bowl drawn out along the line of the vents (screen-right), not a round pit: positions
+# around it are measured in a stretched, wobbled radius rho
+RY=1.45
+def wob(a): return 1+0.11*math.sin(3*a+0.7)+0.07*math.sin(5*a+2.0)
+def polar(u,v):
+    a=math.atan2((v-C[1])/RY,u-C[0]); return math.hypot(u-C[0],(v-C[1])/RY)/wob(a),a
+def CP(rho,a): w=wob(a); return (C[0]+rho*w*math.cos(a),C[1]+RY*rho*w*math.sin(a))
+def rimh_a(a): return 3.7-1.0*math.cos(a)+0.45*math.sin(2*a+0.4)        # the near rim lower; uneven all round
+def rimh(u,v): return rimh_a(polar(u,v)[1])
 def crater(u,v):
-    r=math.hypot(u-C[0],v-C[1]); hr=rimh(u,v)
+    r,a=polar(u,v); hr=rimh_a(a)
     if r<RIM:
-        t=max(0.0,(r-1.3)/(RIM-1.3)); return FL+(hr-FL)*t**1.5
+        p=1.1+1.3*(0.5+0.5*math.cos(a-2.6))                 # the far wall falls sheer, the near one shelves
+        t=max(0.0,(r-1.3)/(RIM-1.3)); return FL+(hr-FL)*t**p
     return hr*max(0.0,1-(r-RIM)/5.0)**1.1
 KM=(3.4,-6.0)
 def kome(u,v):
@@ -141,10 +149,10 @@ def H(x,y):
 STEP=0.62; NG=int(round(2*FH/STEP))+1
 vs=[(-FH+STEP*i,-FH+STEP*j,H(-FH+STEP*i,-FH+STEP*j)) for j in range(NG) for i in range(NG)]
 def facemat(x,y,h):
-    u,v=to_uv(x,y); r=math.hypot(u-C[0],v-C[1])
+    u,v=to_uv(x,y); r=polar(u,v)[0]
     if r<RIM-0.05 and h<rimh(u,v)-0.08:
         return "strata1" if int((h+0.1)/0.32)%2 else "strata2"
-    if r<RIM+4.0 and h>0.3: return "ash"
+    if r<RIM+2.4 and h>0.3: return "ash"            # the ash stays on the cone; grass runs up its lower slopes
     if math.hypot(u-KM[0],v-KM[1])<2.0:
         a=math.atan2(v-KM[1],u-KM[0]); return "strata2" if (int((a+math.pi)/(2*math.pi)*18)%3==0 and h>0.25) else "grass"
     if h< -0.1: return "grass"
@@ -157,7 +165,7 @@ for j in range(NG-1):
             ps=[vs[k] for k in tri]
             x,y,h=(sum(p[0] for p in ps)/3,sum(p[1] for p in ps)/3,sum(p[2] for p in ps)/3)
             u,v=to_uv(x,y)
-            if math.hypot(u-C[0],v-C[1])<RIM+0.15: continue             # the crater's inside is lofted below, in bands
+            if polar(u,v)[0]<RIM+0.15: continue                       # the crater's inside is lofted below, in bands
             h+=rng.uniform(-0.18,0.18)*smooth(0.3,0.9,h)
             faces.append(tri); fm.append(facemat(x,y,h))
 emit(vs,faces,fm)
@@ -166,18 +174,20 @@ rings=[]
 for r in LV:
     ring=[]
     for k in range(NA):
-        a=2*math.pi*k/NA; u,v=C[0]+r*math.cos(a),C[1]+r*math.sin(a); x,y=to_xy(u,v)
+        a=2*math.pi*k/NA; rr=r+(rng.uniform(-0.07,0.07) if 0<len(rings)<len(LV)-1 else 0.0); u,v=CP(rr,a); x,y=to_xy(u,v)
         ring.append((x,y,crater(u,v)*smooth(FH,FH-1.3,max(abs(x),abs(y)))))
     rings.append(ring)
 for li in range(len(rings)-1):
     fs=[];ms=[]
     for k in range(NA):
         k2=(k+1)%NA; fs.append([k,k2,NA+k2,NA+k])
-    emit(rings[li]+rings[li+1],fs,[("strata1" if li%2 else "strata2") if li<len(rings)-2 else "ash"]*NA)
+    band=[("strata1" if (li+(k*7)//NA+(1 if math.sin(1.7*k+li)>0.6 else 0))%2 else "strata2") for k in range(NA)]   # broken, uneven bands
+    emit(rings[li]+rings[li+1],fs,band if li<len(rings)-2 else ["ash"]*NA)
 cxy=to_xy(*C)
 emit(rings[0]+[(cxy[0],cxy[1],FL)],[[k,NA,(k+1)%NA] for k in range(NA)],["strata2"]*NA)
 cx,cy=to_xy(*C)
-prism("lake",cx,cy,FL-0.2,FL+0.3,1.42,1.5,14,0)
+LR=[to_xy(*CP(1.3,2*math.pi*k/16)) for k in range(16)]
+solid([[(x,y,FL-0.2) for x,y in LR],[(x,y,FL+0.3) for x,y in LR]],"lake")
 for k,(r,dz,dv,du) in enumerate(((0.55,0.75,0.0,-0.3),(0.8,1.35,0.25,-0.85),(1.0,2.0,0.6,-1.5),(1.15,2.65,1.05,-2.2),(1.2,3.25,1.6,-2.9))):
     x,y=to_xy(C[0]+du,C[1]+dv); ico("steam",x,y,FL+dz,r,r*0.95,r*0.8)
 px,py=to_xy(*PO)
@@ -185,23 +195,23 @@ emit([(px+1.75*math.cos(2*math.pi*k/16)/1.2*S2+1.75*math.sin(2*math.pi*k/16)*S2,
      [[k,(k+1)%16,16] for k in range(16)],["water"]*16)
 def water_disc(x,y):
     u,v=to_uv(x,y)
-    return math.hypot(u-C[0],v-C[1])<1.45 or math.hypot((u-PO[0])*1.2,v-PO[1])<1.5
+    return polar(u,v)[0]<1.25 or math.hypot((u-PO[0])*1.2,v-PO[1])<1.5
 
 # ---- on the near rim: the viewing walk with its railing, two concrete shelters; a path up from the meadow
 def P(u,v,dz=0.03): x,y=to_xy(u,v); return (x,y,H(x,y)+dz)
 for k in range(13):
-    a=-0.9+1.8*k/12; u=C[0]+(RIM+0.35)*math.cos(a); v=C[1]+(RIM+0.35)*math.sin(a)
+    a=-0.9+1.8*k/12; u,v=CP(RIM+0.35,a)
     x,y,z=P(u,v,0); box("concrete",x,y,z-0.1,z+0.7,0.05,0.05)
 for k in range(12):
     a0=-0.9+1.8*k/12; a1=-0.9+1.8*(k+1)/12
-    p0=P(C[0]+(RIM+0.35)*math.cos(a0),C[1]+(RIM+0.35)*math.sin(a0),0.62); p1=P(C[0]+(RIM+0.35)*math.cos(a1),C[1]+(RIM+0.35)*math.sin(a1),0.62)
+    p0=P(*CP(RIM+0.35,a0),0.62); p1=P(*CP(RIM+0.35,a1),0.62)
     solid([[(p0[0],p0[1],p0[2]),(p0[0]+0.03,p0[1]+0.03,p0[2]),(p0[0]+0.03,p0[1]+0.03,p0[2]+0.06),(p0[0],p0[1],p0[2]+0.06)],[(p1[0],p1[1],p1[2]),(p1[0]+0.03,p1[1]+0.03,p1[2]),(p1[0]+0.03,p1[1]+0.03,p1[2]+0.06),(p1[0],p1[1],p1[2]+0.06)]],"concrete")
 for a in (-1.15,1.2):
-    x,y,z=P(C[0]+(RIM+1.5)*math.cos(a),C[1]+(RIM+1.5)*math.sin(a),0)
+    x,y,z=P(*CP(RIM+1.5,a),0)
     T=dict(cx=x,cy=y,cz=z,rot=math.pi/4+a)
     box("concrete",0,0,-0.4,0.75,0.7,0.5,T); extrude_x("concrete",[(-0.55,0.75),(0,1.05),(0.55,0.75)],-0.75,0.75,T)
     box("strata2",0.0,-0.51,0.0,0.55,0.35,0.01,T)
-pts=[(9.6,1.0),(7.6,-0.6),(5.6,-1.4),(3.0,-0.6),(1.4,0.4),(C[0]+RIM+0.35,C[1]-0.2)]
+pts=[(9.6,1.0),(7.6,-0.6),(5.6,-1.4),(3.0,-0.6),(1.4,0.4),CP(RIM+0.35,-0.07)]
 for (ua,va),(ub,vb) in zip(pts,pts[1:]):
     n=max(2,int(math.hypot(ub-ua,vb-va)/0.6))
     for k in range(n):
@@ -222,8 +232,8 @@ for u,v,a in [(6.6,-2.6,0.4),(7.4,3.8,2.2),(4.0,4.4,-0.8),(8.4,-0.2,1.4)]:
     horse(u,v,a)
 
 def ground_at(x,y): return H(x,y)
-INTERACT=to_xy(C[0]+RIM+0.9,C[1])   # on the near rim, looking down into the crater
-STAND=to_xy(C[0]+RIM+1.9,C[1]+0.4)
+INTERACT=to_xy(*CP(RIM+0.9,0.0))   # on the near rim, looking down into the crater
+STAND=to_xy(*CP(RIM+1.9,0.12))
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/mount-aso.json and read by the world layer (see docs/landmarks.md).

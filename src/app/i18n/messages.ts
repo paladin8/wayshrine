@@ -11,7 +11,7 @@ export type Locale = (typeof LOCALES)[number];
 export interface Messages {
   /** Names of the capabilities the player collects. */
   readonly capability: Readonly<Record<Capability, string>>;
-  /** The capstone unlock at the end of act VIII: every remaining landmark is marked on the map. */
+  /** Far sight marks every remaining landmark on the map. */
   readonly farSight: string;
   readonly gearRequirement: (stars: number, status: "locked" | "unlocked") => string;
   /** Terrain as it is named when it blocks the way ("to cross ..."). */

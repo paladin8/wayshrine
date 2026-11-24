@@ -122,15 +122,15 @@ def to_uv(x,y): return (S2*(x-y),S2*(x+y))
 
 # ---- the landform: Sakurajima's broad massif with its two summits (Kitadake, and Minamidake with the active crater),
 # gullied slopes, the Taisho lava at its foot, a strip of Kagoshima Bay, and the near shore we look from
-VC=(-3.8,0.2); K=(-5.0,-1.5); M=(-2.8,1.9)
+VC=(-3.8,0.2); K=(-5.2,-2.8); M=(-2.6,2.3)     # Kitadake higher, Minamidake lower: an unequal pair
 def Hv(u,v):
     r=math.hypot(u-VC[0],v-VC[1]); th=math.atan2(v-VC[1],u-VC[0])
-    h=3.6*max(0.0,1-r/8.4)**1.2
-    h+=3.9*math.exp(-((u-K[0])**2+(v-K[1])**2)/(2*2.1**2))+3.3*math.exp(-((u-M[0])**2+(v-M[1])**2)/(2*1.8**2))
+    h=2.9*max(0.0,1-r/8.4)**1.2
+    h+=4.6*math.exp(-((u-K[0])**2+(v-K[1])**2)/(2*1.7**2))+3.1*math.exp(-((u-M[0])**2+(v-M[1])**2)/(2*1.6**2))
     h-=1.0*math.exp(-((u-M[0])**2+(v-M[1])**2)/(2*0.42**2))                    # Minamidake's crater
     h+=0.28*math.sin(9*th+1.3)*min(1.0,r/3.0)*max(0.0,1-r/8.4)                    # gullies
     return h*smooth(2.7,1.1,u)
-def bay(u,v): return -0.85*smooth(2.2,3.1,u)*smooth(6.1,5.2,u)*smooth(7.6,6.0,abs(v))
+def bay(u,v): return -0.85*smooth(2.0,2.9,u)*smooth(7.7,6.8,u)*smooth(10.2,8.4,abs(v))     # a wide reach of the bay
 def H(x,y):
     u,v=to_uv(x,y)
     return (Hv(u,v)+bay(u,v))*smooth(FH,FH-1.2,max(abs(x),abs(y)))
@@ -156,10 +156,8 @@ for j in range(NG-1):
             m=facemat(x,y,hm,(max(hs)-min(hs))/STEP)
             faces.append(tri); fm.append(m)
 emit(vs,faces,fm)
-uu=[2.0+k*0.5 for k in range(10)]
-for ua,ub in zip(uu,uu[1:]):
-    q=[to_xy(ua,-8.2),to_xy(ua,8.2),to_xy(ub,8.2),to_xy(ub,-8.2)]
-    emit([(*p,-0.28) for p in q],[[0,1,2,3]],["water"])
+W_=FH-0.3
+emit([(-W_,-W_,-0.28),(W_,-W_,-0.28),(W_,W_,-0.28),(-W_,W_,-0.28)],[[0,1,2,3]],["water"])   # shows only where the bay dips below it
 def water_disc(x,y): return H(x,y)< -0.4
 # the crater's glow and the ash plume leaning away on the wind
 mx,my=to_xy(*M); mz=Hv(*M)
@@ -172,19 +170,19 @@ for k in range(26):
     ico("lava",x,y,H(x,y)+0.05,rng.uniform(0.25,0.55),rng.uniform(0.2,0.45),rng.uniform(0.18,0.35))
 
 # ---- the near shore: a promenade along the water with a railing, a small lookout, pines; pines on the island's foot
-for va,vb in ((-7.4,7.4),):
-    q=[to_xy(6.2,va),to_xy(7.4,va),to_xy(7.4,vb),to_xy(6.2,vb)]
+for va,vb in ((-5.4,5.4),):
+    q=[to_xy(8.1,va),to_xy(9.2,va),to_xy(9.2,vb),to_xy(8.1,vb)]
     emit([(*p,0.04) for p in q],[[0,1,2,3]],["pave"])
-for k in range(20):
-    v=-7.2+14.4*k/19; x,y=to_xy(6.1,v); box("wood",x,y,-0.05,0.85,0.05,0.05)
-a=to_xy(6.1,-7.2); b=to_xy(6.1,7.2)
+for k in range(15):
+    v=-5.3+10.6*k/14; x,y=to_xy(8.0,v); box("wood",x,y,-0.05,0.85,0.05,0.05)
+a=to_xy(8.0,-5.3); b=to_xy(8.0,5.3)
 for z in (0.45,0.8): solid([[(a[0],a[1]-0.03,z),(a[0],a[1]+0.03,z),(a[0],a[1]+0.03,z+0.06),(a[0],a[1]-0.03,z+0.06)],[(b[0],b[1]-0.03,z),(b[0],b[1]+0.03,z),(b[0],b[1]+0.03,z+0.06),(b[0],b[1]-0.03,z+0.06)]],"wood")
 def pine(x,y,s,z0=None):
     z0=H(x,y) if z0 is None else z0
     T2=dict(cx=x,cy=y,cz=z0,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.14,-0.4,5),ngon(0.1,1.7,5,0,0.3,0)],"bark",T2)
     for zc,r,dx in ((2.0,0.95,0.3),(1.5,0.7,-0.3),(2.45,0.55,0.5)): ico("pine",dx,0.1,zc,r,r*0.9,r*0.4,T2)
-for u,v,s in [(8.6,-5.6,1.0),(9.4,-1.4,0.9),(8.8,3.0,1.0),(9.6,6.0,0.9),(10.6,0.8,0.8),(8.2,7.2,0.85),(8.0,-8.0,0.85)]:
+for u,v,s in [(9.6,-5.8,0.95),(9.8,5.6,0.9)]:     # only a pine at either end: the view across the bay stays open
     x,y=to_xy(u,v)
     if abs(x)<FH-1.3 and abs(y)<FH-1.3: pine(x,y,s)
 for k in range(18):
@@ -194,8 +192,8 @@ for k in range(18):
     pine(x,y,rng.uniform(0.6,0.85))
 
 def ground_at(x,y): return H(x,y)
-INTERACT=to_xy(6.7,0.0)   # on the promenade, the volcano across the water
-STAND=to_xy(7.6,0.8)
+INTERACT=to_xy(8.6,0.0)   # on the promenade, the volcano across the water
+STAND=to_xy(9.4,0.8)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/sakurajima.json and read by the world layer (see docs/landmarks.md).
