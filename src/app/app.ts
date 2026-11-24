@@ -72,6 +72,7 @@ const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   snow: "walk-snow",
   mountain: "walk-mountain",
   marsh: "walk-marsh",
+  volcanic: "walk-mountain",
   water: "row-water",
 };
 const MOVEMENT_FADE_IN = 0.65;
@@ -93,6 +94,8 @@ const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
 /** Alternate shrine swell shared by the Snowline, Marshwalk, and Lantern music sets. */
 const WINTER_SHRINE_SWELL: CueId = "winter-light-restored";
 const WINTER_SHRINE_FADE_IN = 2.4;
+/** Volcanic shrines use the landmark swell, which suits the basalt theme better than the winter one. */
+const VOLCANIC_SHRINE_SWELL: CueId = "radiant-arrival";
 const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), WINTER_SHRINE_SWELL, "haiku-bell"] as const;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0;
@@ -634,9 +637,10 @@ export function startApp(container: HTMLElement): void {
           // Each swell is trimmed so its peak lands just before the wave finishes filling the region.
           cues.play(AWAKENING_BURST);
           const useWinterSwell = kind === "shrine" && (
-            backgroundTrack === "snowline-walk" || backgroundTrack === "marshwalk" || backgroundTrack === "lantern-trail" || backgroundTrack === "basalt-crossing"
+            backgroundTrack === "snowline-walk" || backgroundTrack === "marshwalk" || backgroundTrack === "lantern-trail"
           );
-          if (useWinterSwell) cues.play(WINTER_SHRINE_SWELL, WINTER_SHRINE_FADE_IN);
+          if (kind === "shrine" && backgroundTrack === "basalt-crossing") cues.play(VOLCANIC_SHRINE_SWELL);
+          else if (useWinterSwell) cues.play(WINTER_SHRINE_SWELL, WINTER_SHRINE_FADE_IN);
           else cues.play(AWAKENING_SWELLS[kind]);
         } else {
           const station = stationInReach(railway, pos);
