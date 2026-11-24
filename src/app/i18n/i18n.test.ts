@@ -6,7 +6,7 @@ import { LOCALES, detectLocale, isLocale, messagesFor, type Messages } from "./i
 function allText(m: Messages): string[] {
   return [
     ...CAPABILITIES.map((c) => m.capability[c]),
-    m.farSight,
+    m.pilgrimsWake,
     m.gearRequirement(3, "locked"),
     m.gearRequirement(3, "unlocked"),
     ...BIOMES.map((b) => m.terrain[b]),

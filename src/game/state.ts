@@ -1,5 +1,5 @@
 import { createRng } from "../core";
-import { FAR_SIGHT_STARS, capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
+import { capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
 
 /**
  * Everything the player has changed about the world. A save is the world seed
@@ -61,12 +61,10 @@ export function isLandmarkRevealed(state: GameState, region: Region): boolean {
 /**
  * Landmarks are hinted in one fixed order (by act, then a seeded rank): every seven rubbings cover the next
  * landmark in that order, and the unrestored ones among the covered get a gold star. Restoring a landmark that
- * is not yet covered (found out of order) never uncovers one that is. Far sight marks them all.
+ * is not yet covered (found out of order) never uncovers one that is.
  */
 export function revealLandmarks(state: GameState, world: World): GameState {
-  const unrestored = world.landmarks.filter((region) => !isRestored(state, region));
-  const restored = world.landmarks.length - unrestored.length;
-  const covered = restored >= FAR_SIGHT_STARS ? world.landmarks.length : Math.floor(state.collected.length / RUBBINGS_PER_REVEAL);
+  const covered = Math.floor(state.collected.length / RUBBINGS_PER_REVEAL);
   const order = createRng(world.seed).fork("landmark-reveals");
   const revealedLandmarks = new Set(
     world.landmarks.map((region) => ({ landmark: region.landmark!, restored: isRestored(state, region), rank: order.fork(region.landmark!.id).next() }))

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { frontGlow, lifeAt } from "../game";
+import { frontGlow, lifeAt, type RestorationWake } from "../game";
 import type { Point } from "../world";
 import { palette } from "./palette";
 
@@ -9,10 +9,14 @@ export interface VitalityMesh {
   readonly regionIds: ReadonlySet<string>;
   /**
    * Recolours from each region's restoration progress (0 dead, 1 alive, in
-   * between a front sweeping out from the shrine). With `only`, regions not
-   * in the set are left as they are.
+   * between a front sweeping out from the shrine or the traveller). With
+   * `only`, regions outside the set are left as they are.
    */
-  applyVitality(progressOf: (regionId: string) => number, only?: ReadonlySet<string>): void;
+  applyVitality(
+    progressOf: (regionId: string) => number,
+    only?: ReadonlySet<string>,
+    wakeOf?: (regionId: string) => RestorationWake | undefined,
+  ): void;
   dispose(): void;
 }
 
@@ -130,7 +134,8 @@ export class VitalityBuilder {
     const { alive, dead, distance, vertexRegion, regionList } = this;
     const count = vertexRegion.length;
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.positions, 3));
+    const positions = new THREE.Float32BufferAttribute(this.positions, 3);
+    geometry.setAttribute("position", positions);
     const colors = new Float32Array(alive);
     const colorAttr = new THREE.BufferAttribute(colors, 3).setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute("color", colorAttr);
@@ -144,17 +149,19 @@ export class VitalityBuilder {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
 
-    const applyVitality = (progressFor: (regionId: string) => number, only?: ReadonlySet<string>): void => {
+    const applyVitality: VitalityMesh["applyVitality"] = (progressFor, only, wakeOf) => {
       if (only && !regionList.some((id) => only.has(id))) return;
       const progress = regionList.map((id) => Math.min(1, Math.max(0, progressFor(id))));
       const skip = regionList.map((id) => (only ? !only.has(id) : false));
+      const wakes = wakeOf && regionList.map(wakeOf);
       for (let i = 0; i < count; i++) {
         const r = vertexRegion[i]!;
         if (skip[r]) continue;
         const p = progress[r]!;
-        const d = distance[i]!;
-        const t = lifeAt(p, d);
-        const glow = frontGlow(p, d) * GLOW_STRENGTH;
+        const wake = wakes?.[r];
+        const d = wake && p < 1 ? Math.hypot(positions.getX(i) - wake.origin.x, positions.getZ(i) - wake.origin.z) : distance[i]!;
+        const t = lifeAt(p, d, wake?.extent);
+        const glow = frontGlow(p, d, wake?.extent) * GLOW_STRENGTH;
         life[i] = t;
         const k = i * 3;
         colors[k] = Math.min(1, dead[k]! + (alive[k]! - dead[k]!) * t + GLOW.r * glow);
@@ -187,7 +194,7 @@ export function combine(parts: readonly VitalityMesh[]): VitalityMesh {
   return {
     object,
     regionIds: ids,
-    applyVitality: (v, only) => parts.forEach((p) => p.applyVitality(v, only)),
+    applyVitality: (v, only, wakeOf) => parts.forEach((p) => p.applyVitality(v, only, wakeOf)),
     dispose: () => parts.forEach((p) => p.dispose()),
   };
 }

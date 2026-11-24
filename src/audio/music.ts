@@ -42,8 +42,8 @@ export interface MusicStatus {
 export interface Music {
   /** Call from a user gesture (key, click): browsers block audio before one. */
   unlock(): void;
-  /** Crossfades to a track, over `fadeSeconds` if given. Does nothing if it is already the current one. */
-  setTrack(id: TrackId, fadeSeconds?: number): void;
+  /** Switches tracks, with an optional cut for outgoing voices that are already ducked. */
+  setTrack(id: TrackId, fadeSeconds?: number, outgoing?: "crossfade" | "cut"): void;
   /** Master volume in [0, 1]. */
   setVolume(volume: number): void;
   setMuted(muted: boolean): void;
@@ -108,6 +108,7 @@ export function createMusic(options: MusicOptions = {}): Music {
     voices.push(voice);
     // Autoplay can still be refused (e.g. the gesture was too old); retry on the next unlock().
     Promise.resolve(voice.player.play()).catch(() => {
+      if (!voices.includes(voice)) return;
       voices = voices.filter((x) => x !== voice);
       unlocked = false;
     });
@@ -125,8 +126,12 @@ export function createMusic(options: MusicOptions = {}): Music {
       unlocked = true;
       if (!voices.some((v) => v.id === desired && v.target === 1)) begin();
     },
-    setTrack(id, seconds) {
+    setTrack(id, seconds, outgoing = "crossfade") {
       if (id === desired) return;
+      if (outgoing === "cut") {
+        for (const voice of voices) voice.player.pause();
+        voices = [];
+      }
       fadeSeconds = Math.max(0.1, seconds ?? defaultFade);
       desired = id;
       begin();

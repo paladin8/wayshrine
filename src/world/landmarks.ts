@@ -108,10 +108,10 @@ export const CAPABILITY_THRESHOLDS: Readonly<Record<Capability, number>> = {
 };
 
 /**
- * Far sight marks every unrestored landmark on the map after 58 restorations. It opens no
- * terrain, so it never affects where landmarks can be placed.
+ * Pilgrim’s Wake restores dormant regions when the traveller enters them after 58 landmarks.
+ * It opens no terrain, so it never affects where landmarks can be placed.
  */
-export const FAR_SIGHT_STARS = 58;
+export const PILGRIMS_WAKE_STARS = 58;
 
 export function capabilitiesForCount(count: number): ReadonlySet<Capability> {
   const held = new Set<Capability>();

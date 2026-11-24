@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAPABILITIES, CAPABILITY_THRESHOLDS, FAR_SIGHT_STARS, createWorld } from "../world";
+import { CAPABILITIES, CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, createWorld } from "../world";
 import {
   landmarksRestored,
   canEnter,
@@ -261,12 +261,12 @@ describe("landmark map reveals", () => {
     expect(firstReveals).toEqual(names(0, 3));
   });
 
-  it("far sight marks every remaining landmark once enough are restored, and not before", () => {
-    const before = revealLandmarks(withLandmarks(FAR_SIGHT_STARS - 1), world);
-    expect(before.revealedLandmarks.size).toBe(0);
-    const after = revealLandmarks(withLandmarks(FAR_SIGHT_STARS), world);
-    expect(after.revealedLandmarks.size).toBe(world.landmarks.length - FAR_SIGHT_STARS);
-    for (const r of world.landmarks.slice(FAR_SIGHT_STARS)) expect(isLandmarkRevealed(after, r)).toBe(true);
+  it("still requires rubbings to reveal remaining landmarks after Pilgrim’s Wake unlocks", () => {
+    const unlocked = withLandmarks(PILGRIMS_WAKE_STARS);
+    expect(revealLandmarks(unlocked, world).revealedLandmarks.size).toBe(0);
+    const collected = rubbings(world.landmarks.length * 7);
+    const after = revealLandmarks({ ...unlocked, collected }, world);
+    expect(after.revealedLandmarks).toEqual(names(PILGRIMS_WAKE_STARS, world.landmarks.length));
   });
 
   it("recalculates old markers from collected rubbings and the seed", () => {

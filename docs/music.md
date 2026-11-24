@@ -32,7 +32,7 @@ The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `
 
 **Breeze**, **Waves**, and **Ridgewalk** use **Dawn Reverence** for ordinary shrines. **Snowline** and **Marshwalk** use **Winter Light Restored**. Every set uses **Radiant Arrival** for landmarks and the same awakening burst.
 
-In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), **Snowline** (Snowline Walk), **Ridgewalk** (Ridgewalk in E Major), and **Marshwalk** (Still Water Reeds), **Lantern**, **Basalt**, and **Open sea**. The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
+The **music button** at the top right (two eighth notes and a number) cycles the background through the themes the traveller has unlocked. The number is the playing theme's place among them. Breeze is always unlocked; Waves, Snowline, Ridgewalk, Marshwalk, Lantern, Basalt, and Open sea unlock with the first use of the matching gear (boat, snowshoes, climbing gear, geta, lantern, ash sandals, ship), and Sunlit fields with Pilgrim’s Wake. A click moves to the next unlocked theme and wraps; after the newest one it returns to following progression. A pick applies to the next restoration. It is ignored during a gear moment, and a new unlock or gear moment hands the music back to progression. The pick is not saved, so a reload follows progression again.
 
 ## Boat prototype
 
@@ -70,8 +70,14 @@ In **Gear acquisition**, **Preview ship unlock** and **Preview first sailing** p
 
 Under way the ship uses the same rowing loop as the skiff (`MOVEMENT_CUES.sea`); there is no sound yet for the gangway or casting off.
 
+## Pilgrim’s Wake
+
+Restoring the 58th landmark unlocks Pilgrim’s Wake. Its landmark swell hands off directly to **Road Through Sunlit Fields**, which stays selected in Auto after reload. Later passive restorations leave the background alone and play no restoration swell.
+
+In **Gear acquisition**, **Preview Pilgrim’s Wake unlock** shows the unlock message.
+
 ## Code
-- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed, lanternUsed, ashSandalsUsed, shipLaunched)`, the set selection for each stage.
+- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed, lanternUsed, ashSandalsUsed, shipLaunched, pilgrimsWake)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
 - `src/app/settings.ts`, `src/app/settings-panel.ts`: persisted settings and the dialog that edits them.
 
@@ -86,6 +92,8 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
 | `marshwalk` | `marshwalk.mp3` | Supplied by the project owner (`Still_Water_Reeds`). Three minutes, stereo MP3, about -16.7 LUFS. Becomes the background after the first geta step. |
 | `open-sea` | `open-sea.mp3` | Supplied by the project owner (`Beyond_The_Headland`). Three minutes, stereo MP3, about -12 LUFS, so it plays at gain 0.65 to sit level with the others. Becomes the background after the first sailing. |
+
+| `road-through-sunlit-fields` | `road-through-sunlit-fields.mp3` | Supplied by the project owner (`Road_Through_Sunlit_Fields`). Three minutes, stereo MP3. Final background after Pilgrim’s Wake. |
 
 Record the origin and licence of each track here when it is added.
 

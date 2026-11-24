@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { frontRadius } from "../game";
+import { frontRadius, type RestorationWake } from "../game";
 import type { Point, Terrain } from "../world";
 import { biomeArt } from "./biome-art";
 import { Kind, ParticleLayer, stepParticle, type Particle } from "./particles";
@@ -38,6 +38,7 @@ export interface AmbientView {
   readonly zoom: number;
   /** The region being awakened and its progress, if any. */
   readonly awakening: { readonly regionId: string; readonly progress: number } | null;
+  readonly wakes?: ReadonlyMap<string, RestorationWake>;
 }
 
 /**
@@ -163,14 +164,14 @@ export function createAmbient(
     paint(p, GOLD, rand(4, 7), 0.9);
   }
 
-  function spawnFront(awakening: NonNullable<AmbientView["awakening"]>, glowFreeFront: number): void {
-    const radius = frontRadius(awakening.progress);
-    if (radius === null || glowFreeFront < 0) return;
-    const region = world.regionById(awakening.regionId);
+  function spawnFront(regionId: string, progress: number, glowFreeFront: number, wake?: RestorationWake): void {
+    const radius = frontRadius(progress, wake?.extent);
+    if (radius === null || radius < 0 || glowFreeFront < 0) return;
+    const origin = wake?.origin ?? world.regionById(regionId).shrine;
     const angle = rand(0, Math.PI * 2);
-    const x = region.shrine.x + Math.cos(angle) * radius;
-    const z = region.shrine.z + Math.sin(angle) * radius;
-    if (world.regionAt(x, z).id !== region.id) return;
+    const x = origin.x + Math.cos(angle) * radius;
+    const z = origin.z + Math.sin(angle) * radius;
+    if (world.regionAt(x, z).id !== regionId) return;
     const ground = terrain.tileAtPoint(x, z).height;
     const p = spawn(glow.particles[glowFreeFront]!, Kind.Front, x, z, ground + 0.2, ground);
     p.maxAge = rand(1.2, 2.2);
@@ -220,7 +221,11 @@ export function createAmbient(
       }
       if (Math.random() < dt * 14 && sparks.active() < SPARKS) spawnSparks(view.focus, sparks.free());
       if (view.awakening) {
-        for (let i = 0; i < 4; i++) spawnFront(view.awakening, front.free());
+        const { regionId, progress } = view.awakening;
+        for (let i = 0; i < 4; i++) spawnFront(regionId, progress, front.free());
+      }
+      for (const [regionId, wake] of view.wakes ?? []) {
+        for (let i = 0; i < 4; i++) spawnFront(regionId, wake.progress, front.free(), wake);
       }
 
       const scale = pixelScale() * (1 - 0.3 * view.zoom);

@@ -95,8 +95,8 @@ export interface Monument {
   readonly scene?: HaikuSceneKind;
 }
 
-/** Chance of a region holding 0, 1 or 2 monuments. Most of the world is peacefully empty. */
-const COUNT_WEIGHTS = [0.2, 0.55, 0.25] as const;
+/** Chance of a region holding 0, 1 or 2 monuments. Ordinary scatter averages 0.95 monuments per candidate region. */
+const COUNT_WEIGHTS = [0.26, 0.53, 0.21] as const;
 
 /** Monuments keep this far from every region boundary, so the wave and fog treat them as inside. */
 export const MONUMENT_EDGE_MARGIN = 5;
@@ -117,16 +117,25 @@ function countFor(rng: Rng): number {
   return 1;
 }
 
-/** Regions in rings of increasing Chebyshev distance from the origin cell. */
+/** One annulus of region centres, in region widths from the starting cell. */
 function ring(radius: number): Array<[number, number]> {
   if (radius === 0) return [[0, 0]];
+  const inner = (radius - 1) ** 2;
+  const outer = radius ** 2;
   const cells: Array<[number, number]> = [];
-  for (let i = -radius; i <= radius; i++) {
-    cells.push([i, -radius], [i, radius]);
-    if (i > -radius && i < radius) cells.push([-radius, i], [radius, i]);
+  for (let rz = -radius; rz <= radius; rz++) {
+    for (let rx = -radius; rx <= radius; rx++) {
+      const d = rx * rx + rz * rz;
+      if (d > inner && d <= outer) cells.push([rx, rz]);
+    }
   }
   return cells;
 }
+
+const LANDMARK_NEIGHBOURS = [
+  [0, 0], [0, -1], [1, 0], [0, 1], [-1, 0],
+  [-1, -1], [1, -1], [1, 1], [-1, 1],
+] as const;
 
 /** Distance to the nearest region boundary, approximated through the bisector with the nearest rival sites. */
 function edgeMargin(world: World, region: Region, x: number, z: number): number {
@@ -202,9 +211,8 @@ export interface MonumentPlan {
  * Where every text's monument stands: a pure function of the seed and the specs.
  *
  * The world is infinite but the set of texts is finite, so monuments are laid out
- * in rings around the starting region, filling only as many regions as it takes.
- * Each region holds at most two, which keeps them far apart: finding one is an
- * expedition.
+ * in circular bands around the start. Leave space for a find near landmarks
+ * even if their regions lie beyond the general scatter. Each region holds at most two.
  */
 export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]): MonumentPlan {
   const world = terrain.world;
@@ -215,20 +223,34 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
   type Slot = { region: Region; position: Point; rotation: number; variant: number };
   const slots: Slot[] = [];
   const pinnedSpecs: MonumentSpec[] = [];
-  const pinnedIn = new Map<string, Point[]>();
+  const reservedIn = new Map<string, Point[]>();
+  const reserve = (region: Region, rng: Rng): boolean => {
+    const here = reservedIn.get(region.id) ?? [];
+    if (here.length >= 2) return false;
+    const position = pickPosition(world, terrain, region, rng, here[0] ?? null);
+    if (!position) return false;
+    here.push(position);
+    reservedIn.set(region.id, here);
+    slots.push({ region, position, rotation: rng.range(-0.5, 0.5), variant: rng.next() });
+    return true;
+  };
   const landmarkRegions = new Map(world.landmarks.map((r) => [r.landmark?.id ?? "", r]));
   for (const spec of specs) {
     const region = spec.landmark ? landmarkRegions.get(spec.landmark) : undefined;
     if (!region) continue;
-    const here = pinnedIn.get(region.id) ?? [];
-    if (here.length >= 2) continue;
-    const rng = root.fork(`landmark:${spec.id}`);
-    const position = pickPosition(world, terrain, region, rng, here[0] ?? null);
-    if (!position) continue;
-    here.push(position);
-    pinnedIn.set(region.id, here);
-    slots.push({ region, position, rotation: rng.range(-0.5, 0.5), variant: rng.next() });
-    pinnedSpecs.push(spec);
+    if (reserve(region, root.fork(`landmark:${spec.id}`))) pinnedSpecs.push(spec);
+  }
+
+  // Give the full collection a foothold near every landmark, including those beyond the
+  // last ring. A linked rubbing already in that neighbourhood fulfils the reservation.
+  if (slots.length + world.landmarks.length <= specs.length) {
+    for (const { coord, id } of world.landmarks) {
+      const neighbourhood = LANDMARK_NEIGHBOURS.map(([dx, dz]) => world.region(coord.rx + dx, coord.rz + dz));
+      if (neighbourhood.some((region) => reservedIn.has(region.id))) continue;
+      for (const region of neighbourhood) {
+        if (reserve(region, root.fork(`landmark-neighbourhood:${id}:${region.id}`))) break;
+      }
+    }
   }
 
   // 1. Find valid slots ring by ring. A cramped region can hold fewer stones.
@@ -236,7 +258,7 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
     const ringSlots: Slot[] = [];
     for (const [rx, rz] of ring(r)) {
       const region = world.region(rx, rz);
-      const taken = pinnedIn.get(region.id) ?? [];
+      const taken = reservedIn.get(region.id) ?? [];
       const n = countFor(root.fork(`count:${region.id}`)) - taken.length;
       let previous: Point | null = taken[taken.length - 1] ?? null;
       for (let index = 0; index < n; index++) {

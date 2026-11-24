@@ -122,7 +122,8 @@ def water_disc(x,y): return False
 # so no one could climb it (laid on the 0.8 grid so the terrain's slope stays inside the stone)
 HM=2.4; HX0,HX1,HY0,HY1=-6.4,4.8,-2.4,7.2
 def wring(o,z): return rect((HX1-HX0)/2+o,(HY1-HY0)/2+o,z,(HX0+HX1)/2,(HY0+HY1)/2)
-WP=[(-0.05,1.7),(0.7,0.95),(1.35,0.45),(1.9,0.14),(HM,0.0)]
+# exaggerated for the game camera: a long shallow foot, then the last third standing almost sheer
+WP=[(-0.05,2.15),(0.45,1.45),(0.9,0.86),(1.3,0.42),(1.6,0.16),(1.95,0.04),(HM,0.0)]
 solid([wring(o,z) for z,o in WP],"stone",mt="pave")
 def wo(z):
     for (z0,o0),(z1,o1) in zip(WP,WP[1:]):
@@ -141,6 +142,13 @@ for ci,(za,zb) in enumerate(zip([0.0,0.4,0.8,1.15,1.5,1.82,2.12],[0.4,0.8,1.15,1
     y=HY0+rng.uniform(0.2,0.9)
     while y<HY1-0.3:
         box("joint",HX1+om,y,za,zb,0.012,0.012); y+=rng.uniform(0.7,1.4)
+# the front corner, nearest the camera: long and short corner stones (sangi-zumi) in paler stone trace the curve,
+# so the shallow foot and the sheer lip can be compared at a glance
+zs=[i*HM/14 for i in range(15)]
+for i,(za,zb) in enumerate(zip(zs,zs[1:])):
+    o=wo((za+zb)/2)+0.02; cx,cy=HX1+o,HY0-o; lg=0.55 if i%2 else 0.3
+    box("pave",cx-lg/2+0.06,cy,za+0.01,zb-0.01,lg/2,0.05)
+    box("pave",cx,cy+(0.3 if i%2 else 0.55)/2-0.06,za+0.01,zb-0.01,0.05,(0.3 if i%2 else 0.55)/2)
 for k in range(12):                                           # the stone stair up to the honmaru
     box("stone",(SX0+SX1)/2,HY0-2.3+0.2*k,-0.05,HM*(k+1)/12,(SX1-SX0)/2,0.1)
 box("pave",0.6,-7.0,-0.04,0.03,5.4,2.4)
@@ -198,7 +206,7 @@ def tree(x,y,s,m,z0=0.0):
     T=dict(cx=x,cy=y,cz=z0,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.17,-0.3,5),ngon(0.11,2.0,5)],"bark",T)
     ico(m,0,0,2.6,1.25,1.15,1.15,T); ico(m,0.6,0.35,2.1,0.8,0.75,0.7,T)
-for x,y,s,m in [(-8.4,-4.0,1.0,"ginkgo"),(-4.0,-6.6,1.0,"leaf"),(6.6,-5.0,1.05,"ginkgo"),(8.0,-1.0,1.0,"leaf"),(8.2,4.0,1.0,"leaf"),(6.8,8.6,0.95,"leaf"),
+for x,y,s,m in [(-8.4,-4.0,1.0,"ginkgo"),(-4.0,-6.6,1.0,"leaf"),(8.9,-4.4,1.05,"ginkgo"),(8.0,-1.0,1.0,"leaf"),(8.2,4.0,1.0,"leaf"),(6.8,8.6,0.95,"leaf"),
                 (-8.6,2.4,1.0,"leaf"),(-8.8,7.4,0.95,"leaf"),(-3.4,9.4,0.9,"leaf"),(1.6,9.4,0.95,"ginkgo"),(-8.2,-8.6,0.9,"leaf"),(4.4,-8.8,0.85,"leaf")]:
     tree(x,y,s,m)
 for x,y,s in [(-5.6,5.6,0.8),(3.8,6.0,0.8),(4.0,-1.4,0.75)]:
@@ -208,6 +216,11 @@ def ground_at(x,y):
     if HX0-0.05<=x<=HX1+0.05 and HY0-0.05<=y<=HY1+0.05: return HM
     if SX0<=x<=SX1 and HY0-2.45<=y<HY0: return HM*(y-(HY0-2.4))/2.4
     return 0.0
+def terrain_at(x,y):
+    # the game samples the terrain on 1-unit tiles: on the honmaru it sits under the paving, low enough that the
+    # slope from its edge down to the lawn runs inside the curving wall instead of out through its face
+    if HX0-0.05<=x<=HX1+0.05 and HY0-0.05<=y<=HY1+0.05: return HM-0.6
+    return ground_at(x,y)
 INTERACT=(2.4,-1.5)   # at the head of the stair, the keeps above
 STAND=(2.4,-5.8)
 

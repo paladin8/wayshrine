@@ -10,7 +10,7 @@ GLB=ROOT+"/public/models/landmarks/kinkaku-ji.glb"
 BLEND=ROOT+"/content/landmarks/kinkaku-ji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"gold":"e2b34c","water":"3fb2bd","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","darkwood":"6e5442","snow":"f1f4f6","foliage":"5f9a52","vermilion":"d96b59","glow_cream":"e8dcb0"}
+PAL={"gold":"e2b34c","water":"3c6f6c","shimmer":"b39445","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","darkwood":"6e5442","snow":"f1f4f6","foliage":"5f9a52","vermilion":"d96b59","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -171,14 +171,25 @@ def pine(cx,cy,cz,s,ang):
     ico("foliage",0.45,-0.1,2.05,0.5,0.45,0.22,T)
 
 # islands, rocks and pines in the pond
-island(-3.0,-2.6,1.6); island(1.4,-4.2,0.8); island(-4.6,-4.4,0.65)
-pine(-3.4,-2.5,0.15,1.0,0.4); pine(-2.3,-2.9,0.15,0.75,2.6); pine(1.35,-4.2,0.15,0.8,1.2)
-for (x,y,r) in [(0.6,-0.4,0.38),(2.8,-1.2,0.32),(-1.3,0.8,0.3),(3.6,-3.6,0.34),(-4.5,-4.3,0.3)]: rock(x,y,WATER_Z,r)
+# the islands keep to the west half, leaving an open lane of water from the front shore to the pavilion
+island(-3.0,-2.6,1.6); island(-4.6,-4.4,0.65)
+pine(-3.4,-2.5,0.15,1.0,0.4); pine(-2.3,-2.9,0.15,0.75,2.6)
+for (x,y,r) in [(-1.3,0.8,0.3),(-4.5,-4.3,0.3),(-5.4,-1.0,0.32)]: rock(x,y,WATER_Z,r)
+# the pavilion's reflection: broken strips of muted gold on the water directly below it in the game view
+# (the camera looks along +x/-y, so "below" on screen is toward the front-right of the pavilion's water face)
+for k in range(14):
+    d=0.45+0.32*k+rng.uniform(-0.06,0.06)                  # distance out from the facade, along the view
+    for seg in range(3):
+        x0=-1.4+1.75*seg+rng.uniform(-0.25,0.35); L=rng.uniform(0.45,1.25)*(1.0-0.045*k)
+        cx,cy=x0+0.707*d,1.2-0.707*d; w=0.06+0.04*rng.random()
+        ex,ey=0.707*L/2,0.707*L/2; nx,ny=0.707*w,-0.707*w          # laid level across the screen, as ripples are
+        if pond_m(cx-ex,cy-ey)>0.9 or pond_m(cx+ex,cy+ey)>0.9 or rng.random()<0.25: continue
+        emit([(cx-ex-nx,cy-ey-ny,WATER_Z+0.012),(cx+ex-nx,cy+ey-ny,WATER_Z+0.012),(cx+ex+nx,cy+ey+ny,WATER_Z+0.012),(cx-ex+nx,cy-ey+ny,WATER_Z+0.012)],[[0,1,2,3]],["shimmer"],orient=False)
 for k in range(14):
     th=2*math.pi*k/14+rng.uniform(-0.12,0.12)
     if 35<math.degrees(th)%360<120: continue      # leave the pavilion's shore clear
     x,y=pond_pt(th,1.02); rock(x,y,-0.06,rng.uniform(0.32,0.5))
-pine(-5.6,2.6,0.0,1.15,-0.75); pine(2.8,-6.9,0.0,1.0,2.2)
+pine(-5.6,2.6,0.0,1.15,-0.75); pine(-6.4,-6.9,0.0,1.0,2.2)
 
 # ---- Kinkaku (the Golden Pavilion): three storeys, the first partly over the water
 PX,PY=1.0,3.6

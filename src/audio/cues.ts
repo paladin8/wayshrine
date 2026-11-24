@@ -4,7 +4,7 @@ const MOVEMENT_GAIN = 0.32;
 const FOOTSTEP_GAIN = MOVEMENT_GAIN * 0.75;
 
 /** Sound effects, separate from background music. */
-export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "basalt-restoration", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "walk-meadow", "walk-snow", "walk-mountain", "walk-marsh", "row-water", "rail-roll"] as const;
+export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "basalt-restoration", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "walk-meadow", "walk-snow", "walk-mountain", "walk-marsh", "row-water", "rail-roll", "shrine-travel"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -22,6 +22,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "awakening-burst": { url: `${base}audio/cues/awakening-burst.mp3` },
   "haiku-bell": { url: `${base}audio/cues/haiku-bell.wav`, gain: 0.65 },
   "haiku-cicadas": { url: `${base}audio/cues/haiku-cicadas.wav`, loop: true, gain: 0.36 },
+  "shrine-travel": { url: `${base}audio/cues/shrine-travel.mp3` },
   "monument-read": { url: `${base}audio/cues/monument-read.mp3` },
   "book-open": { url: `${base}audio/cues/book-open.mp3` },
   "page-flip": { url: `${base}audio/cues/page-flip.mp3` },

@@ -10,7 +10,7 @@ export const ja: Messages = {
     ashSandals: "灰よけの草履",
     ship: "船",
   },
-  farSight: "千里眼",
+  pilgrimsWake: "巡礼の息吹",
   gearRequirement(stars, status) {
     switch (status) {
       case "locked": return `解放には星${stars}個が必要`;
@@ -98,6 +98,7 @@ export const ja: Messages = {
     "snow-monkeys": "地獄谷野猿公苑",
   },
   landmarksRestored: (count) => `蘇った名所: ${count}`,
+  musicTrack: (number, total) => total > 1 ? `音楽: ${total}曲中${number}曲目（クリックで次の曲）` : `音楽: ${number}曲目`,
   notebook: {
     title: "旅の日記",
     empty: "まだ何も書かれていません。名所を蘇らせると、最初のページが埋まります。",
@@ -115,6 +116,7 @@ export const ja: Messages = {
     lantern: { title: "提灯を手に入れた", hint: "暗い森に足を踏み入れると、提灯に火を灯せます。" },
     ashSandals: { title: "灰よけの草履を手に入れた", hint: "火山の大地に足を踏み入れると、草履を履けます。" },
     ship: { title: "船を手に入れた", hint: "外海の岸辺へ向かうと、船に乗れます。" },
+    pilgrimsWake: { title: "巡礼の息吹が目覚めた", hint: "眠っている地域に足を踏み入れると、大地が蘇ります。" },
   },
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",

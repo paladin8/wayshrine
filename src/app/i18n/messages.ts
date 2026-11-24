@@ -11,8 +11,8 @@ export type Locale = (typeof LOCALES)[number];
 export interface Messages {
   /** Names of the capabilities the player collects. */
   readonly capability: Readonly<Record<Capability, string>>;
-  /** Far sight marks every remaining landmark on the map. */
-  readonly farSight: string;
+  /** Pilgrim’s Wake restores dormant regions as the traveller enters them. */
+  readonly pilgrimsWake: string;
   readonly gearRequirement: (stars: number, status: "locked" | "unlocked") => string;
   /** Terrain as it is named when it blocks the way ("to cross ..."). */
   readonly terrain: Readonly<Record<Biome, string>>;
@@ -21,6 +21,8 @@ export interface Messages {
   /** Display names of the landmarks, by id. */
   readonly landmarkNames: Readonly<Record<string, string>>;
   readonly landmarksRestored: (count: number) => string;
+  /** The music button's tooltip: which unlocked track is playing, and that a click moves to the next. */
+  readonly musicTrack: (number: number, total: number) => string;
   /** The travel notebook that lists restored landmarks. */
   readonly notebook: {
     readonly title: string;
@@ -32,7 +34,7 @@ export interface Messages {
     readonly next: string;
     readonly close: string;
   };
-  readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern" | "ashSandals" | "ship", { readonly title: string; readonly hint: string }>>;
+  readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern" | "ashSandals" | "ship" | "pilgrimsWake", { readonly title: string; readonly hint: string }>>;
   readonly promptRestore: string;
   readonly promptRestoreLandmark: string;
   readonly promptSkip: string;

@@ -12,6 +12,7 @@ delete (lines as Record<string, unknown>)["_about"];
 const source = combineSources(
   read("content/source/japanese-texts.json") as never,
   read("content/source/landmark-haiku.json") as never,
+  read("content/source/outer-rubbings.json") as never,
 );
 const { texts, index } = buildContent(source, scenery, undefined, lines);
 const write = (path: string, value: unknown): void =>

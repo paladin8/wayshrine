@@ -10,7 +10,7 @@ export const en: Messages = {
     ashSandals: "Ash sandals",
     ship: "Ship",
   },
-  farSight: "Far sight",
+  pilgrimsWake: "Pilgrim’s Wake",
   gearRequirement(stars, status) {
     switch (status) {
       case "locked": return `Requires ${stars} stars`;
@@ -98,6 +98,7 @@ export const en: Messages = {
     "snow-monkeys": "Jigokudani snow monkeys",
   },
   landmarksRestored: (count) => `Landmarks restored: ${count}`,
+  musicTrack: (number, total) => total > 1 ? `Music: track ${number} of ${total} (click for the next)` : `Music: track ${number}`,
   notebook: {
     title: "Travel journal",
     empty: "Nothing written yet. Restore a landmark and the first page will fill in.",
@@ -115,6 +116,7 @@ export const en: Messages = {
     lantern: { title: "Lantern unlocked", hint: "Step into the dark forest to light it." },
     ashSandals: { title: "Ash sandals unlocked", hint: "Walk onto volcanic ground to put them on." },
     ship: { title: "Ship unlocked", hint: "Walk out to the open sea to board it." },
+    pilgrimsWake: { title: "Pilgrim’s Wake awakened", hint: "Enter a dormant region to restore it with your footsteps." },
   },
   promptRestore: "Press E to restore the shrine",
   promptRestoreLandmark: "Press E to restore the landmark",

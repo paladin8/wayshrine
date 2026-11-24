@@ -1,0 +1,1625 @@
+{
+  "title": "Additional proverbs and sayings for Wayshrine",
+  "compiled_on": "2026-11-24",
+  "entry_count": 200,
+  "counts_by_type": {
+    "proverb": 29,
+    "four_character_idiom": 111,
+    "idiom": 60
+  },
+  "sources": {
+    "jmdict": {
+      "title": "JMdict Japanese–English dictionary",
+      "credit": "Electronic Dictionary Research and Development Group (EDRDG) and JMdict contributors",
+      "url": "https://www.edrdg.org/wiki/JMdict-EDICT_Dictionary_Project.html",
+      "download_url": "https://www.edrdg.org/pub/Nihongo/JMdict_e.gz",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "license_statement_url": "https://www.edrdg.org/edrdg/licence.html",
+      "changes": "Selected one Japanese form and English sense per entry. Many glosses are adapted to read naturally as short bilingual inscriptions. Distinct forms of an existing saying were omitted where identified.",
+      "version": "2026-11-24"
+    }
+  },
+  "entries": [
+    {
+      "id": "jmdict-1640760",
+      "type": "proverb",
+      "japanese": "窮すれば通ず",
+      "english": "when all seems lost, a way opens",
+      "source": "jmdict",
+      "source_locator": "1640760"
+    },
+    {
+      "id": "jmdict-1810770",
+      "type": "proverb",
+      "japanese": "魚心あれば水心",
+      "english": "favor calls for favor, as fish and water depend on each other",
+      "source": "jmdict",
+      "source_locator": "1810770"
+    },
+    {
+      "id": "jmdict-2141260",
+      "type": "proverb",
+      "japanese": "石が流れて木の葉が沈む",
+      "english": "sometimes stones float and leaves sink",
+      "source": "jmdict",
+      "source_locator": "2141260"
+    },
+    {
+      "id": "jmdict-2174520",
+      "type": "proverb",
+      "japanese": "己達せんと欲して人を達せしむ",
+      "english": "if you want to succeed, help others succeed first",
+      "source": "jmdict",
+      "source_locator": "2174520"
+    },
+    {
+      "id": "jmdict-2416880",
+      "type": "proverb",
+      "japanese": "鬼が出るか仏が出るか",
+      "english": "who knows whether an ogre or a Buddha will appear?",
+      "source": "jmdict",
+      "source_locator": "2416880"
+    },
+    {
+      "id": "jmdict-2417040",
+      "type": "proverb",
+      "japanese": "金銀は回り持ち",
+      "english": "silver and gold pass from hand to hand",
+      "source": "jmdict",
+      "source_locator": "2417040"
+    },
+    {
+      "id": "jmdict-2417530",
+      "type": "proverb",
+      "japanese": "歳月流るる如し",
+      "english": "the years flow away",
+      "source": "jmdict",
+      "source_locator": "2417530"
+    },
+    {
+      "id": "jmdict-2418040",
+      "type": "proverb",
+      "japanese": "上手の手から水が漏れる",
+      "english": "water slips through even skillful hands",
+      "source": "jmdict",
+      "source_locator": "2418040"
+    },
+    {
+      "id": "jmdict-2418200",
+      "type": "proverb",
+      "japanese": "身を捨ててこそ浮かぶ瀬もあれ",
+      "english": "sometimes you have to let go before you can find a place to stand",
+      "source": "jmdict",
+      "source_locator": "2418200"
+    },
+    {
+      "id": "jmdict-2418850",
+      "type": "proverb",
+      "japanese": "待てば海路の日和あり",
+      "english": "wait and a fair day for sailing will come",
+      "source": "jmdict",
+      "source_locator": "2418850"
+    },
+    {
+      "id": "jmdict-2418860",
+      "type": "proverb",
+      "japanese": "鯛の尾より鰯の頭",
+      "english": "better the head of a sardine than the tail of a sea bream",
+      "source": "jmdict",
+      "source_locator": "2418860"
+    },
+    {
+      "id": "jmdict-2418990",
+      "type": "proverb",
+      "japanese": "地獄の沙汰も金次第",
+      "english": "even the verdicts of hell depend on money",
+      "source": "jmdict",
+      "source_locator": "2418990"
+    },
+    {
+      "id": "jmdict-2419540",
+      "type": "proverb",
+      "japanese": "負けるが勝ち",
+      "english": "sometimes losing is how you win",
+      "source": "jmdict",
+      "source_locator": "2419540"
+    },
+    {
+      "id": "jmdict-2420100",
+      "type": "proverb",
+      "japanese": "隣の花は赤い",
+      "english": "the neighbor's flowers always look redder",
+      "source": "jmdict",
+      "source_locator": "2420100"
+    },
+    {
+      "id": "jmdict-2646530",
+      "type": "proverb",
+      "japanese": "残り物に福あり",
+      "english": "there's good fortune in what others leave behind",
+      "source": "jmdict",
+      "source_locator": "2646530"
+    },
+    {
+      "id": "jmdict-2694350",
+      "type": "proverb",
+      "japanese": "転んでもただでは起きない",
+      "english": "even after a fall, get up with something in hand",
+      "source": "jmdict",
+      "source_locator": "2694350"
+    },
+    {
+      "id": "jmdict-2713340",
+      "type": "proverb",
+      "japanese": "猫耳を洗うと雨が降る",
+      "english": "when a cat washes its ears, rain is coming",
+      "source": "jmdict",
+      "source_locator": "2713340"
+    },
+    {
+      "id": "jmdict-2789880",
+      "type": "proverb",
+      "japanese": "あの声で蜥蜴食らうか時鳥",
+      "english": "with a voice like that, who'd think the cuckoo eats lizards?",
+      "source": "jmdict",
+      "source_locator": "2789880"
+    },
+    {
+      "id": "jmdict-2828900",
+      "type": "proverb",
+      "japanese": "山中の賊を破るは易く心中の賊を破るは難し",
+      "english": "the bandit in the mountains is easier to rout than the one in your own heart",
+      "source": "jmdict",
+      "source_locator": "2828900"
+    },
+    {
+      "id": "jmdict-2832798",
+      "type": "proverb",
+      "japanese": "凹き所に水溜まる",
+      "english": "water gathers in a hollow",
+      "source": "jmdict",
+      "source_locator": "2832798"
+    },
+    {
+      "id": "jmdict-2833969",
+      "type": "proverb",
+      "japanese": "蟻の穴から堤も崩れる",
+      "english": "an ant's tunnel can bring down a levee",
+      "source": "jmdict",
+      "source_locator": "2833969"
+    },
+    {
+      "id": "jmdict-2833980",
+      "type": "proverb",
+      "japanese": "牛は牛連れ馬は馬連れ",
+      "english": "oxen keep with oxen and horses with horses",
+      "source": "jmdict",
+      "source_locator": "2833980"
+    },
+    {
+      "id": "jmdict-2834651",
+      "type": "proverb",
+      "japanese": "冷や酒と親の意見は後できく",
+      "english": "cold sake and a parent's advice take effect later",
+      "source": "jmdict",
+      "source_locator": "2834651"
+    },
+    {
+      "id": "jmdict-2834653",
+      "type": "proverb",
+      "japanese": "易者身の上知らず",
+      "english": "a fortune-teller cannot read their own fortunes",
+      "source": "jmdict",
+      "source_locator": "2834653"
+    },
+    {
+      "id": "jmdict-2835664",
+      "type": "proverb",
+      "japanese": "地獄にも知る人",
+      "english": "even in hell, you can make a friend",
+      "source": "jmdict",
+      "source_locator": "2835664"
+    },
+    {
+      "id": "jmdict-2844715",
+      "type": "proverb",
+      "japanese": "瑠璃も玻璃も照らせば光る",
+      "english": "lapis and glass both sparkle when light falls on them",
+      "source": "jmdict",
+      "source_locator": "2844715"
+    },
+    {
+      "id": "jmdict-2844874",
+      "type": "proverb",
+      "japanese": "鑿と言えば槌",
+      "english": "if asked for the chisel, bring the mallet too",
+      "source": "jmdict",
+      "source_locator": "2844874"
+    },
+    {
+      "id": "jmdict-2845840",
+      "type": "proverb",
+      "japanese": "碁打ちに時なし",
+      "english": "a Go player forgets the time",
+      "source": "jmdict",
+      "source_locator": "2845840"
+    },
+    {
+      "id": "jmdict-2849009",
+      "type": "proverb",
+      "japanese": "実るほど頭を垂れる稲穂かな",
+      "english": "the fuller the ear of rice, the lower it bows",
+      "source": "jmdict",
+      "source_locator": "2849009"
+    },
+    {
+      "id": "jmdict-1153900",
+      "type": "four_character_idiom",
+      "japanese": "安心立命",
+      "english": "settled in faith and at peace",
+      "source": "jmdict",
+      "source_locator": "1153900"
+    },
+    {
+      "id": "jmdict-1156780",
+      "type": "four_character_idiom",
+      "japanese": "意馬心猿",
+      "english": "a heart like a monkey and thoughts like a runaway horse",
+      "source": "jmdict",
+      "source_locator": "1156780"
+    },
+    {
+      "id": "jmdict-1161050",
+      "type": "four_character_idiom",
+      "japanese": "一意専心",
+      "english": "single-mindedly",
+      "source": "jmdict",
+      "source_locator": "1161050"
+    },
+    {
+      "id": "jmdict-1161060",
+      "type": "four_character_idiom",
+      "japanese": "一衣帯水",
+      "english": "separated only by a narrow strip of water",
+      "source": "jmdict",
+      "source_locator": "1161060"
+    },
+    {
+      "id": "jmdict-1161210",
+      "type": "four_character_idiom",
+      "japanese": "一家団欒",
+      "english": "happy family get-together",
+      "source": "jmdict",
+      "source_locator": "1161210"
+    },
+    {
+      "id": "jmdict-1161700",
+      "type": "four_character_idiom",
+      "japanese": "一期一会",
+      "english": "once-in-a-lifetime encounter",
+      "source": "jmdict",
+      "source_locator": "1161700"
+    },
+    {
+      "id": "jmdict-1161860",
+      "type": "four_character_idiom",
+      "japanese": "一挙一動",
+      "english": "one's every action",
+      "source": "jmdict",
+      "source_locator": "1161860"
+    },
+    {
+      "id": "jmdict-1162260",
+      "type": "four_character_idiom",
+      "japanese": "一言一行",
+      "english": "every word and act",
+      "source": "jmdict",
+      "source_locator": "1162260"
+    },
+    {
+      "id": "jmdict-1162520",
+      "type": "four_character_idiom",
+      "japanese": "一刻千金",
+      "english": "every moment is worth a fortune",
+      "source": "jmdict",
+      "source_locator": "1162520"
+    },
+    {
+      "id": "jmdict-1162770",
+      "type": "four_character_idiom",
+      "japanese": "一子相伝",
+      "english": "transmission of the secrets of an art, craft, trade or learning from father to only one child",
+      "source": "jmdict",
+      "source_locator": "1162770"
+    },
+    {
+      "id": "jmdict-1162880",
+      "type": "four_character_idiom",
+      "japanese": "一視同仁",
+      "english": "treating everyone with equal care",
+      "source": "jmdict",
+      "source_locator": "1162880"
+    },
+    {
+      "id": "jmdict-1162910",
+      "type": "four_character_idiom",
+      "japanese": "一字千金",
+      "english": "word of great value",
+      "source": "jmdict",
+      "source_locator": "1162910"
+    },
+    {
+      "id": "jmdict-1163280",
+      "type": "four_character_idiom",
+      "japanese": "一汁一菜",
+      "english": "one-plate meal",
+      "source": "jmdict",
+      "source_locator": "1163280"
+    },
+    {
+      "id": "jmdict-1163330",
+      "type": "four_character_idiom",
+      "japanese": "一宿一飯",
+      "english": "the kindness of a meal and a night's lodging",
+      "source": "jmdict",
+      "source_locator": "1163330"
+    },
+    {
+      "id": "jmdict-1164210",
+      "type": "four_character_idiom",
+      "japanese": "一切衆生",
+      "english": "all living creatures",
+      "source": "jmdict",
+      "source_locator": "1164210"
+    },
+    {
+      "id": "jmdict-1164730",
+      "type": "four_character_idiom",
+      "japanese": "一知半解",
+      "english": "superficial knowledge",
+      "source": "jmdict",
+      "source_locator": "1164730"
+    },
+    {
+      "id": "jmdict-1164830",
+      "type": "four_character_idiom",
+      "japanese": "一張一弛",
+      "english": "tension and relaxation",
+      "source": "jmdict",
+      "source_locator": "1164830"
+    },
+    {
+      "id": "jmdict-1165050",
+      "type": "four_character_idiom",
+      "japanese": "一天四海",
+      "english": "the world",
+      "source": "jmdict",
+      "source_locator": "1165050"
+    },
+    {
+      "id": "jmdict-1165380",
+      "type": "four_character_idiom",
+      "japanese": "一得一失",
+      "english": "gaining some and losing some",
+      "source": "jmdict",
+      "source_locator": "1165380"
+    },
+    {
+      "id": "jmdict-1166590",
+      "type": "four_character_idiom",
+      "japanese": "一望千里",
+      "english": "a view stretching a thousand leagues",
+      "source": "jmdict",
+      "source_locator": "1166590"
+    },
+    {
+      "id": "jmdict-1167000",
+      "type": "four_character_idiom",
+      "japanese": "一目瞭然",
+      "english": "obvious",
+      "source": "jmdict",
+      "source_locator": "1167000"
+    },
+    {
+      "id": "jmdict-1167010",
+      "type": "four_character_idiom",
+      "japanese": "一問一答",
+      "english": "answering question by question",
+      "source": "jmdict",
+      "source_locator": "1167010"
+    },
+    {
+      "id": "jmdict-1167440",
+      "type": "four_character_idiom",
+      "japanese": "一蓮托生",
+      "english": "sharing the same fate, like souls on one lotus",
+      "source": "jmdict",
+      "source_locator": "1167440"
+    },
+    {
+      "id": "jmdict-1167530",
+      "type": "four_character_idiom",
+      "japanese": "一瀉千里",
+      "english": "rushing onward like a river for a thousand leagues",
+      "source": "jmdict",
+      "source_locator": "1167530"
+    },
+    {
+      "id": "jmdict-1201560",
+      "type": "four_character_idiom",
+      "japanese": "海千山千",
+      "english": "worldly-wise from long experience",
+      "source": "jmdict",
+      "source_locator": "1201560"
+    },
+    {
+      "id": "jmdict-1209790",
+      "type": "four_character_idiom",
+      "japanese": "乾坤一擲",
+      "english": "stake all (on something)",
+      "source": "jmdict",
+      "source_locator": "1209790"
+    },
+    {
+      "id": "jmdict-1232750",
+      "type": "four_character_idiom",
+      "japanese": "虚心坦懐",
+      "english": "with an open and calm mind",
+      "source": "jmdict",
+      "source_locator": "1232750"
+    },
+    {
+      "id": "jmdict-1243640",
+      "type": "four_character_idiom",
+      "japanese": "九牛一毛",
+      "english": "small fraction (of)",
+      "source": "jmdict",
+      "source_locator": "1243640"
+    },
+    {
+      "id": "jmdict-1255510",
+      "type": "four_character_idiom",
+      "japanese": "月下氷人",
+      "english": "a go-between for a match",
+      "source": "jmdict",
+      "source_locator": "1255510"
+    },
+    {
+      "id": "jmdict-1264480",
+      "type": "four_character_idiom",
+      "japanese": "言行一致",
+      "english": "words and deeds agreeing",
+      "source": "jmdict",
+      "source_locator": "1264480"
+    },
+    {
+      "id": "jmdict-1288130",
+      "type": "four_character_idiom",
+      "japanese": "黒風白雨",
+      "english": "dark winds and a sudden white shower",
+      "source": "jmdict",
+      "source_locator": "1288130"
+    },
+    {
+      "id": "jmdict-1302890",
+      "type": "four_character_idiom",
+      "japanese": "山紫水明",
+      "english": "purple mountains and clear waters",
+      "source": "jmdict",
+      "source_locator": "1302890"
+    },
+    {
+      "id": "jmdict-1320620",
+      "type": "four_character_idiom",
+      "japanese": "疾風迅雷",
+      "english": "with lightning speed",
+      "source": "jmdict",
+      "source_locator": "1320620"
+    },
+    {
+      "id": "jmdict-1335020",
+      "type": "four_character_idiom",
+      "japanese": "十年一日",
+      "english": "ten years of work, each day like the first",
+      "source": "jmdict",
+      "source_locator": "1335020"
+    },
+    {
+      "id": "jmdict-1341150",
+      "type": "four_character_idiom",
+      "japanese": "春風駘蕩",
+      "english": "a warm and gentle spring breeze",
+      "source": "jmdict",
+      "source_locator": "1341150"
+    },
+    {
+      "id": "jmdict-1342210",
+      "type": "four_character_idiom",
+      "japanese": "醇風美俗",
+      "english": "good morals and manners",
+      "source": "jmdict",
+      "source_locator": "1342210"
+    },
+    {
+      "id": "jmdict-1348280",
+      "type": "four_character_idiom",
+      "japanese": "小春日和",
+      "english": "a warm, clear day in late autumn",
+      "source": "jmdict",
+      "source_locator": "1348280"
+    },
+    {
+      "id": "jmdict-1360900",
+      "type": "four_character_idiom",
+      "japanese": "心頭滅却",
+      "english": "emptying the mind of worldly thoughts",
+      "source": "jmdict",
+      "source_locator": "1360900"
+    },
+    {
+      "id": "jmdict-1363790",
+      "type": "four_character_idiom",
+      "japanese": "真実一路",
+      "english": "following a path of sincerity",
+      "source": "jmdict",
+      "source_locator": "1363790"
+    },
+    {
+      "id": "jmdict-1378430",
+      "type": "four_character_idiom",
+      "japanese": "清廉潔白",
+      "english": "spotless integrity",
+      "source": "jmdict",
+      "source_locator": "1378430"
+    },
+    {
+      "id": "jmdict-1381190",
+      "type": "four_character_idiom",
+      "japanese": "誠心誠意",
+      "english": "in all sincerity",
+      "source": "jmdict",
+      "source_locator": "1381190"
+    },
+    {
+      "id": "jmdict-1428060",
+      "type": "four_character_idiom",
+      "japanese": "彫心鏤骨",
+      "english": "working with painstaking care",
+      "source": "jmdict",
+      "source_locator": "1428060"
+    },
+    {
+      "id": "jmdict-1438890",
+      "type": "four_character_idiom",
+      "japanese": "天空海濶",
+      "english": "wide sky and open sea",
+      "source": "jmdict",
+      "source_locator": "1438890"
+    },
+    {
+      "id": "jmdict-1488060",
+      "type": "four_character_idiom",
+      "japanese": "百花斉放",
+      "english": "let a hundred flowers bloom",
+      "source": "jmdict",
+      "source_locator": "1488060"
+    },
+    {
+      "id": "jmdict-1488070",
+      "type": "four_character_idiom",
+      "japanese": "百花繚乱",
+      "english": "a profusion of blossoms, or many gifts coming into bloom at once",
+      "source": "jmdict",
+      "source_locator": "1488070"
+    },
+    {
+      "id": "jmdict-1489950",
+      "type": "four_character_idiom",
+      "japanese": "表裏一体",
+      "english": "inseparable as the two sides of one thing",
+      "source": "jmdict",
+      "source_locator": "1489950"
+    },
+    {
+      "id": "jmdict-1502470",
+      "type": "four_character_idiom",
+      "japanese": "物見遊山",
+      "english": "going out to see the sights",
+      "source": "jmdict",
+      "source_locator": "1502470"
+    },
+    {
+      "id": "jmdict-1538930",
+      "type": "four_character_idiom",
+      "japanese": "唯一無二",
+      "english": "one and only",
+      "source": "jmdict",
+      "source_locator": "1538930"
+    },
+    {
+      "id": "jmdict-1561350",
+      "type": "four_character_idiom",
+      "japanese": "六根清浄",
+      "english": "purifying the six faculties of perception",
+      "source": "jmdict",
+      "source_locator": "1561350"
+    },
+    {
+      "id": "jmdict-1576270",
+      "type": "four_character_idiom",
+      "japanese": "一日千秋",
+      "english": "waiting so long that a day feels like a thousand autumns",
+      "source": "jmdict",
+      "source_locator": "1576270"
+    },
+    {
+      "id": "jmdict-1576790",
+      "type": "four_character_idiom",
+      "japanese": "黄道吉日",
+      "english": "a day of very good fortune",
+      "source": "jmdict",
+      "source_locator": "1576790"
+    },
+    {
+      "id": "jmdict-1667250",
+      "type": "four_character_idiom",
+      "japanese": "渾然一体",
+      "english": "in complete harmony",
+      "source": "jmdict",
+      "source_locator": "1667250"
+    },
+    {
+      "id": "jmdict-1681690",
+      "type": "four_character_idiom",
+      "japanese": "破顔一笑",
+      "english": "smiling broadly",
+      "source": "jmdict",
+      "source_locator": "1681690"
+    },
+    {
+      "id": "jmdict-1686070",
+      "type": "four_character_idiom",
+      "japanese": "行雲流水",
+      "english": "moving freely, like drifting clouds and flowing water",
+      "source": "jmdict",
+      "source_locator": "1686070"
+    },
+    {
+      "id": "jmdict-1696720",
+      "type": "four_character_idiom",
+      "japanese": "首尾一貫",
+      "english": "consistent",
+      "source": "jmdict",
+      "source_locator": "1696720"
+    },
+    {
+      "id": "jmdict-1719120",
+      "type": "four_character_idiom",
+      "japanese": "王道楽土",
+      "english": "a peaceful land ruled with virtue",
+      "source": "jmdict",
+      "source_locator": "1719120"
+    },
+    {
+      "id": "jmdict-1727860",
+      "type": "four_character_idiom",
+      "japanese": "一字一句",
+      "english": "word for word",
+      "source": "jmdict",
+      "source_locator": "1727860"
+    },
+    {
+      "id": "jmdict-1728100",
+      "type": "four_character_idiom",
+      "japanese": "一病息災",
+      "english": "one small ailment can teach you to take better care of your health",
+      "source": "jmdict",
+      "source_locator": "1728100"
+    },
+    {
+      "id": "jmdict-1728230",
+      "type": "four_character_idiom",
+      "japanese": "一陽来復",
+      "english": "the return of spring or the turning of one's luck",
+      "source": "jmdict",
+      "source_locator": "1728230"
+    },
+    {
+      "id": "jmdict-1745100",
+      "type": "four_character_idiom",
+      "japanese": "十年一昔",
+      "english": "ten years ago already feels like another age",
+      "source": "jmdict",
+      "source_locator": "1745100"
+    },
+    {
+      "id": "jmdict-1750630",
+      "type": "four_character_idiom",
+      "japanese": "清浄無垢",
+      "english": "utter purity",
+      "source": "jmdict",
+      "source_locator": "1750630"
+    },
+    {
+      "id": "jmdict-1758580",
+      "type": "four_character_idiom",
+      "japanese": "霊肉一致",
+      "english": "body and spirit in harmony",
+      "source": "jmdict",
+      "source_locator": "1758580"
+    },
+    {
+      "id": "jmdict-1768970",
+      "type": "four_character_idiom",
+      "japanese": "深山幽谷",
+      "english": "remote mountains and deep valleys",
+      "source": "jmdict",
+      "source_locator": "1768970"
+    },
+    {
+      "id": "jmdict-1775270",
+      "type": "four_character_idiom",
+      "japanese": "良風美俗",
+      "english": "good customs",
+      "source": "jmdict",
+      "source_locator": "1775270"
+    },
+    {
+      "id": "jmdict-1781240",
+      "type": "four_character_idiom",
+      "japanese": "威風堂々",
+      "english": "majestic",
+      "source": "jmdict",
+      "source_locator": "1781240"
+    },
+    {
+      "id": "jmdict-1793810",
+      "type": "four_character_idiom",
+      "japanese": "心機一転",
+      "english": "turning over a new leaf",
+      "source": "jmdict",
+      "source_locator": "1793810"
+    },
+    {
+      "id": "jmdict-1794970",
+      "type": "four_character_idiom",
+      "japanese": "桜花爛漫",
+      "english": "cherry blossoms at their fullest",
+      "source": "jmdict",
+      "source_locator": "1794970"
+    },
+    {
+      "id": "jmdict-1834520",
+      "type": "four_character_idiom",
+      "japanese": "異体同心",
+      "english": "different bodies, one heart",
+      "source": "jmdict",
+      "source_locator": "1834520"
+    },
+    {
+      "id": "jmdict-1838910",
+      "type": "four_character_idiom",
+      "japanese": "談論風発",
+      "english": "a lively exchange of ideas",
+      "source": "jmdict",
+      "source_locator": "1838910"
+    },
+    {
+      "id": "jmdict-1844010",
+      "type": "four_character_idiom",
+      "japanese": "風光明媚",
+      "english": "landscape of extraordinary beauty",
+      "source": "jmdict",
+      "source_locator": "1844010"
+    },
+    {
+      "id": "jmdict-1930320",
+      "type": "four_character_idiom",
+      "japanese": "一致団結",
+      "english": "solidarity",
+      "source": "jmdict",
+      "source_locator": "1930320"
+    },
+    {
+      "id": "jmdict-2015110",
+      "type": "four_character_idiom",
+      "japanese": "泰山北斗",
+      "english": "a towering authority in their field",
+      "source": "jmdict",
+      "source_locator": "2015110"
+    },
+    {
+      "id": "jmdict-2015200",
+      "type": "four_character_idiom",
+      "japanese": "風林火山",
+      "english": "swift as wind, still as forest, fierce as fire, steady as a mountain",
+      "source": "jmdict",
+      "source_locator": "2015200"
+    },
+    {
+      "id": "jmdict-2029840",
+      "type": "four_character_idiom",
+      "japanese": "暗雲低迷",
+      "english": "dark clouds hanging overhead",
+      "source": "jmdict",
+      "source_locator": "2029840"
+    },
+    {
+      "id": "jmdict-2029950",
+      "type": "four_character_idiom",
+      "japanese": "一件落着",
+      "english": "an issue being settled",
+      "source": "jmdict",
+      "source_locator": "2029950"
+    },
+    {
+      "id": "jmdict-2029990",
+      "type": "four_character_idiom",
+      "japanese": "一諾千金",
+      "english": "a promise is worth a thousand pieces of gold",
+      "source": "jmdict",
+      "source_locator": "2029990"
+    },
+    {
+      "id": "jmdict-2030040",
+      "type": "four_character_idiom",
+      "japanese": "一路順風",
+      "english": "a following wind for the whole journey",
+      "source": "jmdict",
+      "source_locator": "2030040"
+    },
+    {
+      "id": "jmdict-2030050",
+      "type": "four_character_idiom",
+      "japanese": "一路平安",
+      "english": "a safe journey all the way",
+      "source": "jmdict",
+      "source_locator": "2030050"
+    },
+    {
+      "id": "jmdict-2030070",
+      "type": "four_character_idiom",
+      "japanese": "雲煙万里",
+      "english": "cloud and haze as far as the eye can see",
+      "source": "jmdict",
+      "source_locator": "2030070"
+    },
+    {
+      "id": "jmdict-2030080",
+      "type": "four_character_idiom",
+      "japanese": "雲泥万里",
+      "english": "a world apart, like clouds and mud",
+      "source": "jmdict",
+      "source_locator": "2030080"
+    },
+    {
+      "id": "jmdict-2030810",
+      "type": "four_character_idiom",
+      "japanese": "五風十雨",
+      "english": "winds and rains arriving in their proper season",
+      "source": "jmdict",
+      "source_locator": "2030810"
+    },
+    {
+      "id": "jmdict-2030980",
+      "type": "four_character_idiom",
+      "japanese": "山川草木",
+      "english": "mountains, rivers, grasses and trees",
+      "source": "jmdict",
+      "source_locator": "2030980"
+    },
+    {
+      "id": "jmdict-2031290",
+      "type": "four_character_idiom",
+      "japanese": "春日遅々",
+      "english": "a long, mild spring day",
+      "source": "jmdict",
+      "source_locator": "2031290"
+    },
+    {
+      "id": "jmdict-2031380",
+      "type": "four_character_idiom",
+      "japanese": "心願成就",
+      "english": "a heartfelt prayer answered",
+      "source": "jmdict",
+      "source_locator": "2031380"
+    },
+    {
+      "id": "jmdict-2031550",
+      "type": "four_character_idiom",
+      "japanese": "清濁併呑",
+      "english": "openhearted enough to accept the clear and the muddy",
+      "source": "jmdict",
+      "source_locator": "2031550"
+    },
+    {
+      "id": "jmdict-2031840",
+      "type": "four_character_idiom",
+      "japanese": "大山鳴動",
+      "english": "a mountain rumbles, and little comes of it",
+      "source": "jmdict",
+      "source_locator": "2031840"
+    },
+    {
+      "id": "jmdict-2031850",
+      "type": "four_character_idiom",
+      "japanese": "台風一過",
+      "english": "the clear weather after a typhoon",
+      "source": "jmdict",
+      "source_locator": "2031850"
+    },
+    {
+      "id": "jmdict-2031900",
+      "type": "four_character_idiom",
+      "japanese": "胆大心小",
+      "english": "bold in spirit and careful in detail",
+      "source": "jmdict",
+      "source_locator": "2031900"
+    },
+    {
+      "id": "jmdict-2031920",
+      "type": "four_character_idiom",
+      "japanese": "知行合一",
+      "english": "learning and doing are one",
+      "source": "jmdict",
+      "source_locator": "2031920"
+    },
+    {
+      "id": "jmdict-2032000",
+      "type": "four_character_idiom",
+      "japanese": "沈着冷静",
+      "english": "calm, cool, and collected",
+      "source": "jmdict",
+      "source_locator": "2032000"
+    },
+    {
+      "id": "jmdict-2032440",
+      "type": "four_character_idiom",
+      "japanese": "風流三昧",
+      "english": "losing yourself in the pleasures of art",
+      "source": "jmdict",
+      "source_locator": "2032440"
+    },
+    {
+      "id": "jmdict-2040470",
+      "type": "four_character_idiom",
+      "japanese": "日月星辰",
+      "english": "sun, moon and stars",
+      "source": "jmdict",
+      "source_locator": "2040470"
+    },
+    {
+      "id": "jmdict-2040540",
+      "type": "four_character_idiom",
+      "japanese": "千山万水",
+      "english": "a journey over a thousand mountains and rivers",
+      "source": "jmdict",
+      "source_locator": "2040540"
+    },
+    {
+      "id": "jmdict-2041480",
+      "type": "four_character_idiom",
+      "japanese": "一木一草",
+      "english": "each tree and every blade of grass",
+      "source": "jmdict",
+      "source_locator": "2041480"
+    },
+    {
+      "id": "jmdict-2041950",
+      "type": "four_character_idiom",
+      "japanese": "雨奇晴好",
+      "english": "the landscape is lovely in rain and fine in sun",
+      "source": "jmdict",
+      "source_locator": "2041950"
+    },
+    {
+      "id": "jmdict-2042000",
+      "type": "four_character_idiom",
+      "japanese": "雲煙過眼",
+      "english": "passing before the eyes like cloud and haze",
+      "source": "jmdict",
+      "source_locator": "2042000"
+    },
+    {
+      "id": "jmdict-2042020",
+      "type": "four_character_idiom",
+      "japanese": "雲集霧散",
+      "english": "gathering like clouds and scattering like mist",
+      "source": "jmdict",
+      "source_locator": "2042020"
+    },
+    {
+      "id": "jmdict-2042030",
+      "type": "four_character_idiom",
+      "japanese": "雲水行脚",
+      "english": "a wandering monk on pilgrimage",
+      "source": "jmdict",
+      "source_locator": "2042030"
+    },
+    {
+      "id": "jmdict-2042860",
+      "type": "four_character_idiom",
+      "japanese": "花紅柳緑",
+      "english": "red blossoms and green willows",
+      "source": "jmdict",
+      "source_locator": "2042860"
+    },
+    {
+      "id": "jmdict-2042950",
+      "type": "four_character_idiom",
+      "japanese": "花鳥諷詠",
+      "english": "finding poetry in nature and the seasons",
+      "source": "jmdict",
+      "source_locator": "2042950"
+    },
+    {
+      "id": "jmdict-2043180",
+      "type": "four_character_idiom",
+      "japanese": "閑雲野鶴",
+      "english": "an untroubled life among clouds and wild cranes",
+      "source": "jmdict",
+      "source_locator": "2043180"
+    },
+    {
+      "id": "jmdict-2043630",
+      "type": "four_character_idiom",
+      "japanese": "鬼面仏心",
+      "english": "a stern face and a kind heart",
+      "source": "jmdict",
+      "source_locator": "2043630"
+    },
+    {
+      "id": "jmdict-2043810",
+      "type": "four_character_idiom",
+      "japanese": "鏡花水月",
+      "english": "flowers in a mirror and the moon in water",
+      "source": "jmdict",
+      "source_locator": "2043810"
+    },
+    {
+      "id": "jmdict-2044180",
+      "type": "four_character_idiom",
+      "japanese": "槿花一日",
+      "english": "glory as brief as a hibiscus blossom",
+      "source": "jmdict",
+      "source_locator": "2044180"
+    },
+    {
+      "id": "jmdict-2044540",
+      "type": "four_character_idiom",
+      "japanese": "月下推敲",
+      "english": "polishing a line of verse by moonlight",
+      "source": "jmdict",
+      "source_locator": "2044540"
+    },
+    {
+      "id": "jmdict-2044930",
+      "type": "four_character_idiom",
+      "japanese": "高山流水",
+      "english": "high mountains and running water",
+      "source": "jmdict",
+      "source_locator": "2044930"
+    },
+    {
+      "id": "jmdict-2046310",
+      "type": "four_character_idiom",
+      "japanese": "櫛風沐雨",
+      "english": "braving wind and rain",
+      "source": "jmdict",
+      "source_locator": "2046310"
+    },
+    {
+      "id": "jmdict-2047490",
+      "type": "four_character_idiom",
+      "japanese": "心象風景",
+      "english": "the landscape in one's mind",
+      "source": "jmdict",
+      "source_locator": "2047490"
+    },
+    {
+      "id": "jmdict-2048240",
+      "type": "four_character_idiom",
+      "japanese": "清風明月",
+      "english": "a cool breeze and a bright moon",
+      "source": "jmdict",
+      "source_locator": "2048240"
+    },
+    {
+      "id": "jmdict-2049130",
+      "type": "four_character_idiom",
+      "japanese": "滄海桑田",
+      "english": "the sea becomes a mulberry field as the world changes",
+      "source": "jmdict",
+      "source_locator": "2049130"
+    },
+    {
+      "id": "jmdict-2052360",
+      "type": "four_character_idiom",
+      "japanese": "飛花落葉",
+      "english": "scattered blossoms and fallen leaves, the way all things pass",
+      "source": "jmdict",
+      "source_locator": "2052360"
+    },
+    {
+      "id": "jmdict-1461300",
+      "type": "idiom",
+      "japanese": "二の足を踏む",
+      "english": "to hesitate before taking the next step",
+      "source": "jmdict",
+      "source_locator": "1461300"
+    },
+    {
+      "id": "jmdict-1838070",
+      "type": "idiom",
+      "japanese": "立て板に水",
+      "english": "to speak as smoothly as water down an upright board",
+      "source": "jmdict",
+      "source_locator": "1838070"
+    },
+    {
+      "id": "jmdict-1844190",
+      "type": "idiom",
+      "japanese": "風前の灯火",
+      "english": "a lamp before the wind, liable to go out at any moment",
+      "source": "jmdict",
+      "source_locator": "1844190"
+    },
+    {
+      "id": "jmdict-1853940",
+      "type": "idiom",
+      "japanese": "春秋に富む",
+      "english": "to have one's years and seasons still ahead",
+      "source": "jmdict",
+      "source_locator": "1853940"
+    },
+    {
+      "id": "jmdict-1869390",
+      "type": "idiom",
+      "japanese": "木に竹を接ぐ",
+      "english": "to join things as mismatched as bamboo grafted onto a tree",
+      "source": "jmdict",
+      "source_locator": "1869390"
+    },
+    {
+      "id": "jmdict-1876400",
+      "type": "idiom",
+      "japanese": "心にかかる",
+      "english": "to weigh on one's mind",
+      "source": "jmdict",
+      "source_locator": "1876400"
+    },
+    {
+      "id": "jmdict-1876490",
+      "type": "idiom",
+      "japanese": "心を痛める",
+      "english": "to grieve or worry over something",
+      "source": "jmdict",
+      "source_locator": "1876490"
+    },
+    {
+      "id": "jmdict-1902290",
+      "type": "idiom",
+      "japanese": "花を持たせる",
+      "english": "to let someone else carry the flowers and take the credit",
+      "source": "jmdict",
+      "source_locator": "1902290"
+    },
+    {
+      "id": "jmdict-1972160",
+      "type": "idiom",
+      "japanese": "いばらの道",
+      "english": "a path strewn with thorns",
+      "source": "jmdict",
+      "source_locator": "1972160"
+    },
+    {
+      "id": "jmdict-1975230",
+      "type": "idiom",
+      "japanese": "花も実も有る",
+      "english": "to have both blossom and fruit, beauty and substance",
+      "source": "jmdict",
+      "source_locator": "1975230"
+    },
+    {
+      "id": "jmdict-1977140",
+      "type": "idiom",
+      "japanese": "海老で鯛を釣る",
+      "english": "to use a shrimp to catch a sea bream",
+      "source": "jmdict",
+      "source_locator": "1977140"
+    },
+    {
+      "id": "jmdict-1978010",
+      "type": "idiom",
+      "japanese": "蛙の面に水",
+      "english": "like water on a frog's face, making no impression",
+      "source": "jmdict",
+      "source_locator": "1978010"
+    },
+    {
+      "id": "jmdict-2004180",
+      "type": "idiom",
+      "japanese": "海のもくず",
+      "english": "to be lost at sea",
+      "source": "jmdict",
+      "source_locator": "2004180"
+    },
+    {
+      "id": "jmdict-2017610",
+      "type": "idiom",
+      "japanese": "木に縁って魚を求む",
+      "english": "to climb a tree looking for fish",
+      "source": "jmdict",
+      "source_locator": "2017610"
+    },
+    {
+      "id": "jmdict-2028770",
+      "type": "idiom",
+      "japanese": "足元を見る",
+      "english": "to take advantage of someone's vulnerable position",
+      "source": "jmdict",
+      "source_locator": "2028770"
+    },
+    {
+      "id": "jmdict-2061840",
+      "type": "idiom",
+      "japanese": "水をあける",
+      "english": "to pull ahead",
+      "source": "jmdict",
+      "source_locator": "2061840"
+    },
+    {
+      "id": "jmdict-2063940",
+      "type": "idiom",
+      "japanese": "清水の舞台から飛び降りる",
+      "english": "to take the plunge, as if leaping from Kiyomizu's stage",
+      "source": "jmdict",
+      "source_locator": "2063940"
+    },
+    {
+      "id": "jmdict-2068870",
+      "type": "idiom",
+      "japanese": "閑古鳥が鳴く",
+      "english": "so quiet that all you hear is the cuckoo",
+      "source": "jmdict",
+      "source_locator": "2068870"
+    },
+    {
+      "id": "jmdict-2077280",
+      "type": "idiom",
+      "japanese": "草木も眠る丑三つ時",
+      "english": "the dead of night, when even the trees and grasses sleep",
+      "source": "jmdict",
+      "source_locator": "2077280"
+    },
+    {
+      "id": "jmdict-2078140",
+      "type": "idiom",
+      "japanese": "木を見て森を見ず",
+      "english": "to see the trees and miss the forest",
+      "source": "jmdict",
+      "source_locator": "2078140"
+    },
+    {
+      "id": "jmdict-2100950",
+      "type": "idiom",
+      "japanese": "波風が立つ",
+      "english": "for trouble to stir, like wind and waves rising",
+      "source": "jmdict",
+      "source_locator": "2100950"
+    },
+    {
+      "id": "jmdict-2102020",
+      "type": "idiom",
+      "japanese": "足をはこぶ",
+      "english": "to make one's way to a place",
+      "source": "jmdict",
+      "source_locator": "2102020"
+    },
+    {
+      "id": "jmdict-2102040",
+      "type": "idiom",
+      "japanese": "後足で砂をかける",
+      "english": "to kick sand behind you on the way out",
+      "source": "jmdict",
+      "source_locator": "2102040"
+    },
+    {
+      "id": "jmdict-2102890",
+      "type": "idiom",
+      "japanese": "肩で風を切る",
+      "english": "to swagger as if cutting the wind with your shoulders",
+      "source": "jmdict",
+      "source_locator": "2102890"
+    },
+    {
+      "id": "jmdict-2103090",
+      "type": "idiom",
+      "japanese": "木で鼻をくくる",
+      "english": "to answer curtly",
+      "source": "jmdict",
+      "source_locator": "2103090"
+    },
+    {
+      "id": "jmdict-2103680",
+      "type": "idiom",
+      "japanese": "錦上花を添える",
+      "english": "to add flowers to brocade, making a beautiful thing finer",
+      "source": "jmdict",
+      "source_locator": "2103680"
+    },
+    {
+      "id": "jmdict-2116140",
+      "type": "idiom",
+      "japanese": "水を向ける",
+      "english": "to draw someone out",
+      "source": "jmdict",
+      "source_locator": "2116140"
+    },
+    {
+      "id": "jmdict-2119000",
+      "type": "idiom",
+      "japanese": "氷山の一角",
+      "english": "the tip of the iceberg",
+      "source": "jmdict",
+      "source_locator": "2119000"
+    },
+    {
+      "id": "jmdict-2119580",
+      "type": "idiom",
+      "japanese": "足が地に着かない",
+      "english": "to feel as though your feet have lifted off the ground",
+      "source": "jmdict",
+      "source_locator": "2119580"
+    },
+    {
+      "id": "jmdict-2122910",
+      "type": "idiom",
+      "japanese": "雲行きが怪しい",
+      "english": "the clouds are gathering and things look uncertain",
+      "source": "jmdict",
+      "source_locator": "2122910"
+    },
+    {
+      "id": "jmdict-2124890",
+      "type": "idiom",
+      "japanese": "心を鬼にする",
+      "english": "to harden one's heart",
+      "source": "jmdict",
+      "source_locator": "2124890"
+    },
+    {
+      "id": "jmdict-2127610",
+      "type": "idiom",
+      "japanese": "足るを知る",
+      "english": "to know when one has enough",
+      "source": "jmdict",
+      "source_locator": "2127610"
+    },
+    {
+      "id": "jmdict-2152910",
+      "type": "idiom",
+      "japanese": "焼け石に水",
+      "english": "water on a hot stone, too little to make a difference",
+      "source": "jmdict",
+      "source_locator": "2152910"
+    },
+    {
+      "id": "jmdict-2179330",
+      "type": "idiom",
+      "japanese": "籠で水を汲む",
+      "english": "to try to scoop water with a basket",
+      "source": "jmdict",
+      "source_locator": "2179330"
+    },
+    {
+      "id": "jmdict-2203580",
+      "type": "idiom",
+      "japanese": "足をすくう",
+      "english": "to trip someone up",
+      "source": "jmdict",
+      "source_locator": "2203580"
+    },
+    {
+      "id": "jmdict-2208280",
+      "type": "idiom",
+      "japanese": "水魚の交わり",
+      "english": "a friendship as close as fish and water",
+      "source": "jmdict",
+      "source_locator": "2208280"
+    },
+    {
+      "id": "jmdict-2226240",
+      "type": "idiom",
+      "japanese": "足を棒にする",
+      "english": "to walk until your legs feel like sticks",
+      "source": "jmdict",
+      "source_locator": "2226240"
+    },
+    {
+      "id": "jmdict-2256700",
+      "type": "idiom",
+      "japanese": "花を咲かせる",
+      "english": "to bring a conversation into bloom",
+      "source": "jmdict",
+      "source_locator": "2256700"
+    },
+    {
+      "id": "jmdict-2259970",
+      "type": "idiom",
+      "japanese": "水泡に帰する",
+      "english": "to come to nothing, like a bubble on water",
+      "source": "jmdict",
+      "source_locator": "2259970"
+    },
+    {
+      "id": "jmdict-2273660",
+      "type": "idiom",
+      "japanese": "雨が降ろうが槍が降ろうが",
+      "english": "whether rain falls or spears come down",
+      "source": "jmdict",
+      "source_locator": "2273660"
+    },
+    {
+      "id": "jmdict-2401990",
+      "type": "idiom",
+      "japanese": "水を得た魚",
+      "english": "a fish that has found water, finally in its element",
+      "source": "jmdict",
+      "source_locator": "2401990"
+    },
+    {
+      "id": "jmdict-2415850",
+      "type": "idiom",
+      "japanese": "盲亀の浮木",
+      "english": "a blind turtle finding floating wood, an exceedingly rare chance",
+      "source": "jmdict",
+      "source_locator": "2415850"
+    },
+    {
+      "id": "jmdict-2417570",
+      "type": "idiom",
+      "japanese": "山が見える",
+      "english": "to see the end in sight",
+      "source": "jmdict",
+      "source_locator": "2417570"
+    },
+    {
+      "id": "jmdict-2417590",
+      "type": "idiom",
+      "japanese": "四海波静か",
+      "english": "the four seas are calm, and the world is at peace",
+      "source": "jmdict",
+      "source_locator": "2417590"
+    },
+    {
+      "id": "jmdict-2423630",
+      "type": "idiom",
+      "japanese": "地に足の着いた",
+      "english": "to be grounded and practical",
+      "source": "jmdict",
+      "source_locator": "2423630"
+    },
+    {
+      "id": "jmdict-2564820",
+      "type": "idiom",
+      "japanese": "心がおどる",
+      "english": "to feel one's heart dance",
+      "source": "jmdict",
+      "source_locator": "2564820"
+    },
+    {
+      "id": "jmdict-2572000",
+      "type": "idiom",
+      "japanese": "心が通じる",
+      "english": "to understand each other at heart",
+      "source": "jmdict",
+      "source_locator": "2572000"
+    },
+    {
+      "id": "jmdict-2625430",
+      "type": "idiom",
+      "japanese": "横板に雨垂れ",
+      "english": "to speak in starts and stops, like rain striking a crosswise plank",
+      "source": "jmdict",
+      "source_locator": "2625430"
+    },
+    {
+      "id": "jmdict-2714160",
+      "type": "idiom",
+      "japanese": "湯を沸かして水にする",
+      "english": "to boil water only to let it cool, wasting all the effort",
+      "source": "jmdict",
+      "source_locator": "2714160"
+    },
+    {
+      "id": "jmdict-2786560",
+      "type": "idiom",
+      "japanese": "水が合わない",
+      "english": "the local water doesn't agree with you",
+      "source": "jmdict",
+      "source_locator": "2786560"
+    },
+    {
+      "id": "jmdict-2791840",
+      "type": "idiom",
+      "japanese": "心血を注ぐ",
+      "english": "to pour one's heart into something",
+      "source": "jmdict",
+      "source_locator": "2791840"
+    },
+    {
+      "id": "jmdict-2826179",
+      "type": "idiom",
+      "japanese": "木から落ちた猿",
+      "english": "a monkey fallen from its tree, stripped of what it relied on",
+      "source": "jmdict",
+      "source_locator": "2826179"
+    },
+    {
+      "id": "jmdict-2827765",
+      "type": "idiom",
+      "japanese": "山あり谷あり",
+      "english": "there are mountains and valleys, highs and lows",
+      "source": "jmdict",
+      "source_locator": "2827765"
+    },
+    {
+      "id": "jmdict-2834226",
+      "type": "idiom",
+      "japanese": "炒り豆に花が咲く",
+      "english": "to spring back to life, like roasted beans coming into flower",
+      "source": "jmdict",
+      "source_locator": "2834226"
+    },
+    {
+      "id": "jmdict-2834369",
+      "type": "idiom",
+      "japanese": "猿猴月を取る",
+      "english": "to be like a monkey reaching for the moon's reflection",
+      "source": "jmdict",
+      "source_locator": "2834369"
+    },
+    {
+      "id": "jmdict-2834572",
+      "type": "idiom",
+      "japanese": "心骨に刻する",
+      "english": "to engrave something on one's heart",
+      "source": "jmdict",
+      "source_locator": "2834572"
+    },
+    {
+      "id": "jmdict-2834642",
+      "type": "idiom",
+      "japanese": "柳は緑、花は紅",
+      "english": "willows are green and flowers are red, each true to its nature",
+      "source": "jmdict",
+      "source_locator": "2834642"
+    },
+    {
+      "id": "jmdict-2834644",
+      "type": "idiom",
+      "japanese": "足元から鳥が立つ",
+      "english": "a bird taking flight at your feet, an unexpected turn close to home",
+      "source": "jmdict",
+      "source_locator": "2834644"
+    },
+    {
+      "id": "jmdict-2834956",
+      "type": "idiom",
+      "japanese": "風のうわさ",
+      "english": "a rumor carried on the wind",
+      "source": "jmdict",
+      "source_locator": "2834956"
+    },
+    {
+      "id": "jmdict-2835755",
+      "type": "idiom",
+      "japanese": "道を踏み外す",
+      "english": "to stray from the path",
+      "source": "jmdict",
+      "source_locator": "2835755"
+    }
+  ]
+}

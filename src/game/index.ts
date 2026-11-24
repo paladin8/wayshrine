@@ -60,7 +60,8 @@ export {
   type AwakeningKind,
 } from "./awakening";
 export type { AwakeningFrame } from "./awakening";
-export { FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";
+export { createRestorationWake, FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";
+export type { RestorationWake } from "./vitality-field";
 export { MONUMENT_REACH, isLegible, monumentInReach } from "./monuments";
 
 export { BOAT_PUSH_OFF_SECONDS, boatLaunchFrame, onWater, planBoatLaunch, planShipLaunch, SHIP_PUSH_OFF_SECONDS, SHIP_LAUNCH_SECONDS, shipLaunchFrame, type BoatLaunch, type ShipLaunch, type VoyageFrame } from "./boat";

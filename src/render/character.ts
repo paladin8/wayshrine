@@ -72,7 +72,7 @@ const SHAPES: Readonly<Record<CharacterVariant, Shape>> = {
  * spirit of a wandering herbalist. Built from jointed parts so one walk cycle serves every outfit,
  * with footwear and hand-held gear attached to the feet and right hand.
  */
-export function buildCharacter(variant: CharacterVariant): Character {
+export function buildCharacter(variant: CharacterVariant, arrival?: { value: number }): Character {
   const shape = SHAPES[variant];
   const root = new THREE.Group();
   root.scale.setScalar(shape.scale);
@@ -80,6 +80,23 @@ export function buildCharacter(variant: CharacterVariant): Character {
   const materials: THREE.Material[] = [];
   const m = (color: number, extra?: Partial<THREE.MeshStandardMaterialParameters>): THREE.MeshStandardMaterial => {
     const made = mat(color, extra);
+    if (arrival) {
+      made.customProgramCacheKey = () => "shrine-arrival";
+      made.onBeforeCompile = (shader) => {
+        shader.uniforms.uShrineArrival = arrival;
+        shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>
+uniform float uShrineArrival;`).replace("#include <opaque_fragment>", `
+if (uShrineArrival < 1.0) {
+  float grain = fract(52.9829189 * fract(dot(floor(gl_FragCoord.xy), vec2(0.06711056, 0.00583715))));
+  float reveal = smoothstep(0.0, 0.74, uShrineArrival);
+  if (grain > reveal) discard;
+  float ripple = 0.5 + 0.5 * sin(gl_FragCoord.y * 0.67 - uShrineArrival * 28.0);
+  float glint = pow(ripple, 4.0) * (1.0 - smoothstep(0.32, 1.0, uShrineArrival));
+  outgoingLight = mix(outgoingLight, vec3(0.92, 0.96, 1.0), 0.64 * glint);
+}
+#include <opaque_fragment>`);
+      };
+    }
     materials.push(made);
     return made;
   };
@@ -147,8 +164,7 @@ export function buildCharacter(variant: CharacterVariant): Character {
     // A loose tunic hem that swings out over the thighs.
     const skirtGeo = new THREE.CylinderGeometry(shape.hip * 0.95, shape.hip * 1.45, 0.2, 6, 1, true);
     skirtGeo.translate(0, -0.06, 0);
-    const skirt = mesh(skirtGeo, mat(SHIRT, { side: THREE.DoubleSide }), torso);
-    materials.push(skirt.material as THREE.Material);
+    const skirt = mesh(skirtGeo, m(SHIRT, { side: THREE.DoubleSide }), torso);
     skirt.scale.z = 0.8;
   }
   // Waist sash.

@@ -28,9 +28,9 @@ Done: fushimi-inari, kinkaku-ji, todai-ji-daibutsu, itsukushima-torii, himeji-ca
 | Lantern | 30 | dark forest | in code |
 | Ash sandals | 39 | volcanic ground | in code |
 | Ship | 48 | open sea | in code |
-| Far sight | 58 | nothing: marks every remaining landmark on the map | in code |
+| Pilgrim’s Wake | 58 | automatic restoration on entry to dormant regions | in code |
 
-Each terrain ability unlocks at the end of an act. The landmark planner uses the abilities available at the start of each act. Far sight arrives during Act IX, after 58 restorations, and affects the map only.
+Each terrain ability unlocks at the end of an act. The landmark planner uses the abilities available at the start of each act. Pilgrim’s Wake arrives during Act IX, after 58 restorations, and restores dormant regions as the traveller enters them.
 
 ## The list
 

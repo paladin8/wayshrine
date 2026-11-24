@@ -1,4 +1,4 @@
-import { CAPABILITIES, CAPABILITY_THRESHOLDS, FAR_SIGHT_STARS, type Capability } from "../world";
+import { CAPABILITIES, CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, type Capability } from "../world";
 import type { Locale, Messages } from "./i18n";
 import { UI_FONT, setText } from "./style";
 
@@ -114,10 +114,10 @@ export function createHud(container: HTMLElement): Hud {
   root.append(tl, tr, tc, bc);
   container.appendChild(root);
 
-  // Every ability, then far sight (which opens no terrain) as the last chip.
-  const gear: ReadonlyArray<{ id: Capability | "farSight"; stars: number }> = [
+  // Every ability, then Pilgrim’s Wake (which opens no terrain) as the last chip.
+  const gear: ReadonlyArray<{ id: Capability | "pilgrimsWake"; stars: number }> = [
     ...CAPABILITIES.map((id) => ({ id, stars: CAPABILITY_THRESHOLDS[id] })),
-    { id: "farSight", stars: FAR_SIGHT_STARS },
+    { id: "pilgrimsWake", stars: PILGRIMS_WAKE_STARS },
   ];
   const chips = gear.map((item) => {
     const chip = document.createElement("span");
@@ -237,12 +237,12 @@ export function createHud(container: HTMLElement): Hud {
       gearReveal.hidden = m.gearReveal === null;
       let showedNext = false;
       for (const { item, chip, name, stars } of chips) {
-        const held = item.id === "farSight" ? m.restoredLandmarks.length >= item.stars : m.capabilities.has(item.id);
+        const held = item.id === "pilgrimsWake" ? m.restoredLandmarks.length >= item.stars : m.capabilities.has(item.id);
         chip.hidden = !held && showedNext;
         if (chip.hidden) continue;
         if (!held) showedNext = true;
         const status = held ? "unlocked" : "locked";
-        setText(name, item.id === "farSight" ? t.farSight : t.capability[item.id]);
+        setText(name, item.id === "pilgrimsWake" ? t.pilgrimsWake : t.capability[item.id]);
         chip.classList.toggle("off", status !== "unlocked");
         const requirement = t.gearRequirement(item.stars, status);
         if (stars.getAttribute("aria-label") !== requirement) stars.setAttribute("aria-label", requirement);

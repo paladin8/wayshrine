@@ -8,6 +8,7 @@ export interface PlayerMesh {
   readonly hull: THREE.Group;
   /** Swap the traveller's body (the rest of the pose and gear carry over). */
   setCharacter(variant: CharacterVariant): void;
+  setArrival(progress: number): void;
   /** What the traveller wears or carries right now, or null for plain boots. */
   setGear(gear: GearId | null): void;
   /** Advance the walk cycle: `walking` is whether the player is moving this frame. Returns the feet that landed. */
@@ -29,8 +30,9 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
   const rider = new THREE.Group();
   group.add(rider);
 
+  const arrival = { value: 1 };
   let variant = initial;
-  let character: Character = buildCharacter(variant);
+  let character: Character = buildCharacter(variant, arrival);
   rider.add(character.root);
   let gear: GearId | null = null;
   let seated = 0;
@@ -64,12 +66,16 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       variant = next;
       rider.remove(character.root);
       character.dispose();
-      character = buildCharacter(variant);
+      character = buildCharacter(variant, arrival);
       character.setGear(gear);
       character.setCrouch(crouch, fuss);
       character.setDraw(draw);
       character.setLanternLighting(lighting);
       rider.add(character.root);
+    },
+    setArrival(progress) {
+      arrival.value = progress;
+      rider.visible = progress > 0;
     },
     setGear(next) {
       if (next === gear) return;

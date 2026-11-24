@@ -8,7 +8,7 @@ export { LANDMARK_TOTAL, greedyProgress, reachableRegions } from "./progression"
 export { reachableCoords } from "./reach";
 export {
   CAPABILITY_THRESHOLDS,
-  FAR_SIGHT_STARS,
+  PILGRIMS_WAKE_STARS,
   HOME_RADIUS,
   LANDMARK_WINDOW,
   LANDMARK_BLEND,

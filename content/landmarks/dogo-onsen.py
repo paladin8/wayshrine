@@ -143,8 +143,10 @@ def eave(cx,cy,hx,hy,z,o=0.45,mat="tile",top=None):
     nh=top or (hx-0.3,hy-0.3)
     flared_roof([(hx+o,hy+o,z,0.16),(hx+o,hy+o,z+0.08,0.16),(nh[0]+0.05,nh[1]+0.05,z+0.45,0.0)],mat,cx,cy)
 
-# ---- the square before it
-box("pave",0,-4.4,-0.04,0.03,6.4,2.8)
+# the square before it: smaller now and off-centre, with the walk coming in from the front-right corner
+box("pave",1.2,-3.7,-0.04,0.03,3.2,2.1)
+for k in range(5):
+    t=k/4; box("pave",4.4+2.6*t,-5.8-2.4*t,-0.04,0.03,0.9,0.9)
 box("stone",0.4,0.6,-0.05,0.25,4.6,3.4)
 
 # ---- the main block (Kami-no-yu): three storeys of dark timber, the upper two screened with bamboo blinds,
@@ -160,11 +162,16 @@ box("white",MX,MY,5.1,5.22,1.32,0.14)
 chidori(MX,MY-1.35,3.05,0,1.0,0.75,0.5); chidori(MX+2.25,MY,3.05,math.pi/2,0.8,0.65,0.5)
 kara(MX,MY-0.95,4.35,0,0.75,0.6,0.45)
 # the Shinrokaku: the little vermilion drum tower on the ridge, the white heron at its peak
-box("red",MX,MY,5.15,5.85,0.42,0.42)
-for k in range(2): box("glow_tower_%d"%k,MX-0.18+0.36*k,MY-0.43,5.35,5.7,0.12,0.01)
-flared_roof([(0.68,0.68,5.85,0.1),(0.68,0.68,5.93,0.1),(0.06,0.06,6.35,0.0)],"tile",MX,MY)
-solid([[(MX-0.12,MY-0.04,6.35),(MX+0.12,MY-0.04,6.35),(MX+0.12,MY+0.04,6.35),(MX-0.12,MY+0.04,6.35)],[(MX-0.05,MY-0.03,6.55),(MX+0.2,MY-0.03,6.62),(MX+0.2,MY+0.03,6.62),(MX-0.05,MY+0.03,6.55)]],"white")
-box("white",MX+0.22,MY,6.6,6.78,0.03,0.025)
+# (wider and a little taller than life, so its band of red-framed windows clears the roofs below in the game view)
+TZ0,TZ1=5.15,6.15
+box("red",MX,MY,TZ0,TZ1,0.58,0.58)
+for k in range(3):                                   # the window band all round the two faces the camera sees
+    box("glow_tower",MX-0.36+0.36*k,MY-0.59,TZ0+0.32,TZ1-0.2,0.14,0.01)
+    box("glow_tower",MX+0.59,MY-0.36+0.36*k,TZ0+0.32,TZ1-0.2,0.01,0.14)
+flared_roof([(0.88,0.88,TZ1,0.1),(0.88,0.88,TZ1+0.08,0.1),(0.07,0.07,TZ1+0.55,0.0)],"tile",MX,MY)
+hz=TZ1+0.55
+solid([[(MX-0.12,MY-0.04,hz),(MX+0.12,MY-0.04,hz),(MX+0.12,MY+0.04,hz),(MX-0.12,MY+0.04,hz)],[(MX-0.05,MY-0.03,hz+0.2),(MX+0.2,MY-0.03,hz+0.27),(MX+0.2,MY+0.03,hz+0.27),(MX-0.05,MY+0.03,hz+0.2)]],"white")
+box("white",MX+0.22,MY,hz+0.25,hz+0.43,0.03,0.025)
 
 # ---- the entrance wing at the front under its great curving gable, and a second gable above it
 EX,EY=-0.3,-1.6
@@ -182,14 +189,28 @@ storey(WX,WY,0.95,1.2,1.8,2.7)
 flared_roof([(1.35,1.6,2.7,0.18),(1.35,1.6,2.78,0.18),(0.9,1.1,3.0,0.05),(0.12,0.85,3.45,0.0)],"green",WX,WY)
 chidori(WX,WY-1.2,2.72,0,0.7,0.55,0.45,"green")
 
+# ---- the front-left wing and shopfronts: crowded timber frontage brought forward onto the old forecourt, close to
+# the walk, two storeys of lit screens and bamboo blinds under grey tile
+FX,FY=-3.85,-2.6
+storey(FX,FY,1.35,1.25,0.0,1.15,blinds=False,nwin=4)
+eave(FX,FY,1.35,1.25,1.15,0.4,"tile",(1.0,0.9))
+storey(FX,FY,1.1,1.0,1.5,2.45)
+flared_roof([(1.5,1.4,2.45,0.18),(1.5,1.4,2.53,0.18),(1.0,0.85,2.8,0.05),(0.75,0.1,3.2,0.0)],"tile",FX,FY)
+chidori(FX,FY-1.0,2.5,0,0.8,0.6,0.45)
+box("sudare",FX+0.4,FY-1.27,1.3,1.45,0.9,0.01)
+for k,(cy,hy) in enumerate(((-4.65,0.65),(-5.95,0.55))):        # little shops along the square's left edge
+    storey(-2.75,cy,0.7,hy,0.0,1.05,blinds=False,nwin=2)
+    box("glow_lantern_s%d"%k,-2.04,cy,0.15,0.8,0.01,hy*0.7)
+    flared_roof([(0.98,hy+0.25,1.05,0.12),(0.98,hy+0.25,1.12,0.12),(0.1,hy-0.05,1.6,0.0)],"tile",-2.75,cy)
+
 # ---- trees behind, a few lanterns about the square
 def tree(x,y,s):
     T=dict(cx=x,cy=y,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.15,-0.3,5),ngon(0.1,1.9,5)],"bark",T)
     ico("leaf",0,0,2.5,1.2,1.1,1.0,T); ico("leaf",0.6,0.35,2.0,0.75,0.7,0.6,T)
-for x,y,s in [(-5.6,4.4,1.0),(-3.0,6.4,1.05),(1.4,6.6,1.0),(5.0,5.4,1.0),(-6.8,0.4,0.9),(7.0,2.2,0.9),(-7.0,-6.6,0.8),(7.2,-6.4,0.8)]:
+for x,y,s in [(-5.6,4.4,1.0),(-3.0,6.4,1.05),(1.4,6.6,1.0),(5.0,5.4,1.0),(-6.8,0.4,0.9),(7.0,2.2,0.9),(-6.6,-6.8,0.8),(7.4,-3.8,0.8)]:
     tree(x,y,s)
-for k,(x,y) in enumerate(((-3.2,-3.6),(2.6,-3.6),(-5.6,-2.0),(5.8,-2.4))):
+for k,(x,y) in enumerate(((-1.5,-5.35),(3.9,-5.35),(4.2,-2.3),(-1.55,-3.05))):
     prism("stone",x,y,-0.05,0.55,0.12,0.09,6); box("stone",x,y,0.55,0.6,0.2,0.2)
     box("glow_lantern_%d"%k,x,y,0.6,0.82,0.12,0.12); flared_roof([(0.26,0.26,0.82,0.04),(0.26,0.26,0.87,0.04),(0.03,0.03,1.07,0.0)],"stone",x,y)
 

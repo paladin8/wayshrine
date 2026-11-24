@@ -117,22 +117,33 @@ EXTRA_SOLIDS=[]
 # ---- gassho-zukuri farmhouses: steep thatched A-frames (about 52 degrees) carrying snow, the ridge running
 # front to back so the dark timbered gable with its tiers of paper windows faces the approach
 GLOW=[0]
-def gassho(cx,cy,W,L,storeys=3,shed=False):
+def gassho(cx,cy,W,L,storeys=3,shed=False,rough=0.3):
     T=dict(cx=cx,cy=cy)
     E=0.5                                        # eave height
     HR=E+1.3*(W+0.25)                            # ridge height for a 52 degree pitch
     box("darkwood",0,0,0.0,E+0.45,W*0.78,L*0.96,T)                      # ground storey walls
     box("stone",0,0,-0.05,0.12,W*0.84,L*1.0,T)
     extrude_y("darkwood",[(-W*0.78,E+0.4),(W*0.78,E+0.4),(0,HR-0.3)],-L*0.96,L*0.96,T)   # gable walls
-    # thatch: two thick slabs meeting at the ridge, overhanging the gables
-    extrude_y("thatch",[(-W-0.28,E),(0,HR+0.32),(W+0.28,E),(W-0.1,E),(0,HR-0.12),(-W+0.1,E)],-L-0.38,L+0.38,T)
-    # snow on the slopes, short of the eaves and the gable edges so the thatch shows as a brown rim
-    k=0.1/(W+0.28)
+    # thatch: two thick slabs meeting at the ridge, overhanging the gables. Laid in a few lengths whose eaves hang
+    # a little differently, so the straw edge is cut and uneven rather than one clean line; thicker when rough
+    th=0.2+0.25*rough                                                      # how far the straw's thickness shows at the eave
     def lift(x): return E+(HR+0.32-E)*(1-abs(x)/(W+0.28))
-    sx0=W+0.1
-    extrude_y("snow",[(-sx0,lift(-sx0)+0.03),(0,HR+0.46),(sx0,lift(sx0)+0.03),(sx0-0.04,lift(sx0)-0.02),(0,HR+0.32),(-sx0+0.04,lift(-sx0)-0.02)],-L-0.26,L+0.26,T)
+    NS=4; ys=[-L-0.38+(2*L+0.76)*i/NS for i in range(NS+1)]
+    for i in range(NS):
+        dr=[rng.uniform(0,0.16*rough) for _ in (0,1)]                      # the eave drops a little, side by side
+        ow=[rng.uniform(-0.1,0.06)*rough for _ in (0,1)]
+        extrude_y("thatch",[(-W-0.28-ow[0],E-dr[0]),(0,HR+0.32),(W+0.28+ow[1],E-dr[1]),(W-th,E-dr[1]+0.02),(0,HR-0.12),(-W+th,E-dr[0]+0.02)],ys[i],ys[i+1],T)
+    # snow on the slopes, short of the eaves and the gable edges so the thatch shows as a brown rim. The cap varies
+    # along the roof: in some lengths it has slid back up the slope, baring a broad band of straw
+    gin=0.12+0.25*rough                                                    # straw bared at the gable verges
+    sy=[-L-0.38+gin+(2*L+0.76-2*gin)*i/NS for i in range(NS+1)]
+    for i in range(NS):
+        sx0=W+0.1-((0.3+rng.uniform(0.0,0.45)) if (i+GLOW[0])%2 else rng.uniform(0.0,0.15))*rough
+        top=HR+0.46+rng.uniform(-0.05,0.08)*rough
+        extrude_y("snow",[(-sx0,lift(-sx0)+0.03),(0,top),(sx0,lift(sx0)+0.03),(sx0-0.04,lift(sx0)-0.02),(0,HR+0.32),(-sx0+0.04,lift(-sx0)-0.02)],sy[i],sy[i+1],T)
     box("thatch",0,0,HR+0.3,HR+0.48,0.16,L+0.3,T)                         # ridge cap
-    box("snow",0,0,HR+0.48,HR+0.56,0.2,L+0.24,T)
+    for i in range(NS):
+        box("snow",0,(sy[i]+sy[i+1])/2,HR+0.48,HR+0.56+rng.uniform(0,0.1)*rough,0.2,(sy[i+1]-sy[i])/2,T)
     # the front gable: timber beams and tiers of paper windows (lit, as for the evening illumination)
     g=GLOW[0]=GLOW[0]+1
     yf=-L*0.96
@@ -152,8 +163,9 @@ def gassho(cx,cy,W,L,storeys=3,shed=False):
         extrude_y("thatch",[(W*0.7,1.15),(W*0.78+1.05,0.72),(W*0.78+1.05,0.84),(W*0.7,1.27)],L*0.3-L*0.5,L*0.3+L*0.5,T)
         extrude_y("snow",[(W*0.72,1.28),(W*0.78+0.98,0.86),(W*0.78+0.98,0.9),(W*0.72,1.33)],L*0.3-L*0.45,L*0.3+L*0.45,T)
     return HR
-HOUSES=[(-4.2,2.0,1.45,2.3,4,True),(1.8,5.2,1.2,1.9,3,False),(5.6,-0.8,1.1,1.75,3,True),(-0.4,-3.2,1.05,1.65,3,False),(-7.2,-4.6,0.95,1.5,2,False),
-        (6.8,6.2,1.0,1.6,3,False),(-8.0,6.2,1.0,1.6,2,True),(-4.2,-8.4,0.95,1.5,2,False)]
+# the two houses nearest the camera (front-right) carry the roughest, thickest straw edges
+HOUSES=[(-4.2,2.0,1.45,2.3,4,True),(1.8,5.2,1.2,1.9,3,False),(5.6,-0.8,1.1,1.75,3,True,1.0),(-0.4,-3.2,1.05,1.65,3,False,0.6),(-7.2,-4.6,0.95,1.5,2,False),
+        (6.8,6.2,1.0,1.6,3,False),(-8.0,6.2,1.0,1.6,2,True),(-4.2,-8.4,0.95,1.5,2,False,1.0)]
 for h in HOUSES: gassho(*h)
 gassho(8.7,2.9,0.7,0.95,1)                                                 # a small gassho storehouse
 

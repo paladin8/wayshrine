@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { lifeAt, railwayPowered, vitality, type GameState, type TrainFrame, type VoyageFrame } from "../game";
+import { lifeAt, railwayPowered, vitality, type GameState, type RestorationWake, type TrainFrame, type VoyageFrame } from "../game";
 import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
 import { createAmbient } from "./ambient";
 import { buildFujiTrain } from "./fuji-train";
@@ -22,6 +22,7 @@ import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
 
 /** World units visible vertically in normal play, and when pulled back to see a whole region. */
 const VIEW_SIZE = 16;
+const SHRINE_SHIMMER_SECONDS = 0.48;
 const WIDE_VIEW_SIZE = 62;
 /** Chunks kept loaded around the camera: enough to cover the view, more when pulled back. */
 const LOAD_RADIUS = 2;
@@ -77,6 +78,8 @@ export interface StageView {
   readonly voyage?: VoyageFrame;
   readonly train?: TrainFrame;
   readonly parkedTrain?: number;
+  /** Starts the arrival effect on the traveller after shrine travel. */
+  readonly shrineArrival?: boolean;
   readonly boardingHeight?: number;
   readonly moving?: boolean;
   /** While the traveller straps on snowshoes for the first time: progress through that moment, 0 to 1. */
@@ -91,6 +94,8 @@ export interface StageView {
   readonly character?: CharacterVariant;
   /** Abilities held, so the traveller wears or carries the gear the ground underfoot calls for. */
   readonly capabilities?: ReadonlySet<Capability>;
+  /** Passive waves centred on where the traveller entered each region. */
+  readonly wakes?: ReadonlyMap<string, RestorationWake>;
   /** Optional camera pull-back centred on the player, from 0 to 1. */
   readonly overviewZoom?: number;
   /**
@@ -185,8 +190,12 @@ export function createStage(
   let state: GameState | null = null;
   let awakeningRegion: string | null = null;
   let awakeningProgress = 0;
+  let wakes: StageView["wakes"];
+  const wakeOf = (id: string) => wakes?.get(id);
   let clock = 0;
   let playerY = 1;
+  let arrivalProgress = 1;
+  let arrivalInView = false;
 
   const chunkKey = (cx: number, cz: number): string => `${cx},${cz}`;
   // Warm up the two station views for boarding and arrival. The window has its own scene.
@@ -208,6 +217,8 @@ export function createStage(
   /** Progress to draw now; a region seen for the first time appears at its true value. */
   function shownProgress(id: string): number {
     if (id === awakeningRegion) return awakeningProgress;
+    const wake = wakeOf(id);
+    if (wake) return wake.progress;
     let v = shown.get(id);
     if (v === undefined) {
       v = targetProgress(id);
@@ -269,7 +280,7 @@ export function createStage(
         // A landmark model's origin sits at its plateau's base height; its own ground rises from there.
         const ground = region.landmark ? plateauBase(region) : terrain.tileAtPoint(region.shrine.x, region.shrine.z).height;
         shrine.group.position.set(region.shrine.x, ground, region.shrine.z);
-        shrine.setVitality(shownProgress(region.id));
+        shrine.setVitality(shrineVitality(region));
         shrines.set(region.id, shrine);
         scene.add(shrine.group);
       }
@@ -290,8 +301,14 @@ export function createStage(
       shown.set(awakeningRegion, awakeningProgress);
       if (before !== awakeningProgress) dirty.add(awakeningRegion);
     }
-    for (const [id, v] of shown) {
+    for (const [id, wake] of wakes ?? []) {
       if (id === awakeningRegion) continue;
+      shown.set(id, wake.progress);
+      // Newly streamed geometry needs the wake origin even when its progress has not changed.
+      dirty.add(id);
+    }
+    for (const [id, v] of shown) {
+      if (id === awakeningRegion || wakes?.has(id)) continue;
       const goal = targetProgress(id);
       if (v === goal) continue;
       const step = QUICK_RATE * dt;
@@ -303,14 +320,23 @@ export function createStage(
       railwayVitalityReady = true;
     }
     if (dirty.size === 0) return;
-    railwayMesh?.scenery.applyVitality(shownProgress, dirty);
-    for (const chunk of chunks.values()) chunk.applyVitality(shownProgress, dirty);
-    for (const [id, shrine] of shrines) if (dirty.has(id)) shrine.setVitality(shownProgress(id));
+    const originFor = wakes?.size ? wakeOf : undefined;
+    railwayMesh?.scenery.applyVitality(shownProgress, dirty, originFor);
+    for (const chunk of chunks.values()) chunk.applyVitality(shownProgress, dirty, originFor);
+    for (const [id, shrine] of shrines) if (dirty.has(id)) shrine.setVitality(shrineVitality(world.regionById(id)));
   }
 
   function lifeAtPoint(x: number, z: number): number {
     const region = world.regionAt(x, z);
-    return lifeAt(shownProgress(region.id), Math.hypot(x - region.shrine.x, z - region.shrine.z));
+    const wake = wakeOf(region.id);
+    const origin = wake?.origin ?? region.shrine;
+    return lifeAt(shownProgress(region.id), Math.hypot(x - origin.x, z - origin.z), wake?.extent);
+  }
+
+  function shrineVitality(region: ReturnType<typeof world.regionById>): number {
+    const wake = wakeOf(region.id);
+    return wake ? lifeAt(wake.progress, Math.hypot(region.shrine.x - wake.origin.x, region.shrine.z - wake.origin.z), wake.extent)
+      : shownProgress(region.id);
   }
 
   const particlePixelScale = (): number =>
@@ -372,6 +398,7 @@ export function createStage(
     },
     render(dt, view) {
       state = view.state;
+      wakes = view.wakes;
       const awakening = view.awakening ?? null;
       awakeningRegion = awakening?.regionId ?? null;
       awakeningProgress = awakening?.progress ?? 0;
@@ -420,6 +447,7 @@ export function createStage(
         focus: centre,
         zoom,
         awakening: awakening ? { regionId: awakening.regionId, progress: awakening.progress } : null,
+        wakes,
       });
 
       // During the wide shot, let the restoration wave light the stones in that region.
@@ -448,6 +476,16 @@ export function createStage(
       player.setPose(seated, vessel === "ship" ? aboard * SHIP_DECK_HEIGHT : voyage?.lift ?? 0);
       const needed = BIOME_REQUIRES[tile.biome];
       player.setCharacter(view.character ?? "female");
+      if (view.shrineArrival) {
+        arrivalProgress = 0;
+        arrivalInView = false;
+      }
+      // On a long trip, wait for the camera to catch up before revealing the traveller.
+      if (arrivalProgress < 1) {
+        arrivalInView ||= Math.hypot(target.x - pos.x, target.z - pos.z) < viewSize * 0.36;
+        if (arrivalInView) arrivalProgress = Math.min(1, arrivalProgress + dt / SHRINE_SHIMMER_SECONDS);
+      }
+      player.setArrival(arrivalProgress);
       const strapping = view.strapping;
       let worn = seated < 0.5 && needed && view.capabilities?.has(needed) ? WORN_GEAR[needed] ?? null : null;
       if (strapping !== undefined) {

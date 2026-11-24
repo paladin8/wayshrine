@@ -113,6 +113,23 @@ describe("music", () => {
     expect(music.status().voices).toHaveLength(1);
   });
 
+  it("cuts the old track before releasing the duck into the next one", () => {
+    const { music, made } = setup();
+    music.setTrack("a" as never);
+    music.unlock();
+    run(music, 3);
+    music.setDuck(0);
+    run(music, 1.1);
+    expect(made[0]!.volume).toBe(0);
+
+    music.setTrack("b" as never, 0.1, "cut");
+    expect(made[0]!.playing).toBe(false);
+    expect(music.status().voices.map(({ id }) => id)).toEqual(["b"]);
+    music.setDuck(1);
+    music.update(0.1);
+    expect(made[1]!.volume).toBeGreaterThan(0);
+  });
+
   it("ignores a request for the track already playing", () => {
     const { music, made } = setup();
     music.setTrack("a" as never);

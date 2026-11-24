@@ -7,6 +7,7 @@ const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../../$
 const source = combineSources(
   read("content/source/japanese-texts.json") as SourceFile,
   read("content/source/landmark-haiku.json") as SourceFile,
+  read("content/source/outer-rubbings.json") as SourceFile,
 );
 const scenery = read("content/haiku-scenery.json") as Record<string, Scenery>;
 delete (scenery as Record<string, unknown>)["_about"];
@@ -15,9 +16,22 @@ delete (lines as Record<string, unknown>)["_about"];
 const built = buildContent(source, scenery, undefined, lines);
 
 describe("content", () => {
-  it("has 1009 unique texts", () => {
-    expect(built.texts).toHaveLength(1009);
-    expect(new Set(built.texts.map((t) => t.id)).size).toBe(1009);
+  it("has 1209 unique texts", () => {
+    expect(built.texts).toHaveLength(1209);
+    expect(new Set(built.texts.map((t) => t.id)).size).toBe(1209);
+  });
+
+  it("adds 200 distinct inscriptions", () => {
+    const added = (read("content/source/outer-rubbings.json") as SourceFile).entries;
+    expect(added).toHaveLength(200);
+    const prior = source.entries.slice(0, -added.length);
+    const inscriptionKey = (text: string) => text.normalize("NFKC").replace(/[\p{P}\s]/gu, "");
+    const seen = new Set(prior.map((entry) => inscriptionKey(entry.japanese)));
+    for (const entry of added) {
+      const inscription = inscriptionKey(entry.japanese);
+      expect(seen.has(inscription), entry.id).toBe(false);
+      seen.add(inscription);
+    }
   });
 
   it("generated files are up to date (run `npm run content`)", () => {
@@ -58,6 +72,22 @@ describe("content", () => {
 });
 
 describe("landmark haiku placement", () => {
+  it("puts a rubbing within one region of every landmark", async () => {
+    const { monumentSpecs } = await import("./index");
+    const { createWorld, createTerrain, planMonuments } = await import("../world");
+    for (const seed of ["wayshrine", "cedar-path", "winter-coast", "silver-river", "fuji-rail"]) {
+      const world = createWorld(seed);
+      const plan = planMonuments(createTerrain(world), monumentSpecs);
+      for (const { coord, landmark } of world.landmarks) {
+        const nearby = plan.all.some(({ regionId }) => {
+          const { rx, rz } = world.regionById(regionId).coord;
+          return Math.max(Math.abs(coord.rx - rx), Math.abs(coord.rz - rz)) <= 1;
+        });
+        expect(nearby, `${seed}: ${landmark!.id}`).toBe(true);
+      }
+    }
+  });
+
   it("stands every linked haiku in its landmark's region", async () => {
     const { monumentSpecs } = await import("./index");
     const { createWorld, createTerrain, planMonuments } = await import("../world");

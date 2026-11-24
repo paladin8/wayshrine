@@ -2,10 +2,10 @@
 
 Status: accepted
 
-**Context.** The game needs a second kind of exploration beside shrines: finding things worth reading. The source is a collection of 1,000 Japanese texts (50 haiku, 740 proverbs, 120 four-character sayings, 90 idioms).
+**Context.** The game needs a second kind of exploration beside shrines: finding things worth reading. The source is a collection of 1,209 Japanese texts (59 haiku, 769 proverbs, 231 four-character sayings, 150 idioms).
 
 **Decision.**
-- Every text appears exactly once, on a standing stone. The world is infinite but the set is finite, so `planMonuments` lays the stones out in rings around the start region, 0 to 2 per region (20% / 55% / 25%), far from shrines and region edges. A plan is a pure function of seed and text list (ADR 0002 holds: only what the player has read is saved, as `collected` in save v3).
+- Every text appears exactly once, on a monument. The world is infinite but the set is finite, so `planMonuments` lays the stones out in circular bands around the start region, 0 to 2 per region (26% / 53% / 21% for ordinary scatter), far from shrines and region edges. Landmark-linked haiku are placed first, followed by a reserved rubbing in or next to any landmark region that still needs nearby coverage. A plan is a pure function of seed and text list (ADR 0002 holds: only what the player has read is saved, as `collected` in save v3).
 - A stone's inscription is legible only once its region is restored; until then the stone is worn smooth. Restored, unread stones glimmer, but only while on screen: no compass, no map marker.
 - Haiku carry a scenery tag (biome now; season and scene recorded for later) and are placed in regions of that biome. A haiku tagged with a landmark instead stands in that landmark's region. Other texts are placed at random.
 - Japanese mode shows the Japanese text alone, no English and no readings. English mode adds the translation.

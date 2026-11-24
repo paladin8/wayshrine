@@ -21,7 +21,7 @@ export interface DebugActions {
   readonly previewAshSandalsUse: () => void;
   readonly previewShipUnlock: () => void;
   readonly previewShipUse: () => void;
-  readonly cycleMusic: () => string;
+  readonly previewPilgrimsWake: () => void;
   /** Switches gear transitions between their cue and a plain slow crossfade; returns the new mode. */
 }
 
@@ -88,9 +88,6 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   add(panel, "Reset everything", actions.resetAll);
   add(panel, "Read a rubbing (R)", actions.readRubbing);
   add(panel, "Go to next shrine (G)", actions.goToTarget);
-  const musicSet = add(panel, "Music set: Auto", () => {
-    musicSet.textContent = `Music set: ${actions.cycleMusic()}`;
-  });
 
   const content = document.createElement("div");
   content.className = "debug-content";
@@ -125,6 +122,7 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   preview("Preview ash sandals use", actions.previewAshSandalsUse);
   preview("Preview ship unlock", actions.previewShipUnlock);
   preview("Preview first sailing", actions.previewShipUse);
+  preview("Preview Pilgrim’s Wake unlock", actions.previewPilgrimsWake);
   dialog.appendChild(content);
   container.append(style, panel, dialog);
 
