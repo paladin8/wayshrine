@@ -73,6 +73,9 @@ const defaultFactory: PlayerFactory = (url) => {
   return audio;
 };
 
+/** The outgoing track fades over this share of the fade time; the incoming one takes all of it. */
+const FADE_OUT_SHARE = 0.4;
+
 /**
  * Background music loops in the player and crossfades when the track changes.
  * Nothing plays until `unlock()`.
@@ -152,8 +155,10 @@ export function createMusic(options: MusicOptions = {}): Music {
       const maxMove = dt / (delta > 0 ? duckReleaseSeconds : duckSeconds);
       duck = Math.abs(delta) <= maxMove ? duckTarget : duck + Math.sign(delta) * maxMove;
       const step = dt / fadeSeconds;
+      // The outgoing track leaves faster than the new one arrives, so the two overlap less.
+      const outStep = dt / (fadeSeconds * FADE_OUT_SHARE);
       for (const v of voices) {
-        v.level = v.target === 1 ? Math.min(1, v.level + step) : Math.max(0, v.level - step);
+        v.level = v.target === 1 ? Math.min(1, v.level + step) : Math.max(0, v.level - outStep);
         apply(v);
       }
       for (const v of voices) {

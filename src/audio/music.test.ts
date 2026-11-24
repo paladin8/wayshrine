@@ -103,7 +103,7 @@ describe("music", () => {
     run(music, 3);
     music.setTrack("b" as never);
     expect(made).toHaveLength(2);
-    run(music, 1);
+    run(music, 0.5);
     expect(made[0]!.playing).toBe(true);
     expect(made[0]!.volume).toBeLessThan(0.5);
     expect(made[1]!.volume).toBeGreaterThan(0);
@@ -210,8 +210,23 @@ describe("music", () => {
     run(music, 3);
     music.setTrack("b" as never, 10);
     run(music, 5);
-    expect(made[0]!.volume).toBeCloseTo(0.5, 1);
+    // The old track leaves in 40% of the fade; the new one takes all of it.
+    expect(made[0]!.volume).toBeCloseTo(0, 1);
     expect(made[1]!.volume).toBeCloseTo(0.5, 1);
+  });
+
+  it("fades the outgoing track out faster than the incoming one fades in", () => {
+    const { music, made } = setup({ fade: 4 });
+    music.setVolume(1);
+    music.unlock();
+    music.setTrack("a" as never);
+    run(music, 5);
+    music.setTrack("b" as never);
+    run(music, 1.5);
+    expect(made[0]!.volume).toBeLessThan(made[1]!.volume);
+    run(music, 0.5);
+    expect(made[0]!.playing).toBe(false);
+    expect(made[1]!.playing).toBe(true);
   });
 
   it("can come back up from a duck more slowly than it goes down", () => {
