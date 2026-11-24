@@ -94,9 +94,9 @@ const AWAKENING_SWELLS: Readonly<Record<AwakeningKind, CueId>> = {
 /** Alternate shrine swell shared by the Snowline, Marshwalk, and Lantern music sets. */
 const WINTER_SHRINE_SWELL: CueId = "winter-light-restored";
 const WINTER_SHRINE_FADE_IN = 2.4;
-/** Volcanic shrines use the landmark swell, which suits the basalt theme better than the winter one. */
-const VOLCANIC_SHRINE_SWELL: CueId = "radiant-arrival";
-const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), WINTER_SHRINE_SWELL, "haiku-bell"] as const;
+/** Volcanic shrines have their own swell; the winter and landmark ones did not suit the basalt theme. */
+const VOLCANIC_SHRINE_SWELL: CueId = "light-returns";
+const ALL_AWAKENING_CUES = [AWAKENING_BURST, ...Object.values(AWAKENING_SWELLS), WINTER_SHRINE_SWELL, VOLCANIC_SHRINE_SWELL, "haiku-bell"] as const;
 /** How far the music drops while the awakening swell plays, and how long the swell takes to fade if skipped. */
 const SWELL_DUCK = 0;
 /** How slowly the background music comes back after a restoration swell has silenced it. */
