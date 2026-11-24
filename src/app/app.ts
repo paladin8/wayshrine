@@ -2,6 +2,8 @@ import {
   awakeningFrame,
   BOAT_PUSH_OFF_SECONDS,
   boatLaunchFrame,
+  shipLaunchFrame,
+  SHIP_PUSH_OFF_SECONDS,
   blockerAt,
   captionTarget,
   CAPTION_FADE,
@@ -27,7 +29,9 @@ import {
   type StationIndex,
   type TrainFrame,
   planBoatLaunch,
+  planShipLaunch,
   recordBoatLaunch,
+  recordShipLaunch,
   recordClimbUse,
   recordAshSandalsUse,
   recordGetaUse,
@@ -45,6 +49,8 @@ import {
   timingOf,
   type AwakeningKind,
   type BoatLaunch,
+  type ShipLaunch,
+  type VoyageFrame,
   serialize,
   shrineInReach,
   startPosition,
@@ -258,6 +264,7 @@ export function startApp(container: HTMLElement): void {
   } | null = null;
   let gearReveal: { gear: GearReveal; left: number } | null = null;
   let boatVoyage: { readonly path: BoatLaunch; readonly preview: boolean; t: number } | null = null;
+  let shipVoyage: { readonly path: ShipLaunch; readonly preview: boolean; t: number } | null = null;
   let trainRide: {
     readonly from: StationIndex;
     readonly boardingFrom: Point;
@@ -270,6 +277,8 @@ export function startApp(container: HTMLElement): void {
   let trainLoadNotice = 0;
   // A debug voyage gives temporary water access, without writing that voyage to the save.
   let boatTrial = false;
+  let shipTrial = false;
+  let shipMusicPreview = false;
   let snowshoeMusicPreview = false;
   let snowshoeMoment: { t: number } | null = null;
   let climbMoment: { t: number } | null = null;
@@ -281,8 +290,8 @@ export function startApp(container: HTMLElement): void {
   let ashMoment: { t: number } | null = null;
   let ashMusicPreview = false;
   /** True while a debug preview waits (negative time) for the previous theme to fade back before it starts. */
-  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0 || (ashMoment?.t ?? 0) < 0;
-  const momentBusy = (): boolean => trainRide !== null || awakening !== null || gearReveal !== null || boatVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null || ashMoment !== null;
+  const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (shipVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0 || (ashMoment?.t ?? 0) < 0;
+  const momentBusy = (): boolean => trainRide !== null || awakening !== null || gearReveal !== null || boatVoyage !== null || shipVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null || ashMoment !== null;
   let debugMusicIndex = -1;
   const selectedMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
@@ -308,9 +317,14 @@ export function startApp(container: HTMLElement): void {
       ? lanternMoment.t >= LANTERN_MOMENT_SECONDS * LANTERN_IGNITION_AT
       : lanternMusicPreview || (!earlierGearPreview && state.lanternUsed));
     const earlierThanAsh = earlierGearPreview || lanternMusicPreview || lanternMoment !== null;
+    // The ship comes after the ash sandals, so a previewed departure starts on the basalt theme and crosses over to the sea one.
+    const sailing = shipVoyage?.preview === true || shipMusicPreview;
     const afterAsh = ashMoment && ashMoment.t < 0 ? false
-      : ash || ashMusicPreview || (!earlierThanAsh && state.ashSandalsUsed);
-    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta, afterLantern, afterAsh);
+      : ash || ashMusicPreview || sailing || (!earlierThanAsh && state.ashSandalsUsed);
+    const earlierThanShip = earlierThanAsh || ashMoment !== null || ashMusicPreview;
+    const afterShip = shipVoyage ? shipVoyage.t >= SHIP_PUSH_OFF_SECONDS
+      : shipMusicPreview || (!earlierThanShip && state.shipLaunched);
+    return MUSIC_SETS[debugMusicIndex] ?? musicSetFor(afterLaunch, afterSnow, afterClimb, afterGeta, afterLantern, afterAsh, afterShip);
   };
 
   const startVoyage = (path: BoatLaunch, preview = false): void => {
@@ -326,6 +340,22 @@ export function startApp(container: HTMLElement): void {
     getaMusicPreview = false;
     lanternMusicPreview = false;
     ashMusicPreview = false;
+  };
+
+  const startShipVoyage = (path: ShipLaunch, preview = false): void => {
+    // If this save is already on the sea theme, let the debug run fade back to the basalt theme first.
+    const playing = music.status().track;
+    const lead = preview && debugMusicIndex < 0 && playing && playing !== MUSIC_SETS[6].background ? -3.1 : 0;
+    shipVoyage = { path, preview, t: lead };
+    pos = path.from;
+    facing = path.facing;
+    overviewTime = OVERVIEW_SECONDS;
+    snowshoeMusicPreview = false;
+    climbMusicPreview = false;
+    getaMusicPreview = false;
+    lanternMusicPreview = false;
+    ashMusicPreview = false;
+    shipMusicPreview = false;
   };
 
   const startTrainRide = (from: StationIndex, preview = false): void => {
@@ -362,12 +392,15 @@ export function startApp(container: HTMLElement): void {
     finishTrainRide(false);
     gearReveal = null;
     boatVoyage = null;
+    shipVoyage = null;
     snowshoeMoment = null;
     climbMoment = null;
     getaMoment = null;
     lanternMoment = null;
     ashMoment = null;
     boatTrial = false;
+    shipTrial = false;
+    shipMusicPreview = false;
     snowshoeMusicPreview = false;
     climbMusicPreview = false;
     getaMusicPreview = false;
@@ -461,6 +494,31 @@ export function startApp(container: HTMLElement): void {
       }
     };
 
+    const previewFirstSailing = (): void => {
+      const caps = new Set<Capability>(["boat", "ship"]);
+      // Trace out from a landmark in the open sea until a clear bank meets enough sea for the ship to berth and sail off.
+      for (const region of world.landmarks) {
+        if (region.biome !== "sea") continue;
+        for (let bearing = 0; bearing < 16; bearing++) {
+          const angle = bearing * Math.PI / 8;
+          const at = (r: number): Point => ({ x: region.site.x + Math.cos(angle) * r, z: region.site.z + Math.sin(angle) * r });
+          for (let r = 4; r < 32; r += 0.35) {
+            const from = at(r);
+            const entry = at(r + 0.35);
+            if (onWater(terrain, from) || terrain.tileAtPoint(entry.x, entry.z).biome !== "sea" || blockerAt(terrain, caps, from.x, from.z)) continue;
+            const clear = clearOfObstacles(terrain, caps, obstacles, from);
+            if (Math.hypot(clear.x - from.x, clear.z - from.z) > 0.01) continue;
+            const path = planShipLaunch(terrain, caps, obstacles, from, entry);
+            if (Math.hypot(path.afloat.x - entry.x, path.afloat.z - entry.z) < 3.4) continue;
+            beginPreview();
+            shipTrial = true;
+            startShipVoyage(path, true);
+            return;
+          }
+        }
+      }
+    };
+
     const restoreLandmarks = (): void => world.landmarks.forEach((r) => restore(r.id));
     const reset = (next: (s: GameState) => GameState): void => {
       stopGearMoments();
@@ -491,6 +549,8 @@ export function startApp(container: HTMLElement): void {
       previewGetaUnlock: () => previewGearUnlock("geta"),
       previewLanternUnlock: () => previewGearUnlock("lantern"),
       previewAshSandalsUnlock: () => previewGearUnlock("ashSandals"),
+      previewShipUnlock: () => previewGearUnlock("ship"),
+      previewShipUse: previewFirstSailing,
       previewClimbUse: () => {
         beginPreview();
         // If this save is already on the ridge theme, let the preview fade back to the snow theme first.
@@ -629,7 +689,8 @@ export function startApp(container: HTMLElement): void {
             : count === CAPABILITY_THRESHOLDS.climbing ? "climbing"
             : count === CAPABILITY_THRESHOLDS.geta ? "geta"
             : count === CAPABILITY_THRESHOLDS.lantern ? "lantern"
-            : count === CAPABILITY_THRESHOLDS.ashSandals ? "ashSandals" : null;
+            : count === CAPABILITY_THRESHOLDS.ashSandals ? "ashSandals"
+            : count === CAPABILITY_THRESHOLDS.ship ? "ship" : null;
           const initialZoom = overviewZoomAt(overviewTime);
           overviewTime = OVERVIEW_SECONDS;
           const backgroundTrack = selectedMusicSet().background;
@@ -685,10 +746,11 @@ export function startApp(container: HTMLElement): void {
     }
     const caps = capabilitiesForCount(restoredLandmarks.length);
     if (boatTrial && !boatVoyage && !onWater(terrain, pos)) boatTrial = false;
-    const sailingCaps = boatTrial ? new Set<Capability>([...caps, "boat"]) : caps;
+    if (shipTrial && !shipVoyage && !onWater(terrain, pos)) shipTrial = false;
+    const sailingCaps = boatTrial || shipTrial ? new Set<Capability>([...caps, ...(boatTrial ? ["boat" as const] : []), ...(shipTrial ? ["ship" as const] : [])]) : caps;
     // Losing a capability (a reset, an old save) must never strand the player.
-    if (!boatVoyage && !trainRide) pos = clearOfObstacles(terrain, sailingCaps, obstacles, safePosition(terrain, sailingCaps, pos));
-    const seen = boatTrial || trainRide ? state : discoverNear(state, world, pos);
+    if (!boatVoyage && !shipVoyage && !trainRide) pos = clearOfObstacles(terrain, sailingCaps, obstacles, safePosition(terrain, sailingCaps, pos));
+    const seen = boatTrial || shipTrial || trainRide ? state : discoverNear(state, world, pos);
     if (seen !== state) {
       state = seen;
       saveGame(state);
@@ -705,8 +767,11 @@ export function startApp(container: HTMLElement): void {
       moving = Math.hypot(from.x - moved.pos.x, from.z - moved.pos.z) > 0.001;
       pos = moved.pos;
       facing = Math.atan2(dir.x, dir.z);
-      if (caps.has("boat") && !state.boatLaunched && !boatTrial && !onWater(terrain, from) && onWater(terrain, pos)) {
+      const biomeNow = terrain.tileAtPoint(pos.x, pos.z).biome;
+      if (caps.has("boat") && !state.boatLaunched && !boatTrial && !onWater(terrain, from) && biomeNow === "water") {
         startVoyage(planBoatLaunch(terrain, caps, obstacles, from, pos));
+      } else if (caps.has("ship") && !state.shipLaunched && !shipTrial && biomeNow === "sea" && terrain.tileAtPoint(from.x, from.z).biome !== "sea") {
+        startShipVoyage(planShipLaunch(terrain, caps, obstacles, from, pos));
       } else if (moving && caps.has("lantern") && !state.lanternUsed && terrain.tileAtPoint(pos.x, pos.z).biome === "forest") {
         state = recordLanternUse(state);
         saveGame(state);
@@ -742,7 +807,7 @@ export function startApp(container: HTMLElement): void {
     if (hintLeft === 0) blockedBy = null;
     overviewTime = Math.min(OVERVIEW_SECONDS, overviewTime + dt);
 
-    let voyageFrame: ReturnType<typeof boatLaunchFrame> | undefined;
+    let voyageFrame: VoyageFrame | undefined;
     if (boatVoyage) {
       boatVoyage.t += dt;
       if (boatVoyage.t >= 0) {
@@ -754,6 +819,20 @@ export function startApp(container: HTMLElement): void {
             saveGame(state);
           }
           boatVoyage = null;
+        }
+      }
+    }
+    if (shipVoyage) {
+      shipVoyage.t += dt;
+      if (shipVoyage.t >= 0) {
+        voyageFrame = shipLaunchFrame(shipVoyage.path, shipVoyage.t);
+        pos = voyageFrame.rider;
+        if (voyageFrame.done) {
+          if (!shipVoyage.preview) {
+            state = recordShipLaunch(state);
+            saveGame(state);
+          }
+          shipVoyage = null;
         }
       }
     }

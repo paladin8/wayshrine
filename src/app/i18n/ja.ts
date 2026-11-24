@@ -114,6 +114,7 @@ export const ja: Messages = {
     geta: { title: "下駄を手に入れた", hint: "湿地に足を踏み入れると、下駄を履けます。" },
     lantern: { title: "提灯を手に入れた", hint: "暗い森に足を踏み入れると、提灯に火を灯せます。" },
     ashSandals: { title: "灰よけの草履を手に入れた", hint: "火山の大地に足を踏み入れると、草履を履けます。" },
+    ship: { title: "船を手に入れた", hint: "外海の岸辺へ向かうと、船に乗れます。" },
   },
   promptRestore: "Eキーで祠を蘇らせる",
   promptRestoreLandmark: "Eキーで名所を蘇らせる",

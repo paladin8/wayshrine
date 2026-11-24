@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { buildBoat, buildScullingOar, buildWake } from "./boat-mesh";
+import { buildShip } from "./ship-mesh";
 import { buildCharacter, type Character, type CharacterVariant, type FootStep, type GearId, type LanternLighting } from "./character";
 
 export interface PlayerMesh {
@@ -18,6 +19,8 @@ export interface PlayerMesh {
   animate(dt: number, walking: boolean): readonly FootStep[];
   setPose(seated: number, lift: number): void;
   setBoat(visible: boolean, wake: number, seconds: number): void;
+  /** Show the ship in place of the boat; `gangway` is how far its boarding plank is out, 0 to 1. */
+  setShip(visible: boolean, wake: number, seconds: number, gangway: number): void;
 }
 
 /** A small low-poly traveller, with a boat that appears on water. */
@@ -41,8 +44,17 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
   const oar = buildScullingOar();
   const wake = buildWake();
   boat.add(oar);
-  hull.add(boat, wake.group);
+  const ship = buildShip();
+  const shipWake = buildWake();
+  // The ship is about twice as long, so its wake starts at the transom and is wider.
+  shipWake.group.scale.setScalar(1.7);
+  shipWake.group.position.z = -1.3;
+  ship.group.visible = false;
+  shipWake.group.visible = false;
+  hull.add(boat, wake.group, ship.group, shipWake.group);
   hull.visible = false;
+  let boatShown = false;
+  let shipShown = false;
 
   return {
     group,
@@ -85,12 +97,28 @@ export function buildPlayer(initial: CharacterVariant = "female"): PlayerMesh {
       rider.position.y = lift + 0.1 * next;
     },
     setBoat(visible, strength, seconds) {
-      hull.visible = visible;
-      if (!visible) return;
+      boatShown = visible;
+      hull.visible = boatShown || shipShown;
+      boat.visible = visible;
+      if (!visible) {
+        wake.group.visible = false;
+        return;
+      }
       boat.rotation.z = Math.sin(seconds * 2.7) * 0.035;
       oar.position.set(0.23, 0.445, -0.82);
       oar.rotation.set(-0.27, -0.18 + Math.sin(seconds * 5.2) * strength * 0.32, -0.12);
       wake.update(strength, seconds);
+    },
+    setShip(visible, strength, seconds, gangway) {
+      shipShown = visible;
+      hull.visible = boatShown || shipShown;
+      ship.group.visible = visible;
+      if (!visible) {
+        shipWake.group.visible = false;
+        return;
+      }
+      ship.update(seconds, gangway);
+      shipWake.update(strength, seconds);
     },
   };
 }

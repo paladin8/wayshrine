@@ -13,6 +13,7 @@ export {
   isRestored,
   newGame,
   recordBoatLaunch,
+  recordShipLaunch,
   recordClimbUse,
   recordAshSandalsUse,
   recordGetaUse,
@@ -62,5 +63,5 @@ export type { AwakeningFrame } from "./awakening";
 export { FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";
 export { MONUMENT_REACH, isLegible, monumentInReach } from "./monuments";
 
-export { BOAT_PUSH_OFF_SECONDS, boatLaunchFrame, onWater, planBoatLaunch, type BoatLaunch } from "./boat";
+export { BOAT_PUSH_OFF_SECONDS, boatLaunchFrame, onWater, planBoatLaunch, planShipLaunch, SHIP_PUSH_OFF_SECONDS, SHIP_LAUNCH_SECONDS, shipLaunchFrame, type BoatLaunch, type ShipLaunch, type VoyageFrame } from "./boat";
 export { otherStation, railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS, type StationIndex, type TrainFrame } from "./train";

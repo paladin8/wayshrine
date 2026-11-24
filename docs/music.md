@@ -32,7 +32,7 @@ The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `
 
 **Breeze**, **Waves**, and **Ridgewalk** use **Dawn Reverence** for ordinary shrines. **Snowline** and **Marshwalk** use **Winter Light Restored**. Every set uses **Radiant Arrival** for landmarks and the same awakening burst.
 
-In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), **Snowline** (Snowline Walk), **Ridgewalk** (Ridgewalk in E Major), and **Marshwalk** (Still Water Reeds). The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
+In `?debug`, **Music set** cycles through **Auto**, **Breeze** (Homeward Breeze), **Waves** (Waves Beyond the Headlands), **Snowline** (Snowline Walk), **Ridgewalk** (Ridgewalk in E Major), and **Marshwalk** (Still Water Reeds), **Lantern**, **Basalt**, and **Open sea**. The manual choice applies to the next restoration and stays in effect until you select **Auto** or reload. Auto follows saved gear first uses.
 
 ## Boat prototype
 
@@ -62,8 +62,16 @@ The first moving step onto volcanic ground after earning ash sandals crouches th
 
 The unlock reveal reads "Ash sandals unlocked" (English and Japanese). In **Gear acquisition**, **Preview ash sandals unlock** and **Preview ash sandals use** play the reveal and the bind-on moment without updating the save, fading back to the lantern theme first if the save is already on the basalt one.
 
+## First sailing
+
+Earning the ship (49 landmarks) shows "Ship unlocked" (English and Japanese). The first time the traveller walks from the bank onto open sea (`sea` biome, from land or from a lake) the ship comes into play: it glides in along the bank while she waits, she crosses its gangway to the deck, and it casts off, swinging bow-out. The background crossfades from **Basalt Crossing** to **Open sea** over 5 s as the ship casts off (`SHIP_PUSH_OFF_SECONDS`), with no cue or duck. The first sailing is saved when it finishes (`shipLaunched`) and Open sea remains the background on reload. Open water is crossed in the ship; lakes still take the skiff.
+
+In **Gear acquisition**, **Preview ship unlock** and **Preview first sailing** play the reveal and the departure without updating the save (the preview finds a clear bank beside a sea landmark), fading back to the basalt theme first if the save is already on Open sea.
+
+There is no sound yet for the ship under way (the sea has no movement cue) or for the gangway and casting off.
+
 ## Code
-- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed)`, the set selection for each stage.
+- `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed, lanternUsed, ashSandalsUsed, shipLaunched)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
 - `src/app/settings.ts`, `src/app/settings-panel.ts`: persisted settings and the dialog that edits them.
 
@@ -77,6 +85,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
 | `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
 | `marshwalk` | `marshwalk.mp3` | Supplied by the project owner (`Still_Water_Reeds`). Three minutes, stereo MP3, about -16.7 LUFS. Becomes the background after the first geta step. |
+| `open-sea` | `open-sea.mp3` | Becomes the background after the first sailing. **Placeholder:** the file in place is a copy of `waves-beyond-the-headlands.mp3` until the project owner's own track replaces it (same file name). |
 
 Record the origin and licence of each track here when it is added.
 

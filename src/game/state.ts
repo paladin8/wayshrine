@@ -25,6 +25,8 @@ export interface GameState {
   readonly getaUsed: boolean;
   readonly lanternUsed: boolean;
   readonly ashSandalsUsed: boolean;
+  /** The first ship departure ceremony has been completed in this save. */
+  readonly shipLaunched: boolean;
 }
 
 /** A region counts as seen when the player is within this distance of its shrine. */
@@ -34,7 +36,7 @@ export const REVEAL_DISTANCE = 28;
 const RUBBINGS_PER_REVEAL = 7;
 
 export function newGame(seed: string): GameState {
-  return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [], boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false, lanternUsed: false, ashSandalsUsed: false };
+  return { seed, restored: new Set(), explored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, collected: [], boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false, lanternUsed: false, ashSandalsUsed: false, shipLaunched: false };
 }
 
 /** Restores a region's shrine. Restoring twice has no further effect. */
@@ -126,6 +128,11 @@ export function recordBoatLaunch(state: GameState): GameState {
   return state.boatLaunched ? state : { ...state, boatLaunched: true };
 }
 
+/** Records completion of the first ship departure. */
+export function recordShipLaunch(state: GameState): GameState {
+  return state.shipLaunched ? state : { ...state, shipLaunched: true };
+}
+
 /** Records the first step with snowshoes. */
 export function recordSnowshoeUse(state: GameState): GameState {
   return state.snowshoesUsed ? state : { ...state, snowshoesUsed: true };
@@ -161,8 +168,8 @@ export function unrestoreShrine(state: GameState, region: Region): GameState {
 
 /** Un-restores every shrine, keeping what has been explored. For debugging. */
 export function resetShrines(state: GameState): GameState {
-  if (state.restored.size === 0 && state.revealedLandmarks.size === 0 && state.shrineCredits === 0 && !state.boatLaunched && !state.snowshoesUsed && !state.climbingUsed && !state.getaUsed && !state.lanternUsed && !state.ashSandalsUsed) return state;
-  return { ...state, restored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false, lanternUsed: false, ashSandalsUsed: false };
+  if (state.restored.size === 0 && state.revealedLandmarks.size === 0 && state.shrineCredits === 0 && !state.boatLaunched && !state.snowshoesUsed && !state.climbingUsed && !state.getaUsed && !state.lanternUsed && !state.ashSandalsUsed && !state.shipLaunched) return state;
+  return { ...state, restored: new Set(), revealedLandmarks: new Set(), shrineCredits: 0, boatLaunched: false, snowshoesUsed: false, climbingUsed: false, getaUsed: false, lanternUsed: false, ashSandalsUsed: false, shipLaunched: false };
 }
 
 /** Back to a brand-new game on the same seed. For debugging. */
@@ -220,6 +227,7 @@ export interface SaveV4 extends Omit<SaveV3, "v"> {
   readonly getaUsed?: boolean;
   readonly lanternUsed?: boolean;
   readonly ashSandalsUsed?: boolean;
+  readonly shipLaunched?: boolean;
   readonly v: 4;
   readonly revealedLandmarks: readonly string[];
   readonly shrineCredits: number;
@@ -242,6 +250,7 @@ export function serialize(state: GameState): SaveV4 {
     getaUsed: state.getaUsed,
     lanternUsed: state.lanternUsed,
     ashSandalsUsed: state.ashSandalsUsed,
+    shipLaunched: state.shipLaunched,
   };
 }
 
@@ -266,6 +275,7 @@ export function deserialize(data: SaveData, world?: World): GameState {
       getaUsed: data.getaUsed === true,
       lanternUsed: data.lanternUsed === true,
       ashSandalsUsed: data.ashSandalsUsed === true,
+      shipLaunched: data.shipLaunched === true,
     }, current);
   }
   if (state.restored.size === 0) return revealLandmarks(state, current);

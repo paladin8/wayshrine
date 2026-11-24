@@ -114,6 +114,7 @@ export const en: Messages = {
     geta: { title: "Geta unlocked", hint: "Walk into the marsh to wear them." },
     lantern: { title: "Lantern unlocked", hint: "Step into the dark forest to light it." },
     ashSandals: { title: "Ash sandals unlocked", hint: "Walk onto volcanic ground to put them on." },
+    ship: { title: "Ship unlocked", hint: "Walk out to the open sea to board it." },
   },
   promptRestore: "Press E to restore the shrine",
   promptRestoreLandmark: "Press E to restore the landmark",

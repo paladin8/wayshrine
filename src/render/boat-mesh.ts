@@ -10,11 +10,11 @@ const UP = new THREE.Vector3(0, 1, 0);
 // The highest ripple is 0.082 units. Leave clearance for the skiff's roll and bob.
 const FLOOR_Y = 0.15;
 
-function wood(color: number): THREE.MeshStandardMaterial {
+export function wood(color: number): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ color, flatShading: true, side: THREE.DoubleSide });
 }
 
-function surface(points: number[], material: THREE.Material): THREE.Mesh {
+export function surface(points: number[], material: THREE.Material): THREE.Mesh {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
   geometry.computeVertexNormals();
@@ -23,7 +23,7 @@ function surface(points: number[], material: THREE.Material): THREE.Mesh {
   return mesh;
 }
 
-function band(lower: THREE.Vector3[], upper: THREE.Vector3[], material: THREE.Material): THREE.Mesh {
+export function band(lower: THREE.Vector3[], upper: THREE.Vector3[], material: THREE.Material): THREE.Mesh {
   const points: number[] = [];
   for (let i = 0; i < upper.length; i++) {
     const j = (i + 1) % upper.length;

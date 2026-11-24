@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { lifeAt, railwayPowered, vitality, type boatLaunchFrame, type GameState, type TrainFrame } from "../game";
+import { lifeAt, railwayPowered, vitality, type GameState, type TrainFrame, type VoyageFrame } from "../game";
 import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
 import { createAmbient } from "./ambient";
 import { buildFujiTrain } from "./fuji-train";
@@ -14,6 +14,7 @@ import type { CharacterVariant, GearId, LanternLighting } from "./character";
 import { createAshPuff } from "./ash-puff";
 import { createFootprints } from "./footprints";
 import { buildPlayer } from "./player-mesh";
+import { SHIP_DECK_HEIGHT } from "./ship-mesh";
 import { buildLandmark } from "./landmark-mesh";
 import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
@@ -47,6 +48,13 @@ const DRAW_AT = 0.3;
 
 /** Fraction of the strap-on moment at which the snowshoes appear on the feet. */
 const STRAP_ON_AT = 0.4;
+/** How fast the ship's heading follows the player's, in radians per second. */
+const SHIP_TURN_RATE = 2.1;
+/** Turns `current` toward `target` by at most `step`, the short way round. */
+function turnToward(current: number, target: number, step: number): number {
+  const delta = ((target - current + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  return current + Math.min(step, Math.max(-step, delta));
+}
 const smooth = (x: number): number => {
   const t = Math.min(1, Math.max(0, x));
   return t * t * (3 - 2 * t);
@@ -66,7 +74,7 @@ export interface StageView {
   /** Heading in radians about the vertical axis. */
   readonly facing: number;
   readonly state: GameState;
-  readonly voyage?: ReturnType<typeof boatLaunchFrame>;
+  readonly voyage?: VoyageFrame;
   readonly train?: TrainFrame;
   readonly parkedTrain?: number;
   readonly boardingHeight?: number;
@@ -168,6 +176,7 @@ export function createStage(
   const ashPuff = createAshPuff();
   scene.add(ashPuff.root);
   let ashPuffed = false;
+  let shipYaw = 0;
 
   const chunks = new Map<string, VitalityMesh>();
   const shrines = new Map<string, ShrineMesh>();
@@ -425,15 +434,18 @@ export function createStage(
 
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       lightBiome(sun, fill, tile.biome, dt);
-      const onWater = isWater(tile.biome);
       const voyage = view.voyage;
-      const seated = voyage?.seated ?? Number(onWater);
+      // Lakes take the skiff and the open sea the ship, however the traveller came to be afloat.
+      const vessel = voyage?.vessel ?? (tile.biome === "sea" ? "ship" : isWater(tile.biome) ? "boat" : null);
+      const seated = vessel === "boat" ? voyage?.seated ?? 1 : 0;
+      // How far aboard the ship the traveller is: on the quay 0, up the gangway, then standing on the deck.
+      const aboard = vessel === "ship" ? voyage?.lift ?? 1 : 0;
       const bob = 0.045 + Math.sin(clock * 3) * 0.03;
-      const groundY = view.boardingHeight ?? terrain.groundAt(pos.x, pos.z) + bob * seated;
+      const groundY = view.boardingHeight ?? terrain.groundAt(pos.x, pos.z) + bob * (vessel === "ship" ? Math.min(1, aboard * 2) : seated);
       playerY += (groundY - playerY) * Math.min(1, dt * 14);
       player.group.position.set(pos.x, playerY, pos.z);
       player.group.rotation.y = view.facing;
-      player.setPose(seated, voyage?.lift ?? 0);
+      player.setPose(seated, vessel === "ship" ? aboard * SHIP_DECK_HEIGHT : voyage?.lift ?? 0);
       const needed = BIOME_REQUIRES[tile.biome];
       player.setCharacter(view.character ?? "female");
       const strapping = view.strapping;
@@ -458,7 +470,9 @@ export function createStage(
       if (lighting) worn = lighting.progress >= 0.10 ? "lantern" : null;
       player.setGear(worn);
       player.setLanternLighting(lighting);
-      for (const step of player.animate(dt, strapping === undefined && drawing === undefined && !lighting && (view.moving ?? false))) {
+      // Aboard the ship the traveller only walks while boarding; under sail they stand at the helm.
+      const walking = vessel === "ship" ? voyage?.walking ?? false : view.moving ?? false;
+      for (const step of player.animate(dt, strapping === undefined && drawing === undefined && !lighting && walking)) {
         if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);
       }
       // Stepping off in ash sandals kicks up a puff of ash, once per strap-on moment.
@@ -472,8 +486,12 @@ export function createStage(
 
       const hull = voyage?.hull ?? pos;
       player.hull.position.set(hull.x, terrain.groundAt(hull.x, hull.z) + bob, hull.z);
-      player.hull.rotation.y = view.facing;
-      player.setBoat(onWater || voyage !== undefined, voyage?.wake ?? Number(view.moving ?? false), clock);
+      // The ship is slow to turn; during the launch it follows the launch's own heading.
+      shipYaw = vessel === "ship" && !voyage ? turnToward(shipYaw, view.facing, SHIP_TURN_RATE * dt) : voyage?.yaw ?? view.facing;
+      player.hull.rotation.y = vessel === "ship" ? shipYaw : voyage?.yaw ?? view.facing;
+      const wake = voyage?.wake ?? Number(view.moving ?? false);
+      player.setBoat(vessel === "boat", wake, clock);
+      player.setShip(vessel === "ship", wake, clock, voyage?.gangway ?? 0);
 
       applyZoom(zoom, viewSize);
       camera.position.copy(target).add(offset);
