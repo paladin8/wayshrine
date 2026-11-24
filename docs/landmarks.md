@@ -105,6 +105,11 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 65 | | yamadera | Yamadera | 山寺 | やまでら | halls on the cliff above the steps | snow |
 | 66 | | snow-monkeys | Jigokudani snow monkeys | 地獄谷野猿公苑 | じごくだにやえんこうえん | monkeys in the hot spring | snow |
 
+## Animals and motion
+
+- **Animals.** A landmark's animals are Blender empties named `<species>_<n>` (deer, crane, macaque, bear, horse, camel, buffalo) with custom props `collisionRadius` and `collisionHalfLength`, plus optional `resting`, `snowcap` and `saddle`. The generator exports them with `export_extras=True`. At load `replaceLandmarkAnimals` (`src/render/landmark-mesh.ts`) swaps each anchor for a model from the shared set in `src/render/animal-models.ts`, the same one the world's animals use, so landmark and world animals match. The anchor's scale scales the model, its location and rotation keyframes carry the motion, and the gait and a crane's wing lift are derived from that travel. The animals also block the player (`animal-collision.ts`). Do not model legs, wings or bodies in the generator.
+- **Steam and smoke.** A mesh whose material is named `<id>_steam`, `<id>_plume` or `<id>_smoke` is split into its separate blobs at load (`src/render/landmark-effects.ts`). After restoration each blob rises (a plume leans along its own line), swells, fades and restarts from below. Before restoration they are hidden. It is a runtime effect, so a generator only needs to model the blobs and name the material.
+
 ## Chosen and left out
 
 The aim is the places most Japanese people would name, plus a few that make distinctive dioramas, without regard to biome balance. Enoshima Sea Candle is the weakest choice in the opening acts, and the Great Buddha of Kamakura would replace it well if those acts are revisited. Mount Fuji is meant to be modelled with the Chureito pagoda, the most familiar view of it. It is listed 30th, in Act V, which ends at the lantern unlock.

@@ -226,18 +226,12 @@ for sx in (-1,1):
     for k in range(5):
         t=-1+2*k/4; box("deck",sx*DECK[3],t*DECK[2],DZ,DZ+0.55,0.03,0.03,T); box("deck",t*DECK[3],-sx*DECK[2],DZ,DZ+0.55,0.03,0.03,T)
         box("post",sx*(DECK[3]-0.1),t*DECK[2]*0.9,-0.5,DZ-0.1,0.04,0.04,T)
-# a brown bear crossing the snow below the forest, and sika deer
+# a brown bear crossing the snow below the forest, and sika deer (anchors; see the animal block before the export)
+ANIMALS=[]
 def bear(u,v,ang):
-    x,y=to_xy(u,v); z=H(x,y); T2=F(u,v,ang,z)
-    ico("bear",0,0,0.5,0.55,0.3,0.32,T2); ico("bear",0.5,0,0.62,0.2,0.18,0.18,T2); box("bear",0.68,0,0.56,0.64,0.08,0.06,T2)
-    for sx in (-0.3,0.3):
-        for sy in (-0.15,0.15): box("bear",sx,sy,0.0,0.4,0.08,0.08,T2)
+    x,y=to_xy(u,v); ANIMALS.append(("bear",x,y,H(x,y),math.pi/4+ang,1.0,{}))
 def deer(u,v,ang):
-    x,y=to_xy(u,v); z=H(x,y); T2=F(u,v,ang,z)
-    box("deerc",0,0,0.42,0.68,0.32,0.12,T2)
-    for sx in (-0.24,0.24):
-        for sy in (-0.07,0.07): box("deerc",sx,sy,0.0,0.45,0.03,0.03,T2)
-    solid([[(0.28,-0.05,0.6),(0.28,0.05,0.6),(0.28,0.05,0.7),(0.28,-0.05,0.7)],[(0.42,-0.04,0.85),(0.42,0.04,0.85),(0.42,0.04,0.93),(0.42,-0.04,0.93)]],"deerc",T2)
+    x,y=to_xy(u,v); ANIMALS.append(("deer",x,y,H(x,y),math.pi/4+ang,0.95,{}))
 bear(-1.2,-5.8,0.4); deer(4.2,4.6,2.0); deer(4.8,5.4,1.6)
 def ground_at(x,y):
     u,v=to_uv(x,y)
@@ -319,10 +313,19 @@ for key in sorted(B):
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
     allv+= [v.co.copy() for v in me.vertices]
+# ---- the animals are anchors (name_N, a collider and a heading): the game draws them with its shared animal models, the ones
+# the wild animals use, so they match the world. Anything on an anchor is replaced, so only the position matters here.
+_counts={}
+for _sp,_x,_y,_z,_rot,_sc,_props in ANIMALS:
+    _counts[_sp]=_counts.get(_sp,0)+1
+    _ob=bpy.data.objects.new(f"{_sp}_{_counts[_sp]}",None); col.objects.link(_ob)
+    _ob.location=(_x,_y,_z); _ob.rotation_euler.z=_rot; _ob.scale=(_sc,_sc,_sc)
+    _ob["collisionRadius"]=0.3; _ob["collisionHalfLength"]=0.0
+    for _k,_v in _props.items(): _ob[_k]=_v
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
-    export_cameras=False, export_lights=False, export_animations=False, export_materials='EXPORT')
+    export_cameras=False, export_lights=False, export_extras=True, export_animations=False, export_materials='EXPORT')
 clr=min(math.hypot(s[0]-STAND[0],s[1]+STAND[1])-s[2] for s in solids)
 res={"stand_clear":round(clr,3),"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
 json.dump(res,open("/tmp/lm_build.json","w"))

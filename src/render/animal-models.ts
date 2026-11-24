@@ -1,6 +1,42 @@
 import * as THREE from "three";
 
 export type Species = "deer" | "serow" | "boar" | "crane" | "fox" | "otter" | "dolphin" | "whale";
+/** Animals that live only on landmarks, where an authored anchor places them. */
+export type LandmarkSpecies = "macaque" | "bear" | "horse" | "camel" | "buffalo";
+export type AnimalKind = Species | LandmarkSpecies;
+
+export interface AnimalOptions {
+  /** Lie down, where the species has a resting pose (deer, camel). */
+  readonly resting?: boolean;
+  /** Snow settled on the head, for the macaques that soak in the cold. */
+  readonly snowcap?: boolean;
+  /** A red blanket over the hump, for the camels that give rides. */
+  readonly saddle?: boolean;
+}
+
+interface BeastShape {
+  readonly back: number;
+  readonly belly: number;
+  readonly dark: number;
+  readonly lower: number;
+  readonly hip: number;
+  readonly width: number;
+  readonly length: number;
+  readonly depth: number;
+  readonly leg: number;
+  readonly shin: number;
+  readonly bounce: number;
+  readonly swing: number;
+}
+
+const BEASTS: Readonly<Record<"horse" | "camel" | "buffalo" | "bear", BeastShape>> = {
+  horse: { back: 0x6a4630, belly: 0x80593c, dark: 0x2c211d, lower: 0x2c211d, hip: 1.0, width: 0.27, length: 0.66, depth: 0.34, leg: 0.062, shin: 0.044, bounce: 0.04, swing: 0.55 },
+  camel: { back: 0xb08a5c, belly: 0xcaa878, dark: 0x5b4532, lower: 0xb08a5c, hip: 1.12, width: 0.27, length: 0.64, depth: 0.33, leg: 0.07, shin: 0.05, bounce: 0.03, swing: 0.45 },
+  buffalo: { back: 0x4c4642, belly: 0x5d5550, dark: 0x2b2624, lower: 0xb3a994, hip: 0.62, width: 0.37, length: 0.64, depth: 0.40, leg: 0.095, shin: 0.075, bounce: 0.02, swing: 0.4 },
+  bear: { back: 0x5c402c, belly: 0x6d4e38, dark: 0x2e2018, lower: 0x5c402c, hip: 0.5, width: 0.36, length: 0.62, depth: 0.40, leg: 0.12, shin: 0.10, bounce: 0.035, swing: 0.5 },
+};
+
+const MACAQUE = { fur: 0xa38c74, belly: 0xc7b399, face: 0xd86a5c, dark: 0x4a3a30, snow: 0xf1f4f6 };
 
 interface Coat {
   readonly back: number;
@@ -21,7 +57,8 @@ const COATS: Readonly<Record<Species, Coat>> = {
 
 export interface AnimalModel {
   readonly group: THREE.Group;
-  pose(time: number, gait: number, phase: number): void;
+  /** `lift` is how far an authored hop has raised the actor, from 0 to 1; a displaying crane spreads its wings with it. */
+  pose(time: number, gait: number, phase: number, lift?: number): void;
 }
 
 export function createAnimalModels() {
@@ -166,12 +203,12 @@ export function createAnimalModels() {
     });
     return {
       group,
-      pose(time, gait, phase) {
+      pose(time, gait, phase, lift = 0) {
         legs[0]!.rotation.x = Math.sin(phase) * gait * 0.42;
         legs[1]!.rotation.x = -legs[0]!.rotation.x;
         neck.rotation.x = 0.18 + Math.max(0, Math.sin(time * 1.19)) ** 5 * (1 - gait) * 1.36;
         const flap = Math.max(0, Math.sin(time * 0.45 + 1)) ** 9 * (1 - gait);
-        for (const { side, wing } of wings) wing.rotation.z = side * (0.11 + flap * Math.sin(time * 5.2) * 0.55);
+        for (const { side, wing } of wings) wing.rotation.z = side * (0.11 + flap * Math.sin(time * 5.2) * 0.55 + lift * 1.15);
       },
     };
   }
@@ -217,12 +254,176 @@ export function createAnimalModels() {
     };
   }
 
+
+  function beast(kind: "horse" | "camel" | "buffalo" | "bear", resting: boolean, saddle = false): AnimalModel {
+    const group = new THREE.Group();
+    const shape = BEASTS[kind];
+    const { back, belly, dark, lower, width, length, depth } = shape;
+    const kneeling = resting && kind === "camel";
+    const hip = kneeling ? 0.38 : shape.hip;
+    const trunk = pivot(group, 0, hip, 0);
+    mesh(trunk, back, 0, depth * 0.16, 0, width, depth, length, softBody);
+    mesh(trunk, belly, 0, -depth * 0.37, 0.07, width * 0.87, depth * 0.63, length * 0.72);
+    const neck = pivot(trunk, 0, depth * 0.32, length * 0.60);
+    const head = pivot(neck, 0, 0, 0);
+    const tail = pivot(trunk, 0, depth * 0.12, -length * 0.88);
+    const ears: THREE.Mesh[] = [];
+    if (kind === "horse") {
+      bone(neck, back, [0, -0.12, -0.10], [0, 0.46, 0.24], 0.14);
+      for (let i = 0; i < 6; i++) {
+        const t = i / 5;
+        mesh(neck, dark, 0, -0.08 + t * 0.62, -0.17 + t * 0.34, 0.03, 0.075, 0.06);
+      }
+      head.position.set(0, 0.50, 0.27);
+      head.rotation.x = 0.78;
+      mesh(head, back, 0, 0, 0.12, 0.11, 0.13, 0.26, softBody);
+      mesh(head, dark, 0, -0.02, 0.36, 0.075, 0.085, 0.13);
+      for (const side of [-1, 1]) ears.push(mesh(head, back, side * 0.065, 0.14, -0.03, 0.034, 0.085, 0.03));
+      mesh(tail, dark, 0, -0.22, -0.05, 0.055, 0.30, 0.07, softBody);
+    } else if (kind === "camel") {
+      mesh(trunk, belly, 0, depth * 0.16 + 0.34, -0.06, 0.2, 0.24, 0.22, softBody);
+      if (saddle) mesh(trunk, 0xc8473a, 0, depth * 0.16 + 0.46, -0.06, 0.215, 0.13, 0.235, softBody);
+      bone(neck, back, [0, -0.1, -0.05], [0, 0.32, 0.17], 0.12);
+      bone(neck, back, [0, 0.30, 0.17], [0, 0.70, 0.29], 0.09);
+      head.position.set(0, 0.72, 0.30);
+      head.rotation.x = 0.55;
+      mesh(head, back, 0, 0, 0.09, 0.09, 0.10, 0.20, softBody);
+      mesh(head, belly, 0, -0.035, 0.26, 0.075, 0.07, 0.12);
+      for (const side of [-1, 1]) ears.push(mesh(head, dark, side * 0.07, 0.08, -0.03, 0.025, 0.04, 0.025));
+      mesh(tail, dark, 0, -0.12, -0.04, 0.035, 0.17, 0.04);
+    } else if (kind === "buffalo") {
+      bone(neck, back, [0, 0.0, -0.06], [0, -0.04, 0.27], 0.2);
+      head.position.set(0, -0.04, 0.30);
+      head.rotation.x = 0.22;
+      mesh(head, back, 0, 0, 0.10, 0.17, 0.16, 0.24, softBody);
+      mesh(head, dark, 0, -0.045, 0.30, 0.13, 0.10, 0.12);
+      for (const side of [-1, 1]) {
+        ears.push(mesh(head, back, side * 0.2, 0.07, 0.0, 0.12, 0.03, 0.07));
+        bone(head, 0xd5cab2, [side * 0.14, 0.12, 0.02], [side * 0.33, 0.13, -0.08], 0.034);
+        bone(head, 0xd5cab2, [side * 0.33, 0.13, -0.08], [side * 0.41, 0.27, -0.2], 0.026);
+      }
+      mesh(tail, dark, 0, -0.18, -0.04, 0.03, 0.22, 0.035);
+      mesh(tail, dark, 0, -0.40, -0.04, 0.05, 0.07, 0.05);
+    } else {
+      mesh(trunk, back, 0, depth * 0.55, length * 0.30, 0.30, 0.20, 0.24, softBody);
+      bone(neck, back, [0, -0.06, -0.12], [0, 0.0, 0.2], 0.21);
+      head.position.set(0, 0.0, 0.24);
+      mesh(head, back, 0, 0, 0.09, 0.19, 0.18, 0.22, softBody);
+      mesh(head, 0x8d6c4f, 0, -0.05, 0.29, 0.09, 0.08, 0.14, softBody);
+      mesh(head, dark, 0, -0.035, 0.42, 0.036, 0.03, 0.03);
+      for (const side of [-1, 1]) ears.push(mesh(head, dark, side * 0.13, 0.15, 0.0, 0.06, 0.06, 0.04));
+      mesh(tail, back, 0, 0, -0.05, 0.05, 0.05, 0.06);
+    }
+    const legs = [-1, 1].flatMap((side) => [-1, 1].map((front) => {
+      const joint = pivot(group, side * width * 0.59, hip * 0.98, front * length * 0.60);
+      if (kneeling) {
+        const kneeZ = front > 0 ? 0.32 : -0.22;
+        const hoofZ = front > 0 ? 0.10 : 0.19;
+        bone(joint, back, [0, 0.015, 0], [side * 0.09, -0.24, kneeZ], shape.leg * 1.25);
+        bone(joint, dark, [side * 0.09, -0.24, kneeZ], [side * 0.05, -0.30, hoofZ], shape.shin * 1.1);
+        mesh(joint, dark, side * 0.05, -0.30, hoofZ, 0.065, 0.04, 0.085);
+      } else {
+        bone(joint, back, [0, 0.04, 0], [0, -hip * 0.55, -0.035 * front], shape.leg);
+        bone(joint, lower, [0, -hip * 0.51, -0.035 * front], [0, -hip * 0.96, 0.018], shape.shin);
+        mesh(joint, dark, 0, -hip * 0.96, 0.044, shape.shin * 1.25, 0.034, shape.shin * 1.5);
+      }
+      return { joint, side, front };
+    }));
+    const base = head.rotation.x;
+    return {
+      group,
+      pose(time, gait, phase) {
+        const move = kneeling ? 0 : gait;
+        if (!kneeling) {
+          for (const { joint, side, front } of legs) {
+            joint.rotation.x = Math.sin(phase + (side * front < 0 ? Math.PI : 0)) * move * shape.swing;
+          }
+          trunk.position.y = hip + Math.abs(Math.sin(phase)) * move * shape.bounce;
+        } else {
+          trunk.scale.y = 1 + 0.025 * Math.sin(time * 1.7 + phase);
+        }
+        const idle = 1 - move;
+        if (kind === "horse") {
+          const graze = 0.95 * (0.5 + 0.5 * Math.sin(time * 0.52 + 1.3)) ** 1.6;
+          neck.rotation.x = graze * idle + move * 0.12;
+          neck.rotation.y = Math.sin(time * 0.43) * 0.12 * idle;
+          tail.rotation.set(0.2 * Math.sin(time * 1.7), 0, 0.28 * Math.sin(time * 2.4));
+        } else if (kind === "camel") {
+          neck.rotation.x = 0.06 * Math.sin(time * 0.6) + move * 0.08;
+          neck.rotation.y = Math.sin(time * 0.37) * 0.22 * idle;
+          head.rotation.x = base + (kneeling ? 0.07 * Math.sin(time * 4.1) : 0.1 * Math.sin(time * 0.6 + 1));
+          tail.rotation.z = Math.sin(time * 2.1) * 0.25;
+        } else if (kind === "buffalo") {
+          neck.rotation.x = 0.1 * Math.sin(time * 0.7) + move * 0.05;
+          neck.rotation.y = Math.sin(time * 0.5 + phase) * 0.2 * idle;
+          head.rotation.x = base + 0.12 * Math.max(0, Math.sin(time * 3.6)) * Math.max(0, Math.sin(time * 0.31));
+          tail.rotation.z = Math.sin(time * 4.4) * 0.5 * Math.max(0, Math.sin(time * 0.8 + 0.5));
+        } else {
+          const sniff = 0.42 * (0.5 + 0.5 * Math.sin(time * 0.9 + 0.4));
+          neck.rotation.x = sniff * idle + move * 0.18;
+          neck.rotation.y = Math.sin(time * 0.66) * 0.34 * idle;
+          tail.rotation.y = Math.sin(time * 1.8) * 0.15;
+        }
+        const flick = Math.max(0, Math.sin(time * 0.9 + 2)) ** 14;
+        ears.forEach((ear, i) => { ear.rotation.z = (i === 0 ? -1 : 1) * (kind === "buffalo" ? 0 : 0.35 * flick); });
+      },
+    };
+  }
+
+  function macaque(snowcap: boolean): AnimalModel {
+    const group = new THREE.Group();
+    const { fur, belly, face, dark, snow } = MACAQUE;
+    // Seated, leaning slightly forward, hands on the knees.
+    const torso = pivot(group, 0, 0.17, -0.02);
+    torso.rotation.x = 0.16;
+    mesh(torso, fur, 0, 0.07, 0, 0.19, 0.21, 0.17, softBody);
+    mesh(torso, belly, 0, 0.03, 0.09, 0.14, 0.15, 0.09, softBody);
+    mesh(torso, fur, 0, 0.2, -0.03, 0.2, 0.09, 0.15, softBody);
+    for (const side of [-1, 1]) {
+      mesh(group, fur, side * 0.15, 0.09, 0.08, 0.075, 0.085, 0.15, softBody);
+      mesh(group, dark, side * 0.15, 0.025, 0.2, 0.052, 0.03, 0.075);
+    }
+    mesh(group, face, 0, 0.04, -0.15, 0.06, 0.05, 0.05, softBody);
+    mesh(group, fur, 0, 0.04, -0.21, 0.035, 0.035, 0.09);
+    const arms = [-1, 1].map((side) => {
+      const shoulder = pivot(torso, side * 0.18, 0.2, 0.02);
+      bone(shoulder, fur, [0, 0, 0], [side * 0.04, -0.14, 0.12], 0.055);
+      bone(shoulder, fur, [side * 0.04, -0.14, 0.12], [side * 0.01, -0.2, 0.2], 0.045);
+      mesh(shoulder, dark, side * 0.01, -0.21, 0.215, 0.05, 0.03, 0.06);
+      return { shoulder, side };
+    });
+    const neck = pivot(torso, 0, 0.27, 0.06);
+    mesh(neck, fur, 0, 0.1, 0.0, 0.135, 0.125, 0.125, softBody);
+    mesh(neck, face, 0, 0.085, 0.1, 0.1, 0.09, 0.05, softBody);
+    mesh(neck, 0xbfae98, 0, 0.17, 0.07, 0.1, 0.028, 0.05);
+    for (const side of [-1, 1]) {
+      mesh(neck, dark, side * 0.04, 0.125, 0.145, 0.016, 0.016, 0.014);
+      mesh(neck, face, side * 0.135, 0.1, -0.01, 0.03, 0.045, 0.02);
+    }
+    if (snowcap) mesh(neck, snow, 0, 0.215, -0.01, 0.085, 0.045, 0.085, softBody);
+    return {
+      group,
+      pose(time, _gait, phase) {
+        torso.scale.y = 1 + 0.03 * Math.sin(time * 1.6 + phase);
+        neck.rotation.y = 0.55 * Math.sin(time * 0.37 + phase * 3) * Math.sin(time * 0.21 + phase) ;
+        neck.rotation.x = 0.08 * Math.sin(time * 0.53 + phase) + 0.2 * Math.max(0, Math.sin(time * 0.19 + phase * 2)) ** 3;
+        const scratch = Math.max(0, Math.sin(time * 0.41 + phase * 5)) ** 10;
+        for (const { shoulder, side } of arms) {
+          shoulder.rotation.x = side > 0 ? -2.3 * scratch + 0.1 * Math.sin(time * 9) * scratch : 0.03 * Math.sin(time + phase);
+        }
+      },
+    };
+  }
+
   return {
     buildRestingDeer(): AnimalModel {
       return quadruped("deer", false, true);
     },
-    build(species: Species, lead: boolean): AnimalModel {
+    build(species: AnimalKind, lead: boolean, options: AnimalOptions = {}): AnimalModel {
       const model = species === "crane" ? crane()
+        : species === "macaque" ? macaque(options.snowcap === true)
+        : species === "horse" || species === "camel" || species === "buffalo" || species === "bear" ? beast(species, options.resting === true, options.saddle === true)
+        : species === "deer" && options.resting ? quadruped("deer", false, true)
         : species === "dolphin" || species === "whale" || species === "otter" ? swimmer(species)
           : quadruped(species, lead);
       model.group.name = species;

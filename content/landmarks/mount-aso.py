@@ -220,14 +220,10 @@ for (ua,va),(ub,vb) in zip(pts,pts[1:]):
         dl=math.hypot(u1-u0,v1-v0); nu,nv=-(v1-v0)/dl*0.42,(u1-u0)/dl*0.42
         emit([P(u0+nu,v0+nv),P(u0-nu,v0-nv),P(u1-nu,v1-nv),P(u1+nu,v1+nv)],[[0,1,2,3]],["pave"])
 
-# ---- horses grazing on Kusasenri
+# ---- horses grazing on Kusasenri (anchors; see the animal block before the export)
+ANIMALS=[]
 def horse(u,v,ang):
-    x,y,z=P(u,v,0); T=dict(cx=x,cy=y,cz=z,rot=ang)
-    box("horse",0,0,0.42,0.72,0.42,0.14,T)
-    for sx in (-1,1):
-        for sy in (-1,1): box("horse",sx*0.3,sy*0.08,0.0,0.45,0.04,0.04,T)
-    solid([[(0.35,-0.07,0.6),(0.35,0.07,0.6),(0.35,0.07,0.75),(0.35,-0.07,0.75)],[(0.62,-0.06,0.4),(0.62,0.06,0.4),(0.62,0.06,0.55),(0.62,-0.06,0.55)]],"horse",T)
-    box("strata2",-0.44,0,0.35,0.62,0.03,0.03,T)
+    x,y,z=P(u,v,0); ANIMALS.append(("horse",x,y,z,ang,0.95,{}))
 for u,v,a in [(6.6,-2.6,0.4),(7.4,3.8,2.2),(4.0,4.4,-0.8),(8.4,-0.2,1.4)]:
     horse(u,v,a)
 
@@ -307,10 +303,19 @@ for key in sorted(B):
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
     allv+= [v.co.copy() for v in me.vertices]
+# ---- the animals are anchors (name_N, a collider and a heading): the game draws them with its shared animal models, the ones
+# the wild animals use, so they match the world. Anything on an anchor is replaced, so only the position matters here.
+_counts={}
+for _sp,_x,_y,_z,_rot,_sc,_props in ANIMALS:
+    _counts[_sp]=_counts.get(_sp,0)+1
+    _ob=bpy.data.objects.new(f"{_sp}_{_counts[_sp]}",None); col.objects.link(_ob)
+    _ob.location=(_x,_y,_z); _ob.rotation_euler.z=_rot; _ob.scale=(_sc,_sc,_sc)
+    _ob["collisionRadius"]=0.3; _ob["collisionHalfLength"]=0.0
+    for _k,_v in _props.items(): _ob[_k]=_v
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
-    export_cameras=False, export_lights=False, export_animations=False, export_materials='EXPORT')
+    export_cameras=False, export_lights=False, export_extras=True, export_animations=False, export_materials='EXPORT')
 clr=min(math.hypot(s[0]-STAND[0],s[1]+STAND[1])-s[2] for s in solids)
 res={"stand_clear":round(clr,3),"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
 json.dump(res,open("/tmp/lm_build.json","w"))

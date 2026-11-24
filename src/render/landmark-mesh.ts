@@ -3,7 +3,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { lifeAt } from "../game";
 import type { Obstacle } from "../world";
 import { appendAnimalObstacles } from "./animal-collision";
-import { createAnimalModels, type AnimalModel } from "./animal-models";
+import { createAnimalModels, type AnimalKind, type AnimalModel } from "./animal-models";
+import { extractPuffs, type Puffs } from "./landmark-effects";
 import type { ShrineMesh } from "./shrine-mesh";
 import { palette } from "./palette";
 import { deadOf } from "./vitality-mesh";
@@ -77,25 +78,39 @@ function adopt(root: THREE.Object3D, replaced: ReadonlySet<THREE.Object3D>): { t
   return { tinted: [...tinted.values()], colliders };
 }
 
-const SHARED_DEER_LANDMARKS = new Set(["todai-ji-daibutsu", "itsukushima-torii"]);
+const ANIMAL_NODE = /^(deer|crane|macaque|bear|horse|camel|buffalo)_\d+$/;
 
-interface LandmarkDeer {
+/** Metres the animal's own gait covers per stride, before the anchor's scale. */
+const STRIDE: Readonly<Record<AnimalKind, number>> = {
+  deer: 0.64, serow: 0.6, boar: 0.5, crane: 0.5, fox: 0.45, otter: 0.4, dolphin: 1, whale: 1,
+  macaque: 0.4, bear: 0.62, horse: 0.9, camel: 0.9, buffalo: 0.6,
+};
+
+interface LandmarkAnimal {
   readonly anchor: THREE.Object3D;
+  readonly species: AnimalKind;
   readonly model: AnimalModel;
   readonly previous: THREE.Vector3;
+  readonly seed: number;
+  readonly restY: number;
   phase: number;
 }
 
-/** Retain the exported paths while replacing the visible actors. */
-function replaceLandmarkDeer(root: THREE.Object3D) {
+/**
+ * The authored animals are anchors (`deer_1`, `crane_3`, `macaque_2`...) that carry a collider and, where the
+ * animal walks, the path it follows. The visible body is the shared model, the one the wild animals use, so a
+ * landmark's animals match those in the world. Any child geometry on an anchor is retired along with its tracks.
+ */
+function replaceLandmarkAnimals(root: THREE.Object3D) {
   const anchors: THREE.Object3D[] = [];
   root.traverse(node => {
-    if (/^deer_\d+$/.test(node.name) && typeof node.userData.collisionRadius === "number") anchors.push(node);
+    if (ANIMAL_NODE.test(node.name) && typeof node.userData.collisionRadius === "number") anchors.push(node);
   });
   const retiredTracks = new Set<string>();
-  if (!anchors.length) return { deer: [], retiredTracks };
+  if (!anchors.length) return { animals: [] as LandmarkAnimal[], retiredTracks };
   const models = createAnimalModels();
-  const deer: LandmarkDeer[] = anchors.map((anchor, i) => {
+  const count = new Map<string, number>();
+  const animals: LandmarkAnimal[] = anchors.map((anchor, i) => {
     for (const child of [...anchor.children]) {
       child.traverse(node => {
         retiredTracks.add(node.name);
@@ -103,22 +118,27 @@ function replaceLandmarkDeer(root: THREE.Object3D) {
       });
       anchor.remove(child);
     }
-    const model = models.build("deer", i === 0);
+    const species = anchor.name.slice(0, anchor.name.indexOf("_")) as AnimalKind;
+    const nth = count.get(species) ?? 0;
+    count.set(species, nth + 1);
+    const model = models.build(species, nth === 0, { resting: !!anchor.userData.resting, snowcap: !!anchor.userData.snowcap, saddle: !!anchor.userData.saddle });
     // Blender's authored paths point along local X. The shared model faces local Z.
     model.group.rotation.y = Math.PI / 2;
     anchor.add(model.group);
-    return { anchor, model, previous: anchor.position.clone(), phase: 0 };
+    const seed = i * 2.3;
+    return { anchor, species, model, previous: anchor.position.clone(), seed, restY: anchor.position.y, phase: seed };
   });
-  return { deer, retiredTracks };
+  return { animals, retiredTracks };
 }
 
-function poseLandmarkDeer(deer: readonly LandmarkDeer[], time: number, dt: number): void {
-  deer.forEach((animal, index) => {
+function poseLandmarkAnimals(animals: readonly LandmarkAnimal[], time: number, dt: number): void {
+  animals.forEach((animal, index) => {
     const { position, scale } = animal.anchor;
     const travel = dt > 0 ? Math.hypot(position.x - animal.previous.x, position.z - animal.previous.z) : 0;
     const gait = dt > 0 ? Math.min(1, travel / (dt * 1.15)) : 0;
-    animal.phase = dt > 0 ? animal.phase + travel * 2 * Math.PI / (0.64 * scale.x) : 0;
-    animal.model.pose(time + index * 2.1, gait, animal.phase);
+    animal.phase = dt > 0 ? animal.phase + travel * 2 * Math.PI / (STRIDE[animal.species] * scale.x) : animal.seed;
+    const lift = Math.min(1, Math.max(0, (position.y - animal.restY) / (0.4 * Math.max(scale.y, 0.01))));
+    animal.model.pose(time + index * 2.1, gait, animal.phase, lift);
     animal.previous.copy(position);
   });
 }
@@ -139,7 +159,8 @@ export function buildLandmark(id: string): ShrineMesh {
   let mixer: THREE.AnimationMixer | null = null;
   let animationStart: number | null = null;
   let lastAnimationTime = 0;
-  let deer: readonly LandmarkDeer[] = [];
+  let animals: readonly LandmarkAnimal[] = [];
+  let puffs: Puffs | null = null;
 
   const apply = (): void => {
     const v = lifeAt(progress, 0);
@@ -162,13 +183,15 @@ export function buildLandmark(id: string): ShrineMesh {
         if (!group.parent) return;
         group.remove(stand.group);
         group.add(gltf.scene);
-        const replacement = SHARED_DEER_LANDMARKS.has(id) ? replaceLandmarkDeer(gltf.scene) : null;
-        deer = replacement?.deer ?? [];
-        model = adopt(gltf.scene, new Set(deer.map(animal => animal.anchor)));
+        // Steam and smoke are pulled out first, so they are not tinted with the rest of the model.
+        puffs = extractPuffs(gltf.scene);
+        const replacement = replaceLandmarkAnimals(gltf.scene);
+        animals = replacement.animals;
+        model = adopt(gltf.scene, new Set(animals.map(animal => animal.anchor)));
         if (gltf.animations.length) {
           mixer = new THREE.AnimationMixer(gltf.scene);
           for (const clip of gltf.animations) {
-            if (!replacement) {
+            if (!replacement.animals.length) {
               mixer.clipAction(clip).play();
               continue;
             }
@@ -178,8 +201,8 @@ export function buildLandmark(id: string): ShrineMesh {
             if (tracks.length) mixer.clipAction(new THREE.AnimationClip(clip.name, clip.duration, tracks, clip.blendMode)).play();
           }
           mixer.setTime(0);
-          poseLandmarkDeer(deer, 0, 0);
         }
+        poseLandmarkAnimals(animals, 0, 0);
         apply();
       },
       () => undefined,
@@ -191,7 +214,7 @@ export function buildLandmark(id: string): ShrineMesh {
     modelReady: () => model !== null,
     appendObstaclesNear(x, z, reach, out: Obstacle[]) {
       if (!model) return;
-      for (const animal of deer) appendAnimalObstacles(animal.model.group, "deer", x, z, reach, out);
+      for (const animal of animals) appendAnimalObstacles(animal.model.group, animal.species, x, z, reach, out);
       for (const { node, radius, halfLength } of model.colliders) {
         node.updateWorldMatrix(true, false);
         const r = radius * scratch.setFromMatrixScale(node.matrixWorld).x;
@@ -210,18 +233,18 @@ export function buildLandmark(id: string): ShrineMesh {
     },
     tick(seconds) {
       if (!model) stand.tick(seconds);
-      if (!mixer) return;
+      puffs?.update(seconds, lifeAt(progress, 0));
       if (progress >= 1) {
         animationStart ??= seconds;
         const time = seconds - animationStart;
-        mixer.setTime(time);
-        poseLandmarkDeer(deer, time, time - lastAnimationTime);
+        mixer?.setTime(time);
+        poseLandmarkAnimals(animals, time, time - lastAnimationTime);
         lastAnimationTime = time;
       } else if (animationStart !== null) {
         animationStart = null;
         lastAnimationTime = 0;
-        mixer.setTime(0);
-        poseLandmarkDeer(deer, 0, 0);
+        mixer?.setTime(0);
+        poseLandmarkAnimals(animals, 0, 0);
       }
     },
   };

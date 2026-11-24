@@ -1,6 +1,6 @@
 import type { Object3D } from "three";
 import type { Obstacle } from "../world";
-import type { Species } from "./animal-models";
+import type { AnimalKind, Species } from "./animal-models";
 
 interface BodyFootprint {
   readonly radius: number;
@@ -8,7 +8,7 @@ interface BodyFootprint {
   readonly offsets: readonly number[];
 }
 
-const FOOTPRINT: Readonly<Record<Species, BodyFootprint>> = {
+const FOOTPRINT: Readonly<Record<AnimalKind, BodyFootprint>> = {
   deer: { radius: 0.26, offsets: [-0.39, 0.04, 0.50] },
   serow: { radius: 0.26, offsets: [-0.35, 0.04, 0.44] },
   boar: { radius: 0.31, offsets: [-0.44, 0.04, 0.52] },
@@ -17,6 +17,11 @@ const FOOTPRINT: Readonly<Record<Species, BodyFootprint>> = {
   otter: { radius: 0.21, offsets: [-0.36, 0.04, 0.45] },
   dolphin: { radius: 0.32, offsets: [-0.55, 0.02, 0.65] },
   whale: { radius: 0.76, offsets: [-1.20, 0.10, 1.38] },
+  macaque: { radius: 0.21, offsets: [0.0] },
+  bear: { radius: 0.38, offsets: [-0.42, 0.04, 0.50] },
+  horse: { radius: 0.30, offsets: [-0.52, 0.04, 0.62] },
+  camel: { radius: 0.31, offsets: [-0.50, 0.04, 0.58] },
+  buffalo: { radius: 0.38, offsets: [-0.46, 0.04, 0.52] },
 };
 
 /** The hull can touch a swimming body near the surface. It can pass over a dive or under a leap. */
@@ -28,7 +33,7 @@ export function withinBoatHeight(species: Species, lift: number): boolean {
 
 /** Use the rendered actor's world transform, including authored landmark headings and scale. */
 export function appendAnimalObstacles(
-  actor: Object3D, species: Species, x: number, z: number, reach: number, out: Obstacle[],
+  actor: Object3D, species: AnimalKind, x: number, z: number, reach: number, out: Obstacle[],
 ): void {
   actor.updateWorldMatrix(true, false);
   const matrix = actor.matrixWorld.elements;

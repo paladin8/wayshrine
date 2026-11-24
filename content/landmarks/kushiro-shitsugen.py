@@ -347,7 +347,9 @@ for key in sorted(B):
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
     allv+= [v.co.copy() for v in me.vertices]
-# ---- Crane articulation. Keep these parts out of the static terrain/collider bake.
+# ---- Crane anchors. The game draws the birds with its shared crane model (the one the wild cranes use), so what is
+# authored here is where each bird stands and how it moves: the displaying pair hop and turn (the hop raises the anchor,
+# which the game turns into spread wings), and the others wade out and back. Anything parented to an anchor is replaced.
 FPS=24
 CYCLE=18
 scene=bpy.context.scene
@@ -355,80 +357,18 @@ scene.name="Kushiro Cranes"
 scene.render.fps=FPS
 scene.frame_end=1+CYCLE*FPS
 
-def joint(name,parent=None,at=(0,0,0)):
-    ob=bpy.data.objects.new(name,None)
-    col.objects.link(ob)
-    ob.parent=parent
-    ob.location=at
-    return ob
-
-def bird_part(pivot,draw):
-    global B
-    static=B
-    B={}
-    try:
-        draw()
-        for key,(vs,fs) in B.items():
-            name=pivot.name+"_"+key
-            me=bpy.data.meshes.new(name)
-            me.from_pydata(vs,[],fs)
-            me.update()
-            me.materials.append(getmat(key))
-            ob=bpy.data.objects.new(name,me)
-            col.objects.link(ob)
-            ob.parent=pivot
-            stats[name]=sum(len(face)-2 for face in fs)
-    finally:
-        B=static
-
 def pulse(t,start,rise,fall,end):
     return smooth(start,rise,t)*(1-smooth(fall,end,t))
 
 def animate_crane(index,u,v,face,pose):
     name=f"crane_{index}"
     x,y=to_xy(u,v)
-    actor=joint(name,at=(x,y,0))
-    actor.scale=(1.5,)*3
+    actor=bpy.data.objects.new(name,None); col.objects.link(actor)
+    actor.location=(x,y,0)
     # The landmark loader follows these colliders as the birds move.
     actor["collisionRadius"]=0.19
     actor["collisionHalfLength"]=0.18
-    body=joint(name+"_body",actor,(0,0,0.62))
-    def torso():
-        ico("white",0,0,0,0.34,0.18,0.18)
-        ico("black",-0.28,0,0.018,0.16,0.14,0.10)
-    bird_part(body,torso)
-
-    neck=joint(name+"_neck",body,(0.22,0,0.028))
-    def throat():
-        solid([rect(0.053,0.046,-0.02),rect(0.035,0.035,0.39,0.145,0)],"black")
-        ico("white",0.171,0,0.417,0.092,0.068,0.071)
-        box("red",0.166,0,0.459,0.482,0.047,0.031)
-        cone("black",ngon(0.024,0.411,4,0,0.237,0),(0.402,0,0.388))
-        for side in (-1,1): ico("black",0.211,side*0.052,0.432,0.017,0.013,0.016)
-    bird_part(neck,throat)
-
-    wings=[]
-    legs=[]
-    for side,label in ((-1,"left"),(1,"right")):
-        wing=joint(name+"_wing_"+label,body,(0.075,side*0.125,0.065))
-        def feathers():
-            panel=[(0.09,0,0),(-0.035,side*0.68,0.05),(-0.44,side*0.46,-0.048),(-0.28,0,-0.022)]
-            solid([panel,[(a,b,c+0.027) for a,b,c in panel]],"white")
-            tip=[(-0.035,side*0.68,0.05),(-0.23,side*0.72,0.016),(-0.49,side*0.47,-0.044),(-0.33,side*0.38,-0.043)]
-            solid([tip,[(a,b,c+0.035) for a,b,c in tip]],"black")
-        bird_part(wing,feathers)
-        wings.append((wing,side))
-
-        thigh=joint(name+"_leg_"+label,actor,(-0.012,side*0.061,0.51))
-        shin=joint(name+"_shin_"+label,thigh,(0,0,-0.234))
-        bird_part(thigh,lambda: prism("black",0,0,-0.243,0.025,0.018,0.021,4))
-        def foot():
-            prism("black",0,0,-0.289,0.009,0.012,0.016,4)
-            box("black",0.043,0,-0.295,-0.276,0.052,0.023)
-        bird_part(shin,foot)
-        legs.append((thigh,shin,side))
-
-    hop_height=0.75 if pose=="dance" else 1.0
+    hop_height=0.38 if pose=="dance" else 1.0
     for f in range(1,scene.frame_end+1,2):
         t=(f-1)/FPS
         cycle=math.tau*t/CYCLE
@@ -457,25 +397,10 @@ def animate_crane(index,u,v,face,pose):
             feed=max(pulse(t,1.3+offset,2.2+offset,2.6+offset,3.4+offset),
                      pulse(t,8.02+offset,8.84+offset,9.53+offset,10.42+offset))
             dip=(0.52+1.06*feed) if pose=="feed" else (0.12+0.85*feed)
-        actor.location=(x+distance*math.cos(face),y+distance*math.sin(face),hop*hop_height*actor.scale.z)
+        actor.location=(x+distance*math.cos(face),y+distance*math.sin(face),hop*hop_height)
         actor.rotation_euler.z=face+turn
         actor.keyframe_insert(data_path="location",frame=f)
         actor.keyframe_insert(data_path="rotation_euler",index=2,frame=f)
-        body.rotation_euler.y=0.045*math.sin(cycle*3+offset)*math.sin(cycle)+0.08*dip
-        body.keyframe_insert(data_path="rotation_euler",index=1,frame=f)
-        neck.rotation_euler.y=0.10+dip+0.058*math.sin(cycle*4+offset)
-        neck.rotation_euler.z=0.13*math.sin(cycle*3+offset)
-        neck.keyframe_insert(data_path="rotation_euler",frame=f)
-        for wing,side in wings:
-            wing.rotation_euler.x=side*(-0.50+1.51*spread)
-            wing.rotation_euler.z=side*(1.10-0.95*spread)
-            wing.keyframe_insert(data_path="rotation_euler",frame=f)
-        for thigh,shin,side in legs:
-            lift=max(0,side*stride)
-            thigh.rotation_euler.y=side*stride
-            shin.rotation_euler.y=-0.57*lift-0.36*hop
-            thigh.keyframe_insert(data_path="rotation_euler",index=1,frame=f)
-            shin.keyframe_insert(data_path="rotation_euler",index=1,frame=f)
 
 for index,crane in enumerate(CRANES,1):
     animate_crane(index,*crane)
