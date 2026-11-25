@@ -161,7 +161,7 @@ export const en: Messages = {
     instructionsText: [
       "Walk with WASD or the arrow keys. Press E at a shrine to restore it and bring its region back to life.",
       "Monuments carry poems and sayings. Press E to take a rubbing and B to open the rubbing box.",
-      "Every 7 rubbings reveal the next hidden landmark on the map (M). Restoring landmarks teaches you gear, such as a boat or snowshoes, that lets you cross new terrain.",
+      "Every 7 rubbings reveal the next hidden landmark on the map (M). Restoring landmarks teaches you gear that lets you cross new terrain.",
       "Your travel journal (J, or the book icon) has a page for each landmark you have restored, with a button to travel back to it.",
       "The map hatches regions you cannot cross yet, and the legend says what they need. Z zooms out to look around.",
     ],
@@ -184,7 +184,7 @@ export const en: Messages = {
     seedLabel: "World seed",
     seedPlaceholder: "Leave blank for a random world",
     seedHelp: "The same seed always makes the same world.",
-    begin: "Begin the journey",
+    begin: "Begin your journey",
     loading: "Loading…",
     noSaves: "No saved journeys yet.",
     play: "Play",

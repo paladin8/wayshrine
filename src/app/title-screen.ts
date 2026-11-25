@@ -48,12 +48,13 @@ const CSS = `
 .ts-btn[disabled]{opacity:.4;cursor:default;pointer-events:none}
 .ts-btn.quiet{background:transparent;border-color:transparent}
 .ts-btn.quiet:hover,.ts-btn.quiet:focus-visible{background:#2a242414}
+.ts-dialog-body{display:flex;flex-direction:column;gap:10px;margin-top:10px}
 .ts-field{display:flex;flex-direction:column;gap:6px}
 .ts-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
 .ts-input{box-sizing:border-box;width:100%;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;font:inherit;font-size:14px;color:${INK};outline:none;text-transform:none;letter-spacing:normal}
 .ts-input:focus{border-color:${RED}}
 .ts-help{margin:0;font-size:12px;opacity:.65}
-.ts-credit{margin:8px 0;font-size:13px;line-height:1.45}
+.ts-credit{margin:0;font-size:13px;line-height:1.45}
 .ts-credit.author{font-size:15px;font-weight:600}
 .ts-list{display:flex;flex-direction:column;gap:8px}
 .ts-save{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid #2a242433;background:#fff}
@@ -212,6 +213,7 @@ function createDialog(
   close.textContent = "✕";
   head.append(heading, close);
   const body = document.createElement("div");
+  body.className = "ts-dialog-body";
   card.append(head, body);
   overlay.appendChild(card);
   container.appendChild(overlay);
@@ -414,7 +416,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
     const load = button(m.loadGame, () => loadGame.open());
     if (saves.list().length === 0) load.disabled = true;
     const fresh = button(m.newGame, () => newGame.open(), last ? "" : "primary");
-    panel.append(cont, fresh, load, button(m.options, () => options.toggle()), button(m.credits, () => credits.open(), "quiet"));
+    panel.append(cont, fresh, load, button(m.options, () => options.toggle()), button(m.credits, () => credits.open()));
     (last ? cont : fresh).focus();
   };
 
