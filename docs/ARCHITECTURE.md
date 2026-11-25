@@ -13,7 +13,7 @@
 | `game` | `GameState` (restored shrines), derived capabilities, vitality, save/load, player movement and collision, shrine reach | core, world |
 | `render` | three.js stage, chunk streaming, terrain/shrine/player meshes, palette, camera | core, world, game |
 | `audio` | music playback: track registry, biome-to-track choice, crossfading player (browser audio, no three.js) | core, world, game |
-| `app` | DOM, keyboard input, HUD, settings dialog, translations, frame loop, localStorage saves and settings, seed from URL | all |
+| `app` | DOM, keyboard input, HUD, settings dialog, translations, frame loop, title screen, localStorage save slots and settings, seed from URL | all |
 
 Each layer exposes a public surface through `index.ts`. Other layers import only that.
 
@@ -62,6 +62,8 @@ Vitality is a pure field: `game/vitality-field.ts` maps `(progress, distance fro
 
 ## Settings and language
 `app/settings.ts` holds the persisted player settings (music and sound-effects volume, mute, minimap visibility, language) as a small store with subscribers; parsing tolerates missing, damaged or older data, and the language defaults to the browser's. `app/settings-panel.ts` is the dialog that edits it (gear button or `Esc`); while it is open the game ignores movement and action keys. The app applies each change at once: volumes to the music and cue players, visibility to the HUD and minimap.
+
+`app/title-screen.ts` is the first thing a player sees (skipped when the URL carries `?seed=`): a scenic SVG backdrop, a placeholder logo box (set `LOGO_URL` to replace it), Continue (the most recently played save), New game with an optional seed (blank generates a random one), Load game (play or delete any save), Options (the settings dialog) and Credits. `app/saves.ts` stores any number of save slots: an index (`wayshrine:slots`), the last-played id, one body per slot (`wayshrine:slot:<id>`) and the player's position (`wayshrine:slotPosition:<id>`, written about once a second while the player is free to walk). A slot appears in the list after its first write. Saves from before slots existed (`wayshrine:save:<seed>`) are copied into slots on first run. The settings dialog has a Return to title button during play.
 
 `app/i18n/` holds the catalogs. `Messages` (in `messages.ts`) is the single shape of all player-facing text, with `en.ts` and `ja.ts` each implementing it, so a missing string is a compile error and `i18n.test.ts` also checks both languages have identical coverage. Sentences with inserted values are functions, so each language controls word order. The HUD and minimap take the current `Messages` every frame and only touch the DOM when text changes, which makes a language switch instant. The debug panel is deliberately untranslated.
 

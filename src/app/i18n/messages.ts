@@ -79,8 +79,30 @@ export interface Messages {
     readonly instructions: string;
     /** A few short paragraphs. */
     readonly instructionsText: readonly string[];
+    readonly returnToTitle: string;
+  };
+  readonly title: {
+    readonly continue: string;
+    /** The line under Continue: which journey it resumes. */
+    readonly continueDetail: (seed: string, restored: number) => string;
+    readonly newGame: string;
+    readonly loadGame: string;
+    readonly options: string;
     readonly credits: string;
     readonly creditsText: string;
+    readonly back: string;
+    readonly seedLabel: string;
+    readonly seedPlaceholder: string;
+    readonly seedHelp: string;
+    readonly begin: string;
+    readonly loading: string;
+    readonly noSaves: string;
+    readonly play: string;
+    readonly delete: string;
+    readonly confirmDelete: string;
+    readonly keep: string;
+    readonly saveSummary: (seed: string, restored: number) => string;
+    readonly logoNote: string;
   };
 }
 

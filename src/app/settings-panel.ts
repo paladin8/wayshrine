@@ -6,6 +6,15 @@ export interface SettingsPanel {
   isOpen(): boolean;
   toggle(): void;
   close(): void;
+  /** Removes the dialog and its listeners. */
+  destroy(): void;
+}
+
+export interface SettingsPanelOptions {
+  /** Adds a button that leaves the game for the title screen. */
+  readonly onTitle?: () => void;
+  /** Whether Esc opens and closes the dialog. Default true. */
+  readonly escapeToggles?: boolean;
 }
 
 const CSS = `
@@ -27,7 +36,8 @@ const CSS = `
 .sp-lang{all:unset;cursor:pointer;flex:1;text-align:center;padding:7px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .sp-lang[aria-pressed=true]{background:#d96b59;border-color:#d96b59;color:#fff}
 .sp-howto p{margin:6px 0;font-size:13px;line-height:1.45}
-.sp-credits{margin:0;font-size:12px;line-height:1.5;opacity:.65}
+.sp-title-button{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;margin-top:18px;text-align:center;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
+.sp-title-button:hover{background:#f6efe2}
 `;
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -42,14 +52,21 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 /** The settings dialog and its gear button. All changes go through the store. */
-export function createSettingsPanel(container: HTMLElement, actions: HTMLElement, store: SettingsStore): SettingsPanel {
+export function createSettingsPanel(
+  container: HTMLElement,
+  actions: HTMLElement | null,
+  store: SettingsStore,
+  options: SettingsPanelOptions = {},
+): SettingsPanel {
   const style = document.createElement("style");
   style.textContent = CSS;
   document.head.appendChild(style);
 
-  const gear = el("button", "hud-action gear", actions);
-  gear.type = "button";
-  gear.textContent = "⚙";
+  const gear = actions ? el("button", "hud-action gear", actions) : null;
+  if (gear) {
+    gear.type = "button";
+    gear.textContent = "⚙";
+  }
 
   const overlay = el("div", "sp-overlay", container);
   const card = el("div", "sp-card", overlay);
@@ -111,16 +128,18 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
     return [locale, b] as const;
   });
 
-  const creditsHeading = el("h3", undefined, card);
-  const creditsBody = el("p", "sp-credits", card);
+  const titleButton = options.onTitle ? el("button", "sp-title-button", card) : null;
+  if (titleButton) titleButton.type = "button";
 
   const percent = (v: number): string => `${Math.round(v * 100)}%`;
   const render = (): void => {
     const s = store.get();
     const t = messagesFor(s.language).settings;
     document.documentElement.lang = s.language;
-    gear.title = t.open;
-    gear.setAttribute("aria-label", t.open);
+    if (gear) {
+      gear.title = t.open;
+      gear.setAttribute("aria-label", t.open);
+    }
     closeButton.title = t.close;
     closeButton.setAttribute("aria-label", t.close);
     card.setAttribute("aria-label", t.title);
@@ -143,8 +162,7 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
       b.setAttribute("aria-pressed", String(choice === s.character));
     }
     setText(languageHeading, t.language);
-    setText(creditsHeading, t.credits);
-    setText(creditsBody, t.creditsText);
+    if (titleButton) setText(titleButton, t.returnToTitle);
     music.input.value = String(s.musicVolume);
     sfx.input.value = String(s.sfxVolume);
     setText(music.out, percent(s.musicVolume));
@@ -158,7 +176,7 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
   sfx.input.addEventListener("input", () => store.update({ sfxVolume: Number(sfx.input.value) }));
   mute.input.addEventListener("change", () => store.update({ muted: mute.input.checked }));
   minimap.input.addEventListener("change", () => store.update({ showMinimap: minimap.input.checked }));
-  store.subscribe(render);
+  const unsubscribe = store.subscribe(render);
   render();
 
   let open = false;
@@ -168,14 +186,27 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
     if (open) card.focus();
     else (document.activeElement as HTMLElement | null)?.blur(); // hand the keyboard back to the game
   };
-  gear.addEventListener("click", () => setOpen(!open));
+  gear?.addEventListener("click", () => setOpen(!open));
   closeButton.addEventListener("click", () => setOpen(false));
+  titleButton?.addEventListener("click", () => options.onTitle?.());
   overlay.addEventListener("pointerdown", (e) => {
     if (e.target === overlay) setOpen(false);
   });
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Escape" && !e.repeat) setOpen(!open);
-  });
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.code === "Escape" && !e.repeat && (options.escapeToggles ?? true)) setOpen(!open);
+  };
+  window.addEventListener("keydown", onKey);
 
-  return { isOpen: () => open, toggle: () => setOpen(!open), close: () => setOpen(false) };
+  return {
+    isOpen: () => open,
+    toggle: () => setOpen(!open),
+    close: () => setOpen(false),
+    destroy() {
+      unsubscribe();
+      window.removeEventListener("keydown", onKey);
+      overlay.remove();
+      gear?.remove();
+      style.remove();
+    },
+  };
 }

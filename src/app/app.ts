@@ -71,7 +71,9 @@ import { createMonumentUi } from "./monuments-ui";
 import { createMusicButton } from "./music-button";
 import { createNotebook } from "./notebook";
 import { createRailwayView } from "./railway-view";
-import { createSettingsStore } from "./settings";
+import { createSaveStore, type SaveSlot, type SaveStore } from "./saves";
+import { createSettingsStore, type SettingsStore } from "./settings";
+import { createTitleScreen } from "./title-screen";
 import { createSettingsPanel } from "./settings-panel";
 
 const HINT_SECONDS = 1.5;
@@ -143,31 +145,42 @@ const KEY_UNRESTORE = "KeyU";
 const KEY_RUBBING = "KeyR";
 const KEY_NEXT_SHRINE = "KeyG";
 
-function loadGame(world: World): GameState {
-  const { seed } = world;
+function loadGame(saves: SaveStore, slot: SaveSlot, world: World): GameState {
   try {
-    const raw = window.localStorage.getItem(`wayshrine:save:${seed}`);
+    const raw = saves.read(slot.id);
     if (raw) return deserialize(JSON.parse(raw) as SaveData, world);
   } catch {
     // Unreadable or unavailable storage: start fresh.
   }
-  return newGame(seed);
+  return newGame(world.seed);
 }
 
-function saveGame(state: GameState): void {
-  try {
-    window.localStorage.setItem(`wayshrine:save:${state.seed}`, JSON.stringify(serialize(state)));
-  } catch {
-    // Saving is best-effort.
+/** How often the player's position is written to the save. */
+const POSITION_SAVE_SECONDS = 1;
+
+/**
+ * Browser entry: the title screen, then the game. ?seed=anything skips the title and plays that world
+ * (the same seed always builds the same world).
+ */
+export function startApp(container: HTMLElement): void {
+  const settings = createSettingsStore(undefined, navigator.languages);
+  const saves = createSaveStore();
+  const seed = new URLSearchParams(window.location.search).get("seed");
+  if (seed !== null) {
+    startGame(container, saves.forSeed(seed), settings, saves);
+    return;
   }
+  const title = createTitleScreen(container, { saves, settings });
+  void title.chosen.then((slot) => {
+    title.destroy();
+    startGame(container, slot, settings, saves);
+  });
 }
 
 /** Browser wiring: input, the game loop, the HUD and saving. */
-export function startApp(container: HTMLElement): void {
+function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsStore, saves: SaveStore): void {
   const params = new URLSearchParams(window.location.search);
-  // ?seed=anything selects the world; the same seed always builds the same world.
-  const seed = params.get("seed") ?? "wayshrine";
-  const world = createWorld(seed);
+  const world = createWorld(slot.seed);
   const terrain = createTerrain(world);
   const railway = fujiRailway(world);
   const ginzan = ginzanStream(world);
@@ -208,7 +221,6 @@ export function startApp(container: HTMLElement): void {
   }
   const hud = createHud(container);
   const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
-  const settings = createSettingsStore(undefined, navigator.languages);
   const applyAudio = (s = settings.get()): void => {
     music.setVolume(s.musicVolume);
     music.setMuted(s.muted);
@@ -218,14 +230,20 @@ export function startApp(container: HTMLElement): void {
   applyAudio();
   settings.subscribe(applyAudio);
 
-  let state = loadGame(world);
+  let state = loadGame(saves, slot, world);
   const monumentUi = createMonumentUi(container, hud.actions, {
     collected: () => state.collected,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
   });
   const musicButton = createMusicButton(hud.actions, () => cycleMusic());
-  const panel = createSettingsPanel(container, hud.actions, settings);
+  const panel = createSettingsPanel(container, hud.actions, settings, {
+    onTitle: () => {
+      saveGame(state);
+      savePosition();
+      window.location.href = window.location.pathname;
+    },
+  });
   const notebook = createNotebook(container, hud.landmarkButton, {
     all: world.landmarks.map((region) => region.landmark!.id),
     restored: () => world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id),
@@ -246,7 +264,10 @@ export function startApp(container: HTMLElement): void {
   let nearName = 0;
   /** The landmark whose name is shown (or fading out) near the player. */
   let nearNameId: string | null = null;
-  let pos: Point = startPosition(terrain);
+  const savedPosition = saves.readPosition(slot.id);
+  let pos: Point = savedPosition ? safePosition(terrain, capabilitiesOf(state, world), savedPosition) : startPosition(terrain);
+  let savedAt: Point = pos;
+  let positionTimer = 0;
   let facing = 0;
   /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
   let blockedBy: Biome | null = null;
@@ -448,6 +469,14 @@ export function startApp(container: HTMLElement): void {
   };
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
+
+  const saveGame = (game: GameState): void => saves.write(slot.id, JSON.stringify(serialize(game)), game.restored.size);
+  /** Remembers where the player stands, unless a scripted moment is carrying them. */
+  const savePosition = (): void => {
+    if (momentBusy() || (pos.x === savedAt.x && pos.z === savedAt.z)) return;
+    savedAt = pos;
+    saves.writePosition(slot.id, pos);
+  };
 
   const restore = (id: string): void => {
     const region = world.regionById(id);
@@ -778,6 +807,7 @@ export function startApp(container: HTMLElement): void {
     return true;
   }
 
+  window.addEventListener("pagehide", savePosition);
   window.addEventListener("blur", releaseMovement);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) releaseMovement();
@@ -788,6 +818,11 @@ export function startApp(container: HTMLElement): void {
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
     last = now;
     stage.tick(dt);
+    positionTimer += dt;
+    if (positionTimer >= POSITION_SAVE_SECONDS) {
+      positionTimer = 0;
+      savePosition();
+    }
 
     if (lastRestored !== state.restored) {
       lastRestored = state.restored;

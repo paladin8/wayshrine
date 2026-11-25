@@ -7,6 +7,7 @@
 - Game state: restore, capabilities, save format, player movement.
 - **Monuments and rubbings:** 1,209 Japanese texts on monuments, spread 0 to 2 per region with a find near every landmark; worn until the region is restored; a glimmer when one is on screen; reading adds a loose sheet to the rubbing box (B). Haiku match their region's biome. See ADR 0005.
 - **Haiku scenery:** all 59 tagged haiku have an authored scene beside their rubbing site. Local motion, lighting and effects follow the restoration wave.
+- **Title screen and save slots:** scenic title with placeholder logo, Continue, New game with optional seed, Load game (unlimited slots), Options, Credits; the player's position is saved about once a second.
 - **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap toggle), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, three scores tied to first uses of gear, volume/mute controls.
 - **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 14, 22, 30, 39 and 48 restored landmarks instead of at shrines, and Pilgrim’s Wake at 58; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; the map marks the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
