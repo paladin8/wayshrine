@@ -65,7 +65,7 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 25 | | yanagawa | Yanagawa river cruise | 柳川の川下り | やながわのかわくだり | canals and punt boats | marsh |
 | 26 | | kurashiki-bikan | Kurashiki Bikan Historical Quarter | 倉敷美観地区 | くらしきびかんちく | willow-lined canal and white storehouses | marsh |
 | 27 | | kamakura-daibutsu | Great Buddha of Kamakura | 鎌倉の大仏 | かまくらのだいぶつ | the bronze Buddha sitting in the open | meadow |
-| 28 | | tokyo-tower | Tokyo Tower | 東京タワー | とうきょうたわー | the red-and-white lattice tower | meadow |
+| 28 | | kumamoto-castle | Kumamoto Castle | 熊本城 | くまもとじょう | the black keep on curved stone walls | meadow |
 | 29 | | osaka-castle | Osaka Castle | 大阪城 | おおさかじょう | the keep on its stone walls and moat | meadow |
 | 30 | | mount-fuji | Mount Fuji | 富士山 | ふじさん | the mountain, seen past the Chureito pagoda | mountain |
 | 31 | VI Forest | jomon-sugi | Jomon Sugi | 縄文杉 | じょうもんすぎ | the ancient cedar | forest |
@@ -83,7 +83,7 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 43 | | mount-aso | Mount Aso | 阿蘇山 | あそさん | the caldera | volcanic |
 | 44 | | beppu-hells | Beppu hells | 別府地獄めぐり | べっぷじごくめぐり | the hot-spring hells | volcanic |
 | 45 | | owakudani | Owakudani | 大涌谷 | おおわくだに | the steaming volcanic valley | volcanic |
-| 46 | | kumamoto-castle | Kumamoto Castle | 熊本城 | くまもとじょう | the black keep on curved stone walls | meadow |
+| 46 | | tokyo-tower | Tokyo Tower | 東京タワー | とうきょうたわー | the red-and-white lattice tower over a city district | meadow |
 | 47 | | dazaifu | Dazaifu Tenmangu | 太宰府天満宮 | だざいふてんまんぐう | the shrine, drum bridge and plum trees | meadow |
 | 48 | | dogo-onsen | Dogo Onsen | 道後温泉 | どうごおんせん | the wooden bathhouse | meadow |
 | 49 | VIII Open sea | kintaikyo | Kintaikyo Bridge | 錦帯橋 | きんたいきょう | five wooden arches over the river | water |
@@ -104,6 +104,13 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 64 | | chuson-ji | Chuson-ji | 中尊寺 | ちゅうそんじ | the Golden Hall | snow |
 | 65 | | yamadera | Yamadera | 山寺 | やまでら | halls on the cliff above the steps | snow |
 | 66 | | snow-monkeys | Jigokudani snow monkeys | 地獄谷野猿公苑 | じごくだにやえんこうえん | monkeys in the hot spring | snow |
+
+## Special landmarks
+
+- **Tokyo Tower (#46).** A seed-built district surrounds the existing tower model with streets, sidewalks, and walkable blocks. Building colors and shop windows revive with the tower’s restoration wave. Street walkers appear as the surrounding blocks come alive. Tokyo swapped meadow slots with Kumamoto Castle (#28), which keeps the rest of the seeded layout in place. Older saves carry both landmarks’ restoration status to the new locations.
+- **Ginzan Onsen (#63).** An approved direction for later work. Hot water runs from the restored inn street into nearby snow regions. Restored downstream shrines light baths and reveal short thawed paths along steaming banks.
+- **Zao Juhyo (#12), proposed.** Restoration makes the wind visible across the snowy approaches. Clusters of frost-covered trees and ribbons of blowing snow lead to sheltered hollows and lookouts, with ambient wind lulls along the way. The route stays walkable with snowshoes throughout.
+
 
 ## Animals and motion
 

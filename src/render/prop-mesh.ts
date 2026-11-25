@@ -65,6 +65,29 @@ function partsFor(kind: PropKind, variant: number): Part[] {
           ({ geometry: ico(), color: blossom, matrix: at(x!, y!, z!, 0.71, 0.55, 0.65) })),
       ];
     }
+    case "city-building": {
+      const tint = [0xd0bfaa, 0xaeb6af, 0xc6ab9c, 0xb2b8bf][variant]!;
+      const roof = [0x6a6d70, 0x61696d, 0x635a57, 0x626974][variant]!;
+      const floors = [3, 5, 4, 6][variant]!;
+      const height = floors * 1.15;
+      const parts: Part[] = [
+        { geometry: box(4.1, height, 3.85), color: tint, matrix: at(0, height / 2, 0) },
+        { geometry: box(4.25, 0.28, 4), color: roof, matrix: at(0, height + 0.14, 0) },
+        { geometry: box(1.15, 0.62, 1.35), color: roof, matrix: at(0.85, height + 0.5, -0.8) },
+        { geometry: box(4.2, 0.24, 0.7), color: 0x586568, matrix: at(0, 1.14, 2.1) },
+      ];
+      for (let floor = 0; floor < floors; floor++) {
+        for (const column of [-1, 0, 1]) {
+          const y = (floor + 0.52) * 1.15;
+          const color = floor === 0 ? 0xdac592 : (floor + column + variant) % 4 === 0 ? 0xdbbe8b : 0x657781;
+          parts.push(
+            { geometry: box(0.77, 0.56, 0.035), color, matrix: at(column * 1.24, y, 1.94) },
+            { geometry: box(0.035, 0.56, 0.72), color, matrix: at(2.06, y, column * 1.10) },
+          );
+        }
+      }
+      return parts;
+    }
     case "farmhouse": {
       const roof = [0x45545c, 0x555152, 0x4f5c59, 0x66605d][variant]!;
       const timber = 0x7f6951;
@@ -92,7 +115,7 @@ function partsFor(kind: PropKind, variant: number): Part[] {
 
 const partCache = new Map<string, Part[]>();
 function cachedParts(kind: PropKind, look: string, variant: number): Part[] {
-  const bucket = look !== kind || kind === "tree" || kind === "cherry" || kind === "farmhouse" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
+  const bucket = look !== kind || kind === "tree" || kind === "cherry" || kind === "farmhouse" || kind === "city-building" ? Math.floor(variant * 4) : kind === "flower" ? Math.floor(variant * FLOWER_COLORS.length) : 0;
   const key = `${look}:${bucket}`;
   let parts = partCache.get(key);
   if (!parts) {

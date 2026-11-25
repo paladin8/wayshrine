@@ -213,6 +213,20 @@ describe("exploration", () => {
     }
   });
 
+  it("keeps an older save’s Tokyo Tower restoration with the landmark when it moves to slot 46", () => {
+    const tokyo = world.landmarks[45]!;
+    const kumamoto = world.landmarks[27]!;
+    expect(tokyo.landmark!.id).toBe("tokyo-tower");
+    expect(kumamoto.landmark!.id).toBe("kumamoto-castle");
+    const base = serialize(newGame(world.seed));
+    const old = deserialize({ ...base, v: 4, restored: [kumamoto.id, "0,0"], explored: [kumamoto.id] }, world);
+    expect(old.restored).toEqual(new Set([tokyo.id, "0,0"]));
+    expect(old.explored).toEqual(new Set([kumamoto.id]));
+    expect(deserialize(serialize(old), world)).toEqual(old);
+    const reverse = deserialize({ ...base, v: 4, restored: [tokyo.id] }, world);
+    expect(reverse.restored).toEqual(new Set([kumamoto.id]));
+  });
+
   it("returns the same state when nothing is new", () => {
     const s = discoverNear(newGame(world.seed), world, { x: 10, z: 10 });
     expect(discoverNear(s, world, { x: 10, z: 10 })).toBe(s);

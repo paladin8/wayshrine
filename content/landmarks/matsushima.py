@@ -163,46 +163,70 @@ def shore(h_land,m,edge=0.9,fall=1.08):
     return (LV+0.08)+(FLOOR-(LV+0.08))*smooth(1.0,fall,m)
 # ---- Matsushima: a bay scattered with islets of pale tuff, their cliffs undercut by the waves, each crowned with
 # wind-bent pines; nearest the camera the islet of the Godaido hall, reached by short vermilion bridges from a landing
-ISL=[(3.6,-1.4,2.7,1.2,"god"),(-1.2,-5.4,1.9,1.5,""),(-5.2,-1.2,2.3,1.9,""),(-1.0,3.0,1.5,1.6,""),(-6.6,5.0,1.6,1.3,""),
-     (1.6,7.0,1.2,1.4,""),(-8.4,-5.6,1.0,1.0,""),(2.6,-7.8,1.0,1.1,""),(0.4,-1.0,0.8,0.7,""),(-3.6,8.6,0.9,0.8,"")]
-ISL=[ISL[0]]+[(cu*1.12,cv*1.12,r*1.3,h*1.15,k) for cu,cv,r,h,k in ISL[1:]]
+# (u, v, radius, height, kind, aspect, turn): three kinds of profile, so the islets don't repeat one shape --
+#   dome: the usual pale cliff and pine-capped crown; flat: broad and low; reef: a low narrow spine of rock awash;
+#   under: a tall stack cut deep at the waterline, one pine leaning out over the water
+ISL=[(3.6,-1.4,2.7,1.2,"god",1.0,0.0),(-1.8,-6.4,2.2,1.7,"dome",1.0,0.0),(-6.0,-0.6,2.5,0.9,"flat",0.72,0.5),
+     (-0.4,3.4,1.0,2.5,"under",1.0,0.0),(-7.4,5.8,1.7,1.4,"dome",1.0,0.0),(2.4,7.6,2.8,0.3,"reef",0.26,0.45),
+     (-9.0,-6.2,1.1,1.1,"dome",1.0,0.0),(3.4,-8.4,1.3,1.3,"dome",1.0,0.0),(0.3,-1.2,0.75,0.7,"dome",1.0,0.0),
+     (-3.4,9.2,1.0,0.9,"flat",0.8,1.2),(6.2,4.4,1.5,0.25,"reef",0.3,-0.8)]
 def _fit(cu,cv,r):                                       # keep every islet clear of the footprint's open-water rim
     for _ in range(40):
         x,y=to_xy(cu,cv)
         if max(abs(x),abs(y))+r*1.25<FH-1.3: break
         cu*=0.95; cv*=0.95
     return cu,cv
-ISL=[(*_fit(cu,cv,r),r,h,k) for cu,cv,r,h,k in ISL]
+ISL=[(*_fit(cu,cv,r),r,h,k,asp,rt) for cu,cv,r,h,k,asp,rt in ISL]
+def loc(i,u,v):                                          # an islet's own frame: turned, and squashed across for reefs
+    cu,cv,r,h,k,asp,rt=ISL[i]; du,dv=u-cu,v-cv; c,s_=math.cos(rt),math.sin(rt)
+    return du*c+dv*s_,(-du*s_+dv*c)/asp
 def isl_r(i,a):
-    cu,cv,r,h,k=ISL[i]; return r*(1+0.12*math.sin(3*a+i)+0.07*math.cos(5*a+2*i))
+    r=ISL[i][2]; return r*(1+0.12*math.sin(3*a+i)+0.07*math.cos(5*a+2*i))
+def isl_pt(i,a,fr):
+    cu,cv,r,h,k,asp,rt=ISL[i]; lu,lv=isl_r(i,a)*fr*math.cos(a),isl_r(i,a)*fr*math.sin(a)*asp
+    c,s_=math.cos(rt),math.sin(rt); return to_xy(cu+lu*c-lv*s_,cv+lu*s_+lv*c)
 def in_isl(u,v,m=0.0):
-    for i,(cu,cv,r,h,k) in enumerate(ISL):
-        a=math.atan2(v-cv,u-cu)
-        if math.hypot(u-cu,v-cv)<isl_r(i,a)*0.92-m: return i
+    for i in range(len(ISL)):
+        lu,lv=loc(i,u,v); a=math.atan2(lv,lu)
+        if math.hypot(lu,lv)<isl_r(i,a)*0.92-m: return i
     return None
+PROF={"dome":[(0.78,"F"),(0.8,0.05),(0.92,0.35),(1.02,0.75),(0.97,1.0),(0.9,1.0)],
+      "god":[(0.78,"F"),(0.8,0.05),(0.92,0.35),(1.02,0.75),(0.97,1.0),(0.9,1.0)],
+      "flat":[(0.9,"F"),(0.92,0.05),(0.98,0.5),(1.02,0.85),(1.0,1.0),(0.94,1.0)],
+      "under":[(0.5,"F"),(0.5,0.05),(0.56,0.18),(1.1,0.62),(1.02,1.0),(0.92,1.0)],
+      "reef":[(1.0,"F"),(1.0,0.05),(0.95,0.6),(0.8,0.95),(0.65,1.0),(0.5,1.0)]}
 NA=12
-for i,(cu,cv,r,h,k) in enumerate(ISL):
+for i,(cu,cv,r,h,k,asp,rt) in enumerate(ISL):
     rings=[]
-    for fr,z in ((0.78,FLOOR),(0.8,LV+0.05),(0.92,LV+0.35),(1.02,LV+h*0.75),(0.97,LV+h),(0.9,LV+h+0.05)):
-        rings.append([(*to_xy(cu+isl_r(i,2*math.pi*j/NA)*fr*math.cos(2*math.pi*j/NA),cv+isl_r(i,2*math.pi*j/NA)*fr*math.sin(2*math.pi*j/NA)),z) for j in range(NA)])
-    solid(rings[:5],"tuff",mt="tuff")
-    solid([rings[4],rings[5]],"grass")
-    solid([[(*to_xy(cu+isl_r(i,2*math.pi*j/NA)*0.81*math.cos(2*math.pi*j/NA),cv+isl_r(i,2*math.pi*j/NA)*0.81*math.sin(2*math.pi*j/NA)),z) for j in range(NA)] for z in (LV-0.05,LV+0.22)],"tuffdk")
+    for fr,zf in PROF[k]:
+        z=FLOOR if zf=="F" else (LV+0.05 if zf==0.05 else LV+h*zf)
+        rings.append([(*isl_pt(i,2*math.pi*j/NA,fr),z) for j in range(NA)])
+    rings[5]=[(x,y,z+0.05) for x,y,z in rings[5]]
+    solid(rings[:5],"tuffdk" if k=="reef" else "tuff",mt="tuffdk" if k=="reef" else "tuff")   # reefs: dark, wave-washed
+    if k!="reef": solid([rings[4],rings[5]],"grass")
+    wf=PROF[k][1][0]+0.01                                # the dark wave-worn band at the waterline
+    solid([[(*isl_pt(i,2*math.pi*j/NA,wf),z) for j in range(NA)] for z in (LV-0.05,LV+min(0.22,h*0.6))],"tuffdk")
 draw_sea()
-def pine(x,y,z,s):
-    lean=rng.uniform(0,6.28); dx,dy=math.cos(lean)*0.55*s,math.sin(lean)*0.55*s
+def pine(x,y,z,s,lean=None,reach=0.55):
+    lean=rng.uniform(0,6.28) if lean is None else lean; dx,dy=math.cos(lean)*reach*s,math.sin(lean)*reach*s
     pts=[(x,y,z-0.1),(x+dx*0.4,y+dy*0.4,z+0.8*s),(x+dx,y+dy,z+1.6*s)]
     tube("bark",pts,[0.1*s,0.08*s,0.06*s],5)
     tx,ty,tz=pts[-1]
     for zc,r,o in ((0.0,0.8,0.0),(-0.35,0.6,0.5),(0.25,0.5,-0.4)):
         ico("pine",tx+o*dx,ty+o*dy,tz+zc,r*s,r*s*0.9,r*s*0.38)
-for i,(cu,cv,r,h,k) in enumerate(ISL):
+for i,(cu,cv,r,h,k,asp,rt) in enumerate(ISL):
+    if k=="reef":
+        if r>2: x,y=isl_pt(i,0.3,0.2); pine(x,y,LV+h,0.55)       # one stunted pine on the longer reef
+        continue
+    if k=="under":                                       # one big pine leaning far out over the water, toward the camera
+        x,y=to_xy(cu+0.35,cv); pine(x,y,LV+h+0.05,1.2,lean=-math.pi/4,reach=2.2); continue
     n=1 if r<1.2 else (3 if r<2.0 else 5)
     if k=="god": n=2
+    if k=="flat": n=4
     for j in range(n):
         a=2*math.pi*j/n+i; rr=r*0.45 if n>1 else 0.0
         if k=="god": a=math.pi*(0.85+j*0.4); rr=r*0.55
-        u,v=cu+rr*math.cos(a),cv+rr*math.sin(a); x,y=to_xy(u,v)
+        u,v=cu+rr*math.cos(a),cv+rr*math.sin(a)*(asp if k=="flat" else 1.0); x,y=to_xy(u,v)
         pine(x,y,LV+h+0.05,rng.uniform(0.7,1.0)*(0.8 if r<1 else 1.0))
 # the Godaido: a small hall of dark timber under a steep cypress-bark roof with a jewel on its peak, on its islet
 GU,GV,GR,GH=ISL[0][:4]; GZ=LV+GH+0.05
@@ -248,7 +272,7 @@ JU0,JU1=LU-0.4,10.0
 ubox("darkwood",(JU0+JU1)/2,LV_,FLOOR,JD,(JU1-JU0)/2,0.5)
 def on_jetty(u,v): return JU0-0.05<=u<=JU1 and abs(v-LV_)<=0.5
 # boats moored about the bay
-for u,v,a in ((3.0,4.4,0.6),(-3.0,0.2,-0.3),(5.6,5.6,1.2)):
+for u,v,a in ((2.6,4.8,0.6),(-2.6,0.8,-0.3),(4.4,1.8,1.2)):
     T2=F(u,v,a,LV)
     solid([[(-0.55,-0.16,-0.05),(0.55,-0.16,-0.05),(0.55,0.16,-0.05),(-0.55,0.16,-0.05)],[(-0.7,-0.24,0.2),(0.8,-0.15,0.2),(0.8,0.15,0.2),(-0.7,0.24,0.2)]],"white",T2)
     box("darkwood",-0.15,0,0.2,0.45,0.25,0.18,T2)

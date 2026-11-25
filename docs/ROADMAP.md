@@ -12,6 +12,7 @@
 - **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 14, 22, 30, 39 and 48 restored landmarks instead of at shrines, and Pilgrim’s Wake at 58; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; compass points at the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
 - **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Ordinary shrines:** biome-specific gates and shelters. Land shrines sit on flat terraces that blend into the surrounding hill, lake shrines stand on pilings, and coastal torii rise directly from the sea. Water shrines can be restored from the boat.
+- **Tokyo Tower:** the tower anchors a walkable city district at landmark 46. The district gains color and pedestrians as restoration reaches the streets.
 - **Scenery:** seeded regional palettes and brushwork, cedar forests, reed beds and marsh pools, basalt and ash seams, separate lake ripples and ocean breakers. Lighting, mist, spray, and cinders vary by biome; the restoration wave brings the details to life.
 - **Regional variety:** changing boundary shapes, biome-specific relief, island and shoal forms, and lake and seabed colour patterns. Restored regions mix clustered plant species with local birds and fish. Rubbings use a wider range of stone, wood, ceramic, and bronze forms.
 - **Rare wildlife:** roughly one in four regions has a seeded large-animal sighting after restoration. Sika deer graze and stroll, foxes dart, and boars rest between charges. Serow pick their way along slopes, cranes wade and peck, otters paddle in bursts, dolphins leap, and whales surface and dive. Nara and Itsukushima share the sika deer model with wild herds.
@@ -27,7 +28,7 @@
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).
 4. Tile placing: decide whether it earns a place.
 5. **Technology thread.** Mount Fuji is the scenic railway. Its five-region corridor echoes the ride with trackside farmhouses, paddies, and cherry trees. See the [scenic railway plan](railway-plan.md).
-6. **Livelier world.** Extend rare sightings with responses to nearby players, and eventually add people.
+6. **Livelier world.** Develop Ginzan Onsen’s warm downstream stretches. See [special landmarks](landmarks.md#special-landmarks). Extend rare sightings with responses to nearby players, and eventually add people.
 7. **Player.** A much higher-fidelity player model with real animations, and the abilities (boat, snowshoes, walking sticks and the rest) given the same treatment.
 8. **Footsteps.** Moving across different terrain should make different sounds.
 9. **Terrain variety.** More diversity in the world and the terrain, to reward exploring. Starting points:

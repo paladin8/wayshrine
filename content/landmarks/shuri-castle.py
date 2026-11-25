@@ -175,26 +175,27 @@ def water_disc(x,y): return False
 def gmat(x,y,h,sl):
     u,v=to_uv(x,y)
     if top_m(u,v)<1.0: return "pave"
-    if h<LV+0.35 or (isl_m(u,v)>0.84 and u>2.5 and abs(v-1.0)<3.0): return "sand"
+    if h<LV+0.35 or (isl_m(u,v)>0.92 and u>2.5 and abs(v)<1.4): return "sand"
     return "grass"
 draw_ground(H,gmat,0.62,skip=lambda x,y: top_m(*to_uv(x,y))<0.97)
 draw_sea()
-# the walls: curving coral limestone round the hilltop, battered, with rounded corners
-NW=40
-def wall_ring(o,z):
-    pts=[]
-    for k in range(NW):
-        a=2*math.pi*k/NW; c,s=math.cos(a),math.sin(a)
-        r=1.0/(((abs(c)/4.0)**3+(abs(s)/4.6)**3)**(1/3)); u,v=(r+o)*c-0.4,(r+o)*s
-        pts.append((*to_xy(u,v),z))
-    return pts
-solid([wall_ring(0.6,0.05),wall_ring(0.2,HT-0.2),wall_ring(0.0,HT+0.75),wall_ring(-0.32,HT+0.75),wall_ring(-0.32,HT-0.01)],"limestone")   # one loop, so its caps lie under the court
+# the walls: curving coral limestone round the hilltop, battered, with rounded corners; tall on the seaward side
+# so they carry the near silhouette, and pierced at the front for the gate
+NW=48
+WSEC=[(1.15,0.05),(0.45,HT-0.25),(0.05,HT+1.15),(-0.3,HT+1.15),(-0.3,HT-0.01)]
+def wsec(a):
+    c,s_=math.cos(a),math.sin(a); r=1.0/(((abs(c)/4.0)**3+(abs(s_)/4.6)**3)**(1/3))
+    return [(*to_xy((r+o)*c-0.4,(r+o)*s_),z) for o,z in WSEC]
+for k in range(NW):
+    a0,a1=2*math.pi*k/NW,2*math.pi*(k+1)/NW; am=(a0+a1)/2
+    if math.cos(am)>0.9 and abs(math.sin(am))<0.25: continue          # the gap for the Hoshinmon
+    solid([wsec(a0),wsec(a1)],"limestone")
 q=[to_xy(-4.0,-4.3),to_xy(-4.0,4.3),to_xy(3.2,4.3),to_xy(3.2,-4.3)]
 emit([(*p,HT) for p in q],[[0,1,2,3]],["pave"])
 # the una, the court before the hall, striped in red and white tile
-for k in range(9):
-    v0=-2.6+5.2*k/9; v1=-2.6+5.2*(k+1)/9
-    q=[to_xy(-0.6,v0),to_xy(-0.6,v1),to_xy(2.6,v1),to_xy(2.6,v0)]
+for k in range(11):                                   # widened, wall to wall between the flanking halls
+    v0=-2.9+5.8*k/11; v1=-2.9+5.8*(k+1)/11
+    q=[to_xy(-0.75,v0),to_xy(-0.75,v1),to_xy(3.1,v1),to_xy(3.1,v0)]
     emit([(*p,HT+0.02) for p in q],[[0,1,2,3]],["red" if k%2==0 else "white"])
 # the Seiden: two storeys of vermilion lacquer under orange-red tile, the great karahafu over its steps, dragons on
 # its ridge and its porch
@@ -222,29 +223,35 @@ extrude_y("gold",lo,-1.55,-2.2,TK)
 hi=[(1.52,-0.08),(0.8,0.44),(0.34,1.05),(0,1.2),(-0.34,1.05),(-0.8,0.44),(-1.52,-0.08)]
 extrude_y("roof",lo+hi,-1.5,-2.35,TK)
 for k in range(5): ubox("limestone",SU+1.45+0.18*k,SV,HT,HT+0.35-0.07*k,0.09,0.9)
+# the pair of stone dragon columns (dairyuchu) before the steps, set well out to either side so they read as two
+for sv in (-1.45,1.45):
+    x,y=to_xy(SU+1.75,sv)
+    prism("limestone",x,y,HT,HT+0.2,0.2,0.2,8); prism("limestone",x,y,HT+0.2,HT+1.3,0.11,0.1,8)
+    for zc in (HT+0.45,HT+0.8,HT+1.1): prism("gold",x,y,zc,zc+0.08,0.15,0.15,8)
+    ico("gold",x,y,HT+1.42,0.17,0.17,0.15); ico("gold",*to_xy(SU+1.95,sv),HT+1.38,0.11,0.09,0.08)
 # the Nanden and Hokuden flanking the court
-for hv,col in ((-3.7,"red"),(3.7,"red")):
-    ubox("limestone",0.6,hv,HT,HT+0.2,2.3,0.75)
-    ubox(col,0.6,hv,HT+0.2,HT+1.25,2.1,0.6)
+for hv,col in ((-3.95,"red"),(3.95,"red")):           # set back to the court's edges, so the striped una opens between them
+    ubox("limestone",0.6,hv,HT,HT+0.2,2.3,0.55)
+    ubox(col,0.6,hv,HT+0.2,HT+1.15,2.1,0.42)
     T2=F(0.6,hv,math.pi/2)
-    nb=len(B["roof"][0]); flared_roof([(2.55,1.0,HT+1.25,0.16),(2.55,1.0,HT+1.33,0.16),(2.0,0.1,HT+1.95,0.0)],"roof",0,0)
+    nb=len(B["roof"][0]); flared_roof([(2.5,0.78,HT+1.15,0.14),(2.5,0.78,HT+1.22,0.14),(2.0,0.08,HT+1.75,0.0)],"roof",0,0)
     bv=B["roof"][0]
     for i in range(nb,len(bv)):
         x,y,z=bv[i]; bv[i]=(*xf([(x,y,z)],**T2)[0][:2],z)
 # the Hoshinmon gate in the front wall, and the stone steps down the hill to the beach
-GU=3.5
-ubox("red",GU,0.0,HT+0.55,HT+1.4,0.3,1.2)
-for sv in (-0.75,0.75): ubox("dark",GU,sv,HT,HT+1.4,0.32,0.08)
+GU=3.85                                               # low, in the wall's gap, so it doesn't screen the court
+ubox("red",GU,0.0,HT+0.75,HT+1.05,0.28,1.05)
+for sv in (-0.75,0.75): ubox("dark",GU,sv,HT,HT+1.05,0.3,0.08)
 T3=F(GU,0.0)
-nb=len(B["roof"][0]); flared_roof([(1.55,0.55,HT+1.4,0.12),(1.55,0.55,HT+1.48,0.12),(1.1,0.08,HT+1.85,0.0)],"roof",0,0)
+nb=len(B["roof"][0]); flared_roof([(1.35,0.5,HT+1.05,0.1),(1.35,0.5,HT+1.12,0.1),(0.95,0.07,HT+1.4,0.0)],"roof",0,0)
 bv=B["roof"][0]
 for i in range(nb,len(bv)):
     x,y,z=bv[i]; bv[i]=(*xf([(x,y,z)],**T3)[0][:2],z)
 SU0,SU1=3.7,6.4
 def stair_z(u): return HT+(0.15-HT)*(u-SU0)/(SU1-SU0)
-for k in range(10):
-    u=SU0+(SU1-SU0)*(k+0.5)/10; ubox("limestone",u,0.0,0.0,stair_z(u),(SU1-SU0)/20,0.6)
-def on_stair(u,v): return SU0-0.35<=u<=SU1 and abs(v)<=0.6
+for k in range(10):                                   # low slabs on the slope, not a white wedge: the walls lead the eye
+    u=SU0+(SU1-SU0)*(k+0.5)/10; ubox("pave",u,0.0,stair_z(u)-0.16,stair_z(u),(SU1-SU0)/20,0.45)
+def on_stair(u,v): return SU0-0.35<=u<=SU1 and abs(v)<=0.45
 # the landing on the beach
 JD=LV+0.3; JU0,JU1,JV=6.6,9.0,0.0
 def on_jetty(u,v): return JU0<=u<=JU1 and abs(v-JV)<=0.5

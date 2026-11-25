@@ -47,6 +47,7 @@ export function buildBiomeDetails(
       const x = x0 + ix + rng.range(-0.75, 0.75);
       const z = z0 + iz + rng.range(-0.75, 0.75);
       const tile = terrain.tileAtPoint(x, z);
+      if (tile.tokyoSurface === "street" || tile.tokyoSurface === "sidewalk") continue;
       const { biome, regionId } = tile;
       const region = terrain.world.regionById(regionId);
       const profile = art.profile(region);

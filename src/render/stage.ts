@@ -4,6 +4,7 @@ import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, typ
 import { createAmbient } from "./ambient";
 import { buildFujiTrain } from "./fuji-train";
 import { createFujiVista } from "./fuji-vista";
+import { createTokyoStreetLife } from "./tokyo-street-life";
 import { lightBiome } from "./biome-light";
 import { createHaikuScenes, type HaikuSounds } from "./haiku-scenes";
 import { createGlimmer } from "./glimmer";
@@ -80,6 +81,8 @@ export interface StageView {
   readonly parkedTrain?: number;
   /** Starts the arrival effect on the traveller after shrine travel. */
   readonly shrineArrival?: boolean;
+  /** Called once, after drawing the first frame of the arrival shimmer. */
+  readonly onShrineShimmer?: () => void;
   readonly boardingHeight?: number;
   readonly moving?: boolean;
   /** While the traveller straps on snowshoes for the first time: progress through that moment, 0 to 1. */
@@ -195,7 +198,6 @@ export function createStage(
   let clock = 0;
   let playerY = 1;
   let arrivalProgress = 1;
-  let arrivalInView = false;
 
   const chunkKey = (cx: number, cz: number): string => `${cx},${cz}`;
   // Warm up the two station views for boarding and arrival. The window has its own scene.
@@ -341,6 +343,7 @@ export function createStage(
 
   const particlePixelScale = (): number =>
     renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720));
+  const updateTokyo = createTokyoStreetLife(scene, terrain, lifeAtPoint);
   const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
   const sightings = createLargeWildlife(terrain, lifeAtPoint);
   const haiku = createHaikuScenes(terrain, monuments, obstacles, lifeAtPoint, haikuSounds);
@@ -435,6 +438,7 @@ export function createStage(
       streamChunks(centre, zoom, riding);
       streamShrines(centre);
       updateProgress(dt);
+      updateTokyo(dt, clock, centre);
       if (railway && railwayMesh) {
         const visible = riding || railwayClearance(railway, centre.x, centre.z) < 85;
         railwayMesh.root.visible = visible;
@@ -476,14 +480,11 @@ export function createStage(
       player.setPose(seated, vessel === "ship" ? aboard * SHIP_DECK_HEIGHT : voyage?.lift ?? 0);
       const needed = BIOME_REQUIRES[tile.biome];
       player.setCharacter(view.character ?? "female");
-      if (view.shrineArrival) {
-        arrivalProgress = 0;
-        arrivalInView = false;
-      }
+      if (view.shrineArrival) arrivalProgress = 0;
       // On a long trip, wait for the camera to catch up before revealing the traveller.
-      if (arrivalProgress < 1) {
-        arrivalInView ||= Math.hypot(target.x - pos.x, target.z - pos.z) < viewSize * 0.36;
-        if (arrivalInView) arrivalProgress = Math.min(1, arrivalProgress + dt / SHRINE_SHIMMER_SECONDS);
+      const waitingForView = arrivalProgress === 0;
+      if (arrivalProgress < 1 && (!waitingForView || Math.hypot(target.x - pos.x, target.z - pos.z) < viewSize * 0.36)) {
+        arrivalProgress = Math.min(1, arrivalProgress + dt / SHRINE_SHIMMER_SECONDS);
       }
       player.setArrival(arrivalProgress);
       const strapping = view.strapping;
@@ -511,7 +512,10 @@ export function createStage(
       // Aboard the ship the traveller only walks while boarding; under sail they stand at the helm.
       const walking = vessel === "ship" ? voyage?.walking ?? false : view.moving ?? false;
       for (const step of player.animate(dt, strapping === undefined && drawing === undefined && !lighting && walking)) {
-        if (worn === "snowshoes") footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing);
+        const surface = terrain.biomeAt(Math.floor(step.x), Math.floor(step.z));
+        if (surface === "dunes" || (surface === "snow" && worn === "snowshoes")) {
+          footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing, surface === "dunes" ? "sand" : "snow");
+        }
       }
       // Stepping off in ash sandals kicks up a puff of ash, once per strap-on moment.
       if (strapping === undefined) ashPuffed = false;
@@ -538,6 +542,7 @@ export function createStage(
       sun.target.position.set(target.x, target.y - 1, target.z);
       sun.target.updateMatrixWorld();
       renderer.render(scene, camera);
+      if (waitingForView && arrivalProgress > 0) view.onShrineShimmer?.();
     },
   };
 }

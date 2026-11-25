@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/yamadera.glb"
 BLEND=ROOT+"/content/landmarks/yamadera.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"eef2f4","rock":"6e6a66","forest":"3f5a48","wood":"4e3a2c","red":"c0442e","roof":"4a4d52","stone":"8f8a80","fir":"2f4f3e","glow_cream":"e8dcb0"}
+PAL={"snow":"eef2f4","rock":"6e6a66","forest":"3f5a48","wood":"4e3a2c","red":"c0442e","roof":"4a4d52","stone":"8f8a80","pale":"d4cdbf","fir":"2f4f3e","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -147,10 +147,10 @@ for j in range(N):
             fs.append([ix[k] for k in t]); ms.append(m)
 emit(vs,fs,ms)
 
-def hall(cx,cy,hx,hy,h,wall="wood",roofz=None,ridge=None,rot=0.0):
+def hall(cx,cy,hx,hy,h,wall="wood",roofz=None,ridge=None,rot=0.0,base="stone"):
     z=H(cx,cy) if roofz is None else roofz
     T=dict(cx=cx,cy=cy,rot=rot)
-    box("stone",0,0,z-0.4,z+0.12,hx+0.15,hy+0.15,T)
+    box(base,0,0,z-0.4,z+0.12,hx+0.15,hy+0.15,T)
     box(wall,0,0,z+0.12,z+h,hx,hy,T)
     return z
 def roof(cx,cy,hx,hy,z,rise,ridge):
@@ -174,30 +174,40 @@ for (x0,y0),(x1,y1) in zip(PATH,PATH[1:]):
     for k in range(n):
         t=(k+0.5)/n; x,y=x0+(x1-x0)*t,y0+(y1-y0)*t; z=H(x,y)
         box("stone",0,0,z-0.35,z+0.06,0.16,0.42,dict(cx=x,cy=y,rot=a))
+        for sd in (-1,1): box("pale",0,sd*0.47,z-0.3,z+0.1,0.17,0.06,dict(cx=x,cy=y,rot=a))   # the pale kerbs
 
 # ---- on the ledge: the Kaisando, and the little vermilion Nokyodo on the crag's tip beside it
-z=hall(-2.1,1.85,0.75,0.6,0.85)
+z=hall(-2.1,1.85,0.75,0.6,0.85,base="pale")
+box("pale",-2.1,1.85-0.95,z-0.4,z+0.08,1.1,0.25)     # a pale stone terrace edge on the ledge
 box("glow_doors",-2.1,1.85-0.61,z+0.2,z+0.7,0.35,0.02)
 roof(-2.1,1.85,0.75,0.6,z+0.85,0.8,0.5)
 nx,ny=-3.75,0.05; nz=H(nx,ny)
+box("pale",nx,ny,nz-0.3,nz+0.0,0.5,0.5)
 box("red",nx,ny,nz-0.2,nz+0.62,0.38,0.38)
 box("glow_doors",nx,ny-0.39,nz+0.12,nz+0.48,0.18,0.02)
 flared_roof([(0.62,0.62,nz+0.62,0.08),(0.62,0.62,nz+0.68,0.08),(0.04,0.04,nz+1.08,0.0)],"roof",nx,ny)
 flared_roof([(0.55,0.55,nz+0.69,0.03),(0.55,0.55,nz+0.72,0.03),(0.03,0.03,nz+1.12,0.0)],"snow",nx,ny)
-# ---- the Godaido: an open timber stage built out over the drop on a frame of posts, the view hall of the valley
-GX,GY=2.5,0.55; GZ=H(GX,GY+0.8)+0.15
-box("wood",GX,GY,GZ-0.1,GZ,1.05,0.8)
+# ---- the Godaido: an open timber stage built well out over the drop on a tall frame of posts and braces, the view
+# hall of the valley; its back sits on the ledge, its front hangs over the face so the frame shows against the rock
+GX,GY,GW,DH=2.5,0.05,1.05,1.0
+GZ=H(GX,GY+DH)+0.15
+box("wood",GX,GY,GZ-0.12,GZ,GW,DH)
+PY=[GY-DH+0.08,GY-0.3,GY+0.4,GY+DH-0.08]
 for sx in (-1,0,1):
-    for sy in (-1,0,1):
-        x,y=GX+sx*0.95,GY+sy*0.7; box("wood",x,y,H(x,y)-0.2,GZ-0.1,0.06,0.06)
-for zc in (0.35,0.6):
-    zz=GZ-0.1-(GZ-H(GX,GY-0.7))*zc
-    box("wood",GX,GY-0.7,zz-0.04,zz+0.04,1.0,0.04); box("wood",GX-0.95,GY,zz-0.04,zz+0.04,0.04,0.75); box("wood",GX+0.95,GY,zz-0.04,zz+0.04,0.04,0.75)
+    for y in PY:
+        x=GX+sx*(GW-0.08); box("wood",x,y,H(x,y)-0.2,GZ-0.12,0.065,0.065)
+for frac in (0.3,0.62):                                   # tiers of braces tying the posts, tallest at the front
+    for y in PY[:3]:
+        zz=GZ-0.12-(GZ-H(GX,y))*frac
+        box("wood",GX,y,zz-0.045,zz+0.045,GW,0.045)
+    for sx in (-1,1):
+        zz=GZ-0.12-(GZ-H(GX+sx*GW,GY-DH))*frac
+        box("wood",GX+sx*(GW-0.08),GY-0.2,zz-0.045,zz+0.045,0.045,DH-0.25)
 for sx in (-1,1):
-    for sy in (-1,1): box("wood",GX+sx*0.95,GY+sy*0.7,GZ,GZ+1.0,0.06,0.06)
-box("wood",GX,GY-0.78,GZ+0.35,GZ+0.42,1.02,0.03); box("wood",GX-1.03,GY,GZ+0.35,GZ+0.42,0.03,0.78); box("wood",GX+1.03,GY,GZ+0.35,GZ+0.42,0.03,0.78)
-box("glow_doors",GX,GY+0.68,GZ+0.1,GZ+0.8,0.6,0.02)
-roof(GX,GY,1.0,0.75,GZ+1.0,0.85,0.7)
+    for sy in (-1,1): box("wood",GX+sx*(GW-0.1),GY+sy*(DH-0.1),GZ,GZ+1.0,0.06,0.06)
+box("wood",GX,GY-DH+0.02,GZ+0.35,GZ+0.42,GW-0.03,0.03); box("wood",GX-GW+0.02,GY,GZ+0.35,GZ+0.42,0.03,DH-0.03); box("wood",GX+GW-0.02,GY,GZ+0.35,GZ+0.42,0.03,DH-0.03)
+box("glow_doors",GX,GY+DH-0.12,GZ+0.1,GZ+0.8,0.6,0.02)
+roof(GX,GY,GW-0.05,DH-0.05,GZ+1.0,0.85,0.7)
 
 # ---- snowed cedars on the slopes and in the valley
 def cedar(x,y,s):
@@ -206,7 +216,7 @@ def cedar(x,y,s):
     for zc,r,hh in ((0.9,0.58,1.1),(1.6,0.4,1.0)):
         cone("fir",ngon(r,zc,6,rng.uniform(0,1)),(0,0,zc+hh),T)
         cone("snow",ngon(r*0.5,zc+hh*0.48,6,0.3),(0,0,zc+hh+0.05),T)
-keep=[(-4.6,-6.2,2.4),(0,-4.3,1.3),(-2.1,1.85,1.3),(-3.75,0.05,0.9),(2.5,0.55,1.6)]+[(x,y,0.55) for x,y in PATH]
+keep=[(-4.6,-6.2,2.4),(0,-4.3,1.3),(-2.1,1.85,1.3),(-3.75,0.05,0.9),(2.5,0.05,1.8)]+[(x,y,1.4) for x,y in PATH]     # trees kept well off the steps
 tp=[]
 for k in range(260):
     x,y=rng.uniform(-9.8,9.8),rng.uniform(-9.8,8.6)
@@ -216,10 +226,10 @@ for k in range(260):
     if math.hypot(gx,gy)>1.3: continue
     if y<-3.0 and rng.random()<0.55: continue
     tp.append((x,y)); cedar(x,y,rng.uniform(0.8,1.1))
-    if len(tp)>=34: break
+    if len(tp)>=28: break
 
 def ground_at(x,y):
-    if abs(x-GX)<1.05 and abs(y-GY)<0.8: return GZ
+    if abs(x-GX)<GW and abs(y-GY)<DH: return GZ
     return H(x,y)
 def water_disc(x,y): return False
 INTERACT=(0.0,-5.0)   # before the Sanmon at the foot of the thousand steps

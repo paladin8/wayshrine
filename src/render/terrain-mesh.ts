@@ -5,6 +5,7 @@ import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
 const SIDE_SHADE = 0.8;
 const fujiGrass = new Color(0x90a96a);
+const cityColors = { street: 0x666a71, sidewalk: 0xb4ab9d, garden: 0x879871 };
 const fieldColors = {
   bank: 0x81965a,
   paddy: 0x8fae9f,
@@ -45,7 +46,9 @@ export function buildTerrainChunk(
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
       const tile = terrain.tileAt(tx, tz);
       const field = tile.fujiField;
-      const top = field ? new Color(fieldColors[field]) : art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
+      const top = field ? new Color(fieldColors[field]) : tile.tokyoSurface
+        ? new Color(cityColors[tile.tokyoSurface])
+        : art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
       if (!field && tile.fujiVerge) top.lerp(fujiGrass, tile.fujiVerge * 0.90);
       const side = top.clone().multiplyScalar(SIDE_SHADE);
       const c = terrain.corners(tx, tz);

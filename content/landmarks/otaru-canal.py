@@ -123,10 +123,19 @@ def T45(u,v,z=0.0): x,y=to_xy(u,v); return dict(cx=x,cy=y,cz=z,rot=R45)      # l
 def T135(u,v,z=0.0): x,y=to_xy(u,v); return dict(cx=x,cy=y,cz=z,rot=R135)    # local x toward -u, local y toward -v
 
 # ---- the canal: a straight stone-walled channel running screen-right, sunk below the banks, ending in a stone
-# head at either end so the water stays inside the footprint. Asakusa bridge crosses it near the left end
-CW=1.75; VC=8.4; CH=-0.75; WZ=-0.42; BRV=-6.4; BRW=0.75
+# head at either end so the water stays inside the footprint. Each end runs in under a road bridge -- Asakusa bridge
+# square across the left, a second crossing angled across the right -- so the heads are hidden and the canal reads
+# as carrying on beyond them
+CW=1.75; VC=8.4; CH=-0.75; WZ=-0.42; BRW=0.78
+BRIDGES=[(-7.85,0.0),(7.75,0.42)]                      # (centre along the canal, angle off square)
+def bloc(u,v,vc,ang):
+    dv=v-vc; c,s_=math.cos(ang),math.sin(ang); return u*c+dv*s_,-u*s_+dv*c      # along the deck, across it
+def on_bridge(u,v):
+    for vc,ang in BRIDGES:
+        lu,lv=bloc(u,v,vc,ang)
+        if abs(lv)<BRW and abs(lu)<(CW+0.6)/math.cos(ang): return True
+    return False
 def in_canal(u,v,m=0.0): return abs(u)<CW-m and -VC+m<v<VC-m
-def on_bridge(u,v): return abs(v-BRV)<BRW and abs(u)<CW+0.6
 def G(u,v): return CH if in_canal(u,v) else 0.0
 q=[to_xy(-CW,-VC),to_xy(CW,-VC),to_xy(CW,VC),to_xy(-CW,VC)]
 emit([(*p,WZ) for p in q],[[0,1,2,3]],["water"])
@@ -139,13 +148,20 @@ for se in (-1,1):
     wall(-CW-0.25,se*VC,CW+0.25,se*(VC+0.25),CH-0.05,0.06)
 for k in range(9):                                     # mooring stones and stains along the far wall
     v=-7.4+1.85*k
-    if abs(v-BRV)<1.0: continue
+    if on_bridge(-CW,v) or abs(v)>7.0: continue
     wall(-CW+0.02,v-0.12,-CW+0.14,v+0.12,WZ-0.02,-0.1,"pave")
-# Asakusa bridge: a flat stone deck with low parapets
-wall(-CW-0.5,BRV-BRW,CW+0.5,BRV+BRW,-0.32,0.05,"pave")
-for sd in (-1,1):
-    wall(-CW-0.5,BRV+sd*BRW,CW+0.5,BRV+sd*(BRW-0.16),0.05,0.5,"stonewall")
-    for su in (-1,1): box("stonewall",*to_xy(su*(CW+0.42),BRV+sd*(BRW-0.08)),0.05,0.68,0.12,0.12)
+# the bridges: flat stone decks with low parapets and corner posts
+def bquad(lu0,lu1,lv0,lv1,z0,z1,vc,ang,mat):
+    c,s_=math.cos(ang),math.sin(ang)
+    def P(lu,lv): return to_xy(lu*c-lv*s_,vc+lu*s_+lv*c)
+    q=[P(lu0,lv0),P(lu1,lv0),P(lu1,lv1),P(lu0,lv1)]
+    solid([[(*p,z0) for p in q],[(*p,z1) for p in q]],mat)
+for vc,ang in BRIDGES:
+    L=(CW+0.55)/math.cos(ang)
+    bquad(-L,L,-BRW,BRW,-0.32,0.05,vc,ang,"pave")
+    for sd in (-1,1):
+        bquad(-L,L,sd*BRW,sd*(BRW-0.16),0.05,0.5,vc,ang,"stonewall")
+        for su in (-1,1): bquad(su*L-0.12,su*L+0.12,sd*(BRW-0.2),sd*(BRW+0.04),0.05,0.68,vc,ang,"stonewall")
 # a moored barge
 TB=T45(-0.75,2.6,WZ)
 solid([[(-1.1,-0.28,-0.02),(1.1,-0.28,-0.02),(1.1,0.28,-0.02),(-1.1,0.28,-0.02)],[(-1.35,-0.38,0.2),(1.35,-0.38,0.2),(1.35,0.38,0.2),(-1.35,0.38,0.2)]],"wood",TB)
@@ -198,7 +214,7 @@ for k in range(16):
     x,y=to_xy(CW+0.45,v)
     box("glow_candles",x,y,0.12,0.36,0.06,0.06)
     prism("snow",x,y,0.0,0.18,0.14,0.11,6)
-LU=4.05
+LU=2.62                                # the lamps stand right along the water's edge, leading the eye down it
 def lamp(v):
     x,y=to_xy(LU,v); T=dict(cx=x,cy=y,rot=R45)
     prism("iron",x,y,0.0,0.16,0.13,0.1,6); prism("iron",x,y,0.16,1.85,0.05,0.04,6)
@@ -207,7 +223,7 @@ def lamp(v):
         box("glow_lamps",sx,0,1.56,1.8,0.09,0.09,T)
         frus("iron",sx,0,1.84,1.96,0.13,0.13,0.03,0.03,None,T)
     prism("iron",x,y,1.85,2.05,0.03,0.01,4)
-for v in (-7.6,-5.1,-2.6,-0.1,2.4,4.9,7.4): lamp(v)
+for v in (-6.3,-3.9,-1.5,0.9,3.3,5.7): lamp(v)
 for v in (-3.9,3.6):                                    # benches
     T=T45(4.4,v); box("wood",0,0,0.38,0.46,0.6,0.18,T); box("snow",0,0,0.46,0.52,0.56,0.15,T)
     for sx in (-0.5,0.5): box("iron",sx,0,0.0,0.38,0.04,0.15,T)
@@ -230,8 +246,8 @@ def ground_at(x,y):
 def terrain_at(x,y):
     u,v=to_uv(x,y); return G(u,v)
 def water_disc(x,y): u,v=to_uv(x,y); return in_canal(u,v,0.15) and not on_bridge(u,v)
-INTERACT=to_xy(3.0,1.15)   # on the canal walk between two lamps, looking across at the warehouses
-STAND=to_xy(3.3,1.15)
+INTERACT=to_xy(3.1,2.1)    # on the canal walk between two lamps, looking across at the warehouses
+STAND=to_xy(3.75,2.1)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/otaru-canal.json and read by the world layer (see docs/landmarks.md).

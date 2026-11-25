@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/snow-monkeys.glb"
 BLEND=ROOT+"/content/landmarks/snow-monkeys.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"eef2f4","water":"4a8f98","stone":"7e7a74","fur":"8a7c6c","face":"d07a6a","steam":"dfe4e6","wood":"4e3a2c","roof":"4a4d52","fir":"2f4f3e","glow_cream":"e8dcb0"}
+PAL={"snow":"eef2f4","water":"4a8f98","stone":"66625e","fur":"a38c74","face":"d86a5c","steam":"dfe4e6","wood":"4e3a2c","roof":"4a4d52","fir":"2f4f3e","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -145,21 +145,18 @@ for k,(dx,dy,z,s) in enumerate([(-1.2,0.9,0.5,0.32),(-1.0,1.1,1.05,0.26),(-0.8,1
     ico("steam",PC[0]+dx,PC[1]+dy,z,s,s,s*1.15)
 
 # ---- the macaques: some soaking to the chin, snow on their heads, others hunched on the rim stones
+ANIMALS=[]
 def monkey(x,y,z,face,s=1.0,bathing=False,snowcap=False):
-    T=dict(cx=x,cy=y,cz=z,s=s,rot=face)
-    if bathing:
-        ico("fur",0,0,-0.02,0.2,0.18,0.12,T); ico("fur",0,-0.02,0.15,0.13,0.12,0.12,T)
-        box("face",0,-0.13,0.1,0.2,0.065,0.02,T)
-        if snowcap: ico("snow",0,0.0,0.26,0.08,0.08,0.035,T)
-    else:
-        ico("fur",0,0.02,0.24,0.2,0.18,0.25,T); ico("fur",0,-0.06,0.52,0.13,0.12,0.12,T)
-        box("face",0,-0.17,0.47,0.57,0.065,0.02,T)
-        for sx in (-0.14,0.14): ico("fur",sx,-0.1,0.08,0.07,0.1,0.07,T)
-        if snowcap: ico("snow",0,-0.04,0.63,0.08,0.08,0.035,T)
+    # The game's macaque sits up from its anchor; a soaking one is lowered until the water reaches its chest.
+    sc=s*0.9; sink=0.26*sc if bathing is True else (0.12*sc if bathing=="up" else -0.05*sc)
+    # face: local -Y is the face, so the anchor (which looks along +X) turns a quarter back
+    ANIMALS.append(("macaque",x,y,z-sink,face-math.pi/2,sc,{"snowcap":1} if snowcap else {}))
 # rot: local -Y is the face; rot turns it. Most look toward the front (the camera side)
 MS=1.7
 monkey(-0.6,0.3,WZ,0.2,MS,True,True)
-monkey(0.7,-0.5,WZ,-0.3,MS,True)
+# the foreground pair, a little larger, faces turned to the walk and the camera; one sits up out of the water
+monkey(0.75,-0.75,WZ,math.pi/4,MS*1.3,"up",True)
+monkey(1.85,0.35,WZ,math.pi/4-0.35,MS*1.2,True)
 monkey(1.3,1.0,WZ,0.6,MS*0.95,True,True)
 monkey(-0.3,1.5,WZ,-0.1,MS*1.05,True)
 monkey(1.15,0.15,WZ,0.1,MS*0.65,True)
@@ -287,10 +284,19 @@ for key in sorted(B):
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
     allv+= [v.co.copy() for v in me.vertices]
+# ---- the animals are anchors (name_N, a collider and a heading): the game draws them with its shared animal models, the ones
+# the wild animals use, so they match the world. Anything on an anchor is replaced, so only the position matters here.
+_counts={}
+for _sp,_x,_y,_z,_rot,_sc,_props in ANIMALS:
+    _counts[_sp]=_counts.get(_sp,0)+1
+    _ob=bpy.data.objects.new(f"{_sp}_{_counts[_sp]}",None); col.objects.link(_ob)
+    _ob.location=(_x,_y,_z); _ob.rotation_euler.z=_rot; _ob.scale=(_sc,_sc,_sc)
+    _ob["collisionRadius"]=0.3; _ob["collisionHalfLength"]=0.0
+    for _k,_v in _props.items(): _ob[_k]=_v
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
-    export_cameras=False, export_lights=False, export_animations=False, export_materials='EXPORT')
+    export_cameras=False, export_lights=False, export_extras=True, export_animations=False, export_materials='EXPORT')
 clr=min(math.hypot(s[0]-STAND[0],s[1]+STAND[1])-s[2] for s in solids)
 res={"stand_clear":round(clr,3),"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
 json.dump(res,open("/tmp/lm_build.json","w"))

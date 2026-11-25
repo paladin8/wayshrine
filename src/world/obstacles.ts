@@ -26,6 +26,7 @@ const PROP_RADIUS: Partial<Record<PropKind, number>> = {
   tree: 0.22,
   cherry: 0.24,
   farmhouse: 2.0,
+  "city-building": 2.55,
   pine: 0.25,
   rock: 0.32,
   crag: 0.5,

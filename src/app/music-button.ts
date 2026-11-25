@@ -55,7 +55,6 @@ export function createMusicButton(actions: HTMLElement, onCycle: () => void): Mu
       if (key === shown) return;
       shown = key;
       number.textContent = String(model.number);
-      element.title = model.label;
       element.setAttribute("aria-label", model.label);
     },
   };

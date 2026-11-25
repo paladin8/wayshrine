@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildContent, combineSources } from "./build";
-import type { Scenery, SourceFile } from "./build";
+import { buildContent, combineSources, englishOverrides } from "./build";
+import type { OverrideFile, Scenery, SourceFile } from "./build";
 
 const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"));
 const source = combineSources(
@@ -13,7 +13,9 @@ const scenery = read("content/haiku-scenery.json") as Record<string, Scenery>;
 delete (scenery as Record<string, unknown>)["_about"];
 const lines = read("content/haiku-lines.json") as Record<string, string[]>;
 delete (lines as Record<string, unknown>)["_about"];
-const built = buildContent(source, scenery, undefined, lines);
+const overrideFile = read("content/english-overrides.json") as OverrideFile;
+const overrides = englishOverrides(overrideFile, source);
+const built = buildContent(source, scenery, overrides, lines);
 
 describe("content", () => {
   it("has 1209 unique texts", () => {
@@ -63,6 +65,11 @@ describe("content", () => {
 
   it("drops spelling-variant parentheticals", () => {
     expect(built.texts.find((t) => t.id === "jmdict-2175010")?.en).toBe("love your neighbor");
+  });
+
+  it("rejects an override whose Japanese no longer matches its source entry", () => {
+    expect(() => englishOverrides({ "jmdict-2175010": { ja: "別の文", en: "x" } }, source)).toThrow();
+    expect(() => englishOverrides({ nope: { ja: "x", en: "x" } }, source)).toThrow();
   });
 
   it("rejects overrides and scenery for unknown ids", () => {

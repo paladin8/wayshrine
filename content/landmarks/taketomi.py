@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/taketomi.glb"
 BLEND=ROOT+"/content/landmarks/taketomi.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"tile":"c8553a","white":"f2efe6","coral":"9e9a90","sand":"ece4cc","grass":"6f9a4a","dark":"3a3430","leaf":"3f7a42","flower":"e0405a","buffalo":"4a4440","wood":"8a6a4a","water":"2a6a8a","bark":"5a4a3a"}
+PAL={"tile":"c8553a","white":"f2efe6","coral":"9e9a90","sand":"ece4cc","grass":"6f9a4a","dark":"3a3430","leaf":"3f7a42","tile2":"a8503c","buffalo":"4a4440","wood":"8a6a4a","water":"2a6a8a","bark":"5a4a3a"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -170,7 +170,12 @@ def H(x,y):
     u,v=to_uv(x,y); return shore(TOP,isl_m(u,v),0.87,1.08)
 def water_disc(x,y): return False
 LANES_U=[-4.4,-0.8,2.8]; LANES_V=[-4.4,-1.0,2.4,5.8]       # lane centre lines, 1.0 wide
-def in_lane(u,v): return any(abs(u-a)<0.6 for a in LANES_U) or any(abs(v-b)<0.6 for b in LANES_V)
+APPROACH=[(7.9,1.2),(6.6,1.2),(6.0,2.0),(5.4,2.4)]       # the lane in from the beach, bending round the corner lot
+def seg_d(u,v,a,b):
+    du,dv=b[0]-a[0],b[1]-a[1]; t=max(0.0,min(1.0,((u-a[0])*du+(v-a[1])*dv)/(du*du+dv*dv)))
+    return math.hypot(u-a[0]-t*du,v-a[1]-t*dv)
+def app_d(u,v): return min(seg_d(u,v,a,b) for a,b in zip(APPROACH,APPROACH[1:]))
+def in_lane(u,v): return any(abs(u-a)<0.6 for a in LANES_U) or any(abs(v-b)<0.6 for b in LANES_V) or app_d(u,v)<0.6
 def gmat(x,y,h,sl):
     u,v=to_uv(x,y); m=isl_m(u,v)
     if m>0.86 or h<TOP-0.05: return "sand"
@@ -179,33 +184,54 @@ def gmat(x,y,h,sl):
 draw_ground(H,gmat,0.55,0.1)
 draw_sea()
 # the plots: coral-stone walls, a house with its red hip roof and white-mortared ridges, a shisa on top, a hibiscus
+def tree(u,v,s):
+    x,y=to_xy(u,v); T3=dict(cx=x,cy=y,cz=TOP,s=s,rot=rng.uniform(0,6.28))
+    solid([ngon(0.13,-0.3,5),ngon(0.09,1.4,5)],"bark",T3)
+    ico("leaf",0,0,1.9,0.8,0.75,1.0,T3)
+def hip(cu_,cv_,w,d,z0,rp,rm):
+    T=F(cu_,cv_); nb=len(B[rm][0]) if rm in B else 0
+    flared_roof([(w+0.35,d+0.35,z0,0.04),(w+0.35,d+0.35,z0+0.07,0.04),(w*0.35,d*0.12,z0+rp,0.0)],rm,0,0)
+    bv=B[rm][0]
+    for i in range(nb,len(bv)):
+        x,y,z=bv[i]; bv[i]=(*xf([(x,y,z)],**T)[0][:2],z)
+    box("white",0,0,z0+rp-0.05,z0+rp+0.05,w*0.38,0.06,T)
+    return T
 def plot(u0,v0,su,sv,k):
     hu,hv=su/2,sv/2; cu,cv=u0+hu,v0+hv
     gap=0.45
     walls=[((cu-hu,cv-hv),(cu-hu,cv+hv)),((cu-hu,cv+hv),(cu+hu,cv+hv)),((cu+hu,cv-hv),(cu-hu,cv-hv))]
     # the front (toward the camera, +u) wall has the gate gap
     walls+=[((cu+hu,cv-hv),(cu+hu,cv-gap)),((cu+hu,cv+gap),(cu+hu,cv+hv))]
+    front=cu+hu>3.0                                      # the plots facing the approach get taller, bolder walls
     for (ua,va),(ub,vb) in walls:
-        L=math.hypot(ub-ua,vb-va); n=max(1,int(L/0.62))
+        L=math.hypot(ub-ua,vb-va); n=max(1,int(L/(0.72 if front else 0.8)))
         for j in range(n):
             t=(j+0.5)/n; u,v=ua+(ub-ua)*t,va+(vb-va)*t
-            x,y=to_xy(u,v); prism("coral",x,y,TOP-0.05,TOP+0.5,0.34,0.26,5,rng.uniform(0,1))
+            x,y=to_xy(u,v); hh=rng.uniform(0.62,0.8) if front else rng.uniform(0.42,0.56)
+            prism("coral",x,y,TOP-0.05,TOP+hh,0.42 if front else 0.38,0.32 if front else 0.28,5,rng.uniform(0,1))
+    if k%6==4:                                           # a lot kept as a garden: no house, a fukugi and a hibiscus
+        tree(cu-0.3,cv-0.4,0.8); x,y=to_xy(cu+0.4,cv+0.5); ico("leaf",x,y,TOP+0.4,0.5,0.45,0.4); ico("tile",x+0.15,y-0.1,TOP+0.7,0.15,0.15,0.12)
+        return
     ubox("coral",cu+hu-0.75,cv,TOP,TOP+0.75,0.12,0.42)             # the hinpun screen inside the gate
-    w,d=hv*0.62,hu*0.55; hc=cu-0.25
+    # no two houses alike: size, place in the plot and roof pitch all vary; some have a wing, many an outbuilding
+    w,d=hv*rng.uniform(0.42,0.68),hu*rng.uniform(0.38,0.58); hc=cu-0.25+rng.uniform(-0.3,0.1)
+    side=1 if rng.random()<0.5 else -1
+    cv=cv+side*rng.uniform(0.0,0.35)*max(0.0,hv-w-0.35)
+    rp=rng.uniform(0.5,0.85); rm="tile2" if rng.random()<0.4 else "tile"
     ubox("white",hc,cv,TOP,TOP+0.85,d,w)
     for j in range(3): ubox("dark",hc+d+0.01,cv-w*0.6+w*0.6*j,TOP+0.15,TOP+0.7,0.01,w*0.22)
-    T=F(hc,cv)
-    nb=len(B["tile"][0]) if "tile" in B else 0
-    flared_roof([(w+0.35,d+0.35,TOP+0.85,0.04),(w+0.35,d+0.35,TOP+0.92,0.04),(w*0.35,d*0.12,TOP+1.55,0.0)],"tile",0,0)
-    bv=B["tile"][0]
-    for i in range(nb,len(bv)):
-        x,y,z=bv[i]; bv[i]=(*xf([(x,y,z)],**T)[0][:2],z)
-    box("white",0,0,TOP+1.5,TOP+1.6,w*0.38,0.06,T)
-    for sx in (-1,1):
-        for sy in (-1,1): tube("white",[(*xf([(sx*w*0.38,0,0)],**T)[0][:2],TOP+1.55),(*xf([(sx*(w+0.3),sy*(d+0.3),0)],**T)[0][:2],TOP+0.95)],[0.035,0.035],4)
-    sx_,sy_=xf([(0,-d*0.5,TOP+1.3)],**T)[0][:2]
-    box("wood",sx_,sy_,TOP+1.3,TOP+1.52,0.08,0.08); ico("wood",sx_,sy_,TOP+1.6,0.09,0.09,0.09)
-    if k%2==0: x,y=to_xy(cu+hu-0.45,cv+hv-0.5); ico("leaf",x,y,TOP+0.5,0.45,0.4,0.4); ico("flower",x+0.15,y-0.1,TOP+0.75,0.15,0.15,0.12)
+    T=hip(hc,cv,w,d,TOP+0.85,rp,rm)
+    zr=TOP+0.85+rp; sx_,sy_=xf([(0,-d*0.45,0)],**T)[0][:2]                 # the shisa on the ridge, toward the lane
+    box("wood",sx_,sy_,zr-0.25,zr-0.03,0.08,0.08); ico("wood",sx_,sy_,zr+0.05,0.09,0.09,0.09)
+    r=rng.random()
+    if r<0.3 and hv-w>0.9:                               # a lower wing to one side
+        ww=min(0.5,hv-w-0.45); wd=d*0.7; wv=cv-side*(w+ww+0.05)
+        ubox("white",hc+0.15,wv,TOP,TOP+0.65,wd,ww); hip(hc+0.15,wv,ww,wd,TOP+0.65,rp*0.7,rm)
+    elif r<0.75:                                         # an outbuilding in a corner, front or back
+        ou=(cu-hu+0.55) if rng.random()<0.5 else (cu+hu-0.6); ov=cv-side*(hv-0.55)
+        ubox("white" if r<0.5 else "coral",ou,ov,TOP,TOP+0.55,0.3,0.36); hip(ou,ov,0.36,0.3,TOP+0.55,0.38,"tile2" if rm=="tile" else "tile")
+    if rng.random()<0.4:
+        tree(cu-hu+0.5,cv+side*(hv-0.5),rng.uniform(0.6,0.8))
 PLOTS=[]
 for i in range(len(LANES_U)+1):
     ua=[-8.0]+[a+0.6 for a in LANES_U]; ub=[a-0.6 for a in LANES_U]+[5.8]
@@ -218,6 +244,10 @@ for i in range(len(LANES_U)+1):
                 pu0=u0+(u1-u0)*a/nu; pv0=v0+(v1-v0)*b/nv; su=(u1-u0)/nu; sv=(v1-v0)/nv
                 cu,cv=pu0+su/2,pv0+sv/2
                 if isl_m(cu,cv)>0.72 or max(isl_m(cu+a2*su/2,cv+b2*sv/2) for a2 in (-1,1) for b2 in (-1,1))>0.86: continue
+                if app_d(cu,cv)<1.0: continue
+                k_=len(PLOTS)
+                if k_%5==2: pu0+=0.35*(1 if k_%2 else -1); su-=0.35      # a few lots sit off the grid
+                if k_%7==3: pv0+=0.3; sv-=0.3
                 PLOTS.append((pu0,pv0,su,sv))
 for k,(u0,v0,su,sv) in enumerate(PLOTS):
     if k==len(PLOTS)//2-1: continue                      # leave one plot open: the Nagomi tower stands there
@@ -233,11 +263,10 @@ bv=B["tile"][0]
 for i in range(nb,len(bv)):
     x,y,z=bv[i]; bv[i]=(*xf([(x,y,z)],**T)[0][:2],z)
 # the water-buffalo cart in the lane before the camera
+ANIMALS=[]
 def cart(u,v,ang):
     T2=F(u,v,ang,TOP)
-    box("buffalo",0.9,0,0.35,0.75,0.42,0.18,T2); box("buffalo",1.38,0,0.45,0.68,0.12,0.11,T2)
-    for sx in (0.62,1.18):
-        for sy in (-0.12,0.12): box("buffalo",sx,sy,0.0,0.38,0.05,0.05,T2)
+    bx,by,_=xf([(1.2,0,0)],**T2)[0]; ANIMALS.append(("buffalo",bx,by,TOP,T2["rot"],0.8,{}))   # in the shafts
     for sy in (-1,1): tube("white",[(*xf([(1.42,sy*0.1,0.68)],**T2)[0][:2],TOP+0.68),(*xf([(1.5,sy*0.3,0.82)],**T2)[0][:2],TOP+0.82)],[0.03,0.015],4)
     box("wood",-0.3,0,0.3,0.42,0.75,0.42,T2)
     for sy in (-1,1):
@@ -248,16 +277,13 @@ def cart(u,v,ang):
     box("wood",0.4,0,0.36,0.42,0.6,0.05,T2)
 cart(LANES_U[2]+0.0,0.3,math.pi/2)
 # fukugi windbreak trees and hibiscus along the shore, a pier to the beach
-def tree(u,v,s):
-    x,y=to_xy(u,v); T3=dict(cx=x,cy=y,cz=TOP,s=s,rot=rng.uniform(0,6.28))
-    solid([ngon(0.13,-0.3,5),ngon(0.09,1.4,5)],"bark",T3)
-    ico("leaf",0,0,1.9,0.8,0.75,1.0,T3)
-for k in range(30):
-    a=2*math.pi*k/30+rng.uniform(-0.08,0.08); r=0.84
+a=0.0; tp=[]
+while a<2*math.pi-0.1 and len(tp)<26:                    # fukugi in clumps and gaps, not a ring of evenly set posts
+    a+=rng.choice((0.12,0.16,0.2,0.24,0.5,0.7)); r=rng.uniform(0.76,0.86)
     u=9.4*r*math.cos(a); v=9.0*r*math.sin(a)
     if u>5.0 and abs(v-1.2)<3.2: continue
-    if isl_m(u,v)>0.86: continue
-    tree(u,v,rng.uniform(0.75,1.0))
+    if isl_m(u,v)>0.86 or app_d(u,v)<1.0: continue
+    tp.append((u,v)); tree(u,v,rng.uniform(0.7,1.05))
 JD=LV+0.3; JU0,JU1,JV=8.0,9.8,1.2
 def on_jetty(u,v): return JU0<=u<=JU1 and abs(v-JV)<=0.5
 ubox("coral",(JU0+JU1)/2,JV,FLOOR,JD,(JU1-JU0)/2,0.5)
@@ -340,10 +366,19 @@ for key in sorted(B):
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
     allv+= [v.co.copy() for v in me.vertices]
+# ---- the animals are anchors (name_N, a collider and a heading): the game draws them with its shared animal models, the ones
+# the wild animals use, so they match the world. Anything on an anchor is replaced, so only the position matters here.
+_counts={}
+for _sp,_x,_y,_z,_rot,_sc,_props in ANIMALS:
+    _counts[_sp]=_counts.get(_sp,0)+1
+    _ob=bpy.data.objects.new(f"{_sp}_{_counts[_sp]}",None); col.objects.link(_ob)
+    _ob.location=(_x,_y,_z); _ob.rotation_euler.z=_rot; _ob.scale=(_sc,_sc,_sc)
+    _ob["collisionRadius"]=0.3; _ob["collisionHalfLength"]=0.0
+    for _k,_v in _props.items(): _ob[_k]=_v
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
-    export_cameras=False, export_lights=False, export_animations=False, export_materials='EXPORT')
+    export_cameras=False, export_lights=False, export_extras=True, export_animations=False, export_materials='EXPORT')
 clr=min(math.hypot(s[0]-STAND[0],s[1]+STAND[1])-s[2] for s in solids)
 res={"stand_clear":round(clr,3),"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
 json.dump(res,open("/tmp/lm_build.json","w"))

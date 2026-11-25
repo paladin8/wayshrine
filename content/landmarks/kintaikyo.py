@@ -130,11 +130,16 @@ def tube(mat,pts,rs,n=6):
     solid(rings,mat)
 
 # ---- the Nishiki river runs toward the camera between broad gravel beds; at low water it sinks into the gravel
-# before either edge, so it stays inside the footprint. Stone embankments hold the banks
+# before either edge, so it stays inside the footprint. Broad gravel banks, edged irregularly, fall away to the grass
 WZ=-0.2; RIV=-0.5; GRV=-0.32; GM=-0.25    # GM: the gravel's drawn surface, just above the terrain beneath it
 def rw(u): return 3.6*smooth(7.2,4.6,abs(u-0.6))+0.2      # half-width of the flowing water
 def in_water(u,v,m=0.0): return abs(v-0.25*math.sin(0.3*u))<rw(u)-m and -6.6<u<7.8
-def in_bed(u,v): return abs(v)<5.0 and -6.8<u<8.4
+BC=(1.2,0.0); BA,BB=7.8,7.3                          # the gravel bed: a rounded, wobbling squircle in (u,v)
+def bwob(t): return 1+0.05*math.sin(3*t+0.7)+0.04*math.sin(7*t+2.0)
+def bed_f(u,v):
+    du,dv=(u-BC[0])/BA,(v-BC[1])/BB; t=math.atan2(dv,du)
+    return (du**4+dv**4)**0.25/bwob(t)
+def in_bed(u,v): return bed_f(u,v)<1.0
 def G(u,v):
     if in_water(u,v): return RIV
     if in_bed(u,v): return GRV
@@ -146,18 +151,18 @@ for ua,ub in zip(us,us[1:]):
     ca,cb=0.25*math.sin(0.3*ua),0.25*math.sin(0.3*ub)
     q=[to_xy(ua,ca-wa),to_xy(ua,ca+wa),to_xy(ub,cb+wb),to_xy(ub,cb-wb)]
     emit([(*p,WZ) for p in q],[[0,1,2,3]],["water"])
-q=[to_xy(-6.8,-5.0),to_xy(-6.8,5.0),to_xy(8.4,5.0),to_xy(8.4,-5.0)]
-emit([(*p,GM) for p in q],[[0,1,2,3]],["gravel"])
-for k in range(40):
-    u,v=rng.uniform(-6.6,8.2),rng.uniform(-4.9,4.9)
+NB=48; ring=[]
+for k in range(NB):
+    t=2*math.pi*k/NB; c,s_=math.cos(t),math.sin(t)
+    r=bwob(t)/((c**4+s_**4)**0.25)*1.02
+    ring.append(to_xy(BC[0]+BA*r*c,BC[1]+BB*r*s_))
+cx,cy=to_xy(*BC)
+emit([(*p,GM) for p in ring]+[(cx,cy,GM)],[[k,(k+1)%NB,NB] for k in range(NB)],["gravel"]*NB)
+for k in range(36):
+    u,v=rng.uniform(-6.4,8.8),rng.uniform(-7.0,7.0)
+    if not in_bed(u,v): continue
     if in_water(u,v,-0.1): continue
     x,y=to_xy(u,v); ico("stone",x,y,GM,rng.uniform(0.12,0.25),rng.uniform(0.1,0.2),0.08)
-for sd in (-1,1):                                      # the embankments along each bank
-    a0=to_xy(-7.15,sd*5.0); a1=to_xy(8.75,sd*5.0); b0=to_xy(-7.15,sd*5.35); b1=to_xy(8.75,sd*5.35)
-    solid([[(a0[0],a0[1],GRV-0.05),(b0[0],b0[1],GRV-0.05),(b0[0],b0[1],0.05),(a0[0],a0[1],0.05)],[(a1[0],a1[1],GRV-0.05),(b1[0],b1[1],GRV-0.05),(b1[0],b1[1],0.05),(a1[0],a1[1],0.05)]],"stonewall")
-for ue,uo in ((-6.8,-7.15),(8.4,8.75)):
-    a0=to_xy(ue,-5.0); a1=to_xy(ue,5.0); b0=to_xy(uo,-5.0); b1=to_xy(uo,5.0)
-    solid([[(a0[0],a0[1],GRV-0.05),(b0[0],b0[1],GRV-0.05),(b0[0],b0[1],0.05),(a0[0],a0[1],0.05)],[(a1[0],a1[1],GRV-0.05),(b1[0],b1[1],GRV-0.05),(b1[0],b1[1],0.05),(a1[0],a1[1],0.05)]],"stonewall")
 
 # ---- Kintaikyo: five timber arches, three great ones on tall stone piers and a lower one at each end on posts;
 # the deck climbs and falls over each arch, railed
@@ -171,25 +176,30 @@ def deck(v):
 def on_bridge(u,v): return abs(u)<=BW and abs(v)<=VE+0.4
 def P(u,v,z): x,y=to_xy(u,v); return (x,y,z)
 for v in PIERS:                                         # the piers: stone, pointed upstream and down
-    x,y=to_xy(0,v); T=dict(cx=x,cy=y,rot=math.pi/4)
-    solid([[(-1.6,-0.5,RIV-0.1),(-1.1,-0.62,RIV-0.1),(1.1,-0.62,RIV-0.1),(1.6,-0.5,RIV-0.1),(1.6,0.5,RIV-0.1),(1.1,0.62,RIV-0.1),(-1.1,0.62,RIV-0.1),(-1.6,0.5,RIV-0.1)],
-           [(-1.15,-0.38,1.05),(-0.8,-0.48,1.05),(0.8,-0.48,1.05),(1.15,-0.38,1.05),(1.15,0.38,1.05),(0.8,0.48,1.05),(-0.8,0.48,1.05),(-1.15,0.38,1.05)]],"stonewall")
-    for zc in (0.0,0.4,0.75): box("stone",0,0,zc,zc+0.025,0.01+1.2-0.3*zc,0.01+0.6-0.12*zc,T)
-N=12
+    x,y=to_xy(0,v); T=dict(cx=x,cy=y,rot=-math.pi/4)     # long axis along the stream (u), pointed up and down it
+    def pr(k,z): return [(k*a,k*b,z) for a,b in ((-1.6,0.0),(-1.0,-0.6),(1.0,-0.6),(1.6,0.0),(1.0,0.6),(-1.0,0.6))]
+    solid([pr(1.0,RIV-0.1),pr(0.78,0.92)],"stonewall",T)                 # cutwaters pointed up and downstream
+    solid([pr(0.82,0.92),pr(0.82,1.05)],"stone",T)                       # the coping course
+N=10
 for sp in range(5):
     v0,v1=([-VE]+PIERS+[VE])[sp],([-VE]+PIERS+[VE])[sp+1]
     vs=[v0+(v1-v0)*k/N for k in range(N+1)]
-    for su in (-0.45,-0.15,0.15,0.45):                   # the stacked arch beams beneath
+    for su in (-0.15,0.15):                              # the inner arch beams beneath
         pts=[P(su,v,deck(v)-0.25) for v in vs]
         tube("wood",pts,[0.07]*len(pts),4)
+    for su in (-BW+0.04,BW-0.04):                         # the outer faces: three stacked timber arch rings
+        for li,dz in enumerate((0.16,0.31,0.46)):
+            vv=[v for v in vs if sp in (1,2,3) or li==0]
+            if len(vv)<2: continue
+            tube("wood",[P(su,v,deck(v)-dz) for v in vv],[0.065]*len(vv),4)
     for va,vb in zip(vs,vs[1:]):
         za,zb=deck(va),deck(vb)
         a=[P(-BW,va,za-0.1),P(BW,va,za-0.1),P(BW,va,za),P(-BW,va,za)]
         b=[P(-BW,vb,zb-0.1),P(BW,vb,zb-0.1),P(BW,vb,zb),P(-BW,vb,zb)]
         solid([a,b],"deck")
     for sd in (-1,1):
-        tube("wood",[P(sd*BW,v,deck(v)+0.55) for v in vs],[0.035]*len(vs),4)
-        for v in vs[::2]: box("wood",*to_xy(sd*BW,v),deck(v),deck(v)+0.58,0.03,0.03)
+        tube("wood",[P(sd*BW,v,deck(v)+0.3) for v in vs],[0.025]*len(vs),4)          # a low rail, so the arches show
+        for v in vs[::3]: box("wood",*to_xy(sd*BW,v),deck(v),deck(v)+0.32,0.022,0.022)
     if sp in (0,4):                                      # the end spans stand on timber posts
         for v in vs[2:-1:3]:
             for su in (-0.4,0.4):
@@ -209,7 +219,7 @@ def ground_at(x,y):
     return G(u,v)+hill(u,v)
 def terrain_at(x,y):
     # the game samples the terrain on 1-unit tiles: under the bed it sits well below the gravel, so it never
-    # rides up through it against the embankments
+    # rides up through it at the bed's edges
     u,v=to_uv(x,y)
     if in_bed(u,v): return min(G(u,v),-0.55)+hill(u,v)   # above the region water level (-0.6): not open water
     return G(u,v)+hill(u,v)
@@ -230,7 +240,7 @@ def tree(u,v,s,m):
     x,y=to_xy(u,v); T=dict(cx=x,cy=y,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.14,-0.3,5),ngon(0.09,1.4,5,0,0.15,0)],"bark",T)
     ico(m,0,0,1.9,1.05,1.0,0.8,T); ico(m,0.5,0.3,1.55,0.65,0.6,0.5,T)
-for u,v,s in [(-5.8,-6.4,0.9),(-3.6,-6.2,0.95),(-1.2,-6.6,0.9),(1.6,-6.2,0.9),(4.4,-6.4,0.85),(-5.6,6.4,0.9),(-3.2,6.2,0.95),(-0.8,6.6,0.9),(2.0,6.4,0.9),(4.8,6.2,0.85)]:
+for u,v,s in [(-4.6,-8.3,0.9),(-2.4,-8.5,0.95),(-0.2,-8.3,0.9),(2.0,-8.5,0.9),(4.2,-8.3,0.85),(-4.6,8.3,0.9),(-2.4,8.5,0.95),(-0.2,8.3,0.9),(2.0,8.5,0.9),(4.2,8.3,0.85)]:
     x,y=to_xy(u,v)
     if abs(x)<FH-1.1 and abs(y)<FH-1.1: tree(u,v,s,"blossom")
 for u,v,s in [(-8.6,-4.4,1.1),(-8.0,5.0,1.1),(-6.0,8.4,1.0),(-6.4,-8.0,1.0),(6.8,-7.8,0.9),(7.2,7.0,0.9)]:

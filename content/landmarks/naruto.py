@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/naruto.glb"
 BLEND=ROOT+"/content/landmarks/naruto.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"grass":"5f8a45","rock":"6e665c","water":"244e6e","foam":"e8f0f0","deep":"1a3f5a","bridge":"dfe2e0","concrete":"b5b0a6","white":"f0ede6","red":"c8473a","pine":"3a5e36","bark":"4e3a30","wood":"7a5a3e"}
+PAL={"grass":"5f8a45","rock":"6e665c","water":"244e6e","foam":"e8f0f0","deep":"112a3e","bridge":"dfe2e0","concrete":"b5b0a6","white":"f0ede6","red":"c8473a","pine":"3a5e36","bark":"4e3a30","wood":"7a5a3e"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -183,21 +183,31 @@ for k in range(26):                                   # boulders and reefs round
     u,v=cu+ru*1.05*math.cos(a),cv+rv*1.05*math.sin(a)
     if abs(v)<4.5 or abs(to_xy(u,v)[0])>FH-1 or abs(to_xy(u,v)[1])>FH-1: continue
     x,y=to_xy(u,v); ico("rock",x,y,LV,rng.uniform(0.3,0.6),rng.uniform(0.25,0.5),rng.uniform(0.3,0.5))
-# whirlpools: spirals of foam over a darker eye, turning on the open water
-def whirl(u0,v0,R,turns=2.2,mat="foam"):
+# whirlpools: a darker funnel of water ringed by broken arcs of foam, the arcs trailing off into the eye; the
+# largest turns right under the bridge. The tide runs through the strait along u, so the streaks all point that way
+def arc(x0,y0,r0,r1,a0,a1,w,mat="foam",n=8):
+    for k in range(n):
+        ta,tb=k/n,(k+1)/n
+        aa,ab=a0+(a1-a0)*ta,a0+(a1-a0)*tb; ra,rb=r0+(r1-r0)*ta,r0+(r1-r0)*tb
+        wa,wb=w*(1-0.6*ta),w*(1-0.6*tb)                     # each arc tapers as it curls in
+        P=lambda a,r,d: (x0+(r+d)*math.cos(a),y0+(r+d)*math.sin(a),LV+0.02)
+        emit([P(aa,ra,-wa),P(aa,ra,wa),P(ab,rb,wb),P(ab,rb,-wb)],[[0,1,2,3]],[mat])
+def whirl(u0,v0,R,narc=4):
     x0,y0=to_xy(u0,v0)
-    prism("deep",x0,y0,LV-0.02,LV+0.01,R*0.45,R*0.2,12)
-    n=36; pts=[]
-    for k in range(n+1):
-        t=k/n; a=turns*2*math.pi*t; r=R*(0.18+0.82*t)
-        pts.append((x0+r*math.cos(a),y0+r*math.sin(a)))
-    for (xa,ya),(xb,yb) in zip(pts,pts[1:]):
-        dx,dy=xb-xa,yb-ya; L=math.hypot(dx,dy) or 1; nx,ny=-dy/L,dx/L; w=0.08+0.05*math.hypot(xa-x0,ya-y0)/R
-        emit([(xa-nx*w,ya-ny*w,LV+0.02),(xa+nx*w,ya+ny*w,LV+0.02),(xb+nx*w,yb+ny*w,LV+0.02),(xb-nx*w,yb-ny*w,LV+0.02)],[[0,1,2,3]],[mat])
-whirl(1.2,-1.0,2.0); whirl(-3.4,1.4,1.5,1.8); whirl(4.4,2.4,1.2,1.6); whirl(-1.0,4.0,0.9,1.4)
-for k in range(30):                                   # the white water racing through the strait
-    u,v=rng.uniform(-8,8),rng.uniform(-4.2,4.2); x,y=to_xy(u,v); a=rng.uniform(0,6.28); L=rng.uniform(0.4,0.9)
-    emit([(x,y,LV+0.015),(x+L*math.cos(a),y+L*math.sin(a),LV+0.015),(x+L*math.cos(a)+0.08,y+L*math.sin(a)+0.08,LV+0.015)],[[0,1,2]],["foam"])
+    prism("deep",x0,y0,LV-0.02,LV+0.005,R*0.8,R*0.8,16)                  # the funnel: dark water inside the outer arcs
+    ph=rng.uniform(0,6.28)
+    for k in range(narc):
+        a0=ph+2*math.pi*k/narc; span=2*math.pi/narc*rng.uniform(0.55,0.8)
+        arc(x0,y0,R*rng.uniform(0.9,1.0),R*0.42,a0,a0+span*1.6,0.11+0.04*R)
+whirl(-0.6,-1.2,2.2,5); whirl(-4.2,2.6,1.4,3); whirl(3.6,2.2,1.1,3); whirl(2.4,-4.0,0.8,3)
+for k in range(46):                                   # the white water racing through the strait, all one way
+    u,v=rng.uniform(-8,8),rng.uniform(-4.2,4.2); x,y=to_xy(u,v)
+    if any(math.hypot(u-a,v-b)<r*0.85 for a,b,r in ((-0.6,-1.2,2.2),(-4.2,2.6,1.4),(3.6,2.2,1.1),(2.4,-4.0,0.8))): continue
+    L=rng.uniform(0.5,1.4); w=0.04+0.03*rng.random(); bend=rng.uniform(-0.15,0.15)
+    p0=to_xy(u,v); p1=to_xy(u+L*0.5,v+bend); p2=to_xy(u+L,v+2*bend)
+    for (xa,ya),(xb,yb),wa,wb in ((p0,p1,w*0.4,w),(p1,p2,w,0.0)):
+        nx,ny=-(yb-ya),(xb-xa); nl=math.hypot(nx,ny) or 1; nx,ny=nx/nl,ny/nl
+        emit([(xa-nx*wa,ya-ny*wa,LV+0.015),(xa+nx*wa,ya+ny*wa,LV+0.015),(xb+nx*wb,yb+ny*wb,LV+0.015),(xb-nx*wb,yb-ny*wb,LV+0.015)],[[0,1,2,3]],["foam"])
 # the Onaruto bridge: two towers in the sea, a deep steel truss deck, the main cables and their hangers
 DZ=4.6; TV=(-4.4,4.4)
 for tv in TV:
@@ -253,7 +263,7 @@ def ground_at(x,y):
     if on_jetty(u,v): return max(JD,H(x,y))
     return H(x,y)
 INTERACT=to_xy(3.6,JV)       # at the jetty's head under the headland, the whirlpools and the bridge before it
-STAND=to_xy(2.8,6.6)
+STAND=(8.22,2.63)        # on the headland path above the jetty
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/naruto.json and read by the world layer (see docs/landmarks.md).

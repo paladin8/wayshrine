@@ -142,16 +142,30 @@ for k in range(36):
 def trunk(x,y,h,r,lean,ph):
     z=G(x,y)-0.1; tx,ty=x+lean*math.cos(ph),y+lean*math.sin(ph)
     solid([ngon(r,z,5,ph,x,y),ngon(r*0.45,z+h,5,ph,tx,ty)],"deadwood")
-    if rng.random()<0.6:
-        k=rng.uniform(0.45,0.8); bx,by,bz=x+(tx-x)*k,y+(ty-y)*k,z+h*k; a=rng.uniform(0,6.28); L=rng.uniform(0.2,0.4)
-        solid([ngon(r*0.4,bz,4,a,bx,by),ngon(r*0.18,bz+L*0.6,4,a,bx+L*math.cos(a),by+L*math.sin(a))],"deadwood")
+    tall=h>2.1
+    nb=(1 if rng.random()<0.5 else 2) if tall else (1 if rng.random()<0.35 else 0)
+    for _ in range(nb):                                  # broken branches: thick and climbing on the tall snags
+        k=rng.uniform(0.5,0.8); bx,by,bz=x+(tx-x)*k,y+(ty-y)*k,z+h*k; a=rng.uniform(0,6.28)
+        L=rng.uniform(0.5,0.85) if tall else rng.uniform(0.2,0.35); rb=r*(0.6 if tall else 0.4)
+        solid([ngon(rb,bz,4,a,bx,by),ngon(rb*0.35,bz+L*0.75,4,a,bx+L*math.cos(a),by+L*math.sin(a))],"deadwood")
+# the drowned larches stand in clumps, as they died where they grew, with a few alone; the tallest lean hardest
 n=0; pts=[]
-while n<54:
-    x,y=rng.uniform(-6.2,6.2),rng.uniform(-2.4,4.2)
-    f=pf(x,y)
-    if f>0.93 or any(math.hypot(x-px,y-py)<0.55 for px,py in pts): continue
-    pts.append((x,y)); n+=1
-    trunk(x,y,rng.uniform(1.1,2.7)*(0.75 if f>0.75 else 1.0),rng.uniform(0.05,0.08),rng.uniform(0.0,0.35),rng.uniform(0,6.28))
+centres=[]
+while len(centres)<9:
+    x,y=rng.uniform(-5.6,5.6),rng.uniform(-1.8,3.8)
+    if pf(x,y)<0.8 and all(math.hypot(x-a,y-b)>1.9 for a,b in centres): centres.append((x,y))
+for cx_,cy_ in centres:
+    for j in range(rng.randint(3,6)):
+        for _ in range(12):
+            x,y=cx_+rng.uniform(-0.75,0.75),cy_+rng.uniform(-0.6,0.6)
+            if pf(x,y)<0.9 and all(math.hypot(x-a,y-b)>0.28 for a,b in pts): break
+        else: continue
+        pts.append((x,y)); h=rng.uniform(1.0,2.9)*(0.8 if pf(x,y)>0.75 else 1.0)
+        trunk(x,y,h,rng.uniform(0.05,0.085),(rng.uniform(0.4,0.75) if h>2.1 else rng.uniform(0.0,0.3)),rng.uniform(0,6.28))
+for _ in range(7):
+    x,y=rng.uniform(-6.0,6.0),rng.uniform(-2.2,4.0)
+    if pf(x,y)<0.9 and all(math.hypot(x-a,y-b)>0.8 for a,b in pts):
+        pts.append((x,y)); trunk(x,y,rng.uniform(1.0,2.2),0.06,rng.uniform(0.0,0.3),rng.uniform(0,6.28))
 for k in range(5):                                     # fallen trunks lying in the shallows
     t=rng.uniform(0,6.28); x,y=PC[0]+PA*0.7*math.cos(t),PC[1]+PB*0.7*math.sin(t); a=rng.uniform(0,6.28); L=rng.uniform(0.8,1.4)
     p0=(x-L*math.cos(a)/2,y-L*math.sin(a)/2,WZ-0.03); p1=(x+L*math.cos(a)/2,y+L*math.sin(a)/2,WZ+0.02)
@@ -183,9 +197,13 @@ def fir(x,y,s):
         cone("fir",ngon(r,zc,6,rng.uniform(0,1)),(0,0,zc+hh),T)
         cone("snow",ngon(r*0.55,zc+hh*0.45,6,0.3),(0,0,zc+hh+0.06),T)
 def larch(x,y,s):
-    z=G(x,y); T=dict(cx=x,cy=y,cz=z,s=s,rot=rng.uniform(0,6.28))
-    solid([ngon(0.09,-0.3,5),ngon(0.05,1.0,5)],"wood",T)
-    cone("larch",ngon(0.5,0.7,6,rng.uniform(0,1)),(0,0,2.9),T)
+    # leafless in winter: a tall thin trunk with tiers of bare twiggy branches, shortening toward the top
+    z=G(x,y); ph=rng.uniform(0,3.14)
+    solid([ngon(0.09*s,z-0.3,5,0,x,y),ngon(0.03*s,z+3.0*s,5,0,x,y)],"wood")
+    for t in range(5):
+        zt=z+(0.9+0.45*t)*s; L=(0.62-0.1*t)*s
+        for a in (ph+1.1*t,ph+1.1*t+math.pi/2):
+            box("larch",0,0,zt,zt+0.035*s,L,0.025*s,dict(cx=x,cy=y,rot=a))
 tp=[]
 def plant(x,y,s,kind):
     if abs(x)>FH-1.0 or abs(y)>FH-1.0 or pf(x,y)<1.18 or on_deck(x,y): return

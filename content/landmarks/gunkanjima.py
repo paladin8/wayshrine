@@ -164,8 +164,16 @@ def shore(h_land,m,edge=0.9,fall=1.08):
 # ---- Hashima: a reef walled all round in concrete and packed with apartment blocks, abandoned since 1974; from the
 # sea it is a battleship. The island runs across the view; the landing pier juts toward the camera
 TOP=0.45; JD=LV+0.3
+# the plan: a blunt stern at the south end (screen left), parallel sides, and a bow that tapers to a point at the north
+# (screen right), as the battleship it was named for. s runs along the island, skewed a little from v
+def hw(s):
+    if s<3.5: return 2.6+0.3*smooth(-8.0,-6.6,s)
+    return 2.9*(1-0.88*(s-3.5)/5.3)
+S0,S1=-8.0,8.8
 def isl_m(u,v):
-    return ((abs(u)/2.9)**4+(abs(v-0.2*u)/8.2)**4)**0.25
+    s_=v-0.2*u
+    if s_<S0 or s_>S1: return 2.0
+    return max(abs(u)/max(hw(s_),0.05), s_/S1 if s_>0 else s_/S0)
 def in_isl(u,v,m=0.0): return isl_m(u,v)<1.0-m
 PU0,PU1,PV=2.75,6.4,1.2                               # the landing pier (u from the wall out to sea, at v=PV)
 def on_pier(u,v): return PU0-0.3<=u<=PU1 and abs(v-PV)<=0.55
@@ -176,15 +184,14 @@ def H(x,y):
     if m<=1.0: return TOP+ridge(u,v)
     return FLOOR
 def water_disc(x,y): return False
-NA=48
+SS=[S0+(8.6-S0)*k/34 for k in range(35)]
 def outline(o,z):
     pts=[]
-    for k in range(NA):
-        a=2*math.pi*k/NA; c,s=math.cos(a),math.sin(a)
-        r=1.0/(((abs(c)/2.9)**4+(abs(s)/8.2)**4)**0.25)
-        u,v=(r+o)*c,(r+o)*s; v+=0.2*u
-        pts.append((*to_xy(u,v),z))
-    return pts
+    for s_ in SS:  pts.append((hw(s_)+o,s_))
+    pts.append((0.0,S1+o*1.6))                             # the bow
+    for s_ in reversed(SS): pts.append((-hw(s_)-o,s_))
+    pts.append((-hw(S0)+0.35,S0-o)); pts.append((hw(S0)-0.35,S0-o))   # the square stern
+    return [(*to_xy(u,s_+0.2*u),z) for u,s_ in pts]
 solid([outline(0.25,FLOOR),outline(0.08,LV+0.2),outline(0.0,TOP)],"concrete",mt="pave")
 draw_sea()
 # the old rock at the island's heart, with the shrine on its crest and green taking it back
@@ -201,20 +208,33 @@ def block(u,v,hu,hv,n,rot=0.0,ruin=False):
     z0=TOP; z1=TOP+n*FLOOR_H
     ubox("concrete" if rng.random()<0.6 else "concrete2",u,v,z0,z1,hu,hv,rot)
     T=F(u,v,rot)
+    def band(face,zb):
+        # a floor's windows on one face: mostly a dark band, but some bays are blank or burst open, so the blocks
+        # read as worn and gutted rather than new
+        r=rng.random(); L=(hv if face==0 else hu)-0.12
+        def put(a,b,h0=0.0,h1=0.18):
+            c,w=(a+b)/2,(b-a)/2
+            if face==0: box("dark",c,-hu-0.01,zb+h0,zb+h1,w,0.01,T)
+            else: box("dark",face*(hv+0.01),c,zb+h0,zb+h1,0.01,w,T)
+        if r<0.14: return
+        if r<0.34:
+            g=rng.uniform(-0.4,0.4)*L; put(-L,g-0.2); put(g+0.2,L)
+        elif r<0.42:
+            put(-L,L); g=rng.uniform(-0.5,0.5)*L; put(g-0.22,g+0.22,-0.12,0.3)
+        else: put(-L,L)
     for f in range(n):
         zb=z0+f*FLOOR_H+0.14
-        box("dark",0,-hu-0.01,zb,zb+0.18,hv-0.12,0.01,T)
-        box("dark",hv+0.01,0,zb,zb+0.18,0.01,hu-0.12,T)
-        box("dark",-hv-0.01,0,zb,zb+0.18,0.01,hu-0.12,T)
+        for face in (0,1,-1): band(face,zb)
     if ruin:
         box("dark",hv*0.3,-hu-0.02,z1-FLOOR_H*1.6,z1-0.05,hv*0.45,0.02,T)
         box("concrete2",hv*0.5,0,z1,z1+FLOOR_H*0.6,hv*0.35,hu*0.8,T)
     else:
         box("concrete2",0,0,z1,z1+0.08,hv+0.04,hu+0.04,T)
     if rng.random()<0.35: ico("green",*to_xy(u,v),z1+0.05,min(hu,hv)*0.6,min(hu,hv)*0.6,0.2)
-BL=[(1.7,-6.6,0.75,0.9,6),(1.8,-4.3,0.85,1.1,7),(1.85,-1.9,0.8,0.9,5),(2.0,3.3,0.7,1.1,6),(1.9,5.6,0.85,1.0,7),(1.7,7.6,0.6,0.7,4),
-    (-1.9,-6.0,0.85,1.5,8),(-2.0,1.8,0.75,1.4,9),(-2.0,4.8,0.75,1.3,7),(-1.4,7.4,0.7,0.8,5),
-    (0.2,3.2,0.6,0.9,6),(0.3,5.9,0.7,0.8,5),(0.4,-4.6,0.6,0.7,4),(-2.1,-2.6,0.6,1.0,6),(-0.4,-6.9,0.5,0.6,5),(-0.1,0.9,0.5,0.6,8)]
+# tallest at the stern end, stepping down toward the bow, so the roofline breaks instead of ranking evenly
+BL=[(1.7,-6.6,0.75,0.9,8),(1.8,-4.3,0.85,1.1,10),(-1.9,-6.0,0.85,1.3,11),(-2.0,-3.3,0.6,0.9,7),(-0.4,-6.9,0.5,0.6,5),(0.4,-4.6,0.6,0.7,4),
+    (1.85,-1.9,0.8,0.9,5),(-2.0,1.4,0.75,1.2,9),(-0.1,0.9,0.5,0.6,8),(2.0,2.4,0.7,1.0,6),(0.2,3.2,0.6,0.7,6),
+    (1.2,4.7,0.55,0.8,5),(-1.2,4.5,0.55,0.8,6),(0.0,6.1,0.5,0.7,4),(0.35,7.1,0.3,0.4,3)]
 for i,(u,v,hu,hv,n) in enumerate(BL):
     block(u,v+0.2*u,hu,hv,n,0.0,ruin=(i%4==1))
 # the mine's old pithead stacks and the lighthouse at the island's north tip

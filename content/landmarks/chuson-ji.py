@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/chuson-ji.glb"
 BLEND=ROOT+"/content/landmarks/chuson-ji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"eef2f4","gold":"d9a83c","lacquer":"221c1a","roof":"5a5e62","wood":"5a4232","stone":"8f8a80","fir":"2f4f3e","glow_cream":"e8dcb0"}
+PAL={"snow":"eef2f4","gold":"d9a83c","lacquer":"221c1a","roof":"5a5e62","wood":"5a4232","stone":"8f8a80","fir":"2f4f3e","shingle":"3f3733","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -127,8 +127,9 @@ for k in range(8):
     box("stone",0,y+0.11,z-0.3,z+0.03,0.75,0.12)
 box("stone",0,-1.0,TZ-0.05,TZ+0.03,0.7,0.65)                       # the paved walk to the hall
 
-# ---- Konjikido: the Golden Hall on its black lacquered dais, gilded walls and pyramidal roof, the sacred jewel
-# on the peak. (Shown open to the sky, as it stood before its cover halls were built)
+# ---- Konjikido: the Golden Hall on its black lacquered dais, gilded walls, posts and doorway under a dark shingled
+# pyramid roof (the restoration found no gilding on the roof), the gilt jewel on its peak. (Shown open to the sky,
+# as it stood before its cover halls were built)
 z0=TZ; KX,KY=0.0,1.4
 box("stone",KX,KY,z0-0.1,z0+0.12,2.0,2.0)
 box("lacquer",KX,KY,z0+0.12,z0+0.45,1.55,1.55)
@@ -140,12 +141,20 @@ for sx in (-1,0,1):
     if sx: box("gold",KX+sx*0.42,KY-1.22,z0+0.53,z0+1.85,0.07,0.04)
 box("lacquer",KX,KY-1.21,z0+0.6,z0+1.55,0.34,0.02)                    # the doors, dark between gilded posts
 box("glow_altar",KX,KY-1.22,z0+0.8,z0+1.35,0.2,0.02)
-for sx in (-1,1):
-    box("lacquer",KX+sx*0.8,KY-1.21,z0+0.75,z0+1.45,0.3,0.02); box("lacquer",KX+sx*1.21,KY,z0+0.75,z0+1.45,0.02,0.6)
-box("lacquer",KX,KY-1.21,z0+1.62,z0+1.7,1.2,0.02)
+for sx in (-1,1):                                                     # thin lacquer frames, so the gilt panels read
+    box("lacquer",KX+sx*0.8,KY-1.215,z0+0.68,z0+0.72,0.32,0.02); box("lacquer",KX+sx*0.8,KY-1.215,z0+1.5,z0+1.54,0.32,0.02)
+    box("lacquer",KX+sx*1.215,KY,z0+0.68,z0+0.72,0.02,1.0); box("lacquer",KX+sx*1.215,KY,z0+1.5,z0+1.54,0.02,1.0)
+box("lacquer",KX,KY-1.21,z0+1.62,z0+1.66,1.2,0.02)
+box("gold",KX,KY,z0+1.72,z0+1.86,1.32,1.32)                           # the gilt bracket course under the eaves
+for k in range(9):                                                     # a gilt railing round the dais
+    t=-1.45+2.9*k/8
+    for x,y in ((KX+t,KY-1.5),(KX+t,KY+1.5),(KX-1.5,KY+t),(KX+1.5,KY+t)):
+        if not (abs(x-KX)<0.5 and y<KY-1.4): box("gold",x,y,z0+0.45,z0+0.75,0.035,0.035)
+for x0,y0,x1,y1 in ((-1.5,-1.5,-0.5,-1.5),(0.5,-1.5,1.5,-1.5),(-1.5,1.5,1.5,1.5),(-1.5,-1.5,-1.5,1.5),(1.5,-1.5,1.5,1.5)):
+    box("gold",KX+(x0+x1)/2,KY+(y0+y1)/2,z0+0.72,z0+0.77,abs(x1-x0)/2+0.03,abs(y1-y0)/2+0.03)
 for k in range(3):                                                     # steps up the dais
     box("lacquer",KX,KY-1.62-0.16*k,z0+0.12,z0+0.45-0.11*k,0.45,0.08)
-flared_roof([(1.75,1.75,z0+1.85,0.16),(1.75,1.75,z0+1.96,0.16),(0.07,0.07,z0+2.85,0.0)],"gold",KX,KY)
+flared_roof([(1.75,1.75,z0+1.85,0.16),(1.75,1.75,z0+1.96,0.16),(0.07,0.07,z0+2.85,0.0)],"shingle",KX,KY)
 prism("gold",KX,KY,z0+2.85,z0+3.0,0.11,0.07,6); ico("gold",KX,KY,z0+3.05,0.1,0.1,0.1)
 
 # stone lanterns at the top of the steps

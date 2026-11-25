@@ -3,9 +3,10 @@ import { REGION_SIZE } from "./coords";
 import { fujiValley } from "./fuji-valley";
 import { fujiRailway, railwayClearance } from "./fuji-railway";
 import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
+import { tokyoBuildings } from "./tokyo-district";
 import { isWater, type Biome } from "./terrain";
 
-export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern", "cherry", "farmhouse"] as const;
+export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern", "cherry", "farmhouse", "city-building"] as const;
 export type PropKind = (typeof PROP_KINDS)[number];
 
 /**
@@ -151,7 +152,7 @@ export function propsInChunk(
       const variant = rng.next();
       let roll = rng.next();
 
-      if (tile.fujiField || valleyProps.some((p) => p.kind === "farmhouse" && Math.hypot(x - p.x, z - p.z) < 2.8)) continue;
+      if (tile.tokyoSurface || tile.fujiField || valleyProps.some((p) => p.kind === "farmhouse" && Math.hypot(x - p.x, z - p.z) < 2.8)) continue;
       const region = world.regionAt(x, z);
       const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;
@@ -197,6 +198,13 @@ export function propsInChunk(
     const radius = prop.kind === "farmhouse" ? 2.6 : 0.5;
     if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + radius || blocksClearing(prop.kind, prop.scale, x, z, c))) continue;
     props.push({ ...prop, y: terrain.groundAt(x, z), regionId: terrain.tileAtPoint(x, z).regionId });
+  }
+
+  for (const building of tokyoBuildings(world)) {
+    const { x, z } = building;
+    if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
+    if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + 3)) continue;
+    props.push({ ...building, kind: "city-building", y: terrain.groundAt(x, z), regionId: terrain.tileAtPoint(x, z).regionId });
   }
 
   // Freestanding lanterns for land shrines whose lanterns fall in this chunk.

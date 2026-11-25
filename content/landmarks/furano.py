@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/furano.glb"
 BLEND=ROOT+"/content/landmarks/furano.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"lavender":"8a6cc4","poppy":"d8463a","cream":"f2ede2","pink":"e88aaa","orange":"ee9a3a","yellow":"eed24a","gravel":"cfc4ae","roof":"a8443a","bark":"5a4636","leaf":"3f6a3a"}
+PAL={"lavender":"8a6cc4","poppy":"d8463a","cream":"f2ede2","pink":"e88aaa","orange":"ee9a3a","yellow":"eed24a","gravel":"cfc4ae","roof":"a8443a","bark":"5a4636","leaf":"3f6a3a","soil":"7a5c44"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -111,7 +111,7 @@ def flared_roof(spec,mat="roof",ox=0.0,oy=0.0):
 
 import random
 rng=random.Random(61)
-EXTRA_SOLIDS=[]; NOSOLID={"leaf","lavender","poppy","pink","orange","yellow","cream","gravel"}
+EXTRA_SOLIDS=[]; NOSOLID={"leaf","lavender","poppy","pink","orange","yellow","cream","gravel","soil"}
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 FH=11.2   # footprint half-width (the sidecar's half): the middle size, a hillside farm of flower fields
@@ -135,13 +135,19 @@ def strip(mat,pts,w,h,sink=0.08,top=0.6):
 
 # ---- the lavender field on the left of the hill: long mounded rows of bushes running across the slope,
 # bowing gently with the contour
+def rowy(j,x): return -5.4+0.78*j+0.45*math.sin(0.35*x+0.3)
 for j in range(15):
-    y0=-5.4+0.78*j
-    x0,x1=-9.2+0.25*math.sin(j),0.6
-    n=int((x1-x0)/0.55)
-    pts=[(x0+(x1-x0)*k/n,y0+0.45*math.sin(0.35*(x0+(x1-x0)*k/n)+0.3)) for k in range(n+1)]
+    x0=-9.2+0.25*math.sin(j)
+    xb=-1.2+rng.uniform(-0.6,0.5) if j%3!=1 else 0.6     # where the row breaks into separate bushes near the path
+    n=max(1,int((xb-x0)/0.55))
+    pts=[(x0+(xb-x0)*k/n,rowy(j,x0+(xb-x0)*k/n)) for k in range(n+1)]
     pts=[p for p in pts if abs(p[0])<FH-1.2 and abs(p[1])<FH-1.2]
     if len(pts)>1: strip("lavender",pts,0.25,0.3)
+    x=xb+0.35
+    while x<0.55:                                        # the row's front end: low, distinct bushes with gaps
+        if rng.random()>0.15:
+            y=rowy(j,x); r=rng.uniform(0.2,0.27); ico("lavender",x,y,G(x,y)-0.05,r,r*0.95,r*1.05)
+        x+=rng.uniform(0.42,0.55)
 # ---- the Irodori field on the right: broad flat bands of colour running down the slope
 COL=["poppy","cream","pink","lavender","orange","yellow","poppy","cream","pink","lavender"]
 for j,m in enumerate(COL):
@@ -156,6 +162,10 @@ for j,m in enumerate(COL):
 def walk(pts,w=0.45): strip("gravel",pts,w,0.03,0.06,1.0)
 walk([(-9.6+19.2*k/24,-6.5+0.15*math.sin(k*0.5)) for k in range(25)])
 walk([(1.3+0.15*math.sin(k*0.7),-6.3+12.6*k/18) for k in range(19)],0.38)
+# narrow strips of bare soil beside the walks, where the planting stops short of the gravel
+WK=[(1.3+0.15*math.sin(k*0.7),-6.3+12.6*k/18) for k in range(19)]
+for sd in (-1,1): strip("soil",[(x+sd*0.58,y) for x,y in WK],0.13,0.012,0.05,1.0)
+strip("soil",[(-9.6+19.2*k/24,-5.92+0.15*math.sin(k*0.5)) for k in range(25)],0.12,0.012,0.05,1.0)
 bx,by=1.3,6.9; bz=G(bx,by)
 box("bark",bx,by+0.25,bz+0.38,bz+0.46,0.6,0.18)
 for sx in (-0.5,0.5): box("bark",bx+sx,by+0.25,bz-0.1,bz+0.38,0.05,0.15)

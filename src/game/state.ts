@@ -231,11 +231,22 @@ export interface SaveV4 extends Omit<SaveV3, "v"> {
   readonly shrineCredits: number;
 }
 
-export type SaveData = SaveV1 | SaveV2 | SaveV3 | SaveV4;
+export interface SaveV5 extends Omit<SaveV4, "v"> {
+  readonly v: 5;
+}
 
-export function serialize(state: GameState): SaveV4 {
+export type SaveData = SaveV1 | SaveV2 | SaveV3 | SaveV4 | SaveV5;
+
+/** The meadow slots exchanged landmarks, so pre-v5 saves refer to the inverse labels. */
+function landmarkBeforeTokyoMove(id: string): string {
+  if (id === "tokyo-tower") return "kumamoto-castle";
+  if (id === "kumamoto-castle") return "tokyo-tower";
+  return id;
+}
+
+export function serialize(state: GameState): SaveV5 {
   return {
-    v: 4,
+    v: 5,
     seed: state.seed,
     restored: [...state.restored].sort(),
     explored: [...state.explored].sort(),
@@ -254,7 +265,7 @@ export function serialize(state: GameState): SaveV4 {
 
 export function deserialize(data: SaveData, world?: World): GameState {
   const { v, seed } = data;
-  if (v !== 1 && v !== 2 && v !== 3 && v !== 4) throw new Error(`unsupported save version: ${String(v)}`);
+  if (v !== 1 && v !== 2 && v !== 3 && v !== 4 && v !== 5) throw new Error(`unsupported save version: ${String(v)}`);
   const state: GameState = {
     ...newGame(seed),
     restored: new Set(data.restored),
@@ -262,10 +273,22 @@ export function deserialize(data: SaveData, world?: World): GameState {
     collected: v === 1 || v === 2 ? [] : [...new Set(data.collected)],
   };
   const current = world?.seed === seed ? world : createWorld(seed);
-  if (v === 4) {
+  if (v === 4 || v === 5) {
+    const restored = new Set(state.restored);
+    if (v === 4 && restored.size > 0) {
+      const tokyo = current.landmarks.find((r) => r.landmark?.id === "tokyo-tower");
+      const kumamoto = current.landmarks.find((r) => r.landmark?.id === "kumamoto-castle");
+      if (tokyo && kumamoto) {
+        if (state.restored.has(tokyo.id)) restored.add(kumamoto.id);
+        else restored.delete(kumamoto.id);
+        if (state.restored.has(kumamoto.id)) restored.add(tokyo.id);
+        else restored.delete(tokyo.id);
+      }
+    }
     const shrineCredits = Number.isSafeInteger(data.shrineCredits) ? Math.max(0, data.shrineCredits) : 0;
     return revealLandmarks({
       ...state,
+      restored,
       shrineCredits,
       boatLaunched: data.boatLaunched === true,
       snowshoesUsed: data.snowshoesUsed === true,
@@ -279,7 +302,7 @@ export function deserialize(data: SaveData, world?: World): GameState {
   if (state.restored.size === 0) return revealLandmarks(state, current);
   const previous = createWorld(seed, "spread");
   const currentLandmarks = new Map(current.landmarks.map((region) => [region.landmark!.id, region.id]));
-  const previousLandmarks = new Map(previous.landmarks.map((region) => [region.id, region.landmark!.id]));
+  const previousLandmarks = new Map(previous.landmarks.map((region) => [region.id, landmarkBeforeTokyoMove(region.landmark!.id)]));
   const restored = new Set<string>();
   let shrineCredits = 0;
   for (const id of state.restored) {

@@ -82,6 +82,7 @@ const MOVEMENT_CUES: Readonly<Partial<Record<Biome, CueId>>> = {
   mountain: "walk-mountain",
   marsh: "walk-marsh",
   volcanic: "walk-mountain",
+  dunes: "walk-snow",
   water: "row-water",
   sea: "row-water",
 };

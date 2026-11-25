@@ -163,7 +163,14 @@ def ryokan(sd,cy,L,D,ns,gable,tower=False,fx0=2.75):
             y=cy-L+(k+0.5)*2*L/nw
             box("glow_windows",fx-sd*0.02,y,z0+0.25,z1-0.15,0.02,L/nw*0.62)
         if s>=2: box("iron",fx-sd*0.22,cy,z0+0.3,z0+0.36,0.025,L-0.05)
+        elif sd>0: box("iron",fx-sd*0.22,cy,z0+0.56,z0+0.62,0.025,L-0.05)    # a balcony rail, clear of the walk below
         pent(fx,sd,cy-L-0.05,cy+L+0.05,z0)
+    if sd>0 and ns>1:      # the slim inns on the near bank: their backs to the hillside path are lit and eaved too
+        bx=cx+sd*D
+        for s in range(ns):
+            z0,z1=zs[s],zs[s+1]; nw=max(2,int(L/0.5))
+            for k in range(nw): box("glow_windows",bx+sd*0.02,cy-L+(k+0.5)*2*L/nw,z0+0.25,z1-0.18,0.02,L/nw*0.6)
+            if s>=1: pent(bx,-sd,cy-L-0.05,cy+L+0.05,z0,0.32)
     zt=zs[ns]; R=0.9
     if gable:   # ridge across the street, the gable facing the river
         T=dict(cx=cx,cy=cy,rot=math.pi/2)
@@ -189,7 +196,7 @@ def ryokan(sd,cy,L,D,ns,gable,tower=False,fx0=2.75):
         flared_roof([(0.72,0.72,tz+0.75,0.1),(0.72,0.72,tz+0.82,0.1),(0.05,0.05,tz+1.25,0.0)],"roof",tx,cy)
         flared_roof([(0.64,0.64,tz+0.84,0.04),(0.64,0.64,tz+0.87,0.04),(0.03,0.03,tz+1.29,0.0)],"snow",tx,cy)
 for sd,cy,L,D,ns,gab,tw in [(-1,-7.2,1.3,1.4,3,True,False),(-1,-3.9,1.6,1.5,4,False,False),(-1,-0.3,1.4,1.4,3,True,True),(-1,3.2,1.6,1.5,3,False,False),(-1,6.1,1.0,1.3,3,True,False),
-                            (1,-6.3,1.3,1.2,1,False,False),(1,-1.9,1.3,1.2,1,True,False),(1,4.0,1.4,1.2,1,False,False)]:
+                            (1,-4.5,1.1,0.7,2,True,False),(1,-2.0,0.95,0.7,2,False,False),(1,4.0,1.4,1.2,1,False,False)]:   # slim two-storey inns tight to the walk by the entrance
     ryokan(sd,cy,L,D,ns,gab,tw)
 
 # ---- gas lamps along both walks
@@ -216,7 +223,7 @@ def fir(x,y,s,z=0.0):
         cone("snow",ngon(r*0.55,zc+hh*0.45,6,0.3),(0,0,zc+hh+0.06),T)
 for x,s in ((-2.6,0.8),(-0.9,0.75),(1.0,0.8),(2.7,0.75)): fir(x,9.0+0.2*math.sin(x),s,3.0)
 for x,y,s in [(-7.2,-8.6,0.9),(-7.6,-4.6,1.0),(-7.4,-0.4,0.9),(-7.2,3.6,1.0),(-6.6,7.6,0.9),(-8.8,9.0,0.9),
-              (7.4,-8.4,0.9),(7.6,-4.2,1.0),(7.2,0.2,0.9),(7.4,4.0,1.0),(6.8,7.8,0.9),(8.8,9.2,0.9),(-3.6,-9.8,0.8),(3.8,-9.8,0.8),(3.7,-4.1,0.85),(3.6,1.05,0.8),(3.5,6.6,0.85)]:
+              (7.4,-8.4,0.9),(7.6,-4.2,1.0),(7.2,0.2,0.9),(7.4,4.0,1.0),(6.8,7.8,0.9),(8.8,9.2,0.9),(-3.6,-9.8,0.8),(3.8,-9.8,0.8),(4.7,-6.6,0.85),(3.6,1.05,0.8),(3.5,6.6,0.85)]:
     fir(x,y,s)
 
 def ground_at(x,y):

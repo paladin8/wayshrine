@@ -3,31 +3,46 @@ import * as THREE from "three";
 /** Seconds a print takes to fade away completely. */
 const LIFETIME = 8;
 const CAPACITY = 40;
-const PRINT_OPACITY = 0.8;
+
+type Surface = "snow" | "sand";
 
 export interface Footprints {
   readonly root: THREE.Group;
-  /** Press a snowshoe print into the ground at (x, y, z), pointing along `yaw`. */
-  add(x: number, y: number, z: number, yaw: number): void;
+  /** Press a print into the ground at (x, y, z), pointing along `yaw`. */
+  add(x: number, y: number, z: number, yaw: number, surface: Surface): void;
   update(dt: number): void;
   dispose(): void;
 }
 
-/** Fading snowshoe prints: a shallow oval with a lighter net pattern inside, reused in a ring. */
+function oval(width: number, length: number, segments: number): THREE.BufferGeometry {
+  return new THREE.CircleGeometry(1, segments).rotateX(-Math.PI / 2).scale(width, 1, length);
+}
+
+/** Fading snowshoe and boot prints, drawn from the same pool. */
 export function createFootprints(): Footprints {
   const root = new THREE.Group();
-  const oval = new THREE.CircleGeometry(1, 14);
-  oval.rotateX(-Math.PI / 2);
-  oval.scale(0.115, 1, 0.31);
-  const net = new THREE.CircleGeometry(1, 10);
-  net.rotateX(-Math.PI / 2);
-  net.scale(0.07, 1, 0.24);
-  const bar = new THREE.PlaneGeometry(0.2, 0.025);
-  bar.rotateX(-Math.PI / 2);
+  const rim = oval(0.115, 0.31, 14);
+  const net = oval(0.07, 0.24, 10);
+  const bar = new THREE.PlaneGeometry(0.2, 0.025).rotateX(-Math.PI / 2);
+  const forefoot = oval(0.068, 0.079, 12);
+  const heel = oval(0.043, 0.056, 10);
+  const styles = {
+    snow: [
+      { geometry: rim, color: 0x93a5b8, y: 0, z: 0, opacity: 0.8 },
+      { geometry: net, color: 0xbccbda, y: 0.002, z: 0, opacity: 0.72 },
+      { geometry: bar, color: 0x7f93a8, y: 0.004, z: -0.1, opacity: 0.8 },
+      { geometry: bar, color: 0x7f93a8, y: 0.004, z: 0.07, opacity: 0.8 },
+    ],
+    sand: [
+      { geometry: forefoot, color: 0xa48052, y: 0, z: 0.05, opacity: 0.7 },
+      { geometry: heel, color: 0xa48052, y: 0, z: -0.065, opacity: 0.7 },
+    ],
+  };
 
-  const dent = (color: number): THREE.MeshStandardMaterial =>
-    new THREE.MeshStandardMaterial({
-      color,
+  const prints = Array.from({ length: CAPACITY }, () => {
+    const group = new THREE.Group();
+    group.visible = false;
+    const parts = styles.snow.map(({ geometry }) => new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
       transparent: true,
       opacity: 0,
       depthWrite: false,
@@ -35,79 +50,50 @@ export function createFootprints(): Footprints {
       polygonOffsetFactor: -2,
       polygonOffsetUnits: -2,
       flatShading: true,
-    });
-  const edgeMat = dent(0x93a5b8);
-  const netMat = dent(0xbccbda);
-  const barMat = dent(0x7f93a8);
-  const materials = [edgeMat, netMat, barMat] as const;
-  const base = [PRINT_OPACITY, PRINT_OPACITY * 0.9, PRINT_OPACITY] as const;
-
-  interface Print {
-    readonly group: THREE.Group;
-    age: number;
-  }
-  const prints: Print[] = [];
-  for (let i = 0; i < CAPACITY; i++) {
-    const group = new THREE.Group();
-    group.visible = false;
-    const edge = new THREE.Mesh(oval, edgeMat);
-    const inner = new THREE.Mesh(net, netMat);
-    inner.position.y = 0.002;
-    group.add(edge, inner);
-    for (const z of [-0.1, 0.07]) {
-      const b = new THREE.Mesh(bar, barMat);
-      b.position.set(0, 0.004, z);
-      group.add(b);
-    }
+    })));
+    group.add(...parts);
     root.add(group);
-    prints.push({ group, age: LIFETIME });
-  }
+    return { group, parts, age: LIFETIME, surface: "snow" as Surface };
+  });
   let next = 0;
-
-  // All prints share three materials, so the fade is per print through scale-free opacity groups:
-  // each print owns clones instead, so ages can differ.
-  const owned: THREE.MeshStandardMaterial[] = [];
-  for (const p of prints) {
-    p.group.children.forEach((child, idx) => {
-      const mesh = child as THREE.Mesh;
-      const src = idx === 0 ? edgeMat : idx === 1 ? netMat : barMat;
-      const clone = src.clone();
-      owned.push(clone);
-      mesh.material = clone;
-    });
-  }
 
   return {
     root,
-    add(x, y, z, yaw) {
-      const p = prints[next]!;
+    add(x, y, z, yaw, surface) {
+      const print = prints[next]!;
       next = (next + 1) % CAPACITY;
-      p.age = 0;
-      p.group.visible = true;
-      p.group.position.set(x, y + 0.03, z);
-      p.group.rotation.y = yaw;
+      print.age = 0;
+      print.surface = surface;
+      print.group.visible = true;
+      print.group.position.set(x, y + 0.03, z);
+      print.group.rotation.y = yaw;
+      print.parts.forEach((mesh, i) => {
+        const part = styles[surface][i];
+        mesh.visible = part !== undefined;
+        if (!part) return;
+        mesh.geometry = part.geometry;
+        mesh.position.set(0, part.y, part.z);
+        mesh.material.color.setHex(part.color);
+      });
     },
     update(dt) {
-      for (const p of prints) {
-        if (!p.group.visible) continue;
-        p.age += dt;
-        if (p.age >= LIFETIME) {
-          p.group.visible = false;
+      for (const print of prints) {
+        if (!print.group.visible) continue;
+        print.age += dt;
+        if (print.age >= LIFETIME) {
+          print.group.visible = false;
           continue;
         }
-        const f = 1 - p.age / LIFETIME;
+        const f = 1 - print.age / LIFETIME;
         const fade = f * f * (3 - 2 * f);
-        p.group.children.forEach((child, idx) => {
-          ((child as THREE.Mesh).material as THREE.MeshStandardMaterial).opacity = (idx === 0 ? base[0] : idx === 1 ? base[1] : base[2]) * fade;
+        styles[print.surface].forEach(({ opacity }, i) => {
+          print.parts[i]!.material.opacity = opacity * fade;
         });
       }
     },
     dispose() {
-      oval.dispose();
-      net.dispose();
-      bar.dispose();
-      materials.forEach((m) => m.dispose());
-      owned.forEach((m) => m.dispose());
+      for (const geometry of [rim, net, bar, forefoot, heel]) geometry.dispose();
+      for (const { parts } of prints) parts.forEach((part) => part.material.dispose());
     },
   };
 }

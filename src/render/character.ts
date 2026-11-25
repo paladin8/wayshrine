@@ -330,7 +330,7 @@ if (uShrineArrival < 1.0) {
   mesh(new THREE.CylinderGeometry(0.074, 0.091, 0.026, 12), frame, lantern, 0, -0.085, 0);
   mesh(new THREE.CylinderGeometry(0.092, 0.073, 0.030, 12), frame, lantern, 0, -0.352, 0);
   mesh(new THREE.TorusGeometry(0.072, 0.009, 4, 14, Math.PI), frame, lantern, 0, -0.079, 0);
-  const lanternLight = new THREE.PointLight(0xffb15e, 0, 4);
+  const lanternLight = new THREE.PointLight(0xffb15e, 0, 4.6);
   lanternLight.position.y = -0.25;
   lantern.add(lanternLight);
   registerGear("lantern", [lantern]);
@@ -519,7 +519,7 @@ if (uShrineArrival < 1.0) {
         lantern.rotation.z = -right.shoulder.rotation.z + 0.07 * Math.sin(lanternTime * 2.2);
         const flame = smooth(lighting?.flame ?? 1) * (0.95 + 0.03 * Math.sin(lanternTime * 13) + 0.02 * Math.sin(lanternTime * 21));
         paper.emissiveIntensity = flame * 1.5;
-        lanternLight.intensity = flame * 8;
+        lanternLight.intensity = flame * 10;
       }
       if (stickState === "held") {
         // Keep each stick at a steady angle from the ground whatever the arm is doing.
