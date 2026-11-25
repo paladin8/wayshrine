@@ -4,6 +4,8 @@ import { lifeAt } from "../game";
 import type { Obstacle } from "../world";
 import { appendAnimalObstacles } from "./animal-collision";
 import { createAnimalModels, type AnimalKind, type AnimalModel } from "./animal-models";
+import { disposeObject } from "./dispose";
+import { buildMatsushimaLanterns } from "./floating-lanterns";
 import { extractPuffs, type Puffs } from "./landmark-effects";
 import type { ShrineMesh } from "./shrine-mesh";
 import { palette } from "./palette";
@@ -19,10 +21,10 @@ function modelUrl(id: string): string {
 
 /** Raw model files, fetched once; each landmark instance parses its own copy so it owns its materials. */
 const files = new Map<string, Promise<ArrayBuffer | null>>();
-function fetchModel(id: string): Promise<ArrayBuffer | null> {
-  let hit = files.get(id);
+function fetchModel(url: string): Promise<ArrayBuffer | null> {
+  let hit = files.get(url);
   if (!hit) {
-    hit = fetch(modelUrl(id), { cache: "no-cache" })
+    hit = fetch(url, { cache: "no-cache" })
       .then(async (r) => {
         if (!r.ok) return null;
         const buffer = await r.arrayBuffer();
@@ -30,7 +32,7 @@ function fetchModel(id: string): Promise<ArrayBuffer | null> {
         return new TextDecoder().decode(buffer.slice(0, 4)) === "glTF" ? buffer : null;
       })
       .catch(() => null);
-    files.set(id, hit);
+    files.set(url, hit);
   }
   return hit;
 }
@@ -161,6 +163,7 @@ export function buildLandmark(id: string): ShrineMesh {
   let lastAnimationTime = 0;
   let animals: readonly LandmarkAnimal[] = [];
   let puffs: Puffs | null = null;
+  let lanterns: ReturnType<typeof buildMatsushimaLanterns> | null = null;
 
   const apply = (): void => {
     const v = lifeAt(progress, 0);
@@ -173,7 +176,7 @@ export function buildLandmark(id: string): ShrineMesh {
     }
   };
 
-  void fetchModel(id).then((buffer) => {
+  void fetchModel(modelUrl(id)).then((buffer) => {
     if (!buffer) return;
     new GLTFLoader().parse(
       buffer,
@@ -204,6 +207,19 @@ export function buildLandmark(id: string): ShrineMesh {
         }
         poseLandmarkAnimals(animals, 0, 0);
         apply();
+        if (id === "matsushima") {
+          void fetchModel(`${import.meta.env.BASE_URL}models/title/toro.glb`).then(async (asset) => {
+            if (!asset || !group.parent) return;
+            const { scene } = await new GLTFLoader().parseAsync(asset, "");
+            const toro = scene.getObjectByName("toro");
+            if (!toro || !group.parent) {
+              disposeObject(scene);
+              return;
+            }
+            lanterns = buildMatsushimaLanterns(toro);
+            group.add(lanterns.group);
+          }).catch(() => undefined);
+        }
       },
       () => undefined,
     );
@@ -233,7 +249,9 @@ export function buildLandmark(id: string): ShrineMesh {
     },
     tick(seconds) {
       if (!model) stand.tick(seconds);
-      puffs?.update(seconds, lifeAt(progress, 0));
+      const vitality = lifeAt(progress, 0);
+      puffs?.update(seconds, vitality);
+      lanterns?.update(seconds, vitality);
       if (progress >= 1) {
         animationStart ??= seconds;
         const time = seconds - animationStart;

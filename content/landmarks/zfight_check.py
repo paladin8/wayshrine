@@ -95,11 +95,13 @@ def sunk(gh, gs, gg):
         x0 = min(n-2, int(fx)); z0 = min(n-2, int(fz)); tx = fx-x0; tz = fz-z0
         return gg[z0][x0]*(1-tx)*(1-tz) + gg[z0][x0+1]*tx*(1-tz) + gg[z0+1][x0]*(1-tx)*tz + gg[z0+1][x0+1]*tx*tz
     m = int(math.ceil(gh))
+    level = gg[0][0] if gg[0][0] < -0.01 else None     # a model ending in open water: its edge ring is the water level
     h = {}
     for x in range(-m, m):
         for z in range(-m, m):
             if max(abs(x+0.5), abs(z+0.5)) > gh-0.5: continue      # tiles at the edge belong to the blend
             h[(x, z)] = min(grid(x+0.5+i, z+0.5+j) for i in (-1, 0, 1) for j in (-1, 0, 1)) - MODEL_PAD
+            if level is not None: h[(x, z)] = min(h[(x, z)], level - 0.3)
     out = []
     up = Vector((0, 0, 1))
     for (x, z), t in h.items():

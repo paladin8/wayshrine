@@ -108,7 +108,7 @@ export const CAPABILITY_THRESHOLDS: Readonly<Record<Capability, number>> = {
 };
 
 /**
- * Pilgrim’s Wake restores dormant regions when the traveller enters them after 58 landmarks.
+ * After 58 landmark restorations, Pilgrim’s Wake restores dormant ordinary shrine regions on entry.
  * It opens no terrain, so it never affects where landmarks can be placed.
  */
 export const PILGRIMS_WAKE_STARS = 58;

@@ -21,6 +21,8 @@ export interface NotebookSource {
   readonly language: () => Locale;
   /** Takes the player to the landmark. The notebook closes first. */
   readonly onTravel: (id: string) => void;
+  /** Opens the star chart once the whole collection is complete. */
+  readonly onCompletion: () => void;
   /** Plays a sound as the book opens or a page turns. */
   readonly sound: (cue: "book-open" | "page-flip") => void;
 }
@@ -105,6 +107,10 @@ const CSS = `
 .nb-folio{position:absolute;bottom:clamp(8px,1.8vh,14px);left:0;right:0;text-align:center;font:13px ${HAND_EN};color:#9a8566;font-variant-numeric:tabular-nums}
 .nb-turn,.nb-x{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#2a1a14b8;color:#f1e3c4;font:20px/1 ${UI_FONT};border:1px solid #e2c58f55}
 .nb-turn:hover,.nb-x:hover{background:#2a1a14}
+.nb-chart{appearance:none;position:absolute;z-index:2;bottom:7px;left:50%;transform:translateX(-50%);min-height:32px;padding:3px 12px;border:1px solid #e2c58f77;border-radius:4px;background:#35251cee;color:#f1e3c4;cursor:pointer;font:16px/1.25 ${HAND_EN};white-space:nowrap}
+.nb-chart:lang(ja){font-family:${HAND_JA}}
+.nb-chart:hover,.nb-chart:focus-visible{background:#21170f;outline:none;border-color:#e2c58f}
+.nb-book.opening .nb-chart{visibility:hidden}
 .nb-turn[disabled]{opacity:.3;cursor:default}
 .nb-turn{position:absolute;bottom:clamp(6px,1.4vh,12px);z-index:2}
 .nb-turn.prev{left:clamp(8px,2vw,20px)}
@@ -278,17 +284,25 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
       spread.appendChild(buildPage(v, page + 1, "right"));
     }
 
-    const button = (cls: string, glyph: string, label: string, run: () => void): void => {
+    const button = (cls: string, glyph: string, label: string, run: () => void): HTMLButtonElement => {
       const b = el("button", cls, book);
       b.type = "button";
       b.textContent = glyph;
       b.title = label;
       b.setAttribute("aria-label", label);
       b.addEventListener("click", run);
+      return b;
     };
     button("nb-turn prev", "‹", t.notebook.prev, () => turn(-1));
     button("nb-turn next", "›", t.notebook.next, () => turn(1));
     button("nb-x", "×", t.notebook.close, close);
+    if (v.list.length === source.all.length && v.list.every((item) => item.restored)) {
+      const chart = button("nb-chart", t.completion.reopen, t.completion.reopen, () => {
+        close();
+        source.onCompletion();
+      });
+      chart.lang = v.language;
+    }
     updatePageButtons(v, per);
     opener.setAttribute("aria-expanded", String(open));
   }

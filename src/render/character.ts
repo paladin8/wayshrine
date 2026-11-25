@@ -31,6 +31,8 @@ export interface Character {
   setLanternLighting(lighting: LanternLighting | undefined): void;
   /** Crouch to strap on gear: 0 stands normally, 1 is fully crouched. `fuss` moves the hands about the feet. */
   setCrouch(amount: number, fuss: number): void;
+  /** Seated only: rest both hands on the lap, 0 to 1 (the default seated pose holds them out front). */
+  setLapRest(amount: number): void;
   dispose(): void;
 }
 
@@ -135,6 +137,7 @@ if (uShrineArrival < 1.0) {
   const BOOT_H = 0.075;
   const HIP_Y = THIGH + SHIN + BOOT_H;
   const pelvis = group(root, 0, HIP_Y, 0);
+  pelvis.name = "pelvis";
   mesh(new THREE.CylinderGeometry(shape.hip, shape.hip * 0.9, 0.14, 6), trousers, pelvis, 0, 0.0, 0);
 
   interface Leg {
@@ -375,6 +378,7 @@ if (uShrineArrival < 1.0) {
   let draw: number | null = null;
   let lighting: LanternLighting | undefined;
   let lanternTime = 0;
+  let lapRest = 0;
   const refreshSticks = (): void => placeSticks(gear === "climbing" ? "held" : "hidden");
   /** How far gear raises the feet, so the hips follow it. */
   const FOOT_LIFT: Readonly<Partial<Record<GearId, number>>> = { geta: 0.095, snowshoes: 0.03, ashSandals: 0.012 };
@@ -395,6 +399,9 @@ if (uShrineArrival < 1.0) {
     },
     setLanternLighting(next) {
       lighting = next;
+    },
+    setLapRest(amount) {
+      lapRest = amount;
     },
     setCrouch(amount, fussing) {
       crouch = amount;
@@ -435,6 +442,13 @@ if (uShrineArrival < 1.0) {
         arm.shoulder.rotation.x = lerp(ph * 0.8 * w, -0.7, t);
         arm.shoulder.rotation.z = (i === 0 ? -1 : 1) * 0.08;
         arm.elbow.rotation.x = lerp(-0.3 - 0.5 * Math.max(0, -ph) * w, -0.55, t);
+        if (lapRest > 0) {
+          // Upper arms close to the sides, forearms folded forward so the hands rest on the thighs.
+          const a = lapRest * t;
+          arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, 0.35, a);
+          arm.shoulder.rotation.z = lerp(arm.shoulder.rotation.z, (i === 0 ? -1 : 1) * 0.02, a);
+          arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -1.1, a);
+        }
       }
 
       const bob = (0.5 - 0.5 * Math.cos(phase * 2)) * 0.045 * w;

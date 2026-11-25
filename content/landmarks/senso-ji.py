@@ -139,7 +139,37 @@ box("roof",0,GY,3.15,3.28,1.25,0.12)
 L=GY-1.0     # the great lantern (chochin), hung forward of the front posts under the eave so it reads at the entrance
 prism("lantern",0,L,0.5,0.66,0.44,0.6,12,0); prism("lantern",0,L,0.66,1.82,0.6,0.6,12,0); prism("lantern",0,L,1.82,1.98,0.6,0.44,12,0)
 prism("black",0,L,0.3,0.52,0.46,0.46,12,0); prism("black",0,L,1.96,2.18,0.46,0.46,12,0)          # its broad black rims
-box("black",0,L-0.61,1.3,1.72,0.34,0.02); box("black",0,L-0.61,0.74,1.16,0.34,0.02)   # its two great characters
+# its two great characters, 雷門 (Thunder Gate), in bold simplified brush strokes laid on the lantern's facets:
+# u is the distance round the lantern from its front, v the height
+def on_lantern(u,v,off):
+    ph=-math.pi/2+u/0.6
+    k=round((ph-math.pi/12)/(math.pi/6)); d=ph-(math.pi/12+k*math.pi/6)       # angle from the nearest facet's centre
+    r=0.6*math.cos(math.pi/12)/math.cos(d)+off
+    return (r*math.cos(ph),L+r*math.sin(ph),v)
+def stroke(u0,v0,u1,v1,w=0.045):
+    n=max(1,int(math.hypot(u1-u0,v1-v0)/0.07)+1)
+    du,dv=u1-u0,v1-v0; ln=math.hypot(du,dv); pu,pv=-dv/ln*w/2,du/ln*w/2
+    for i in range(n):
+        a0,a1=i/n,(i+1)/n
+        q=[(u0+du*a0-pu,v0+dv*a0-pv),(u0+du*a1-pu,v0+dv*a1-pv),(u0+du*a1+pu,v0+dv*a1+pv),(u0+du*a0+pu,v0+dv*a0+pv)]
+        emit([on_lantern(u,v,-0.004) for u,v in q]+[on_lantern(u,v,0.012) for u,v in q],
+             [[0,1,2,3],[7,6,5,4],[0,4,5,1],[1,5,6,2],[2,6,7,3],[3,7,4,0]],["black"]*6)
+# 雷: the rain radical over a field
+stroke(-0.25,1.71,0.25,1.71)                                          # top stroke
+stroke(-0.30,1.53,-0.30,1.645); stroke(-0.30,1.645,0.30,1.645)       # the crown
+stroke(0.30,1.645,0.30,1.51); stroke(0.30,1.51,0.25,1.535,0.035)
+stroke(0.0,1.72,0.0,1.50)                                             # centre stroke
+for su in (-1,1):                                                     # the four drops
+    stroke(su*0.21,1.605,su*0.13,1.585,0.032); stroke(su*0.21,1.555,su*0.13,1.535,0.032)
+stroke(-0.22,1.47,-0.22,1.30); stroke(0.22,1.47,0.22,1.30)          # the field: 田
+stroke(-0.22,1.47,0.22,1.47); stroke(-0.22,1.385,0.22,1.385); stroke(-0.22,1.30,0.22,1.30)
+stroke(0.0,1.47,0.0,1.30,0.038)
+# 門: two leaves of a gate
+for su in (-1,1):
+    stroke(su*0.28,1.16,su*0.28,0.74)                                 # the posts
+    stroke(su*0.28,1.16,su*0.06,1.16); stroke(su*0.06,1.16,su*0.06,0.97,0.04)
+    stroke(su*0.28,1.075,su*0.06,1.075,0.035); stroke(su*0.28,0.985,su*0.06,0.985,0.035)
+stroke(0.28,0.74,0.22,0.775,0.035)                                    # the hook at the foot
 box("black",0,(L+GY-0.75)/2,2.18,2.3,0.05,(GY-0.75-L)/2+0.05)                         # hung from the front beam
 
 # ---- Nakamise-dori: long rows of little shops either side of the street, vermilion shutters under green roofs,

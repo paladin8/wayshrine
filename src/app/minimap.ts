@@ -1,19 +1,34 @@
-import { isExplored, isRestored, type GameState } from "../game";
-import { palette } from "../render";
-import { REGION_SIZE, type Biome, type Monument, type Point, type Region, type World } from "../world";
+import { capabilitiesOf, isExplored, isLandmarkRevealed, isRestored, type GameState } from "../game";
+import { BIOMES, BIOME_REQUIRES, REGION_SIZE, canTraverse, type Biome, type Capability, type Monument, type Point, type Region, type World } from "../world";
 import { UI_FONT, setText } from "./style";
 
 const SMALL_SIZE = 168;
 /** World units per map pixel in the corner map: about five regions across. */
 const SMALL_SCALE = 2;
+/** The expanded map opens at this zoom (world units per pixel): centred on what is explored when that fits, else on the player. */
+const MAX_FIT_SCALE = 1;
+/** Zooming out past these hides detail: first the (debug) monuments, then the ordinary shrines. Landmark stars always stay. */
+const HIDE_MONUMENTS_SCALE = 1.2;
+const HIDE_SHRINES_SCALE = 2;
 const FOG = [0x3a, 0x34, 0x34] as const;
 const DEAD_GREY = [0x8c, 0x8c, 0x88] as const;
+/** How far an unrestored region is drained toward grey: enough to read as asleep, not enough to lose its biome. */
+const DEAD_DRAIN = 0.4;
 
+/**
+ * The map's own biome colours, chosen to tell the biomes apart at a glance (they differ from the
+ * game's palette, where marsh and meadow, or water and sea, are close).
+ */
 const BIOME_HEX: Readonly<Record<Biome, number>> = {
-  meadow: palette.grass,
-  water: palette.water,
-  snow: palette.snow,
-  mountain: palette.rock,
+  meadow: 0x84b567,
+  water: 0x3fb2bd,
+  snow: 0xf1f4f6,
+  mountain: 0x9c8f86,
+  marsh: 0xb5b04a,
+  forest: 0x2c6b45,
+  volcanic: 0xa5503a,
+  sea: 0x24509a,
+  dunes: 0xe6c987,
 };
 
 type RGB = readonly [number, number, number];
@@ -24,7 +39,7 @@ const mix = (a: RGB, b: RGB, t: number): RGB => [
   a[2] + (b[2] - a[2]) * t,
 ];
 
-/** A five-point star: gold until the landmark is restored, then the shrine red. */
+/** A five-point star: gold until the landmark is restored, then the shrine red with a light outline. */
 function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, restored: boolean): void {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
@@ -33,9 +48,33 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
     ctx.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
   }
   ctx.closePath();
-  ctx.fillStyle = restored ? "#d96b59" : "#ffd23f";
+  if (restored) {
+    // A dark outer edge and a cream inner one keep the red readable on warm biomes like the volcanic one.
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#2a2424";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.strokeStyle = "#f6ead2";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = "#e04b3a";
+    ctx.fill();
+    return;
+  }
+  ctx.fillStyle = "#ffd23f";
   ctx.fill();
-  ctx.strokeStyle = restored ? "#ffe9a8" : "#2a2424";
+  ctx.strokeStyle = "#2a2424";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawShrineDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, restored: boolean): void {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = restored ? "#d96b59" : "#7a726a";
+  ctx.fill();
+  if (restored) return;
+  ctx.strokeStyle = "#cfc8b8";
   ctx.lineWidth = 1.5;
   ctx.stroke();
 }
@@ -43,7 +82,7 @@ function drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, r: number
 export interface MapInput {
   readonly pos: Point;
   readonly state: GameState;
-  /** The shrine the compass is pointing at, if any. */
+  /** The nearest reachable unrestored shrine, marked on the map, if any. */
   readonly target: Region | null;
   /** False hides the map entirely (a player setting). */
   readonly visible: boolean;
@@ -52,7 +91,15 @@ export interface MapInput {
   /** Debug only: any explored shrine can be travelled to, not just restored ones. */
   readonly travelToAny?: boolean;
   /** The corner hint, in the player's language. */
-  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string };
+  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };
+  /** Names for the legend of the expanded map, in the player's language. */
+  readonly names: {
+    /** A landmark's name, in the current language. */
+    readonly landmark: (id: string) => string;
+    readonly terrain: Readonly<Record<Biome, string>>;
+    readonly capability: Readonly<Record<Capability, string>>;
+    readonly needs: (gear: string) => string;
+  };
 }
 
 /** A shrine the player can travel to from the expanded map, in canvas pixels. */
@@ -65,20 +112,35 @@ interface Waypoint {
 export interface Minimap {
   update(input: MapInput): void;
   toggleExpanded(): void;
+  isExpanded(): boolean;
 }
 
 const CSS = `
 .map{position:fixed;pointer-events:none;border-radius:14px;overflow:hidden;border:2px solid #fffaf0cc;box-shadow:0 2px 12px #0004;background:#3a3434}
 .map.small{right:14px;bottom:14px}
-.map.large{pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
+.map-zoom{position:fixed;bottom:14px;right:calc(14px + 172px + 8px);width:34px;height:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid #2a242422;background:#fffaf0cc;color:#2a2424;font:600 15px/1 ${UI_FONT};cursor:pointer;pointer-events:auto}
+.map-zoom:hover{background:#fffaf0}
+.map-zoom.alone{right:14px}
+.map.large{z-index:3;pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
 .map canvas.travel{cursor:pointer}
 .map .hint{position:absolute;left:8px;bottom:6px;font:11px ${UI_FONT};color:#f2ede0;opacity:.8}
+.map .legend{position:absolute;left:10px;top:10px;display:none;flex-direction:column;gap:4px;padding:8px 10px;border-radius:10px;background:#2a2424d9;font:12px ${UI_FONT};color:#f2ede0;pointer-events:none}
+.map.large .legend{display:flex}
+.map .legend div{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.map .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #fffaf099}
+.map .legend .sw.blocked{background-image:repeating-linear-gradient(45deg,#0000 0 3px,#2a2424b3 3px 5px)}
+.map .legend .need{opacity:.75;display:none}
+.map.large .legend{pointer-events:auto}
+.map .legend:hover .need{display:inline}
+.map.large canvas{cursor:grab;touch-action:none}
+.map.large canvas.travel{cursor:pointer}
+.map.large canvas.dragging{cursor:grabbing}
 `;
 
 /**
  * A region-level map. The corner map follows the player; the expanded map fits
- * everything explored so far. It is drawn in screen orientation (the same
+ * explored regions and revealed landmarks. It is drawn in screen orientation (the same
  * rotated view as the game), and unexplored regions stay fogged.
  */
 export function createMinimap(
@@ -88,6 +150,8 @@ export function createMinimap(
   basis: (right: number, up: number) => Point,
   /** Called when the player clicks a shrine on the expanded map. */
   onTravel: (region: Region) => void,
+  /** Called by the zoom-out button beside the corner map. */
+  onZoom: () => void = () => {},
 ): Minimap {
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -99,8 +163,19 @@ export function createMinimap(
   const ctx = canvas.getContext("2d")!;
   const hint = document.createElement("div");
   hint.className = "hint";
-  frame.append(canvas, hint);
+  const legend = document.createElement("div");
+  legend.className = "legend";
+  frame.append(canvas, legend, hint);
   container.appendChild(frame);
+  const zoom = document.createElement("button");
+  zoom.type = "button";
+  zoom.className = "map-zoom";
+  zoom.textContent = "Z";
+  zoom.addEventListener("click", () => {
+    onZoom();
+    zoom.blur(); // hand the keyboard back to the game
+  });
+  container.appendChild(zoom);
 
   let shown = true;
   const sample = document.createElement("canvas");
@@ -109,6 +184,12 @@ export function createMinimap(
   const R = basis(1, 0);
   const F = basis(0, 1);
   let expanded = false;
+  /** The expanded map's view, as an offset from the auto-fit view (screen-space world units) and a zoom factor. */
+  let panU = 0;
+  let panV = 0;
+  let zoomK = 1;
+  /** The view the last expanded draw used: centre (screen-space u, v) and world units per pixel, and the auto-fit it started from. */
+  let view = { u: 0, v: 0, scale: 1, fitU: 0, fitV: 0, fitScale: 1 };
   let lastKey = "";
   let waypoints: Waypoint[] = [];
   let hovered: Waypoint | null = null;
@@ -117,11 +198,44 @@ export function createMinimap(
   const regionRgb = (r: Region, state: GameState): RGB => {
     if (!isExplored(state, r)) return FOG;
     const alive = rgb(BIOME_HEX[r.biome]);
-    return isRestored(state, r) ? alive : mix(alive, DEAD_GREY, 0.8);
+    return isRestored(state, r) ? alive : mix(alive, DEAD_GREY, DEAD_DRAIN);
   };
+
+  /** The legend: each biome seen so far, and the gear a blocked one needs. Rebuilt only when it changes. */
+  let legendKey = "";
+  function updateLegend(input: MapInput): void {
+    const caps = capabilitiesOf(input.state, world);
+    const seen = new Set<Biome>(["meadow"]);
+    for (const id of input.state.explored) seen.add(world.regionById(id).biome);
+    const rows = BIOMES.filter((b) => seen.has(b)).map((b) => ({ b, blocked: !canTraverse(b, caps) }));
+    const key = [...rows.map((r) => `${r.b}${r.blocked ? "!" : ""}`), input.names.terrain.meadow, input.names.needs("")].join("|");
+    if (key === legendKey) return;
+    legendKey = key;
+    legend.replaceChildren(
+      ...rows.map(({ b, blocked }) => {
+        const row = document.createElement("div");
+        const swatch = document.createElement("span");
+        swatch.className = blocked ? "sw blocked" : "sw";
+        swatch.style.backgroundColor = `#${BIOME_HEX[b].toString(16).padStart(6, "0")}`;
+        const name = document.createElement("span");
+        name.textContent = input.names.terrain[b];
+        row.append(swatch, name);
+        const gear = BIOME_REQUIRES[b];
+        if (blocked && gear) {
+          const need = document.createElement("span");
+          need.className = "need";
+          need.textContent = input.names.needs(input.names.capability[gear]);
+          row.append(need);
+        }
+        return row;
+      }),
+    );
+  }
 
   function draw(input: MapInput, size: number, block: number): void {
     const { pos, state, target } = input;
+    const caps = capabilitiesOf(state, world);
+    const markedLandmarks = world.landmarks.filter((region) => isLandmarkRevealed(state, region) || isRestored(state, region));
     // View: centre (ground point) and scale (world units per pixel).
     let centre: Point = pos;
     let scale = SMALL_SCALE;
@@ -134,13 +248,24 @@ export function createMinimap(
         minV = Math.min(minV, v); maxV = Math.max(maxV, v);
       };
       include(pos);
-      for (const id of state.explored) include(world.regionById(id).site);
-      // Landmarks are always on the map, so the player can go and find them.
-      for (const l of world.landmarks) include(l.site);
+      for (const id of state.explored) include(world.regionById(id).shrine);
+      for (const landmark of markedLandmarks) {
+        if (!state.explored.has(landmark.id)) include(landmark.shrine);
+      }
       const span = Math.max(maxU - minU, maxV - minV) + REGION_SIZE * 1.6;
-      scale = Math.max(span / size, 1.2);
-      const u = (minU + maxU) / 2;
-      const v = (minV + maxV) / 2;
+      let fitScale = Math.max(span / size, MAX_FIT_SCALE);
+      let fitU = (minU + maxU) / 2;
+      let fitV = (minV + maxV) / 2;
+      if (fitScale > MAX_FIT_SCALE) {
+        // Too much explored to show at once: stay at a readable size, centred on the player.
+        fitScale = MAX_FIT_SCALE;
+        fitU = pos.x * R.x + pos.z * R.z;
+        fitV = pos.x * F.x + pos.z * F.z;
+      }
+      scale = fitScale / zoomK;
+      const u = fitU + panU;
+      const v = fitV + panV;
+      view = { u, v, scale, fitU, fitV, fitScale };
       centre = { x: u * R.x + v * F.x, z: u * R.z + v * F.z };
     }
 
@@ -161,10 +286,12 @@ export function createMinimap(
           c = regionRgb(r, state);
           colours.set(r.id, c);
         }
+        // Ground the player cannot cross yet is hatched, so a wall reads as a wall.
+        const hatch = isExplored(state, r) && !canTraverse(r.biome, caps) && (i + j) % 4 === 0 ? 0.62 : 1;
         const k = (j * n + i) * 4;
-        image.data[k] = c[0];
-        image.data[k + 1] = c[1];
-        image.data[k + 2] = c[2];
+        image.data[k] = c[0] * hatch;
+        image.data[k + 1] = c[1] * hatch;
+        image.data[k + 2] = c[2] * hatch;
         image.data[k + 3] = 255;
       }
     }
@@ -199,61 +326,25 @@ export function createMinimap(
     const dotR = expanded ? 4.5 : 3.5;
     waypoints = [];
     for (const id of state.explored) {
+      if (expanded && scale > HIDE_SHRINES_SCALE) break;
       const r = world.regionById(id);
-      const [x, y] = project(r.site);
+      if (r.landmark) continue; // landmark markers are drawn below
+      const [x, y] = project(r.shrine);
       if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
       if (expanded && (input.travelToAny || isRestored(state, r))) waypoints.push({ x, y, region: r });
-      if (r.landmark) continue; // drawn as a star below
-      ctx.beginPath();
-      ctx.arc(x, y, dotR, 0, Math.PI * 2);
-      if (isRestored(state, r)) {
-        ctx.fillStyle = "#d96b59";
-        ctx.fill();
-        ctx.strokeStyle = "#ffe9a8";
-      } else {
-        ctx.fillStyle = "#2a2424";
-        ctx.fill();
-        ctx.strokeStyle = "#cfc8b8";
-      }
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      drawShrineDot(ctx, x, y, dotR, isRestored(state, r));
     }
-    // Landmarks: always shown, explored or not (shrine beacons will gate this later).
     const starR = expanded ? 9 : 7;
-    const offscreen: Array<{ x: number; y: number; d: number }> = [];
-    for (const r of world.landmarks) {
-      const [x, y] = project(r.site);
-      const done = isRestored(state, r);
-      if (x < -starR || y < -starR || x > size + starR || y > size + starR) {
-        if (!done) offscreen.push({ x, y, d: Math.hypot(r.site.x - pos.x, r.site.z - pos.z) });
-        continue;
-      }
-      drawStar(ctx, x, y, starR, done);
-    }
-    // In the corner map, point toward the nearest landmarks beyond the edge.
-    if (!expanded) {
-      offscreen.sort((a, b) => a.d - b.d);
-      for (const o of offscreen.slice(0, 3)) {
-        const dx = o.x - size / 2;
-        const dy = o.y - size / 2;
-        const k = (size / 2 - 9) / Math.max(Math.abs(dx), Math.abs(dy));
-        const ax = size / 2 + dx * k;
-        const ay = size / 2 + dy * k;
-        const a = Math.atan2(dy, dx);
-        ctx.beginPath();
-        ctx.moveTo(ax + Math.cos(a) * 6, ay + Math.sin(a) * 6);
-        ctx.lineTo(ax + Math.cos(a + 2.5) * 6, ay + Math.sin(a + 2.5) * 6);
-        ctx.lineTo(ax + Math.cos(a - 2.5) * 6, ay + Math.sin(a - 2.5) * 6);
-        ctx.closePath();
-        ctx.fillStyle = "#ffd23f";
-        ctx.fill();
-        ctx.strokeStyle = "#2a2424";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
+    for (const r of markedLandmarks) {
+      const [x, y] = project(r.shrine);
+      if (x < -starR || y < -starR || x > size + starR || y > size + starR) continue;
+      const restored = isRestored(state, r);
+      if (expanded && (restored || input.travelToAny)) waypoints.push({ x, y, region: r });
+      drawStar(ctx, x, y, starR, restored);
     }
     // Debug: monuments in restored regions as diamonds, bright until read.
     for (const m of input.monuments ?? []) {
+      if (expanded && scale > HIDE_MONUMENTS_SCALE) break;
       if (!state.restored.has(m.regionId)) continue;
       const [x, y] = project(m);
       if (x < -8 || y < -8 || x > size + 8 || y > size + 8) continue;
@@ -273,15 +364,37 @@ export function createMinimap(
     if (hovered) {
       const h = waypoints.find((w) => w.region.id === hovered?.region.id);
       if (h) {
+        // A cream ring over a dark one, so it reads on pale snow and dark forest alike.
+        const ringR = (h.region.landmark ? starR : dotR) + 2.5;
         ctx.beginPath();
-        ctx.arc(h.x, h.y, dotR + 3.5, 0, Math.PI * 2);
+        ctx.arc(h.x, h.y, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = "#2a2424";
+        ctx.lineWidth = 4;
+        ctx.stroke();
         ctx.strokeStyle = "#fffaf0";
         ctx.lineWidth = 2;
         ctx.stroke();
+        if (h.region.landmark && isRestored(state, h.region)) {
+          // A restored landmark's name, on a small plate above it (below it when too near the top edge).
+          const label = input.names.landmark(h.region.landmark.id);
+          ctx.font = `600 13px ${UI_FONT}`;
+          const w = ctx.measureText(label).width + 16;
+          const x = Math.min(size - w / 2 - 6, Math.max(w / 2 + 6, h.x));
+          const above = h.y - starR - 12 > 22;
+          const y = above ? h.y - starR - 12 : h.y + starR + 12;
+          ctx.fillStyle = "#2a2424ee";
+          ctx.beginPath();
+          ctx.roundRect(x - w / 2, y - 11, w, 22, 6);
+          ctx.fill();
+          ctx.fillStyle = "#f2ede0";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, x, y + 0.5);
+        }
       }
     }
-    if (target) {
-      const [x, y] = project(target.site);
+    if (target && (!target.landmark || isLandmarkRevealed(state, target))) {
+      const [x, y] = project(target.shrine);
       ctx.beginPath();
       ctx.arc(x, y, dotR + 4, 0, Math.PI * 2);
       ctx.strokeStyle = "#ffe9a8";
@@ -319,7 +432,75 @@ export function createMinimap(
     }
     return best;
   };
+  // Google-Maps-style navigation: drag to pan, wheel to zoom about the cursor.
+  let redrawQueued = false;
+  const redraw = (): void => {
+    if (redrawQueued) return;
+    redrawQueued = true;
+    requestAnimationFrame(() => {
+      redrawQueued = false;
+      if (expanded && lastInput) draw(lastInput, lastSize, zoomK > 2.5 ? 3 : 4);
+    });
+  };
+  const toCanvas = (e: MouseEvent): [number, number] => {
+    const box = canvas.getBoundingClientRect();
+    return [((e.clientX - box.left) / box.width) * canvas.width, ((e.clientY - box.top) / box.height) * canvas.height];
+  };
+  const maxScale = (): number => Math.max(view.fitScale * 2.5, 6);
+  const setView = (u: number, v: number, scale: number): void => {
+    const clamped = Math.max(0.25, Math.min(maxScale(), scale));
+    panU = u - view.fitU;
+    panV = v - view.fitV;
+    zoomK = view.fitScale / clamped;
+  };
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      if (!expanded) return;
+      e.preventDefault();
+      const [x, y] = toCanvas(e);
+      const half = canvas.width / 2;
+      const uAt = view.u + (x - half) * view.scale;
+      const vAt = view.v + (half - y) * view.scale;
+      const next = Math.max(0.25, Math.min(maxScale(), view.scale * Math.exp(e.deltaY * 0.0015)));
+      view = { ...view, scale: next, u: uAt - (x - half) * next, v: vAt - (half - y) * next };
+      setView(view.u, view.v, next);
+      redraw();
+    },
+    { passive: false },
+  );
+  let drag: { id: number; x: number; y: number; moved: boolean } | null = null;
+  let suppressClick = false;
+  canvas.addEventListener("pointerdown", (e) => {
+    if (!expanded || e.button !== 0) return;
+    const [x, y] = toCanvas(e);
+    drag = { id: e.pointerId, x, y, moved: false };
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const [x, y] = toCanvas(e);
+    if (!drag.moved) {
+      if (Math.hypot(x - drag.x, y - drag.y) < 4) return;
+      drag.moved = true;
+      canvas.setPointerCapture(e.pointerId);
+      canvas.classList.add("dragging");
+      hovered = null;
+    }
+    setView(view.u - (x - drag.x) * view.scale, view.v + (y - drag.y) * view.scale, view.scale);
+    drag.x = x;
+    drag.y = y;
+    redraw();
+  });
+  const endDrag = (e: PointerEvent): void => {
+    if (!drag || e.pointerId !== drag.id) return;
+    suppressClick = drag.moved;
+    drag = null;
+    canvas.classList.remove("dragging");
+  };
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
   canvas.addEventListener("mousemove", (e) => {
+    if (drag?.moved) return;
     const next = hit(e);
     canvas.classList.toggle("travel", next !== null);
     if (next?.region.id === hovered?.region.id) return;
@@ -332,35 +513,48 @@ export function createMinimap(
     if (lastInput) draw(lastInput, lastSize, 4);
   });
   canvas.addEventListener("click", (e) => {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
     const target = hit(e);
     if (target) onTravel(target.region);
   });
 
   return {
+    isExpanded: () => expanded,
     toggleExpanded() {
       if (!shown) return; // the key does nothing while the map is hidden
       expanded = !expanded;
       frame.className = expanded ? "map large" : "map small";
+      zoom.style.display = expanded ? "none" : "";
       hovered = null;
       lastKey = "";
+      panU = 0;
+      panV = 0;
+      zoomK = 1;
+      drag = null;
     },
     update(input) {
       shown = input.visible;
       frame.style.display = shown ? "" : "none";
+      zoom.classList.toggle("alone", !shown);
+      zoom.style.display = expanded ? "none" : "";
+      zoom.title = input.labels.zoom;
+      zoom.setAttribute("aria-label", input.labels.zoom);
       if (!shown) return;
       setText(hint, expanded ? `${input.labels.close} · ${input.labels.travel}` : input.labels.expand);
       const size = expanded ? Math.max(240, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.78)) : SMALL_SIZE;
+      if (expanded) updateLegend(input);
       const key = [
         expanded,
         size,
-        input.state.restored.size,
-        input.state.explored.size,
-        input.state.collected.length,
+        input.travelToAny ?? false,
         input.monuments?.length ?? 0,
         input.target?.id ?? "",
       ].join("|");
       const moved = Math.hypot(input.pos.x - lastPos.x, input.pos.z - lastPos.z);
-      if (key === lastKey && moved < 2) return;
+      if (key === lastKey && lastInput?.state === input.state && lastInput.names.terrain === input.names.terrain && moved < 2) return;
       lastKey = key;
       lastPos = input.pos;
       lastInput = input;

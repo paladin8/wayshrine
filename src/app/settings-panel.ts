@@ -78,7 +78,7 @@ export function createSettingsPanel(
   const title = el("h2", undefined, head);
   const closeButton = el("button", "sp-x", head);
   closeButton.type = "button";
-  closeButton.textContent = "×";
+  closeButton.textContent = "✕";
 
   const howHeading = el("h3", undefined, card);
   const howBody = el("div", "sp-howto", card);

@@ -64,13 +64,16 @@ export const SURFACE_PAD = 0.01;
  * neighbours, less MODEL_PAD. Sunk tiles are flat, so where the model's ground steps the terrain steps too, in a cliff
  * on a tile line; taking the lowest neighbour keeps that cliff below the model's ground on both sides, where it would
  * otherwise rise into a model wall standing on the same line and z-fight with it (Fushimi Inari's gate platform).
+ * In a water region it also stays well under the sea the model draws just below the water level, which would
+ * otherwise meet a sunk tile in the same plane near the shore (Naruto).
  */
-function sunkUnder(model: LandmarkGround, dx: number, dz: number): number {
+function sunkUnder(region: Region, model: LandmarkGround, dx: number, dz: number): number {
   let low = Infinity;
   for (let i = -1; i <= 1; i++) {
     for (let j = -1; j <= 1; j++) low = Math.min(low, surfaceHeight(model, dx + i, dz + j));
   }
-  return low - MODEL_PAD;
+  const level = landmarkWaterLevel(region.biome);
+  return level === undefined ? low - MODEL_PAD : Math.min(low - MODEL_PAD, level - 0.3);
 }
 
 export interface Tile {
@@ -227,7 +230,7 @@ export function createTerrain(world: World): Terrain {
         height = plateauBase(region) + surfaceHeight(model, dx, dz) - SURFACE_PAD;
         skirt = true;
       } else {
-        height = model ? plateauBase(region) + sunkUnder(model, dx, dz) : PLATEAU_HEIGHT[biome];
+        height = model ? plateauBase(region) + sunkUnder(region, model, dx, dz) : PLATEAU_HEIGHT[biome];
       }
     } else if (region.landmark && away < LANDMARK_BLEND) {
       // Ease from the footprint's edge height to natural ground, so it never stands as a wall.

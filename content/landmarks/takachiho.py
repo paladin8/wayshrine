@@ -146,8 +146,8 @@ for row,(u,t0) in enumerate(((-1.2,0.1),(-1.95,0.3),(-2.75,0.2))):
         column(u+uc(v)+(rng.uniform(-0.25,0.2) if row==0 else rng.uniform(-0.06,0.06)),v,t0+rng.uniform(-0.25,0.35),r=0.46 if row==0 else 0.5)
 # near side: basalt cliffs rise at both ends, so the river runs confined between walls; in the middle a lower break
 # (a slope of forest floor down to broken columns at the waterline) keeps the falls and a boat in view
-VC=-2.0
-def cliff(v): return smooth(2.5,3.6,abs(v-VC))
+VC=-1.6
+def cliff(v): return smooth(2.9,4.0,abs(v-VC))     # a notch in the near rim, centred between the falls and the middle
 for va,vb in zip(vs,vs[1:]):
     ca,cb=cliff(va),cliff(vb)
     if ca<0.05 and cb<0.05: continue
@@ -191,7 +191,7 @@ def boat(v,ang,col):
     u=uc(v); x,y=to_xy(u,v); T=dict(cx=x,cy=y,cz=WZ,rot=math.pi/4+ang)
     solid([[(-0.75,-0.18,0.0),(0.75,-0.18,0.0),(0.75,0.18,0.0),(-0.75,0.18,0.0)],[(-0.95,-0.3,0.22),(0.95,-0.3,0.22),(0.95,0.3,0.22),(-0.95,0.3,0.22)]],col,T)
     box("foam",0.0,0,0.22,0.27,0.82,0.25,T); box(col,0.0,0,0.27,0.33,0.1,0.25,T); box(col,0.15,0,0.3,0.55,0.1,0.1,T); ico("leaf" if False else "boat",0.15,0,0.62,0.08,0.08,0.08,T)
-boat(-4.6,0.3,"boat"); boat(0.6,-0.2,"boat"); boat(2.8,0.15,"boat")
+boat(-4.1,0.3,"boat"); boat(-1.35,-0.15,"boat"); boat(1.0,0.2,"boat")   # all in the notch's view; the middle one framed by the falls and the dark wall
 
 # ---- the forest on the rims: tall broadleaf trees and cedars beyond the far wall, lower growth and ferns on the near
 def tree(x,y,s,m):
@@ -213,13 +213,13 @@ for _ in range(3000):
     pts.append((x,y))
     if len(pts)>=22: break
 for k,(x,y) in enumerate(pts): tree(x,y,rng.uniform(0.9,1.2),"leafdk" if k%3==0 else "leaf")
-for u,v,s in [(6.4,-8.0,0.8),(6.6,7.0,0.8),(8.0,-3.2,0.7),(5.6,9.0,0.75)]:
+for u,v,s in [(6.4,-8.0,0.8),(6.6,7.0,0.8),(8.2,-7.0,0.7),(5.6,9.0,0.75)]:   # none in front of the notch
     x,y=to_xy(u,v)
     if abs(x)<FH-1.2 and abs(y)<FH-1.2: tree(x,y,s,"leaf")
 for _ in range(26):
     while True:
         u,v=rng.uniform(-12,9),rng.uniform(-11,11); x,y=to_xy(u,v)
-        if abs(x)<FH-0.8 and abs(y)<FH-0.8 and (u<-3.6 or u>2.4): break
+        if abs(x)<FH-0.8 and abs(y)<FH-0.8 and (u<-3.6 or u>2.4) and not (u<6.5 and abs(v-VC)<3.2): break
     fern(x,y,rng.uniform(0.7,1.05))
 
 def ground_at(x,y):

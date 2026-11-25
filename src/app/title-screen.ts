@@ -1,4 +1,5 @@
 import type { Music } from "../audio";
+import { createTitleScene } from "../render";
 import { messagesFor } from "./i18n";
 import { createSettingsPanel } from "./settings-panel";
 import { randomSeed, type SaveSlot, type SaveStore } from "./saves";
@@ -8,7 +9,7 @@ import { UI_FONT, setText } from "./style";
 /**
  * The game's logo: set this to an image URL (such as "/images/logo.png") and it replaces the placeholder box.
  */
-export const LOGO_URL: string | null = null;
+export const LOGO_URL: string | null = `${import.meta.env.BASE_URL}images/wayshrine-logo.png`;
 
 export interface TitleScreen {
   /** Resolves with the journey the player chose to begin or resume. */
@@ -29,16 +30,35 @@ const TITLE_TRACK = "homeward-breeze";
 const INK = "#2a2424";
 const RED = "#d96b59";
 
+const WASHI_FIBRES = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85 .35' numOctaves='3' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .52  0 0 0 0 .40  0 0 0 0 .26  0 0 0 .26 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")";
+
 const CSS = `
-.ts-root{position:fixed;inset:0;overflow:hidden;background:#f2ede0;font:14px/1.4 ${UI_FONT};color:${INK};z-index:5}
+@font-face{font-family:"Cormorant Garamond";font-style:italic;font-weight:600;src:url("${import.meta.env.BASE_URL}fonts/cormorant-garamond-600-italic.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Yuji Syuku";src:url("${import.meta.env.BASE_URL}fonts/yuji-syuku.woff2") format("woff2");font-display:swap}
+.ts-root{--ts-font:"Cormorant Garamond","Iowan Old Style","Palatino Linotype",Georgia,serif;--ts-track:.03em;--ts-size:23px;font-style:italic;font-weight:600;position:fixed;inset:0;overflow:hidden;background:linear-gradient(#e9b9aa,#f7d9c2 55%,#f8e9d6);font:14px/1.4 ${UI_FONT};color:${INK};z-index:5}
+.ts-root:lang(ja){--ts-font:"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif;--ts-track:.14em;--ts-size:18px;font-style:normal;font-weight:400}
 .ts-scene{position:absolute;inset:0;width:100%;height:100%}
 .ts-ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3.4vh,34px);padding:16px;box-sizing:border-box}
-.ts-logo{width:min(440px,84vw);min-height:clamp(72px,16vh,132px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;border:2px dashed #2a242466;border-radius:14px;background:#fffaf0aa;padding:10px 18px;text-align:center}
-.ts-logo .ts-name{font:600 clamp(28px,6.4vh,52px)/1 Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;letter-spacing:.32em;padding-left:.32em}
+.ts-logo{width:min(484px,84vw);min-height:clamp(72px,16vh,132px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;border:2px dashed #2a242466;border-radius:14px;background:#fffaf0aa;padding:10px 18px;text-align:center}
+.ts-logo .ts-name{font:italic 600 clamp(26px,min(8vh,9vw),64px)/1 "Cormorant Garamond","Iowan Old Style",Georgia,serif;letter-spacing:.06em}
 .ts-logo .ts-note{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.5}
 .ts-logo img{display:block;max-width:100%;max-height:clamp(90px,24vh,200px)}
-.ts-logo.has-image{border:0;background:none;padding:0}
-.ts-panel{width:min(340px,calc(100vw - 32px));box-sizing:border-box;padding:18px 20px 20px;border-radius:16px;background:#fffaf0;border:1px solid #2a242433;box-shadow:0 8px 32px #0005;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 220px);overflow:auto}
+.ts-logo.has-image{border:0;background:none;padding:0;min-height:0}
+.ts-logo img{filter:drop-shadow(0 1px 0 #fff6e6aa) drop-shadow(0 0 14px #fff1dc99)}
+.ts-panel{position:relative;width:min(340px,calc(100vw - 32px));box-sizing:border-box;padding:34px 26px 32px;background:${WASHI_FIBRES},linear-gradient(#f8f1e0,#f3e9d2);color:${INK};font-family:var(--ts-font);box-shadow:0 14px 34px #3a22184d,inset 0 0 0 1px #8a654033,inset 0 0 26px #b8946020;display:flex;flex-direction:column;gap:2px}
+.ts-panel::before,.ts-panel::after{content:"";position:absolute;left:-11px;right:-11px;height:15px;border-radius:8px;background:linear-gradient(#8a6a4a,#5a4030 55%,#3b2a1f);box-shadow:0 3px 7px #2a1a1470}
+.ts-panel::before{top:-9px}
+.ts-panel::after{bottom:-9px}
+.ts-root .ts-panel .ts-btn{border:0;border-radius:0;background:transparent;padding:10px 8px 9px;font-size:var(--ts-size);letter-spacing:var(--ts-track);position:relative}
+.ts-root .ts-panel .ts-btn+.ts-btn{background-image:linear-gradient(90deg,#0000,#5a443655 18%,#5a443655 82%,#0000);background-size:100% 1px;background-repeat:no-repeat;background-position:top}
+.ts-root .ts-panel .ts-btn small{font-size:max(12px,calc(var(--ts-size) - 8px));letter-spacing:.08em;opacity:.62}
+.ts-root .ts-panel .ts-btn:hover,.ts-panel .ts-btn:focus-visible{background-color:#d96b5920;color:#a93a2f;outline:none}
+.ts-root .ts-panel .ts-btn:hover::before,.ts-panel .ts-btn:focus-visible::before{content:"";position:absolute;left:12px;top:50%;width:9px;height:9px;margin-top:-4px;background:#c8473a;border-radius:2px;transform:rotate(45deg)}
+.ts-root .ts-panel .ts-btn.primary{background-color:transparent;color:#a93a2f}
+.ts-root .ts-panel .ts-btn.primary::after{content:"";position:absolute;right:12px;top:50%;width:11px;height:11px;margin-top:-5px;border-radius:3px;background:#c8473a;box-shadow:inset 0 0 0 2px #f8f1e0,inset 0 0 0 3px #c8473a}
+.ts-root .ts-panel .ts-btn.quiet{color:#5a4436}
+.ts-root .ts-panel .ts-btn.quiet:hover,.ts-panel .ts-btn.quiet:focus-visible{background-color:#5a443614;color:${INK}}
+.ts-panel .ts-loading{margin:0;text-align:center;font-size:var(--ts-size);letter-spacing:var(--ts-track)}
 .ts-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:9px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;text-align:center;font-size:14px}
 .ts-btn small{font-size:12px;opacity:.6}
 .ts-btn:hover,.ts-btn:focus-visible{background:#f6efe2}
@@ -48,6 +68,29 @@ const CSS = `
 .ts-btn[disabled]{opacity:.4;cursor:default;pointer-events:none}
 .ts-btn.quiet{background:transparent;border-color:transparent}
 .ts-btn.quiet:hover,.ts-btn.quiet:focus-visible{background:#2a242414}
+/* the dialogs: the same washi paper, with the rods as bands at the top and bottom */
+.ts-root .sp-overlay{background:#2a242466;font-family:var(--ts-font);font-size:calc(var(--ts-size) - 3px)}
+.ts-root .sp-card{width:min(600px,calc(100vw - 32px));border:0;border-radius:6px;padding:40px 26px 38px;color:${INK};font-family:var(--ts-font);background:${WASHI_FIBRES},linear-gradient(#8a6a4a,#5a4030 55%,#3b2a1f) top/100% 16px no-repeat,linear-gradient(#8a6a4a,#5a4030 55%,#3b2a1f) bottom/100% 16px no-repeat,linear-gradient(#f8f1e0,#f3e9d2);background-origin:border-box;box-shadow:0 18px 44px #2a1a1470,inset 0 0 0 1px #8a654033}
+.ts-root .sp-head{margin-bottom:10px;padding-bottom:8px;background:linear-gradient(90deg,#0000,#5a443666 15%,#5a443666 85%,#0000) bottom/100% 1px no-repeat}
+.ts-root .sp-head h2{font:400 calc(var(--ts-size) + 4px)/1.2 var(--ts-font);letter-spacing:var(--ts-track)}
+.ts-root .sp-card{line-height:1.3}
+.ts-root .sp-howto p{margin:4px 0}
+.ts-root .sp-card h3{font:400 calc(var(--ts-size) - 3px)/1.2 var(--ts-font);letter-spacing:var(--ts-track);text-transform:none;opacity:.7;margin:12px 0 6px;color:#a93a2f}
+.ts-root .sp-x{border-radius:4px;color:#5a4436}
+.ts-root .sp-x:hover{background:#5a443618}
+.ts-root .sp-row output,.ts-root .sp-check,.ts-root .sp-row label{letter-spacing:var(--ts-track)}
+.ts-root .sp-lang,.ts-root .sp-title-button,.ts-root .sp-card .ts-btn{font-family:var(--ts-font);letter-spacing:var(--ts-track);border:1px solid #5a443655;border-radius:4px;background:#fffaf0b0;color:${INK};font-size:calc(var(--ts-size) - 2px)}
+.ts-root .sp-lang:hover,.ts-root .sp-card .ts-btn:hover,.ts-root .sp-card .ts-btn:focus-visible{background:#d96b5926;color:#a93a2f}
+.ts-root .sp-lang[aria-pressed=true],.ts-root .sp-card .ts-btn.primary{background:${RED};border-color:#a93a2f;color:#fbf4e4}
+.ts-root .sp-card .ts-btn.primary:hover,.ts-root .sp-card .ts-btn.primary:focus-visible{background:#c85d4c;color:#fff}
+.ts-root .sp-card .ts-input{font-family:var(--ts-font);font-size:calc(var(--ts-size) - 2px);letter-spacing:var(--ts-track);border:0;border-bottom:1px solid #5a4436;border-radius:2px;background:#fffaf0b0;padding:9px 10px}
+.ts-root .sp-card .ts-input:focus{box-shadow:0 1px 0 ${RED};border-bottom-color:${RED}}
+.ts-root .ts-label{font-size:calc(var(--ts-size) - 4px);text-transform:none;letter-spacing:var(--ts-track);opacity:.75;color:#a93a2f}
+.ts-root .ts-help,.ts-root .ts-credit,.ts-root .sp-howto p{font-size:calc(var(--ts-size) - 5px);opacity:1;color:#4a3a30}
+.ts-root .ts-credit.author{font-size:calc(var(--ts-size) - 1px);font-weight:400}
+.ts-root .ts-save{border-radius:4px;border:1px solid #5a443640;background:#fffaf0a0}
+.ts-root .ts-save b{font-weight:400;font-size:calc(var(--ts-size) - 2px)}
+.ts-root .ts-save span{font-size:calc(var(--ts-size) - 6px)}
 .ts-dialog-body{display:flex;flex-direction:column;gap:10px;margin-top:10px}
 .ts-field{display:flex;flex-direction:column;gap:6px}
 .ts-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
@@ -64,125 +107,23 @@ const CSS = `
 .ts-row .ts-btn{flex:1;padding:7px 10px}
 .ts-empty{margin:6px 0;text-align:center;opacity:.65}
 .ts-loading{margin:6px 0;text-align:center}
-.ts-sun{animation:ts-breathe 9s ease-in-out infinite;transform-origin:1090px 300px}
-.ts-shimmer{stroke-dasharray:28 46;animation:ts-shimmer 7s linear infinite}
-.ts-lantern{animation:ts-bob 5s ease-in-out infinite}
-.ts-petal{animation:ts-fall linear infinite}
-.ts-mist{animation:ts-mist 26s ease-in-out infinite alternate}
-@keyframes ts-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-@keyframes ts-shimmer{to{stroke-dashoffset:-148}}
-@keyframes ts-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes ts-fall{from{transform:translate(0,-60px) rotate(0)}to{transform:translate(-160px,980px) rotate(320deg)}}
-@keyframes ts-mist{from{transform:translateX(-40px)}to{transform:translateX(40px)}}
-@media (prefers-reduced-motion:reduce){.ts-sun,.ts-shimmer,.ts-lantern,.ts-petal,.ts-mist{animation:none}}
+.ts-spinner{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:3px solid #2a242426;border-top-color:${RED};animation:ts-spin .9s linear infinite;transition:opacity .4s ease}
+.ts-spinner.done{opacity:0}
+.ts-fail{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
+.ts-fail .ts-panel{text-align:center;line-height:1.5}
+@keyframes ts-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ts-spinner{animation-duration:2.4s}}
+.ts-vignette{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease;background:linear-gradient(#2a24242e,#2a242400 30%,#2a242400 75%,#2a24244d)}
+.ts-vignette.shown{opacity:1}
+/* Wide screens: the island, the peak and the sun fill the left of the view, and the logo and menu sit
+   in the open water on the right, left of the far-shore pagoda, one above the other at the same width so they share a centre line. */
+@media (min-width:760px) and (min-aspect-ratio:5/4){
+  .ts-ui{align-items:flex-end;padding:16px clamp(24px,24vw,440px)}
+  .ts-panel{width:min(360px,32vw)}
+  .ts-logo{width:min(484px,42vw);margin-right:calc((min(360px,32vw) - min(484px,42vw)) / 2)}
+  .ts-logo .ts-name{font-size:clamp(18px,min(6.4vh,2.5vw),52px)}
+}
 `;
-
-interface Mountain {
-  readonly x: number;
-  readonly peak: number;
-  readonly half: number;
-  readonly lean?: number;
-  readonly light: string;
-  readonly dark: string;
-  readonly snow?: boolean;
-}
-
-/** A faceted mountain: a lit left face and a shaded right face meeting along a ridge, with an optional snow cap. */
-function mountain({ x, peak, half, lean = 0.12, light, dark, snow }: Mountain, base: number): string {
-  const ridge = x + half * lean;
-  const parts = [
-    `<polygon points="${x - half},${base} ${x},${peak} ${ridge},${base}" fill="${light}"/>`,
-    `<polygon points="${ridge},${base} ${x},${peak} ${x + half},${base}" fill="${dark}"/>`,
-  ];
-  if (snow) {
-    const cap = (base - peak) * 0.27;
-    const w = (half * cap) / (base - peak);
-    parts.push(
-      `<polygon points="${x - w},${peak + cap} ${x},${peak} ${x + w * lean},${peak + cap * 0.86}" fill="#fbf6ee"/>`,
-      `<polygon points="${x + w * lean},${peak + cap * 0.86} ${x},${peak} ${x + w},${peak + cap}" fill="#dfe3e6"/>`,
-    );
-  }
-  return parts.join("");
-}
-
-function pine(x: number, base: number, height: number, width: number, fill: string, shade: string): string {
-  const tiers = 4;
-  const out = [`<rect x="${x - width * 0.05}" y="${base - height * 0.08}" width="${width * 0.1}" height="${height * 0.1}" fill="${shade}"/>`];
-  for (let i = 0; i < tiers; i++) {
-    const top = base - height + (i * height * 0.8) / tiers;
-    const bottom = top + (height * 0.46);
-    const w = width * (0.38 + (i * 0.62) / (tiers - 1)) * 0.5;
-    out.push(
-      `<polygon points="${x - w},${bottom} ${x},${top} ${x + w * 0.1},${bottom}" fill="${fill}"/>`,
-      `<polygon points="${x + w * 0.1},${bottom} ${x},${top} ${x + w},${bottom}" fill="${shade}"/>`,
-    );
-  }
-  return out.join("");
-}
-
-function torii(cx: number, waterY: number): string {
-  const post = (x: number): string =>
-    `<polygon points="${x - 11},${waterY} ${x - 8},${waterY - 168} ${x + 8},${waterY - 168} ${x + 11},${waterY}" fill="${RED}"/>` +
-    `<polygon points="${x + 3},${waterY} ${x + 8},${waterY - 168} ${x + 11},${waterY}" fill="#a93a2f"/>`;
-  const gate =
-    `<polygon points="${cx - 108},${waterY - 188} ${cx - 82},${waterY - 168} ${cx + 82},${waterY - 168} ${cx + 108},${waterY - 188} ${cx + 96},${waterY - 176} ${cx - 96},${waterY - 176}" fill="${INK}"/>` +
-    `<polygon points="${cx - 104},${waterY - 188} ${cx + 104},${waterY - 188} ${cx + 92},${waterY - 200} ${cx - 92},${waterY - 200}" fill="#3a3232"/>` +
-    `<rect x="${cx - 84}" y="${waterY - 142}" width="168" height="10" fill="${RED}"/>` +
-    `<rect x="${cx - 84}" y="${waterY - 132}" width="168" height="4" fill="#a93a2f"/>` +
-    `<rect x="${cx - 7}" y="${waterY - 168}" width="14" height="26" fill="#a93a2f"/>`;
-  return post(cx - 62) + post(cx + 62) + gate;
-}
-
-function lantern(x: number, y: number, delay: number): string {
-  return `<g class="ts-lantern" style="animation-delay:${delay}s"><rect x="${x - 7}" y="${y - 9}" width="14" height="14" rx="2" fill="#f6c36a"/><rect x="${x - 7}" y="${y - 9}" width="14" height="14" rx="2" fill="#fff3c8" opacity=".55"/><rect x="${x - 9}" y="${y + 4}" width="18" height="3" fill="${INK}" opacity=".7"/><circle cx="${x}" cy="${y - 2}" r="22" fill="#f6c36a" opacity=".2"/></g>`;
-}
-
-function scene(): string {
-  const horizon = 610;
-  const far: Mountain[] = [
-    { x: 160, peak: 400, half: 260, light: "#c4ced4", dark: "#aebbc3" },
-    { x: 540, peak: 440, half: 240, light: "#c4ced4", dark: "#aebbc3" },
-    { x: 1330, peak: 410, half: 300, light: "#c4ced4", dark: "#aebbc3" },
-    { x: 1580, peak: 470, half: 220, light: "#c4ced4", dark: "#aebbc3" },
-  ];
-  const mid: Mountain[] = [
-    { x: 820, peak: 330, half: 400, lean: 0.1, light: "#9fb0ba", dark: "#8195a2", snow: true },
-    { x: 330, peak: 500, half: 260, light: "#8fa2ad", dark: "#75899a" },
-    { x: 1260, peak: 520, half: 290, light: "#8fa2ad", dark: "#75899a" },
-  ];
-  const ripples = Array.from({ length: 12 }, (_, i) => {
-    const y = horizon + 26 + i * 22;
-    const x = (i * 211) % 900;
-    return `<line class="ts-shimmer" x1="${x}" y1="${y}" x2="${x + 560}" y2="${y}" stroke="#fffaf0" stroke-opacity=".34" stroke-width="2" stroke-linecap="round" style="animation-delay:${-i * 0.9}s"/>`;
-  }).join("");
-  const petals = Array.from({ length: 14 }, (_, i) => {
-    const x = 120 + ((i * 197) % 1500);
-    return `<ellipse class="ts-petal" cx="${x}" cy="0" rx="7" ry="4" fill="#f4b9c0" opacity=".85" style="animation-duration:${14 + (i % 5) * 3}s;animation-delay:${-i * 2.3}s"/>`;
-  }).join("");
-  return `<svg class="ts-scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-  <defs>
-    <linearGradient id="ts-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efc4b4"/><stop offset=".55" stop-color="#f7ddc6"/><stop offset="1" stop-color="#f6eedd"/></linearGradient>
-    <linearGradient id="ts-lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9bbcc0"/><stop offset="1" stop-color="#5e8f98"/></linearGradient>
-    <linearGradient id="ts-vignette" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2424" stop-opacity=".18"/><stop offset=".3" stop-color="#2a2424" stop-opacity="0"/><stop offset=".75" stop-color="#2a2424" stop-opacity="0"/><stop offset="1" stop-color="#2a2424" stop-opacity=".3"/></linearGradient>
-  </defs>
-  <rect width="1600" height="900" fill="url(#ts-sky)"/>
-  <g class="ts-sun"><circle cx="1090" cy="300" r="210" fill="#f6b79d" opacity=".28"/><circle cx="1090" cy="300" r="150" fill="#f2a08a" opacity=".4"/><circle cx="1090" cy="300" r="104" fill="#e0574a"/></g>
-  ${far.map((m) => mountain(m, horizon + 6)).join("")}
-  ${mid.map((m) => mountain(m, horizon + 6)).join("")}
-  <g class="ts-mist" opacity=".6"><rect x="-120" y="${horizon - 70}" width="1500" height="26" rx="13" fill="#fffaf0"/><rect x="260" y="${horizon - 36}" width="1500" height="22" rx="11" fill="#fffaf0" opacity=".8"/></g>
-  <rect x="0" y="${horizon}" width="1600" height="${900 - horizon}" fill="url(#ts-lake)"/>
-  <g opacity=".3" transform="translate(0 ${2 * 700}) scale(1 -1)">${torii(520, 700)}</g>
-  ${ripples}
-  <polygon points="380,704 430,690 470,700 590,694 650,706 700,712 360,712" fill="#3d4a44"/>
-  <polygon points="470,700 590,694 650,706 560,712 470,712" fill="#2f3b36"/>
-  ${torii(520, 700)}
-  ${lantern(900, 770, 0)}${lantern(1030, 810, 1.6)}${lantern(760, 840, 3.1)}${lantern(1210, 790, 2.2)}
-  ${pine(70, 930, 520, 230, "#34463f", "#27352f")}${pine(210, 940, 360, 170, "#3b4f47", "#2b3a34")}${pine(-30, 960, 360, 190, "#27352f", "#1f2a26")}
-  ${pine(1540, 930, 560, 250, "#34463f", "#27352f")}${pine(1410, 945, 330, 160, "#3b4f47", "#2b3a34")}${pine(1640, 960, 380, 200, "#27352f", "#1f2a26")}
-  ${petals}
-  <rect width="1600" height="900" fill="url(#ts-vignette)"/>
-</svg>`;
-}
 
 /** A dialog like the settings one. `build` fills the body and is run again whenever the language changes. */
 interface Dialog {
@@ -247,8 +188,37 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
 
   const root = document.createElement("div");
   root.className = "ts-root";
-  root.innerHTML = scene();
+  // The backdrop is the live 3D scene (render/title-scene.ts); there is no fallback, as the game itself needs WebGL.
+  const backdrop = createTitleScene(root, { reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches, character: settings.get().character });
+  const unsubscribeCharacter = settings.subscribe((s) => backdrop?.setCharacter(s.character));
+  const vignette = document.createElement("div");
+  vignette.className = "ts-vignette";
+  const spinner = document.createElement("div");
+  spinner.className = "ts-spinner";
+  spinner.setAttribute("role", "status");
+  root.append(vignette, spinner);
+  const failed = (): void => {
+    spinner.remove();
+    vignette.remove();
+    ui.remove();
+    const fail = document.createElement("div");
+    fail.className = "ts-fail";
+    const box = document.createElement("div");
+    box.className = "ts-panel";
+    box.textContent = messagesFor(settings.get().language).title.webglRequired;
+    fail.appendChild(box);
+    root.appendChild(fail);
+  };
   const ui = document.createElement("div");
+  void (backdrop ? backdrop.ready : Promise.resolve(false)).then((shown) => {
+    if (!shown) {
+      failed();
+      return;
+    }
+    vignette.classList.add("shown");
+    spinner.classList.add("done");
+    setTimeout(() => spinner.remove(), 500);
+  });
   ui.className = "ts-ui";
   const logo = document.createElement("div");
   logo.className = "ts-logo";
@@ -261,7 +231,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
   } else {
     const name = document.createElement("div");
     name.className = "ts-name";
-    name.textContent = "WAYSHRINE";
+    name.textContent = "Wayshrine";
     const note = document.createElement("div");
     note.className = "ts-note";
     logo.append(name, note);
@@ -328,27 +298,21 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
     heading.textContent = m.newGame;
     close.setAttribute("aria-label", m.back);
     const keep = body.querySelector<HTMLInputElement>("input")?.value ?? "";
-    const label = document.createElement("label");
-    label.className = "ts-label ts-field";
-    label.textContent = m.seedLabel;
     const input = document.createElement("input");
     input.className = "ts-input";
     input.type = "text";
     input.placeholder = m.seedPlaceholder;
+    input.setAttribute("aria-label", m.seedPlaceholder);
     input.autocomplete = "off";
     input.spellcheck = false;
     input.maxLength = 64;
     input.value = keep;
     input.dataset.autofocus = "";
-    label.appendChild(input);
-    const help = document.createElement("p");
-    help.className = "ts-help";
-    help.textContent = m.seedHelp;
     const start = (): void => begin(saves.create(input.value.trim() || randomSeed()));
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") start();
     });
-    body.replaceChildren(label, help, button(m.begin, start, "primary"));
+    body.replaceChildren(input, button(m.begin, start, "primary"));
   });
 
   const loadGame = createDialog(root, settings, (body, heading, close) => {
@@ -405,6 +369,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
   const dialogs: readonly Dialog[] = [credits, newGame, loadGame];
 
   const renderMenu = (): void => {
+    root.lang = settings.get().language;
     if (busy) return;
     const m = t();
     const note = logo.querySelector<HTMLElement>(".ts-note");
@@ -422,6 +387,8 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
 
   const onKey = (e: KeyboardEvent): void => {
     music.unlock();
+    const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+    if (e.code === "KeyN" && !e.repeat && !typing && !busy) settings.update({ muted: !settings.get().muted });
     if (e.code !== "Escape" || e.repeat || busy) return;
     const open = dialogs.find((d) => d.isOpen());
     if (open) open.close();
@@ -461,6 +428,8 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
       window.removeEventListener("pointerdown", onPointer);
       options.destroy();
       dialogs.forEach((d) => d.destroy());
+      unsubscribeCharacter();
+      backdrop?.destroy();
       root.remove();
       style.remove();
     },

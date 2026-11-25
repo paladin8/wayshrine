@@ -133,11 +133,14 @@ def water_disc(x,y): return in_moat(x,y) and not (CX0-0.7<=x<=CX1+0.7)
 # ---- moat water and the stone revetments of its outer banks
 box("water",(MS[0]-0.5+MS[1]+0.45)/2,(MS[2]-0.45+MS[3]+0.45)/2,WZ-0.02,WZ,(MS[1]+0.45-MS[0]+0.5)/2,(MS[3]-MS[2]+0.9)/2)
 box("water",(ME[0]-0.45+ME[1]+0.45)/2,(ME[2]-0.45+ME[3]+0.45)/2,WZ-0.02,WZ,(ME[1]-ME[0]+0.9)/2,(ME[3]-ME[2]+0.9)/2)
-extrude_x("stone",[(MS[2]-1.0,MZ-0.05),(MS[2],MZ-0.05),(MS[2]-0.8,0.05),(MS[2]-1.0,0.05)],MS[0]-0.8,ME[1]+0.8)       # south bank
-extrude_y("stone",[(ME[1]+1.0,MZ-0.05),(ME[1],MZ-0.05),(ME[1]+0.8,0.05),(ME[1]+1.0,0.05)],MS[2]-0.8,ME[3]+0.8)       # east bank
-extrude_x("stone",[(ME[3]+1.0,MZ-0.05),(ME[3],MZ-0.05),(ME[3]+0.8,0.05),(ME[3]+1.0,0.05)],HX1,ME[1]+0.8)           # north end of the east moat
-extrude_y("stone",[(MS[0]-1.0,MZ-0.05),(MS[0],MZ-0.05),(MS[0]-0.8,0.05),(MS[0]-1.0,0.05)],MS[2]-0.8,HY0)            # west end of the south moat
-extrude_x("stone",[(HY0+0.2,MZ-0.05),(MS[3],MZ-0.05),(HY0,0.05),(HY0+0.2,0.05)],MS[0]-0.8,HX0-0.8)                 # its north bank, west of the honmaru
+# Each bank slopes up 0.8 from the water and then runs flat to 1.6, two grid steps out: the terrain beneath it stays
+# down at the moat floor for the first step (terrain_at), so it never rides up over the sloping stone.
+B2=1.6
+extrude_x("stone",[(MS[2]-B2,MZ-0.05),(MS[2],MZ-0.05),(MS[2]-0.8,0.05),(MS[2]-B2,0.05)],MS[0]-B2,ME[1]+B2)          # south bank
+extrude_y("stone",[(ME[1]+B2,MZ-0.05),(ME[1],MZ-0.05),(ME[1]+0.8,0.05),(ME[1]+B2,0.05)],MS[2]-B2,ME[3]+B2)          # east bank
+extrude_x("stone",[(ME[3]+B2,MZ-0.05),(ME[3],MZ-0.05),(ME[3]+0.8,0.05),(ME[3]+B2,0.05)],HX1,ME[1]+B2)              # north end of the east moat
+extrude_y("stone",[(MS[0]-B2,MZ-0.05),(MS[0],MZ-0.05),(MS[0]-0.8,0.05),(MS[0]-B2,0.05)],MS[2]-B2,HY0)              # west end of the south moat
+extrude_x("stone",[(MS[3]+B2,MZ-0.05),(MS[3],MZ-0.05),(MS[3]+0.8,0.05),(MS[3]+B2,0.05)],MS[0]-B2,HX0-0.8)          # its north bank, west of the honmaru
 
 # ---- the honmaru walls: dressed stone curving up out of the moat, steepening toward the top; the top is gravel
 def wring(o,z): return rect((HX1-HX0)/2+o,(HY1-HY0)/2+o,z,(HX0+HX1)/2,(HY0+HY1)/2)
@@ -266,6 +269,13 @@ def ground_at(x,y):
     if in_moat(x,y): return MZ
     if HX0-0.05<=x<=HX1+0.05 and HY0-0.05<=y<=HY1+0.05: return HM
     return 0.0
+def terrain_at(x,y):
+    # The game's terrain is 1-unit tiles interpolated between these heights. Under the honmaru (its gravel top is the
+    # model's own) and the causeway it drops to the moat floor, so no tile slopes from the top of a wall down to the
+    # moat over its battered face: the masonry shows all the way down to the water.
+    if on_causeway(x,y) or inr(x,y,MS,0.85) or inr(x,y,ME,0.85): return MZ        # the moat and the banks' slopes
+    if HX0-0.05<=x<=HX1+0.05 and HY0-0.05<=y<=HY1+0.05: return MZ
+    return 0.0
 INTERACT=(GX,0.4)     # the honmaru court before the keep
 STAND=(GX+1.9,0.5)
 
@@ -307,6 +317,10 @@ solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}
 if TERRAIN_SURFACE: side["terrainSurface"]=True
+if "terrain_at" in globals():         # the terrain's own height where it differs from the walkable ground
+    terr=[[round(terrain_at(-HALF+GSTEP*ix, -(-HALF+GSTEP*iz)),3) for ix in range(GN)] for iz in range(GN)]
+    for i in range(GN): terr[0][i]=terr[GN-1][i]=terr[i][0]=terr[i][GN-1]=EDGE_LEVEL
+    if terr!=ground: side["terrain"]=terr
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/osaka-castle.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
 open(_p,"w").write(json.dumps(side,separators=(",",":")))

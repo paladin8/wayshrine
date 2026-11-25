@@ -271,6 +271,11 @@ INTERACT=xf([(0,-2.4,0)],**TH)[0][:2]   # the terrace in front of the Zao-do
 # STAND (set above): the foot of the road
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]],"terrainSurface":True}
+# The model draws its own grass over the hills, so the game's terrain sits a little further under it than the usual
+# 1 cm, where the two surfaces' triangles don't quite agree
+terr=[[round(ground[iz][ix]-0.08,3) for ix in range(GN)] for iz in range(GN)]
+for i in range(GN): terr[0][i]=terr[GN-1][i]=terr[i][0]=terr[i][GN-1]=0.0
+side["terrain"]=terr
 _p=os.environ.get("LM_SIDECAR_OUT") or ROOT+"/src/world/landmark-grounds/yoshino-yama.json"
 os.makedirs(os.path.dirname(_p),exist_ok=True)
 open(_p,"w").write(json.dumps(side,separators=(",",":")))

@@ -128,8 +128,8 @@ for k in range(8):
 box("stone",0,-1.0,TZ-0.05,TZ+0.03,0.7,0.65)                       # the paved walk to the hall
 
 # ---- Konjikido: the Golden Hall on its black lacquered dais, gilded walls, posts and doorway under a dark shingled
-# pyramid roof (the restoration found no gilding on the roof), the gilt jewel on its peak. (Shown open to the sky,
-# as it stood before its cover halls were built)
+# pyramid roof (the restoration found no gilding on the roof), the gilt jewel on its peak. It stands inside its
+# protective hall (Shin-Ooido), drawn as a cutaway below
 z0=TZ; KX,KY=0.0,1.4
 box("stone",KX,KY,z0-0.1,z0+0.12,2.0,2.0)
 box("lacquer",KX,KY,z0+0.12,z0+0.45,1.55,1.55)
@@ -156,6 +156,28 @@ for k in range(3):                                                     # steps u
     box("lacquer",KX,KY-1.62-0.16*k,z0+0.12,z0+0.45-0.11*k,0.45,0.08)
 flared_roof([(1.75,1.75,z0+1.85,0.16),(1.75,1.75,z0+1.96,0.16),(0.07,0.07,z0+2.85,0.0)],"shingle",KX,KY)
 prism("gold",KX,KY,z0+2.85,z0+3.0,0.11,0.07,6); ico("gold",KX,KY,z0+3.05,0.1,0.1,0.1)
+
+# ---- the protective hall (Shin-Ooido) round it, as a cutaway: its dark back and left walls and the two hip planes of
+# its roof that rise from them stand behind the Golden Hall; the sides toward the approach are open down to a low
+# curb, with a gap where the walk leads in, so the gold is seen inside a building and stays the brightest thing here
+SX0,SX1,SY0,SY1=-2.8,2.8,-1.2,4.0; SE=TZ+3.5; SP=TZ+4.55       # walls, eaves, peak
+box("stone",KX,(SY0+SY1)/2,TZ-0.1,TZ+0.06,SX1,(SY1-SY0)/2)                        # its floor
+box("wood",KX,SY1-0.08,TZ+0.06,SE,SX1,0.08)                                     # back wall
+box("wood",SX0+0.08,(SY0+SY1)/2,TZ+0.06,SE,0.08,(SY1-SY0)/2-0.16)               # left wall
+for x,y in ((SX0+0.08,SY0+0.08),(SX1-0.08,SY1-0.08),(SX1-0.08,SY0+0.08)):     # corner posts
+    box("wood",x,y,TZ+0.06,SE if (x<0 or y>0) else TZ+0.4,0.11,0.11)
+box("stone",SX1-0.07,(SY0+SY1)/2,TZ+0.06,TZ+0.3,0.07,(SY1-SY0)/2-0.2)           # the curb along the open right side
+for x0,x1 in ((SX0+0.2,-0.85),(0.85,SX1-0.2)):                                  # and the front, open where the walk leads in
+    box("stone",(x0+x1)/2,SY0+0.07,TZ+0.06,TZ+0.3,(x1-x0)/2,0.07)
+def tri_slab(mat,a,b,c,th):
+    lo=[(x,y,z-th) for x,y,z in (a,b,c)]
+    emit([a,b,c]+lo,[[0,1,2],[5,4,3],[0,3,4,1],[1,4,5,2],[2,5,3,0]],[mat]*5)
+o=0.3; ex0,ex1,ey0,ey1=SX0-o,SX1+o,SY0-o,SY1+o; pk=(KX,(SY0+SY1)/2,SP)
+tri_slab("roof",(ex1,ey1,SE),(ex0,ey1,SE),pk,0.14)                               # the back hip plane
+tri_slab("roof",(ex0,ey1,SE),(ex0,ey0,SE),pk,0.14)                               # the left hip plane
+def up(p,k): return (p[0]+(pk[0]-p[0])*k,p[1]+(pk[1]-p[1])*k,p[2]+(pk[2]-p[2])*k+0.06)
+tri_slab("snow",up((ex1-0.15,ey1,SE),0.04),up((ex0,ey1,SE),0.04),up(pk,0.0),0.05)   # snow lying on them
+tri_slab("snow",up((ex0,ey1,SE),0.04),up((ex0,ey0+0.15,SE),0.04),up(pk,0.0),0.05)
 
 # stone lanterns at the top of the steps
 for k,sx in enumerate((-1.35,1.35)):

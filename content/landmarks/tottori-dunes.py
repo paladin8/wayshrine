@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/tottori-dunes.glb"
 BLEND=ROOT+"/content/landmarks/tottori-dunes.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"sand":"e2c890","sand2":"d4b77c","sanddk":"b89a62","sea":"2f6f8f","foam":"eef2f0","wood":"7a5a3e","grass":"7a8a4a","camel":"b08a5c","red":"c8473a"}
+PAL={"sand":"e2c890","sand2":"d4b77c","sanddk":"b89a62","sea":"2f6f8f","seamid":"3f86a0","shallow":"62a7b5","foam":"eef2f0","wood":"7a5a3e","grass":"7a8a4a","camel":"b08a5c","red":"c8473a"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -125,10 +125,17 @@ def F(u,v,rot=0.0,cz=0.0): x,y=to_xy(u,v); return dict(cx=x,cy=y,cz=cz,rot=math.
 # to a beach and a strip of the Sea of Japan, held in by spits at either end. A pond (the oasis) lies in a hollow
 SEA=-0.55; SF=-1.0
 def ridge_u(v): return -2.0+0.6*math.sin(0.35*v+0.5)
-# the Sea of Japan fills the whole back of the footprint behind one long beach, held in only by a low sand lip at
-# the footprint's edge, so it reads as the open sea the ridge falls toward and not as a pond
-SW=14.3
-def sea_in(u,v): return u<-6.4 and abs(u)+abs(v)<SW
+# the Sea of Japan lies behind one long beach below the ridge; beyond it a line of low, rolling dunes rises along the
+# far edges, so the water runs out of sight behind them rather than ending in a hard outline: from the path, the
+# beach under Umanose is the sea's only visible edge. sea_m is 1 at the far shore (a rounded, wobbling outline)
+SR,SP=12.0,1.3
+def sea_m(u,v):
+    th=math.atan2(v,u)
+    return (abs(u)**SP+abs(v)**SP)**(1/SP)/(SR*(1+0.05*math.sin(5*th+0.7)+0.03*math.sin(9*th+2.0)))
+def sea_in(u,v): return u<-6.4 and sea_m(u,v)<1.0
+def far_dunes(u,v):
+    crest=1.15+0.4*math.sin(0.7*v+1.0)+0.25*math.sin(1.9*v+0.3)+0.2*math.sin(1.3*u)
+    return crest*smooth(1.0,1.16,sea_m(u,v))*smooth(15.5,13.6,abs(u)+abs(v))
 PO=(2.0,-3.6)
 def H(x,y):
     u,v=to_uv(x,y)
@@ -140,7 +147,9 @@ def H(x,y):
         b=0.12*smooth(-5.6,-6.4,u)
         h=max(h,0.0)-b
         if sea_in(u,v):
-            f=smooth(-6.3,-6.9,u)*smooth(SW,SW-0.7,abs(u)+abs(v)); h=SF*f+(SEA+0.1)*(1-f)
+            f=smooth(-6.3,-6.9,u)*smooth(1.0,0.94,sea_m(u,v)); h=SF*f+(SEA+0.1)*(1-f)
+        elif u<-6.2:
+            h=max(h,(SEA+0.1)*(1-smooth(1.0,1.08,sea_m(u,v)))+far_dunes(u,v))
     h+=0.035*math.sin(5.5*u+1.3*v)*smooth(0.2,0.8,h)          # wind ripples
     d=math.hypot(u-PO[0],(v-PO[1])*0.8)
     h-=0.55*smooth(1.8,0.9,d)
@@ -170,12 +179,26 @@ for j in range(N):
 emit(vs,fs,ms)
 uu=[-6.6-0.4*k for k in range(19)]
 for ua,ub in zip(uu,uu[1:]):
-    wa=SW-0.1-abs(ua); wb=SW-0.1-abs(ub)
+    def ext(uq): return max(0.0,(SR*1.09)**SP-abs(uq)**SP)**(1/SP)       # the far shore's reach, at its widest
+    wa=ext(ua); wb=ext(ub)
     if wa<0.3 or wb<0.3: continue
     q=[to_xy(ua,-wa),to_xy(ua,wa),to_xy(ub,wb),to_xy(ub,-wb)]
     emit([(*p,SEA) for p in q],[[0,1,2,3]],["sea"])
+# the far shore shelves away in paler bands of shallows, so it fades into the dunes rather than ending in a line;
+# only the beach below the ridge keeps a crisp edge, with its surf
+def shore_pt(th,k):
+    w=1+0.05*math.sin(5*th+0.7)+0.03*math.sin(9*th+2.0)
+    r=SR*w/((abs(math.cos(th))**SP+abs(math.sin(th))**SP)**(1/SP))*k
+    return r*math.cos(th),r*math.sin(th)
+NT=40
+for k0,k1,z,mat in ((0.8,0.92,SEA+0.006,"seamid"),(0.92,1.04,SEA+0.012,"shallow")):
+    for i in range(NT):
+        ta,tb=math.pi-1.0+2.0*i/NT,math.pi-1.0+2.0*(i+1)/NT
+        pa0,pb0,pb1,pa1=shore_pt(ta,k0),shore_pt(tb,k0),shore_pt(tb,k1),shore_pt(ta,k1)
+        if max(pa0[0],pb0[0])>-7.2: continue                 # only along the far shore, not over the beach
+        emit([(*to_xy(*q),z) for q in (pa0,pb0,pb1,pa1)],[[0,1,2,3]],[mat])
 for k in range(1):                                        # one clean line of surf along the beach
-    u=-6.8; w=SW-abs(u)-0.8
+    u=-6.8; w=(SR**SP-abs(u)**SP)**(1/SP)-0.9
     pts=[(u+0.12*math.sin(1.7*t+k),t) for t in [-w+2*w*q/12 for q in range(13)]]
     for (ua,va),(ub,vb) in zip(pts,pts[1:]):
         q=[to_xy(ua-0.07,va),to_xy(ua+0.07,va),to_xy(ub+0.07,vb),to_xy(ub-0.07,vb)]

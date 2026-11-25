@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/todai-ji-daibutsu.glb"
 BLEND=ROOT+"/content/landmarks/todai-ji-daibutsu.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","foliage":"5f9a52","darkwood":"6e5442","bronze":"5e5244","gold":"e2b34c","glow_cream":"e8dcb0","glow_gold":"e2b34c"}
+PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","foliage":"5f9a52","darkwood":"6e5442","bronze":"5e5244","bronzelt":"7d6c58","gold":"e2b34c","glow_cream":"e8dcb0","glow_gold":"e2b34c"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -201,8 +201,21 @@ solid([ell(2.0,1.35,0.0,8,0,-0.15),ell(1.95,1.3,0.75,8,0,-0.15),ell(1.5,1.0,1.0,
 solid([ell(1.3,0.85,0.8,8,0,0.2),ell(1.4,0.88,2.35,8,0,0.2),ell(0.75,0.55,2.8,8,0,0.25)],"bronze",T)    # robed body and shoulders
 prism("bronze",0,0.25,2.75,3.05,0.5,0.5,8,0,T)
 solid([ell(0.75,0.75,2.95,8,0,0.12),ell(0.95,0.95,3.45,8,0,0.12),ell(0.92,0.92,3.95,8,0,0.15)],"bronze",T)  # face
-solid([ell(0.98,0.98,3.85,8,0,0.17),ell(0.95,0.95,4.35,8,0,0.2),ell(0.66,0.66,4.7,8,0,0.22)],"roof",T)       # curled hair
-solid([ell(0.52,0.52,4.62,8,0,0.22),ell(0.46,0.46,4.95,8,0,0.22),ell(0.18,0.18,5.12,8,0,0.22)],"roof",T)     # ushnisha
+# the face's planes, so it reads as a face from the courtyard: a brow ridge shading the downcast eyes, the nose
+# standing out of the front, cheeks turned a little outward, a small mouth (the front facet is at y≈-0.76)
+extrude_x("bronzelt",[(-0.70,3.55),(-0.80,3.595),(-0.83,3.63),(-0.75,3.72),(-0.70,3.72)],-0.35,0.35,T)          # brow
+solid([[(-0.03,-0.74,3.6),(0.03,-0.74,3.6),(0.0,-0.81,3.6)],[(-0.08,-0.71,3.26),(0.08,-0.71,3.26),(0.0,-0.94,3.26)]],"bronzelt",T)   # nose
+for sx in (-1,1):
+    box("roof",sx*0.17,-0.766,3.485,3.515,0.1,0.012,T)                                                    # eyes, half closed
+    solid([[(sx*0.1,-0.80,3.15),(sx*0.37,-0.745,3.15),(sx*0.37,-0.70,3.15),(sx*0.1,-0.70,3.15)],
+           [(sx*0.1,-0.785,3.44),(sx*0.37,-0.75,3.44),(sx*0.37,-0.70,3.44),(sx*0.1,-0.70,3.44)]],"bronzelt",T)   # cheeks
+box("roof",0,-0.652,3.105,3.125,0.085,0.012,T)                                                          # mouth
+# the gilded halo (koha) behind the statue, standing clear of the dark back wall so the head and the raised hand
+# show against gold rather than wood
+MANDORLA=[(0.0,6.0),(0.62,5.72),(1.25,5.15),(1.68,4.4),(1.85,3.6),(1.76,2.8),(1.46,2.15),(0.0,1.9)]
+extrude_y("gold",[(x,z) for x,z in MANDORLA]+[(-x,z) for x,z in reversed(MANDORLA[1:-1])],2.42,2.5)
+solid([ell(0.98,0.98,3.93,8,0,0.17),ell(0.95,0.95,4.4,8,0,0.2),ell(0.66,0.66,4.74,8,0,0.22)],"roof",T)       # curled hair, the hairline high on a broad face
+solid([ell(0.52,0.52,4.66,8,0,0.22),ell(0.46,0.46,4.98,8,0,0.22),ell(0.18,0.18,5.15,8,0,0.22)],"roof",T)     # ushnisha
 for sx in (-1,1): box("bronze",sx*0.98,0.15,3.05,4.0,0.07,0.16,T)     # long earlobes
 solid([rect(0.18,0.18,1.6,-1.3,0.05),rect(0.16,0.16,2.45,-1.35,-0.45)],"bronze",T)   # right forearm, raised
 box("bronze",-1.35,-0.52,2.4,3.05,0.22,0.08,T)                                        # open palm

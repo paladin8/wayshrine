@@ -10,7 +10,7 @@ Design intent only. How it is built lives in [ARCHITECTURE.md](ARCHITECTURE.md).
 - **Look.** Low-poly, flat-shaded, isometric diorama, from the Blender shrine reference.
 
 ## Movement and terrain
-Free walking by default. Capabilities unlock terrain: **boat** (water), **snowshoes** (snow), **walking sticks** (mountain), **geta** (marsh), **lantern** (dark forest), **ash sandals** (volcanic ground) and **ship** (open sea). The final ability, **Pilgrim’s Wake**, brings dormant regions back to life as the traveller walks into them. The wave starts at their footsteps and spreads while they keep moving.
+Free walking by default. Capabilities unlock terrain: **boat** (water), **snowshoes** (snow), **walking sticks** (mountain), **geta** (marsh), **lantern** (dark forest), **ash sandals** (volcanic ground) and **ship** (open sea). The final ability, **Pilgrim’s Wake**, brings dormant ordinary shrine regions back to life as the traveller walks into them. Landmarks still need to be activated by hand. The wave starts at their footsteps and spreads while they keep moving.
 
 ## Monuments
 A thousand texts (haiku, proverbs, sayings) stand on stones scattered thinly across the world, at most two to a region, so finding one is a small expedition. In a dead region the inscription is worn away; restoring the land makes it legible. A faint glimmer shows an unread stone once it is on screen; nothing points to it from afar. The traveler keeps loose sheets of collected rubbings in a rubbing box. Haiku are placed where their scenery belongs. In Japanese the text stands alone; in English it comes with a translation that stays close to the Japanese and keeps its image, rather than swapping in an English saying. The world is allowed to feel peacefully empty.

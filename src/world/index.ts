@@ -30,7 +30,7 @@ export {
 export type { Landmark, LandmarkSpec } from "./landmarks";
 export { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
 export type { LandmarkGround } from "./landmark-ground";
-export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauBase, plateauDistance } from "./terrain-grid";
+export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, landmarkWaterLevel, plateauBase, plateauDistance } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
 export { PROP_KINDS, SHRINE_CLEARING_RADIUS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";

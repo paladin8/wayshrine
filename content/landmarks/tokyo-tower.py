@@ -1,6 +1,8 @@
 # Tokyo Tower (the orange-and-white lattice tower over FootTown, its main and top decks lit) landmark generator for Wayshrine.
 # Run: Blender -b --factory-startup --python tokyo-tower.py
 # Rebuilds content/landmarks/tokyo-tower.blend and public/models/landmarks/tokyo-tower.glb
+# Preview: frame it taller than the footprint so the antenna, both decks and FootTown all show:
+#   FI_GROUND=meadow FI_HALF=9.6 FI_ORTHO=25 FI_VCENTER=4.0 Blender -b content/landmarks/tokyo-tower.blend --python content/landmarks/preview.py
 import bpy, math, os, json
 from mathutils import Vector
 bpy.ops.wm.read_factory_settings(use_empty=True)

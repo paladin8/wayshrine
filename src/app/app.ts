@@ -62,10 +62,11 @@ import {
 import { createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
+import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type Region, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor, type Messages } from "./i18n";
+import { createJourneyCompletion } from "./journey-completion";
 import { createMinimap } from "./minimap";
 import { createMonumentUi } from "./monuments-ui";
 import { createMusicButton } from "./music-button";
@@ -247,19 +248,23 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       window.location.href = window.location.pathname;
     },
   });
+  const completion = createJourneyCompletion(container, stage.groundDirection);
   const notebook = createNotebook(container, hud.landmarkButton, {
     all: world.landmarks.map((region) => region.landmark!.id),
     restored: () => world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id),
     debug,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
+    onCompletion: () => {
+      if (!pendingCompletion) showCompletion();
+    },
     onTravel: (id) => {
       const region = world.landmarks.find((r) => r.landmark?.id === id);
       if (region) travelToShrine(standPoint(region));
     },
   });
   /** Dialogs own the keyboard while open. */
-  const modalOpen = (): boolean => panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen() || debugPanel?.isOpen() === true;
+  const modalOpen = (): boolean => completion.isOpen() || panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen() || debugPanel?.isOpen() === true;
   let drawnCollected = state.collected.length;
   let drawnLanguage = settings.get().language;
   let drawnLandmarks = -1;
@@ -292,6 +297,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     readonly backgroundTrack: TrackId;
   } | null = null;
   let gearReveal: { gear: GearReveal; left: number } | null = null;
+  let pendingCompletion: Region | null = null;
   const wakes = new Map<string, RestorationWake>();
   let finalMusicPending = false;
   let boatVoyage: { readonly path: BoatLaunch; readonly preview: boolean; t: number } | null = null;
@@ -450,6 +456,8 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
   const railView = railway && createRailwayView(container, () => finishTrainRide(stage.railwayReady()));
 
   const stopGearMoments = (): void => {
+    pendingCompletion = null;
+    completion.close();
     finishTrainRide(false);
     shrineArrival = false;
     gearReveal = null;
@@ -518,6 +526,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     }
     state = revealLandmarks(unrestoreShrine(state, region), world);
     wakes.delete(region.id);
+    if (region.landmark) pendingCompletion = null;
     if (finalMusicPending && landmarksRestored(state, world) < PILGRIMS_WAKE_STARS) finalMusicPending = false;
     saveGame(state);
     // A lost ability may leave the player standing where they can no longer be.
@@ -755,6 +764,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
           restore(region.id);
           const kind: AwakeningKind = region.landmark ? "landmark" : "shrine";
           const count = kind === "landmark" ? landmarksRestored(state, world) : 0;
+          if (count === world.landmarks.length) pendingCompletion = region;
           const unlocksGear = count === CAPABILITY_THRESHOLDS.boat ? "boat"
             : count === CAPABILITY_THRESHOLDS.snowshoes ? "snowshoes"
             : count === CAPABILITY_THRESHOLDS.climbing ? "climbing"
@@ -800,6 +810,12 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     cues.stop("walk-water");
     movementCue = undefined;
   };
+  function showCompletion(finalLandmark?: Region): void {
+    releaseMovement();
+    monumentUi.dismissReading();
+    if (minimap.isExpanded()) minimap.toggleExpanded();
+    completion.show(world.landmarks, settings.get().language, finalLandmark);
+  }
   function travelToShrine(destination: Point): boolean {
     if (momentBusy()) return false;
     releaseMovement();
@@ -856,7 +872,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       facing = Math.atan2(dir.x, dir.z);
       if (moving && restoredLandmarks.length >= PILGRIMS_WAKE_STARS && !boatTrial && !shipTrial) {
         const entered = world.regionAt(pos.x, pos.z);
-        if (!isRestored(state, entered)) {
+        if (!entered.landmark && !isRestored(state, entered)) {
           wakes.set(entered.id, createRestorationWake(entered, pos));
           restore(entered.id);
         }
@@ -1009,6 +1025,14 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       }
     }
 
+    // Let the final landmark ceremony finish before opening the chart.
+    if (pendingCompletion && !momentBusy() && !modalOpen() && !gearReveal && !finalMusicPending) {
+      showCompletion(pendingCompletion);
+      pendingCompletion = null;
+      moving = false;
+    }
+    completion.update(dt);
+
     const prefs = settings.get();
     const t = messagesFor(prefs.language);
 
@@ -1025,7 +1049,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     // After restoration, the name returns, smaller and near the bottom, while the player is close to the landmark.
     const here = world.regionAt(pos.x, pos.z);
     const nearLandmark =
-      !gearReveal && !momentBusy() && here.landmark && isRestored(state, here) && Math.hypot(pos.x - here.site.x, pos.z - here.site.z) < LANDMARK_NAME_RANGE
+      !gearReveal && !momentBusy() && !completion.isOpen() && here.landmark && isRestored(state, here) && Math.hypot(pos.x - here.site.x, pos.z - here.site.z) < LANDMARK_NAME_RANGE
         ? here.landmark.id
         : null;
     if (nearLandmark) nearNameId = nearLandmark;
@@ -1076,7 +1100,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       nearLandmarkName: nearModel,
       messages: t,
     });
-    minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
+    minimap.update({ pos, state, target: debug ? guide?.region ?? null : null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     const movementTile = moving && !voyageFrame && !lanternMoment ? terrain.tileAtPoint(pos.x, pos.z) : undefined;
     let nextMovementCue = movementTile && MOVEMENT_CUES[movementTile.biome];

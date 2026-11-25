@@ -11,7 +11,7 @@
 - **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap toggle), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, three scores tied to first uses of gear, volume/mute controls.
 - **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 14, 22, 30, 39 and 48 restored landmarks instead of at shrines, and Pilgrim’s Wake at 58; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; the map marks the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
-- **Guidance:** the map marks the nearest reachable unrestored shrine or landmark (the on-screen compass is gone; debug travel to the next shrine remains), landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
+- **Guidance:** debug mode marks the nearest reachable unrestored shrine or landmark and offers travel to it, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Ordinary shrines:** biome-specific gates and shelters. Land shrines sit on flat terraces that blend into the surrounding hill, lake shrines stand on pilings, and coastal torii rise directly from the sea. Water shrines can be restored from the boat.
 - **Tokyo Tower:** the tower anchors a walkable city district at landmark 46. The district gains color as restoration reaches the streets.
 - **Ginzan Onsen:** a seeded downstream route leads to baths and footbridges. Each bath warms up after Ginzan and its local shrine are restored.
@@ -21,6 +21,7 @@
 - **Awakening swell:** one-shot cue player, music ducking under it, background music halved.
 - **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.
 - **Travel journal:** the landmark counter (or J) opens a notebook with a handwritten entry per restored landmark, two to a page, with a button to travel back; cover-opening and page-turn animations and sounds. With `?debug` all landmarks are listed and travel works for all of them. A pencil sketch per entry is still to do.
+- **Landmark finale:** when the final restoration settles, the Far Sight star chart returns as a celebration showing every landmark in map orientation. Completed worlds can reopen the chart from the travel journal.
 - **Vertical slice:** streamed tile terrain per biome, WASD player gated by capabilities, shrines that go from dead to alive (animated vitality), HUD, localStorage saves, `?debug` hooks.
 
 ## Next

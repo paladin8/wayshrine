@@ -11,7 +11,7 @@ export type Locale = (typeof LOCALES)[number];
 export interface Messages {
   /** Names of the capabilities the player collects. */
   readonly capability: Readonly<Record<Capability, string>>;
-  /** Pilgrim’s Wake restores dormant regions as the traveller enters them. */
+  /** Pilgrim’s Wake restores dormant ordinary shrine regions as the traveller enters them. */
   readonly pilgrimsWake: string;
   readonly gearRequirement: (stars: number, status: "locked" | "unlocked") => string;
   /** Terrain as it is named when it blocks the way ("to cross ..."). */
@@ -33,6 +33,13 @@ export interface Messages {
     readonly prev: string;
     readonly next: string;
     readonly close: string;
+  };
+  /** The celebration after restoring every landmark. */
+  readonly completion: {
+    readonly title: string;
+    readonly summary: (count: number) => string;
+    readonly resume: string;
+    readonly reopen: string;
   };
   readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern" | "ashSandals" | "ship" | "pilgrimsWake", { readonly title: string; readonly hint: string }>>;
   readonly promptRestore: string;
@@ -92,9 +99,7 @@ export interface Messages {
     /** One entry per line; the first is the author. */
     readonly creditsLines: readonly string[];
     readonly back: string;
-    readonly seedLabel: string;
     readonly seedPlaceholder: string;
-    readonly seedHelp: string;
     readonly begin: string;
     readonly loading: string;
     readonly noSaves: string;
@@ -104,6 +109,8 @@ export interface Messages {
     readonly keep: string;
     readonly saveSummary: (seed: string, landmarks: number) => string;
     readonly logoNote: string;
+    /** Shown instead of the title when the 3D backdrop cannot be drawn. */
+    readonly webglRequired: string;
   };
 }
 
