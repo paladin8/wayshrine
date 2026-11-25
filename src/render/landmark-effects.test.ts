@@ -114,11 +114,15 @@ describe("landmark steam", () => {
     whirl.update(1, 1);
     root.updateMatrixWorld(true);
     const after = arms.map(world);
-    const moved = arms.filter((_, i) => before[i]!.distanceTo(after[i]!) > 0.1);
+    const flat = (v: THREE.Vector3): THREE.Vector2 => new THREE.Vector2(v.x, v.z);
+    const moved = arms.filter((_, i) => flat(before[i]!).distanceTo(flat(after[i]!)) > 0.1);
     expect(moved).toHaveLength(1);
+    // The foam rides the sea's swell above its modelled height once restored.
+    expect(arms.every((_, i) => Math.abs(after[i]!.y - before[i]!.y) > 1e-3)).toBe(true);
     // A dormant whirlpool does not turn.
     whirl.update(2, 0);
     root.updateMatrixWorld(true);
-    expect(arms.map(world).every((p, i) => p.distanceTo(after[i]!) < 1e-6)).toBe(true);
+    // It settles back at its modelled height.
+    expect(arms.map(world).every((p, i) => Math.abs(p.y - before[i]!.y) < 1e-6)).toBe(true);
   });
 });

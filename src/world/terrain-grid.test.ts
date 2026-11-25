@@ -199,4 +199,24 @@ describe("landmark slopes", () => {
       }
     }
   });
+
+  it("floats the traveller on the region's water, not the model's seabed, over a landmark's open water", () => {
+    const terrain = createTerrain(createWorld("wayshrine"));
+    let open = 0;
+    for (const region of terrain.world.landmarks) {
+      const model = groundOf(region.landmark!.id);
+      const level = landmarkWaterLevel(region.biome);
+      if (!model || level === undefined || model.terrainSurface) continue;
+      const half = model.half - 0.5;
+      for (let dx = -half; dx <= half; dx += 0.7) {
+        for (let dz = -half; dz <= half; dz += 0.7) {
+          if (surfaceHeight(model, dx, dz) > level + 0.01) continue;
+          open++;
+          const y = terrain.groundAt(region.shrine.x + dx, region.shrine.z + dz);
+          expect(y, `${region.landmark!.id} at ${dx.toFixed(1)},${dz.toFixed(1)}`).toBeGreaterThanOrEqual(plateauBase(region) + level - 1e-9);
+        }
+      }
+    }
+    expect(open).toBeGreaterThan(0);
+  });
 });

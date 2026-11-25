@@ -108,6 +108,20 @@ export interface Puffs {
   update(time: number, life: number): void;
 }
 
+/**
+ * How far the open sea's surface is lifted at a point and time: the swell in `vitality-mesh`'s water shader
+ * (the ocean case), so that things floating just above the water are not buried under a crest.
+ */
+export function seaSwell(time: number, x: number, z: number): number {
+  const gust = (0.5 + 0.5 * Math.sin(time * 0.72 + x * 0.071 - z * 0.095)) ** 4;
+  const swell = Math.sin(time * 1.05 + x * 0.33 - z * 0.36);
+  const ripple = Math.cos(time * 2.65 + z * 0.96 + x * 0.29);
+  return swell * (0.022 + 0.037 * gust + 0.054) + ripple * 0.01;
+}
+
+/** A restored whirlpool floats this far above the mean surface, so the swell's interpolation never buries it. */
+const WHIRL_CLEARANCE = 0.05;
+
 const hash = (n: number): number => {
   const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return x - Math.floor(x);
@@ -163,6 +177,8 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
 
   const clusters: Cluster[] = [];
   const whirls: { readonly pivot: THREE.Group; readonly rate: number }[] = [];
+  /** Whirlpool parts that ride the sea's swell, with the height they were modelled at. */
+  const riders: { readonly object: THREE.Object3D; readonly baseY: number }[] = [];
   let count = 0;
 
   const addPuff = (holder: THREE.Object3D, geometry: THREE.BufferGeometry, base: THREE.MeshStandardMaterial, period: number): Puff => {
@@ -244,29 +260,39 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
       holder.add(pivot);
       pools.push({ centre, radius: Math.max(size.x, size.z) / 2, pivot });
       whirls.push({ pivot, rate: 0.9 });
+      riders.push({ object: pivot, baseY: 0 });
     }
     swap(eye, holder);
     for (const arm of arms) {
-      const still: THREE.BufferGeometry[] = [];
       for (const g of splitComponents(arm.geometry)) {
         const centre = boxOf(g).getCenter(new THREE.Vector3());
         const pool = pools
           .map((p) => ({ p, d: Math.hypot(p.centre.x - centre.x, p.centre.z - centre.z) }))
           .filter(({ p, d }) => d < p.radius * 1.5)
           .sort((a, b) => a.d - b.d)[0]?.p;
-        if (!pool) { still.push(g); continue; }
+        if (!pool) {
+          // A fleck of foam away from any eye rides the swell by itself.
+          g.translate(-centre.x, 0, -centre.z);
+          const fleck = new THREE.Mesh(g, arm.material as THREE.Material);
+          fleck.position.set(centre.x, 0, centre.z);
+          fleck.castShadow = false;
+          fleck.receiveShadow = false;
+          holder.add(fleck);
+          riders.push({ object: fleck, baseY: 0 });
+          continue;
+        }
         const mesh = new THREE.Mesh(g, arm.material as THREE.Material);
         mesh.position.set(-pool.centre.x, 0, -pool.centre.z);
         mesh.castShadow = false;
         mesh.receiveShadow = false;
         pool.pivot.add(mesh);
       }
-      addStill(holder, still, arm.material as THREE.Material);
       swap(arm, new THREE.Group());
     }
   }
 
   if (!clusters.length && !whirls.length) return null;
+  const at = new THREE.Vector3();
 
   let last = 0;
   return {
@@ -274,6 +300,10 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
       const dt = Math.max(0, Math.min(0.25, time - last));
       last = time;
       for (const whirl of whirls) whirl.pivot.rotation.y += dt * whirl.rate * life;
+      for (const { object, baseY } of riders) {
+        object.getWorldPosition(at);
+        object.position.y = baseY + life * (seaSwell(time, at.x, at.z) + WHIRL_CLEARANCE);
+      }
       for (const { mode, puffs, dir, travel, alpha } of clusters) {
         for (const puff of puffs) {
           const alive = life > 0.01;

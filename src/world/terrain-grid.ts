@@ -3,7 +3,7 @@ import { fujiRailway, railwayBank, railwayGround } from "./fuji-railway";
 import { fujiFieldAt, fujiValley, fujiVergeAt, type FujiField } from "./fuji-valley";
 import { createIsletRelief } from "./islets";
 import { createRegionalRelief } from "./landforms";
-import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
+import { groundHeight, groundOf, surfaceHeight, type LandmarkGround } from "./landmark-ground";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import { isWater, type Biome } from "./terrain";
 import { tokyoSurfaceAt, TOKYO_DISTRICT_EDGE, type TokyoSurface } from "./tokyo-district";
@@ -40,6 +40,12 @@ export function plateauBase(region: Region): number {
  */
 export function landmarkWaterLevel(biome: Biome): number | undefined {
   return isWater(biome) ? PLATEAU_HEIGHT[biome] - PLATEAU_HEIGHT.meadow : undefined;
+}
+
+/** Whether the model's terrain at an offset from its site is the region's own open water, which the boat can sail. */
+function isOpenWater(region: Region, model: LandmarkGround, dx: number, dz: number): boolean {
+  const level = landmarkWaterLevel(region.biome);
+  return level !== undefined && !model.terrainSurface && surfaceHeight(model, dx, dz) <= level + 0.01;
 }
 
 /** Terrain under a landmark's model sits this far below the model's own ground, so the model is never z-fought. */
@@ -172,9 +178,7 @@ export function createTerrain(world: World): Terrain {
     const dx = x - region.shrine.x;
     const dz = z - region.shrine.z;
     // A model's own sea, at the region's water level: open water, the same as around it.
-    const level = landmarkWaterLevel(region.biome);
-    const open =
-      onPlateau && !!model && !model.terrainSurface && level !== undefined && surfaceHeight(model, dx, dz) <= level + 0.01;
+    const open = onPlateau && !!model && isOpenWater(region, model, dx, dz);
     // Ordinary water shrines sit on the surface. Only landmark footprints can make dry land here.
     let biome: Biome = onPlateau && water && !open ? "meadow" : region.biome;
     let height: number;
@@ -329,7 +333,13 @@ export function createTerrain(world: World): Terrain {
       const region = world.regionAt(x, z);
       const model = region.landmark ? groundOf(region.landmark.id) : undefined;
       if (model && plateauDistance(region, x, z) <= 0) {
-        return plateauBase(region) + groundHeight(model, x - region.shrine.x, z - region.shrine.z);
+        const dx = x - region.shrine.x;
+        const dz = z - region.shrine.z;
+        const ground = plateauBase(region) + groundHeight(model, dx, dz);
+        // Over open water the traveller floats on the region's surface, as everywhere else on it; the model's own
+        // seabed lies below that. A deck over the water still stands where the model put it.
+        if (isOpenWater(region, model, dx, dz)) return Math.max(ground, plateauBase(region) + landmarkWaterLevel(region.biome)!);
+        return ground;
       }
       const tx = Math.floor(x);
       const tz = Math.floor(z);
