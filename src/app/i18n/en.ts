@@ -169,7 +169,7 @@ export const en: Messages = {
   },
   title: {
     continue: "Continue",
-    continueDetail: (seed, landmarks) => `${seed} · ${landmarks} ${landmarks === 1 ? "landmark" : "landmarks"}`,
+    continueDetail: (seed, landmarks) => `World ${seed} · ${landmarks} ${landmarks === 1 ? "landmark" : "landmarks"}`,
     newGame: "New game",
     loadGame: "Load game",
     options: "Options",

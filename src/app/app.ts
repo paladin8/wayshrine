@@ -59,7 +59,7 @@ import {
   type RestorationWake,
   type SaveData,
 } from "../game";
-import { createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type MusicSet, type TrackId } from "../audio";
+import { createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
 import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
@@ -170,18 +170,19 @@ export function startApp(container: HTMLElement): void {
   });
   const seed = new URLSearchParams(window.location.search).get("seed");
   if (seed !== null) {
-    startGame(container, saves.forSeed(seed), settings, saves);
+    startGame(container, saves.forSeed(seed), settings, saves, createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS }));
     return;
   }
-  const title = createTitleScreen(container, { saves, settings });
+  const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
+  const title = createTitleScreen(container, { saves, settings, music });
   void title.chosen.then((slot) => {
     title.destroy();
-    startGame(container, slot, settings, saves);
+    startGame(container, slot, settings, saves, music);
   });
 }
 
 /** Browser wiring: input, the game loop, the HUD and saving. */
-function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsStore, saves: SaveStore): void {
+function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsStore, saves: SaveStore, music: Music): void {
   const params = new URLSearchParams(window.location.search);
   const world = createWorld(slot.seed);
   const terrain = createTerrain(world);
@@ -223,7 +224,6 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     }, true);
   }
   const hud = createHud(container);
-  const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
   const applyAudio = (s = settings.get()): void => {
     music.setVolume(s.musicVolume);
     music.setMuted(s.muted);

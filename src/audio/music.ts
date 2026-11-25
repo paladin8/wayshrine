@@ -150,7 +150,8 @@ export function createMusic(options: MusicOptions = {}): Music {
     setDuck(level) {
       duckTarget = Math.min(1, Math.max(0, level));
     },
-    update(dt) {
+    update(elapsed) {
+      const dt = Math.max(0, elapsed);
       const delta = duckTarget - duck;
       const maxMove = dt / (delta > 0 ? duckReleaseSeconds : duckSeconds);
       duck = Math.abs(delta) <= maxMove ? duckTarget : duck + Math.sign(delta) * maxMove;

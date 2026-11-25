@@ -1,3 +1,4 @@
+import type { Music } from "../audio";
 import { messagesFor } from "./i18n";
 import { createSettingsPanel } from "./settings-panel";
 import { randomSeed, type SaveSlot, type SaveStore } from "./saves";
@@ -18,7 +19,12 @@ export interface TitleScreen {
 export interface TitleScreenDeps {
   readonly saves: SaveStore;
   readonly settings: SettingsStore;
+  /** Plays the title theme while the screen is up; the game carries on with the same player. */
+  readonly music: Music;
 }
+
+/** The theme played on the title screen. */
+const TITLE_TRACK = "homeward-breeze";
 
 const INK = "#2a2424";
 const RED = "#d96b59";
@@ -42,6 +48,7 @@ const CSS = `
 .ts-btn[disabled]{opacity:.4;cursor:default;pointer-events:none}
 .ts-btn.quiet{background:transparent;border-color:transparent}
 .ts-btn.quiet:hover,.ts-btn.quiet:focus-visible{background:#2a242414}
+.ts-field{display:flex;flex-direction:column;gap:6px}
 .ts-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
 .ts-input{box-sizing:border-box;width:100%;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;font:inherit;font-size:14px;color:${INK};outline:none;text-transform:none;letter-spacing:normal}
 .ts-input:focus{border-color:${RED}}
@@ -176,15 +183,19 @@ function scene(): string {
 </svg>`;
 }
 
-interface CreditsDialog {
+/** A dialog like the settings one. `build` fills the body and is run again whenever the language changes. */
+interface Dialog {
   isOpen(): boolean;
-  toggle(): void;
+  open(): void;
   close(): void;
   destroy(): void;
 }
 
-/** The credits, in a dialog like the settings one. */
-function createCreditsDialog(container: HTMLElement, settings: SettingsStore): CreditsDialog {
+function createDialog(
+  container: HTMLElement,
+  settings: SettingsStore,
+  build: (body: HTMLElement, heading: HTMLElement, closeButton: HTMLElement) => void,
+): Dialog {
   const overlay = document.createElement("div");
   overlay.className = "sp-overlay";
   const card = document.createElement("div");
@@ -204,49 +215,30 @@ function createCreditsDialog(container: HTMLElement, settings: SettingsStore): C
   card.append(head, body);
   overlay.appendChild(card);
   container.appendChild(overlay);
-  const render = (): void => {
-    const m = messagesFor(settings.get().language).title;
-    heading.textContent = m.credits;
-    close.setAttribute("aria-label", m.back);
-    body.replaceChildren(
-      ...m.creditsLines.map((line, i) => {
-        const p = document.createElement("p");
-        p.className = i === 0 ? "ts-credit author" : "ts-credit";
-        p.textContent = line;
-        return p;
-      }),
-    );
-  };
   const isOpen = (): boolean => overlay.classList.contains("open");
-  const api: CreditsDialog = {
+  const render = (): void => build(body, heading, close);
+  const api: Dialog = {
     isOpen,
-    toggle() {
-      if (isOpen()) api.close();
-      else {
-        render();
-        overlay.classList.add("open");
-        card.focus();
-      }
+    open() {
+      render();
+      overlay.classList.add("open");
+      (body.querySelector<HTMLElement>("[data-autofocus]") ?? card).focus();
     },
     close: () => overlay.classList.remove("open"),
-    destroy: () => overlay.remove(),
+    destroy: () => {
+      unsubscribe();
+      overlay.remove();
+    },
   };
   close.addEventListener("click", api.close);
   overlay.addEventListener("pointerdown", (e) => {
     if (e.target === overlay) api.close();
   });
   const unsubscribe = settings.subscribe(() => isOpen() && render());
-  const destroy = api.destroy;
-  api.destroy = () => {
-    unsubscribe();
-    destroy();
-  };
   return api;
 }
 
-type View = "menu" | "new" | "load";
-
-export function createTitleScreen(container: HTMLElement, { saves, settings }: TitleScreenDeps): TitleScreen {
+export function createTitleScreen(container: HTMLElement, { saves, settings, music }: TitleScreenDeps): TitleScreen {
   const style = document.createElement("style");
   style.textContent = CSS;
   document.head.appendChild(style);
@@ -280,8 +272,6 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
 
   const options = createSettingsPanel(root, null, settings, { escapeToggles: false });
 
-  const credits = createCreditsDialog(root, settings);
-  let view: View = "menu";
   let busy = false;
   let resolve!: (slot: SaveSlot) => void;
   const chosen = new Promise<SaveSlot>((r) => (resolve = r));
@@ -305,6 +295,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
   const begin = (slot: SaveSlot): void => {
     if (busy) return;
     busy = true;
+    dialogs.forEach((d) => d.close());
     panel.replaceChildren();
     const loading = document.createElement("p");
     loading.className = "ts-loading";
@@ -316,120 +307,158 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
   const dateOf = (at: number): string =>
     new Date(at).toLocaleDateString(settings.get().language, { year: "numeric", month: "short", day: "numeric" });
 
-  const render = (): void => {
+  const credits = createDialog(root, settings, (body, heading, close) => {
+    const m = t();
+    heading.textContent = m.credits;
+    close.setAttribute("aria-label", m.back);
+    body.replaceChildren(
+      ...m.creditsLines.map((line, i) => {
+        const p = document.createElement("p");
+        p.className = i === 0 ? "ts-credit author" : "ts-credit";
+        p.textContent = line;
+        return p;
+      }),
+    );
+  });
+
+  const newGame = createDialog(root, settings, (body, heading, close) => {
+    const m = t();
+    heading.textContent = m.newGame;
+    close.setAttribute("aria-label", m.back);
+    const keep = body.querySelector<HTMLInputElement>("input")?.value ?? "";
+    const label = document.createElement("label");
+    label.className = "ts-label ts-field";
+    label.textContent = m.seedLabel;
+    const input = document.createElement("input");
+    input.className = "ts-input";
+    input.type = "text";
+    input.placeholder = m.seedPlaceholder;
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.maxLength = 64;
+    input.value = keep;
+    input.dataset.autofocus = "";
+    label.appendChild(input);
+    const help = document.createElement("p");
+    help.className = "ts-help";
+    help.textContent = m.seedHelp;
+    const start = (): void => begin(saves.create(input.value.trim() || randomSeed()));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") start();
+    });
+    body.replaceChildren(label, help, button(m.begin, start, "primary"));
+  });
+
+  const loadGame = createDialog(root, settings, (body, heading, close) => {
+    const m = t();
+    heading.textContent = m.loadGame;
+    close.setAttribute("aria-label", m.back);
+    const list = document.createElement("div");
+    list.className = "ts-list";
+    const all = saves.list();
+    if (all.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "ts-empty";
+      empty.textContent = m.noSaves;
+      list.appendChild(empty);
+    }
+    for (const slot of all) {
+      const row = document.createElement("div");
+      row.className = "ts-save";
+      const title = document.createElement("b");
+      title.textContent = m.saveSummary(slot.seed, slot.restored);
+      const when = document.createElement("span");
+      when.textContent = dateOf(slot.playedAt);
+      const actions = document.createElement("div");
+      actions.className = "ts-row";
+      actions.append(
+        button(m.play, () => begin(slot), "primary"),
+        button(m.delete, () => {
+          row.replaceChildren();
+          const ask = document.createElement("b");
+          ask.textContent = m.confirmDelete;
+          const confirm = document.createElement("div");
+          confirm.className = "ts-row";
+          confirm.append(
+            button(m.delete, () => {
+              saves.remove(slot.id);
+              if (saves.list().length === 0) loadGame.close();
+              else loadGame.open();
+              renderMenu();
+            }),
+            button(m.keep, () => loadGame.open(), "primary"),
+          );
+          row.append(ask, confirm);
+          (confirm.lastElementChild as HTMLElement).focus();
+        }),
+      );
+      row.append(title, when, actions);
+      list.appendChild(row);
+    }
+    const first = list.querySelector<HTMLElement>(".ts-btn.primary");
+    if (first) first.dataset.autofocus = "";
+    body.replaceChildren(list);
+  });
+
+  const dialogs: readonly Dialog[] = [credits, newGame, loadGame];
+
+  const renderMenu = (): void => {
     if (busy) return;
     const m = t();
     const note = logo.querySelector<HTMLElement>(".ts-note");
     if (note) setText(note, m.logoNote);
     panel.replaceChildren();
-    let focus: HTMLElement | null = null;
-
-    if (view === "menu") {
-      const last = saves.last();
-      const cont = button(m.continue, () => last && begin(last), "primary", last ? m.continueDetail(last.seed, last.restored) : undefined);
-      if (!last) cont.disabled = true;
-      const load = button(m.loadGame, () => ((view = "load"), render()));
-      if (saves.list().length === 0) load.disabled = true;
-      panel.append(
-        cont,
-        button(m.newGame, () => ((view = "new"), render()), last ? "" : "primary"),
-        load,
-        button(m.options, () => options.toggle()),
-        button(m.credits, () => credits.toggle(), "quiet"),
-      );
-      focus = last ? cont : (panel.children[1] as HTMLElement);
-    } else if (view === "new") {
-      const label = document.createElement("label");
-      label.className = "ts-label";
-      label.textContent = m.seedLabel;
-      const input = document.createElement("input");
-      input.className = "ts-input";
-      input.type = "text";
-      input.placeholder = m.seedPlaceholder;
-      input.autocomplete = "off";
-      input.spellcheck = false;
-      input.maxLength = 64;
-      label.appendChild(input);
-      label.style.display = "flex";
-      label.style.flexDirection = "column";
-      label.style.gap = "6px";
-      const help = document.createElement("p");
-      help.className = "ts-help";
-      help.textContent = m.seedHelp;
-      const start = (): void => begin(saves.create(input.value.trim() || randomSeed()));
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") start();
-      });
-      panel.append(label, help, button(m.begin, start, "primary"), button(m.back, () => ((view = "menu"), render()), "quiet"));
-      focus = input;
-    } else if (view === "load") {
-      const list = document.createElement("div");
-      list.className = "ts-list";
-      const all = saves.list();
-      if (all.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "ts-empty";
-        empty.textContent = m.noSaves;
-        list.appendChild(empty);
-      }
-      for (const slot of all) {
-        const row = document.createElement("div");
-        row.className = "ts-save";
-        const title = document.createElement("b");
-        title.textContent = m.saveSummary(slot.seed, slot.restored);
-        const when = document.createElement("span");
-        when.textContent = dateOf(slot.playedAt);
-        const actions = document.createElement("div");
-        actions.className = "ts-row";
-        actions.append(
-          button(m.play, () => begin(slot), "primary"),
-          button(m.delete, () => {
-            row.replaceChildren();
-            const ask = document.createElement("b");
-            ask.textContent = m.confirmDelete;
-            const confirm = document.createElement("div");
-            confirm.className = "ts-row";
-            confirm.append(
-              button(m.delete, () => {
-                saves.remove(slot.id);
-                if (saves.list().length === 0) view = "menu";
-                render();
-              }),
-              button(m.keep, () => render(), "primary"),
-            );
-            row.append(ask, confirm);
-            (confirm.lastElementChild as HTMLElement).focus();
-          }),
-        );
-        row.append(title, when, actions);
-        list.appendChild(row);
-      }
-      panel.append(list, button(m.back, () => ((view = "menu"), render()), "quiet"));
-      focus = list.querySelector<HTMLElement>(".ts-btn.primary") ?? (panel.lastElementChild as HTMLElement);
-    }
-    focus?.focus();
+    const last = saves.last();
+    const cont = button(m.continue, () => last && begin(last), "primary", last ? m.continueDetail(last.seed, last.restored) : undefined);
+    if (!last) cont.disabled = true;
+    const load = button(m.loadGame, () => loadGame.open());
+    if (saves.list().length === 0) load.disabled = true;
+    const fresh = button(m.newGame, () => newGame.open(), last ? "" : "primary");
+    panel.append(cont, fresh, load, button(m.options, () => options.toggle()), button(m.credits, () => credits.open(), "quiet"));
+    (last ? cont : fresh).focus();
   };
 
   const onKey = (e: KeyboardEvent): void => {
+    music.unlock();
     if (e.code !== "Escape" || e.repeat || busy) return;
-    if (credits.isOpen()) credits.close();
+    const open = dialogs.find((d) => d.isOpen());
+    if (open) open.close();
     else if (options.isOpen()) options.close();
-    else if (view !== "menu") {
-      view = "menu";
-      render();
-    }
   };
+  const onPointer = (): void => music.unlock();
   window.addEventListener("keydown", onKey);
-  const unsubscribe = settings.subscribe(render);
-  render();
+  window.addEventListener("pointerdown", onPointer);
+  const unsubscribe = settings.subscribe(renderMenu);
+  renderMenu();
+
+  // The theme plays under the menu; the game takes the same player over when it starts.
+  music.setVolume(settings.get().musicVolume);
+  music.setMuted(settings.get().muted);
+  const unsubscribeAudio = settings.subscribe((s) => {
+    music.setVolume(s.musicVolume);
+    music.setMuted(s.muted);
+  });
+  music.setTrack(TITLE_TRACK);
+  music.unlock();
+  let frameId = 0;
+  let last = performance.now();
+  const tick = (now: number): void => {
+    music.update(Math.min(0.1, Math.max(0, now - last) / 1000));
+    last = now;
+    frameId = requestAnimationFrame(tick);
+  };
+  frameId = requestAnimationFrame(tick);
 
   return {
     chosen,
     destroy() {
+      cancelAnimationFrame(frameId);
       unsubscribe();
+      unsubscribeAudio();
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
       options.destroy();
-      credits.destroy();
+      dialogs.forEach((d) => d.destroy());
       root.remove();
       style.remove();
     },

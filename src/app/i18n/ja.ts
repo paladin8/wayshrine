@@ -169,7 +169,7 @@ export const ja: Messages = {
   },
   title: {
     continue: "つづきから",
-    continueDetail: (seed, landmarks) => `${seed} · 名所 ${landmarks}`,
+    continueDetail: (seed, landmarks) => `世界 ${seed} · 名所 ${landmarks}`,
     newGame: "はじめから",
     loadGame: "旅をえらぶ",
     options: "設定",
