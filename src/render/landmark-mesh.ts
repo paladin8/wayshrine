@@ -184,7 +184,7 @@ export function buildLandmark(id: string): ShrineMesh {
         group.remove(stand.group);
         group.add(gltf.scene);
         // Steam and smoke are pulled out first, so they are not tinted with the rest of the model.
-        puffs = extractPuffs(gltf.scene);
+        puffs = extractPuffs(gltf.scene, id);
         const replacement = replaceLandmarkAnimals(gltf.scene);
         animals = replacement.animals;
         model = adopt(gltf.scene, new Set(animals.map(animal => animal.anchor)));
