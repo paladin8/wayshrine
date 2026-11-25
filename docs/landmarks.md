@@ -56,9 +56,9 @@ Names, in English and Japanese, are what people commonly call each place (they a
 | 15 | IV Mountain | nikko-toshogu | Nikko Toshogu | 日光東照宮 | にっこうとうしょうぐう | the shrine | mountain |
 | 16 | | kegon-falls | Kegon Falls | 華厳の滝 | けごんのたき | the waterfall | mountain |
 | 17 | | kappa-bashi | Kappa-bashi, Kamikochi | 上高地の河童橋 | かみこうちのかっぱばし | the suspension bridge | mountain |
-| 18 | | tateyama-kurobe | Yuki-no-Otani | 雪の大谷 | ゆきのおおたに | the Tateyama Kurobe snow corridor | mountain |
+| 18 | | tateyama-kurobe | Yuki-no-Otani | 雪の大谷 | ゆきのおおたに | the Tateyama Kurobe snow corridor | snow |
 | 19 | | koyasan-okunoin | Koyasan Okunoin | 高野山奥之院 | こうやさんおくのいん | the cemetery | mountain |
-| 20 | | yoshino-yama | Yoshino-yama | 吉野山 | よしのやま | cherry slopes | meadow |
+| 20 | | yoshino-yama | Yoshino-yama | 吉野山 | よしのやま | cherry slopes | mountain |
 | 21 | | byodo-in | Byodo-in | 平等院 | びょうどういん | the Phoenix Hall over its pond | water |
 | 22 | | senso-ji | Senso-ji | 浅草寺 | せんそうじ | the Kaminarimon lantern gate and pagoda | meadow |
 | 23 | V Marsh | kushiro-shitsugen | Kushiro Wetland | 釧路湿原 | くしろしつげん | the wetland and its cranes | marsh |
