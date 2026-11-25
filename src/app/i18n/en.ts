@@ -128,8 +128,6 @@ export const en: Messages = {
     unavailable: "The train view could not load. Try boarding again.",
     skip: "Skip ride",
   },
-  compassHere: "Shrine here",
-  compassNearest: (distance) => `Nearest shrine · ${distance}`,
   map: { expand: "M: expand", close: "M: close", travel: "click a restored shrine to travel", zoom: "Zoom out (Z)" },
   mapNeeds: (gear) => `needs ${gear.toLowerCase()}`,
   monuments: {
@@ -155,7 +153,6 @@ export const en: Messages = {
     muteAll: "Mute all sound (N)",
     display: "Display",
     minimap: "Show minimap",
-    compass: "Show next-shrine compass",
     language: "Language",
     character: "Traveller",
     female: "Female",

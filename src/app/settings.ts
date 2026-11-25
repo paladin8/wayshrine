@@ -10,7 +10,6 @@ export interface Settings {
   /** Silences all sound, music and effects alike. */
   readonly muted: boolean;
   readonly showMinimap: boolean;
-  readonly showCompass: boolean;
   readonly language: Locale;
   /** Which traveller body the player has. */
   readonly character: CharacterChoice;
@@ -29,7 +28,6 @@ export function defaultSettings(preferredLanguages: readonly string[] = []): Set
     sfxVolume: 0.7,
     muted: false,
     showMinimap: true,
-    showCompass: true,
     language: detectLocale(preferredLanguages),
     character: "female",
   };
@@ -55,7 +53,6 @@ export function parseSettings(raw: unknown, preferredLanguages: readonly string[
     sfxVolume: volume(p.sfxVolume, d.sfxVolume),
     muted: flag(p.muted, flag(p.musicMuted, d.muted)),
     showMinimap: flag(p.showMinimap, d.showMinimap),
-    showCompass: flag(p.showCompass, d.showCompass),
     language: isLocale(p.language) ? p.language : d.language,
     character: isCharacter(p.character) ? p.character : d.character,
   };

@@ -91,7 +91,6 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
 
   const displayHeading = el("h3", undefined, card);
   const minimap = checkbox();
-  const compass = checkbox();
 
   const characterHeading = el("h3", undefined, card);
   const characters = el("div", "sp-langs", card);
@@ -138,7 +137,6 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
     setText(mute.label, t.muteAll);
     setText(displayHeading, t.display);
     setText(minimap.label, t.minimap);
-    setText(compass.label, t.compass);
     setText(characterHeading, t.character);
     for (const [choice, b] of characterButtons) {
       b.textContent = t[choice];
@@ -153,7 +151,6 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
     setText(sfx.out, percent(s.sfxVolume));
     mute.input.checked = s.muted;
     minimap.input.checked = s.showMinimap;
-    compass.input.checked = s.showCompass;
     for (const [locale, b] of langButtons) b.setAttribute("aria-pressed", String(locale === s.language));
   };
 
@@ -161,7 +158,6 @@ export function createSettingsPanel(container: HTMLElement, actions: HTMLElement
   sfx.input.addEventListener("input", () => store.update({ sfxVolume: Number(sfx.input.value) }));
   mute.input.addEventListener("change", () => store.update({ muted: mute.input.checked }));
   minimap.input.addEventListener("change", () => store.update({ showMinimap: minimap.input.checked }));
-  compass.input.addEventListener("change", () => store.update({ showCompass: compass.input.checked }));
   store.subscribe(render);
   render();
 

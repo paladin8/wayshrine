@@ -156,7 +156,7 @@ export function monumentClearance(landmark: LandmarkSpec): number {
   return footprintHalf(landmark) + LANDMARK_BLEND + 1.5;
 }
 
-/** The point the compass aims at, in world space. */
+/** The point the map marker and debug travel aim at, in world space. */
 export function anchorOf(region: Region): Point {
   const g = region.landmark ? groundOf(region.landmark.id) : undefined;
   return g ? { x: region.shrine.x + g.interact[0], z: region.shrine.z + g.interact[1] } : region.shrine;

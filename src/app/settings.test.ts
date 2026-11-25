@@ -9,7 +9,7 @@ class MemoryStorage {
 
 describe("settings", () => {
   it("defaults to everything shown, audible, and the browser's language", () => {
-    expect(defaultSettings(["ja-JP"])).toMatchObject({ showMinimap: true, showCompass: true, muted: false, language: "ja" });
+    expect(defaultSettings(["ja-JP"])).toMatchObject({ showMinimap: true, muted: false, language: "ja" });
     expect(defaultSettings(["fr"]).language).toBe("en");
   });
 

@@ -128,8 +128,6 @@ export const ja: Messages = {
     unavailable: "車窓を表示できませんでした。もう一度お試しください。",
     skip: "乗車をスキップ",
   },
-  compassHere: "祠はここ",
-  compassNearest: (distance) => `最寄りの祠 · ${distance}`,
   map: { expand: "M: 拡大", close: "M: 閉じる", travel: "蘇った祠をクリックで移動", zoom: "俯瞰 (Z)" },
   mapNeeds: (gear) => `要${gear}`,
   monuments: {
@@ -155,7 +153,6 @@ export const ja: Messages = {
     muteAll: "すべての音を消す (N)",
     display: "表示",
     minimap: "ミニマップを表示",
-    compass: "次の祠のコンパスを表示",
     language: "言語",
     character: "旅人",
     female: "女性",

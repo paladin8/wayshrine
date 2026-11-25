@@ -82,7 +82,7 @@ function drawShrineDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: n
 export interface MapInput {
   readonly pos: Point;
   readonly state: GameState;
-  /** The shrine the compass is pointing at, if any. */
+  /** The nearest reachable unrestored shrine, marked on the map, if any. */
   readonly target: Region | null;
   /** False hides the map entirely (a player setting). */
   readonly visible: boolean;

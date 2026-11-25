@@ -18,8 +18,6 @@ function allText(m: Messages): string[] {
     m.promptRestore,
     m.promptRestoreLandmark,
     m.promptSkip,
-    m.compassHere,
-    m.compassNearest(52),
     ...Object.values(m.map),
     m.mapNeeds("X"),
     ...Object.values(m.settings).flat(),
@@ -61,7 +59,6 @@ describe("i18n", () => {
       for (const status of ["locked", "unlocked"] as const) {
         expect(m.gearRequirement(39, status)).toContain("39");
       }
-      expect(m.compassNearest(123)).toContain("123");
     }
   });
 

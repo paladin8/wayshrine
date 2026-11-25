@@ -124,7 +124,6 @@ export interface Stage {
   /** Converts screen-space input (right, up) to a unit ground direction. */
   groundDirection(right: number, up: number): Point;
   /** The inverse: a ground-space offset as screen-space (right, up) components. */
-  screenDirection(dx: number, dz: number): { right: number; up: number };
   resize(widthPixels: number, heightPixels: number): void;
   /** Advances model poses before movement queries their collision. */
   tick(dtSeconds: number): void;
@@ -370,9 +369,6 @@ export function createStage(
     groundDirection(right, up) {
       const v = new THREE.Vector3().addScaledVector(RIGHT, right).addScaledVector(FORWARD, up);
       return { x: v.x, z: v.z };
-    },
-    screenDirection(dx, dz) {
-      return { right: dx * RIGHT.x + dz * RIGHT.z, up: dx * FORWARD.x + dz * FORWARD.z };
     },
     resize(w, h) {
       heightPixels = h;

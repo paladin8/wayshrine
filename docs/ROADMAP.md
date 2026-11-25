@@ -7,10 +7,10 @@
 - Game state: restore, capabilities, save format, player movement.
 - **Monuments and rubbings:** 1,209 Japanese texts on monuments, spread 0 to 2 per region with a find near every landmark; worn until the region is restored; a glimmer when one is on screen; reading adds a loose sheet to the rubbing box (B). Haiku match their region's biome. See ADR 0005.
 - **Haiku scenery:** all 59 tagged haiku have an authored scene beside their rubbing site. Local motion, lighting and effects follow the restoration wave.
-- **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap and compass toggles), English and Japanese, persisted.
+- **Settings and language:** settings dialog (music and sound-effects volume, mute, minimap toggle), English and Japanese, persisted.
 - **Music:** audio layer with crossfading player, three scores tied to first uses of gear, volume/mute controls.
-- **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 14, 22, 30, 39 and 48 restored landmarks instead of at shrines, and Pilgrim’s Wake at 58; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; compass points at the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
-- **Guidance:** compass to the nearest reachable unrestored shrine or landmark, landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
+- **Landmarks (structure):** 66 landmarks in nine acts placed in outward ring bands; abilities unlock at 3, 8, 14, 22, 30, 39 and 48 restored landmarks instead of at shrines, and Pilgrim’s Wake at 58; biomes in patches of a few regions, with marsh, dark forest, volcanic and sea fading in beyond about 11 regions; wide plateau and solid placeholder model per landmark; the map marks the next reachable landmark. See ADRs 0006 and 0007 and `docs/landmarks.md`.
+- **Guidance:** the map marks the nearest reachable unrestored shrine or landmark (the on-screen compass is gone; debug travel to the next shrine remains), landmark reveals earned at seven rubbings per star, reduced by restored landmarks, in story order with a seeded order within each act, exploration tracking, corner map and expanded map (M), and debug reset tools.
 - **Ordinary shrines:** biome-specific gates and shelters. Land shrines sit on flat terraces that blend into the surrounding hill, lake shrines stand on pilings, and coastal torii rise directly from the sea. Water shrines can be restored from the boat.
 - **Tokyo Tower:** the tower anchors a walkable city district at landmark 46. The district gains color as restoration reaches the streets.
 - **Ginzan Onsen:** a seeded downstream route leads to baths and footbridges. Each bath warms up after Ginzan and its local shrine are restored.
@@ -23,7 +23,7 @@
 - **Vertical slice:** streamed tile terrain per biome, WASD player gated by capabilities, shrines that go from dead to alive (animated vitality), HUD, localStorage saves, `?debug` hooks.
 
 ## Next
-0. Landmarks: screen-edge glow and compass guidance for revealed landmarks, skyline peek for tall landmarks, real looks, props and player visuals for the later biomes and abilities (placeholders now), more landmark models.
+0. Landmarks: screen-edge glow for revealed landmarks, skyline peek for tall landmarks, real looks, props and player visuals for the later biomes and abilities (placeholders now), more landmark models.
 1. Refine biome edge shapes.
 2. **Ability acquisition.** The boat prototype announces the unlock at three restored landmarks and uses the first boarding to transition between two themes. The first step on snow with snowshoes plays a cue and brings in Snowline Walk. Extend the reward and first-use pattern to the other abilities. See `docs/music.md`.
 3. Advanced-civilisation layer: ruins and structures that appear in restored regions and change generation (see DESIGN).

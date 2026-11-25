@@ -87,7 +87,7 @@ export interface LandmarkGround {
   readonly terrainSurface?: boolean;
   /** Solid discs [x, z, r]: columns, posts, trees, statues. */
   readonly solids: ReadonlyArray<readonly [number, number, number]>;
-  /** Authored approach point and radius. The compass uses the point. */
+  /** Authored approach point and radius. The map marker and debug travel use the point. */
   readonly interact: readonly [number, number];
   readonly reach: number;
   /** Where the player arrives when travelling here. */

@@ -1027,23 +1027,16 @@ export function startApp(container: HTMLElement): void {
       notebook.refresh();
     }
     const guide = nextShrine(world, state, pos);
-    let compass = null;
-    if (guide) {
-      const s = stage.screenDirection(guide.dx, guide.dz);
-      compass = { angle: Math.atan2(s.right, s.up), distance: guide.distance, arrived: reach?.id === guide.region.id };
-    }
     const reading = monumentUi.isReading();
     hud.update({
       capabilities: caps,
       restoredLandmarks,
-      compass,
       prompt: reading ? null : prompt,
       hint: reading || momentBusy() ? null : trainLoadNotice > 0 ? t.railway.unavailable : hint,
       gearReveal: gearReveal && { gear: gearReveal.gear, locale: prefs.language },
       landmarkName: nameModel,
       nearLandmarkName: nearModel,
       messages: t,
-      showCompass: prefs.showCompass,
     });
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
