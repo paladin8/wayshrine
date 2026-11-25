@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { frontRadius, type RestorationWake } from "../game";
-import type { Point, Terrain } from "../world";
+import { hokoraOf, waveOriginOf, type Point, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
 import { Kind, ParticleLayer, stepParticle, type Particle } from "./particles";
 import { createWildlife } from "./wildlife";
@@ -151,12 +151,14 @@ export function createAmbient(
     if (lit.length === 0 || glowFreeSparks < 0) return;
     const region = lit[Math.floor(Math.random() * lit.length)]!;
     const ground = terrain.tileAtPoint(region.shrine.x, region.shrine.z).height;
+    // The orb hovers over an ordinary shrine's hokora, and at a landmark's site.
+    const orb = hokoraOf(region) ?? region.shrine;
     const p = spawn(
       glow.particles[glowFreeSparks]!,
       Kind.Spark,
-      region.shrine.x + rand(-0.6, 0.6),
-      region.shrine.z + rand(-0.6, 0.6),
-      ground + 1.3 + rand(0, 0.4),
+      orb.x + rand(-0.6, 0.6),
+      orb.z + rand(-0.6, 0.6),
+      ground + (region.landmark ? 1.3 : 1.8) + rand(0, 0.4),
       ground,
     );
     p.maxAge = rand(2, 3.6);
@@ -167,7 +169,7 @@ export function createAmbient(
   function spawnFront(regionId: string, progress: number, glowFreeFront: number, wake?: RestorationWake): void {
     const radius = frontRadius(progress, wake?.extent);
     if (radius === null || radius < 0 || glowFreeFront < 0) return;
-    const origin = wake?.origin ?? world.regionById(regionId).shrine;
+    const origin = wake?.origin ?? waveOriginOf(world.regionById(regionId));
     const angle = rand(0, Math.PI * 2);
     const x = origin.x + Math.cos(angle) * radius;
     const z = origin.z + Math.sin(angle) * radius;

@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/matsushima.glb"
 BLEND=ROOT+"/content/landmarks/matsushima.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"tuff":"d8ceb4","tuffdk":"8e8676","grass":"6f8a4a","pine":"3a5e36","bark":"5a4a3a","darkwood":"4a3a2e","bark2":"6e5444","gold":"d9b04a","white":"efeae0","red":"c8473a","water":"2a5e7e"}
+PAL={"tuff":"d8ceb4","tuffdk":"8e8676","terrain":"86a75e","pine":"3a5e36","bark":"5a4a3a","darkwood":"4a3a2e","bark2":"6e5444","gold":"d9b04a","white":"efeae0","red":"c8473a","water":"2a5e7e"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -112,7 +112,7 @@ def flared_roof(spec,mat="roof",ox=0.0,oy=0.0):
 import random
 rng=random.Random(54)
 # Islet surfaces are already in the walkable heightfield. Keep solid trees, structures and boats.
-EXTRA_SOLIDS=[]; NOSOLID={"pine","tuff","tuffdk","grass","water"}
+EXTRA_SOLIDS=[]; NOSOLID={"pine","tuff","tuffdk","terrain","water"}
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 FH=11.2   # footprint half-width (the sidecar's half): the middle size, a stretch of the bay and its islets
@@ -204,7 +204,7 @@ for i,(cu,cv,r,h,k,asp,rt) in enumerate(ISL):
         rings.append([(*isl_pt(i,2*math.pi*j/NA,fr),z) for j in range(NA)])
     rings[5]=[(x,y,z+0.05) for x,y,z in rings[5]]
     solid(rings[:5],"tuffdk" if k=="reef" else "tuff",mt="tuffdk" if k=="reef" else "tuff")   # reefs: dark, wave-washed
-    if k!="reef": solid([rings[4],rings[5]],"grass")
+    if k!="reef": solid([rings[4],rings[5]],"terrain")
     wf=PROF[k][1][0]+0.01                                # the dark wave-worn band at the waterline
     solid([[(*isl_pt(i,2*math.pi*j/NA,wf),z) for j in range(NA)] for z in (LV-0.05,LV+min(0.22,h*0.6))],"tuffdk")
 draw_sea()

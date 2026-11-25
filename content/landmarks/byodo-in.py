@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/byodo-in.glb"
 BLEND=ROOT+"/content/landmarks/byodo-in.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"water":"479ea3","grass":"6f8f4f","pebble":"cfc8b8","stone":"9a958c","red":"c0502f","white":"efeae0","roof":"5d6662","gold":"d9b04a","foliage":"4f7a45","bark":"4e3a30","wood":"6e4c36","glow_cream":"e8dcb0"}
+PAL={"water":"479ea3","terrain":"86a75e","pebble":"cfc8b8","stone":"9a958c","red":"c0502f","white":"efeae0","roof":"5d6662","gold":"d9b04a","foliage":"4f7a45","bark":"4e3a30","wood":"6e4c36","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -157,7 +157,7 @@ for j in range(NG):
         for t3 in ([(a,b,c),(a,c,d4)] if (i+j)%2==0 else [(a,b,d4),(b,c,d4)]):
             P=[gv[k] for k in t3]; cx=sum(p[0] for p in P)/3; cy=sum(p[1] for p in P)/3; cz=sum(p[2] for p in P)/3
             if max(p[2] for p in P)<LV-0.05: continue
-            gf.append([gid[k] for k in t3]); gm.append("pebble" if is_beach(*W2L(cx,cy)) else "grass")
+            gf.append([gid[k] for k in t3]); gm.append("pebble" if is_beach(*W2L(cx,cy)) else "terrain")
 emit(gverts,gf,gm,orient=False)
 emit([(-FH,-FH,LV-0.04),(FH,-FH,LV-0.04),(FH,FH,LV-0.04),(-FH,FH,LV-0.04)],[[0,1,2,3]],["water"],orient=False)   # fills shore tiles the game keeps as land
 MARK={m:len(B[m][0]) for m in B}       # everything after this is built in the garden's frame and turned at the end

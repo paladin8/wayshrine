@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/mount-aso.glb"
 BLEND=ROOT+"/content/landmarks/mount-aso.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"ash":"8a8178","strata1":"7a6a5c","strata2":"5a4e46","grass":"7d9a4f","lake":"6fc7bf","water":"5f8fa0","steam":"e2e4e2","concrete":"b5b0a6","pave":"a8a294","horse":"6b4a32"}
+PAL={"terrain":"574441","ash":"8a8178","strata1":"7a6a5c","strata2":"5a4e46","grass":"7d9a4f","lake":"6fc7bf","water":"5f8fa0","steam":"e2e4e2","concrete":"b5b0a6","pave":"a8a294","horse":"6b4a32"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -154,9 +154,9 @@ def facemat(x,y,h):
         return "strata1" if int((h+0.1)/0.32)%2 else "strata2"
     if r<RIM+2.4 and h>0.3: return "ash"            # the ash stays on the cone; grass runs up its lower slopes
     if math.hypot(u-KM[0],v-KM[1])<2.0:
-        a=math.atan2(v-KM[1],u-KM[0]); return "strata2" if (int((a+math.pi)/(2*math.pi)*18)%3==0 and h>0.25) else "grass"
-    if h< -0.1: return "grass"
-    return "grass"
+        a=math.atan2(v-KM[1],u-KM[0]); return "strata2" if (int((a+math.pi)/(2*math.pi)*18)%3==0 and h>0.25) else "terrain"
+    if h< -0.1: return "terrain"
+    return "terrain"                                # the lower slopes take the region's own ground
 faces=[];fm=[]
 for j in range(NG-1):
     for i in range(NG-1):

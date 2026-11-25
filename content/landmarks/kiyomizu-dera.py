@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/kiyomizu-dera.glb"
 BLEND=ROOT+"/content/landmarks/kiyomizu-dera.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"darkwood":"6e5442","wood":"d1ab80","bark":"6e4a3a","vermilion":"d96b59","stone":"a39e98","cream":"e8dcb0","foliage":"5f9a52","water":"3fb2bd","glow_cream":"e8dcb0"}
+PAL={"terrain":"86a75e","darkwood":"6e5442","wood":"d1ab80","bark":"6e4a3a","vermilion":"d96b59","stone":"a39e98","cream":"e8dcb0","foliage":"5f9a52","water":"3fb2bd","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -150,7 +150,7 @@ for j in range(NG):
         for t3 in tr:
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
-            gf.append([gid[k] for k in t3]); gm.append("foliage")
+            gf.append([gid[k] for k in t3]); gm.append("terrain")
 loop=[(i,0) for i in range(NG+1)]+[(NG,j) for j in range(1,NG+1)]+[(i,NG) for i in range(NG-1,-1,-1)]+[(0,j) for j in range(NG-1,0,-1)]
 for n in range(len(loop)):
     A,Bk=gv[loop[n]],gv[loop[(n+1)%len(loop)]]

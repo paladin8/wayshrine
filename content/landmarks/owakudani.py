@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/owakudani.glb"
 BLEND=ROOT+"/content/landmarks/owakudani.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"sulfur":"d8d2b8","yellow":"e2d36a","ash":"9a948a","scrub":"7a6a4e","rock":"4a4442","concrete":"b5b0a6","steam":"eef0ee","steel":"5a5e62","red":"c8473a","pave":"b9b2a2","roofdark":"2e2e30","glow_cream":"e8dcb0"}
+PAL={"terrain":"574441","sulfur":"d8d2b8","yellow":"e2d36a","ash":"9a948a","scrub":"7a6a4e","rock":"4a4442","concrete":"b5b0a6","steam":"eef0ee","steel":"5a5e62","red":"c8473a","pave":"b9b2a2","roofdark":"2e2e30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -155,7 +155,7 @@ def facemat(x,y,h):
         return "sulfur"
     if u<3.6 and abs(v-vg(u))<3.1+0.4*math.sin(0.9*u) and h>0.3: return "ash"
     if h>0.25: return "scrub"
-    return "ash"
+    return "terrain"                                                 # the foot of the slope: the region's own ground
 faces=[];fm=[]
 for j in range(NG-1):
     for i in range(NG-1):
@@ -208,7 +208,7 @@ for t,side in ((0.3,-0.75),(0.68,0.75)):
 # ---- the plaza at the foot: the ropeway station, a railed lookout up the valley, the hut where the black eggs cook
 for va,vb in ((-6.0,6.0),):
     q=[to_xy(4.3,va),to_xy(8.4,va),to_xy(8.4,vb),to_xy(4.3,vb)]
-    emit([(*p,0.04) for p in q],[[0,1,2,3]],["pave"])
+    emit([(*p,0.04) for p in q],[[0,1,2,3]],["concrete"])
 for k in range(13):
     v=-5.8+11.6*k/12; x,y,z=P(4.35,v); box("steel",x,y,0.0,0.85,0.04,0.04)
 a=to_xy(4.35,-5.8); b=to_xy(4.35,5.8)

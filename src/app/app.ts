@@ -69,6 +69,7 @@ import { messagesFor, type Messages } from "./i18n";
 import { createJourneyCompletion } from "./journey-completion";
 import { createMinimap } from "./minimap";
 import { createMonumentUi } from "./monuments-ui";
+import { createBackpack } from "./backpack";
 import { createMusicButton } from "./music-button";
 import { createNotebook } from "./notebook";
 import { createRailwayView } from "./railway-view";
@@ -140,6 +141,7 @@ const KEY_RUBBING_BOX = "KeyB";
 /** How close (world units) the player must be to a restored landmark for its name to show again. */
 const LANDMARK_NAME_RANGE = 16;
 const KEY_JOURNAL = "KeyJ";
+const KEY_BACKPACK = "KeyI";
 const KEY_MUTE = "KeyN";
 /** Debug only. */
 const KEY_UNRESTORE = "KeyU";
@@ -235,7 +237,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
   settings.subscribe(applyAudio);
 
   let state = loadGame(saves, slot, world);
-  const monumentUi = createMonumentUi(container, hud.actions, {
+  const monumentUi = createMonumentUi(container, hud.topLeft, {
     collected: () => state.collected,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
@@ -248,6 +250,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       window.location.href = window.location.pathname;
     },
   });
+  const backpack = createBackpack(container, hud.backpackButton);
   const completion = createJourneyCompletion(container, stage.groundDirection);
   const notebook = createNotebook(container, hud.landmarkButton, {
     all: world.landmarks.map((region) => region.landmark!.id),
@@ -255,16 +258,13 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     debug,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
-    onCompletion: () => {
-      if (!pendingCompletion) showCompletion();
-    },
     onTravel: (id) => {
       const region = world.landmarks.find((r) => r.landmark?.id === id);
       if (region) travelToShrine(standPoint(region));
     },
   });
   /** Dialogs own the keyboard while open. */
-  const modalOpen = (): boolean => completion.isOpen() || panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen() || debugPanel?.isOpen() === true;
+  const modalOpen = (): boolean => completion.isOpen() || panel.isOpen() || monumentUi.isBoxOpen() || notebook.isOpen() || backpack.isOpen() || debugPanel?.isOpen() === true;
   let drawnCollected = state.collected.length;
   let drawnLanguage = settings.get().language;
   let drawnLandmarks = -1;
@@ -542,6 +542,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       overviewTime = OVERVIEW_SECONDS;
       panel.close();
       notebook.close();
+      backpack.close();
       if (monumentUi.isBoxOpen()) monumentUi.toggleBox();
       else monumentUi.dismissReading();
       if (minimap.isExpanded()) minimap.toggleExpanded();
@@ -738,6 +739,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       overviewTime = 0;
     }
     if (e.code === KEY_JOURNAL && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey) notebook.toggle();
+    if (e.code === KEY_BACKPACK && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey) backpack.toggle();
     if (debug && e.code === KEY_UNRESTORE) unrestoreHere();
     if (debug && e.code === KEY_RUBBING) readRubbingHere();
     if (debug && e.code === KEY_NEXT_SHRINE && !e.metaKey && !e.ctrlKey && !e.altKey) goToNextShrine();
@@ -1094,8 +1096,8 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     }
     const guide = nextShrine(world, state, pos);
     const reading = monumentUi.isReading();
+    backpack.update({ messages: t, restored: restoredLandmarks.length });
     hud.update({
-      capabilities: caps,
       restoredLandmarks,
       prompt: reading ? null : prompt,
       hint: reading || momentBusy() ? null : trainLoadNotice > 0 ? t.railway.unavailable : hint,

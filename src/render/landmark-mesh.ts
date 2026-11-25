@@ -40,6 +40,63 @@ function fetchModel(url: string): Promise<ArrayBuffer | null> {
 /** Light glows and the like: nodes the artist named `glow_*` are lit up as the region wakes. */
 const isGlow = (name: string): boolean => name.startsWith("glow_");
 
+/**
+ * Colours ground the way the region's own terrain would be drawn there: the alive colour of the terrain at world
+ * (x, z) for a surface at height y. A model names the material of its natural ground (grass, snow, ash) `terrain`,
+ * and those faces take the region's palette and patterns instead of a fixed colour, so the footprint's edge doesn't
+ * show however the region happened to be painted.
+ */
+export type GroundPaint = (x: number, y: number, z: number) => THREE.Color;
+const isTerrain = (name: string): boolean => name === "terrain" || name.startsWith("terrain_");
+
+interface Painted {
+  readonly colors: THREE.BufferAttribute;
+  readonly alive: Float32Array;
+  readonly dead: Float32Array;
+}
+
+/** Gives every `terrain` face the region's terrain colour at its centre, alive and dead, as flat vertex colours. */
+function paintGround(root: THREE.Object3D, paint: GroundPaint): Painted[] {
+  const out: Painted[] = [];
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const c = new THREE.Vector3();
+  root.updateWorldMatrix(true, true);
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh) || !isTerrain((o.material as THREE.Material).name)) return;
+    const old = o.geometry as THREE.BufferGeometry;
+    const geometry = old.index ? old.toNonIndexed() : old;
+    if (geometry !== old) {
+      o.geometry = geometry;
+      old.dispose();
+    }
+    const position = geometry.getAttribute("position");
+    const alive = new Float32Array(position.count * 3);
+    const dead = new Float32Array(position.count * 3);
+    for (let i = 0; i + 2 < position.count; i += 3) {
+      a.fromBufferAttribute(position, i);
+      b.fromBufferAttribute(position, i + 1);
+      c.fromBufferAttribute(position, i + 2);
+      const centre = a.add(b).add(c).multiplyScalar(1 / 3).applyMatrix4(o.matrixWorld);
+      const color = paint(centre.x, centre.y, centre.z);
+      const faded = deadOf(color);
+      for (let k = 0; k < 3; k++) {
+        color.toArray(alive, (i + k) * 3);
+        faded.toArray(dead, (i + k) * 3);
+      }
+    }
+    const colors = new THREE.BufferAttribute(alive.slice(), 3);
+    colors.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute("color", colors);
+    const material = o.material as THREE.MeshStandardMaterial;
+    material.vertexColors = true;
+    material.color.set(0xffffff);
+    material.needsUpdate = true;
+    out.push({ colors, alive, dead });
+  });
+  return out;
+}
+
 interface Tinted {
   readonly material: THREE.MeshStandardMaterial;
   readonly alive: THREE.Color;
@@ -70,10 +127,11 @@ function adopt(root: THREE.Object3D, replaced: ReadonlySet<THREE.Object3D>): { t
     o.castShadow = true;
     o.receiveShadow = true;
     const material = o.material as THREE.MeshStandardMaterial;
+    material.flatShading = true;
+    if (isTerrain(material.name) && material.vertexColors) return;      // painted from the terrain: faded per vertex
     const glows = isGlow(o.name) || isGlow(material.name);
     const seen = tinted.get(material);
     if (seen) return;
-    material.flatShading = true;
     if (glows) material.emissive = material.color.clone();
     tinted.set(material, { material, alive: material.color.clone(), dead: deadOf(material.color), glows });
   });
@@ -151,7 +209,7 @@ function poseLandmarkAnimals(animals: readonly LandmarkAnimal[], time: number, d
  * The landmark is the region's shrine, so there is no torii; it is solid within
  * the landmark's footprint.
  */
-export function buildLandmark(id: string): ShrineMesh {
+export function buildLandmark(id: string, paint?: GroundPaint): ShrineMesh {
   const group = new THREE.Group();
   const stand = buildPlaceholder();
   group.add(stand.group);
@@ -164,6 +222,7 @@ export function buildLandmark(id: string): ShrineMesh {
   let animals: readonly LandmarkAnimal[] = [];
   let puffs: Puffs | null = null;
   let lanterns: ReturnType<typeof buildMatsushimaLanterns> | null = null;
+  let painted: readonly Painted[] = [];
 
   const apply = (): void => {
     const v = lifeAt(progress, 0);
@@ -173,6 +232,11 @@ export function buildLandmark(id: string): ShrineMesh {
     for (const t of model.tinted) {
       t.material.color.copy(t.dead).lerp(t.alive, v);
       if (t.glows) t.material.emissiveIntensity = 0.9 * v + 3.0 * flare;
+    }
+    for (const p of painted) {
+      const out = p.colors.array as Float32Array;
+      for (let i = 0; i < out.length; i++) out[i] = p.dead[i]! + (p.alive[i]! - p.dead[i]!) * v;
+      p.colors.needsUpdate = true;
     }
   };
 
@@ -188,6 +252,7 @@ export function buildLandmark(id: string): ShrineMesh {
         group.add(gltf.scene);
         // Steam and smoke are pulled out first, so they are not tinted with the rest of the model.
         puffs = extractPuffs(gltf.scene, id);
+        if (paint) painted = paintGround(gltf.scene, paint);
         const replacement = replaceLandmarkAnimals(gltf.scene);
         animals = replacement.animals;
         model = adopt(gltf.scene, new Set(animals.map(animal => animal.anchor)));

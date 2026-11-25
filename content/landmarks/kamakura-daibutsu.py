@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/kamakura-daibutsu.glb"
 BLEND=ROOT+"/content/landmarks/kamakura-daibutsu.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"bronze":"6c8d7c","bronze_dk":"3b4e45","stone":"9a958c","pave":"cfc8b8","white":"efeae0","wood":"5a4232","roof":"5d6662","foliage":"4f7a45","maple":"c2603a","hill":"55804a","bark":"4e3a30","glow_cream":"e8dcb0"}
+PAL={"terrain":"86a75e","bronze":"6c8d7c","bronze_dk":"3b4e45","stone":"9a958c","pave":"cfc8b8","white":"efeae0","wood":"5a4232","roof":"5d6662","foliage":"4f7a45","maple":"c2603a","hill":"55804a","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -225,8 +225,8 @@ def maple(x,y,s):
     T=dict(cx=x,cy=y,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.13,-0.3,5),ngon(0.09,1.2,5)],"bark",T)
     ico("maple",0,0,1.8,0.95,0.9,0.8,T); ico("maple",0.45,0.25,1.45,0.6,0.55,0.5,T)
-box("hill",0,8.0,-0.05,0.5,8.6,1.4)
-solid([rect(8.6,1.4,0.5,0,8.0),rect(8.2,0.8,1.6,0,8.4),rect(6.8,0.35,2.4,0,8.7)],"hill")
+box("terrain",0,8.0,-0.05,0.5,8.6,1.4)
+solid([rect(8.6,1.4,0.5,0,8.0),rect(8.2,0.8,1.6,0,8.4),rect(6.8,0.35,2.4,0,8.7)],"terrain")
 for k in range(12):
     x=-8.0+16.0*k/11+rng.uniform(-0.4,0.4)
     pine(x,7.9+rng.uniform(-0.5,0.6),rng.uniform(0.95,1.2)) if k%3 else maple(x,7.6,1.0)

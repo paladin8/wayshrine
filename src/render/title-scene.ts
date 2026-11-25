@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Reflector } from "three/examples/jsm/objects/Reflector.js";
+import { HOKORA_SETBACK } from "../world";
 import { buildCharacter, type Character, type CharacterVariant } from "./character";
+import { buildHokora } from "./shrine-mesh";
 
 /**
  * The title screen's backdrop: the Blender scene in public/models/title/title.glb (made by content/title/title.py),
@@ -443,6 +445,21 @@ export function createTitleScene(container: HTMLElement, { reducedMotion, charac
       if (bonsai && cherry) {
         bonsai.visible = false;
         cherry.position.set(bonsai.position.x, bonsai.position.y, bonsai.position.z);
+      }
+      // A hokora behind the gate, as at every shrine in the game: the game's own model, set on the island.
+      const gate = root.getObjectByName("shrine");
+      const island = root.getObjectByName("island");
+      if (gate && island) {
+        const centre = new THREE.Box3().setFromObject(gate).getCenter(new THREE.Vector3());
+        const above = new THREE.Vector3(centre.x, centre.y + 20, centre.z - HOKORA_SETBACK);
+        const hit = new THREE.Raycaster(above, new THREE.Vector3(0, -1, 0)).intersectObject(island, true)[0];
+        if (hit) {
+          const hokora = buildHokora("meadow");
+          disposables.push(hokora.geometry, hokora.material as THREE.Material);
+          // Sunk a little so the stone base meets the grass all round on the island's gentle slope.
+          hokora.position.copy(root.worldToLocal(hit.point.clone().setY(hit.point.y - 0.06)));
+          root.add(hokora);
+        }
       }
       travellerSpot = root.getObjectByName("spot_traveller") ?? null;
       if (travellerSpot) seatTraveller();

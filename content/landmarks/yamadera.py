@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/yamadera.glb"
 BLEND=ROOT+"/content/landmarks/yamadera.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"eef2f4","rock":"6e6a66","forest":"3f5a48","wood":"4e3a2c","red":"c0442e","roof":"4a4d52","stone":"8f8a80","pale":"d4cdbf","fir":"2f4f3e","glow_cream":"e8dcb0"}
+PAL={"terrain":"dbe5eb","snow":"eef2f4","rock":"6e6a66","forest":"3f5a48","wood":"4e3a2c","red":"c0442e","roof":"4a4d52","stone":"8f8a80","pale":"d4cdbf","fir":"2f4f3e","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -141,7 +141,7 @@ for j in range(N):
         for t in ([(a,b,c),(a,c,d)] if (i+j)%2==0 else [(a,b,d),(b,c,d)]):
             ps=[g[k] for k in t]; hh=[p[2] for p in ps]
             sl=(max(hh)-min(hh))/STEP; h=sum(hh)/3
-            m="snow"
+            m="terrain"
             if sl>0.95: m="rock"
             elif sl>0.35 and h>0.4: m="forest"
             fs.append([ix[k] for k in t]); ms.append(m)

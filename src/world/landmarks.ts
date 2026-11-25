@@ -1,5 +1,6 @@
 import { createRng } from "../core";
 import { REGION_SIZE, parseRegionId, regionId, type Point, type RegionCoord } from "./coords";
+import { hokoraOf } from "./hokora";
 import { groundOf } from "./landmark-ground";
 import { canTraverse, type Biome, type Capability } from "./terrain";
 import type { Region } from "./world";
@@ -156,13 +157,14 @@ export function monumentClearance(landmark: LandmarkSpec): number {
   return footprintHalf(landmark) + LANDMARK_BLEND + 1.5;
 }
 
-/** The point the map marker and debug travel aim at, in world space. */
+/** The point the player restores and the compass and map marker aim at: a hokora, a landmark's interaction spot, or the gate. */
 export function anchorOf(region: Region): Point {
   const g = region.landmark ? groundOf(region.landmark.id) : undefined;
-  return g ? { x: region.shrine.x + g.interact[0], z: region.shrine.z + g.interact[1] } : region.shrine;
+  if (g) return { x: region.shrine.x + g.interact[0], z: region.shrine.z + g.interact[1] };
+  return hokoraOf(region) ?? region.shrine;
 }
 
-/** Where the player arrives when travelling to a region: free ground beside its shrine or landmark. */
+/** Where the player arrives when travelling to a region: free ground in front of its gate, or beside its landmark. */
 export function standPoint(region: Region): Point {
   if (!region.landmark) return { x: region.shrine.x, z: region.shrine.z + 2 };
   const g = groundOf(region.landmark.id);

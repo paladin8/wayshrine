@@ -9,6 +9,7 @@ import {
   deserialize,
   discoverNear,
   isExplored,
+  isLandmarkMarked,
   isLandmarkRevealed,
   isRestored,
   newGame,
@@ -26,6 +27,8 @@ import {
   vitality,
   DISCOVER_RADIUS,
   REVEAL_DISTANCE,
+  WAKE_DISCOVER_RADIUS,
+  WAKE_REVEAL_DISTANCE,
 } from "./state";
 
 const world = createWorld("game-tests");
@@ -213,6 +216,22 @@ describe("exploration", () => {
     }
   });
 
+  it("discovers little at first, and far more once Pilgrim’s Wake is held", () => {
+    const at = world.region(0, 0).site;
+    const early = discoverNear(newGame(world.seed), world, at);
+    const woke = discoverNear(withLandmarks(PILGRIMS_WAKE_STARS), world, at);
+    // Early on the traveller sees about as far as the camera: little beyond the region they stand in.
+    expect(early.explored.size).toBeLessThanOrEqual(2);
+    expect(DISCOVER_RADIUS).toBeLessThan(40);
+    expect(REVEAL_DISTANCE).toBeLessThan(20);
+    // With the Wake the reach grows several times over, across rings of regions.
+    expect(WAKE_DISCOVER_RADIUS).toBeGreaterThanOrEqual(DISCOVER_RADIUS * 4);
+    expect(WAKE_REVEAL_DISTANCE).toBeGreaterThanOrEqual(REVEAL_DISTANCE * 4);
+    expect(woke.explored.size).toBeGreaterThanOrEqual(early.explored.size + 8);
+    // One restoration short of the Wake changes nothing.
+    expect(discoverNear(withLandmarks(PILGRIMS_WAKE_STARS - 1), world, at).explored.size).toBe(early.explored.size);
+  });
+
   it("keeps an older save’s Tokyo Tower restoration with the landmark when it moves to slot 46", () => {
     const tokyo = world.landmarks[45]!;
     const kumamoto = world.landmarks[27]!;
@@ -230,6 +249,38 @@ describe("exploration", () => {
   it("returns the same state when nothing is new", () => {
     const s = discoverNear(newGame(world.seed), world, { x: 10, z: 10 });
     expect(discoverNear(s, world, { x: 10, z: 10 })).toBe(s);
+  });
+});
+
+describe("landmark stars on the map", () => {
+  it("marks a landmark once its region is explored, without touching the rubbing reveals", () => {
+    const fresh = newGame(world.seed);
+    expect(isLandmarkMarked(fresh, landmark(2))).toBe(false);
+    const explored = discoverNear(fresh, world, landmark(2).shrine);
+    expect(isExplored(explored, landmark(2))).toBe(true);
+    expect(isLandmarkMarked(explored, landmark(2))).toBe(true);
+    // Exploring is not a rubbing reveal: that state is untouched, and recomputing it changes nothing.
+    expect(isLandmarkRevealed(explored, landmark(2))).toBe(false);
+    expect(explored.revealedLandmarks).toBe(fresh.revealedLandmarks);
+    expect(revealLandmarks(explored, world)).toBe(explored);
+  });
+
+  it("still marks landmarks the rubbings reveal in regions that are not explored, and restored ones", () => {
+    let state = newGame(world.seed);
+    for (let i = 0; i < 7; i++) state = collectMonument(state, `rubbing-${i}`);
+    state = revealLandmarks(state, world);
+    const [id] = [...state.revealedLandmarks];
+    const region = world.landmarks.find((r) => r.landmark!.id === id)!;
+    expect(isExplored(state, region)).toBe(false);
+    expect(isLandmarkMarked(state, region)).toBe(true);
+    const other = world.landmarks.find((r) => r !== region)!;
+    expect(isLandmarkMarked(restoreShrine(state, other), other)).toBe(true);
+  });
+
+  it("never marks an ordinary shrine region", () => {
+    const ordinary = world.region(0, 0).landmark ? world.region(7, 7) : world.region(0, 0);
+    if (ordinary.landmark) return;
+    expect(isLandmarkMarked(discoverNear(newGame(world.seed), world, ordinary.shrine), ordinary)).toBe(false);
   });
 });
 

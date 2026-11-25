@@ -8,7 +8,10 @@ import {
   neighborsOf,
   footprintHalf,
   LANDMARK_REACH_MARGIN,
+  HOKORA_REACH,
+  anchorOf,
   createObstacles,
+  hokoraOf,
   planMonuments,
   standPoint,
   createTerrain,
@@ -20,7 +23,7 @@ import {
   type Terrain,
   type World,
 } from "../world";
-import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, SHRINE_REACH, shrineInReach, startPosition } from "./player";
+import { PLAYER_RADIUS, PLAYER_SPEED, blockerAt, clearOfObstacles, movePlayer, shrineInReach, startPosition } from "./player";
 
 const none = new Set<Capability>();
 const every: ReadonlySet<Capability> = new Set(CAPABILITIES);
@@ -61,10 +64,14 @@ function walk(terrain: Terrain, from: Point, dir: Point, seconds: number, caps: 
 describe("player movement", () => {
   const terrain = createTerrain(createWorld("player"));
 
-  it("starts free, in reach of the first shrine", () => {
+  it("starts free in front of the first gate, and reaches its hokora by walking through the gate", () => {
     const start = startPosition(terrain);
     expect(blockerAt(terrain, none, start.x, start.z)).toBeNull();
-    expect(shrineInReach(terrain, start)?.id).toBe("0,0");
+    expect(shrineInReach(terrain, start)).toBeNull();
+    const solids = createObstacles(terrain, planMonuments(terrain, []));
+    let pos = start;
+    for (let i = 0; i < 60; i++) pos = movePlayer(pos, { x: 0, z: -1 }, 1 / 60, terrain, none, solids).pos;
+    expect(shrineInReach(terrain, pos)?.id).toBe("0,0");
   });
 
   it("moves freely over meadow", () => {
@@ -233,29 +240,90 @@ describe("landmark as shrine", () => {
     }
   });
 
-  it("allows a boat to reach and activate the lake and sea shrines from the water", () => {
+  it("allows a boat to reach and activate the lake and sea shrines' hokora from the water", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
     const solids = createObstacles(terrain, planMonuments(terrain, []));
     for (const [biome, cap] of [["water", "boat"], ["sea", "ship"]] as const) {
       const region = ordinaryRegionNearLandmark(terrain.world, biome);
-      const { x, z } = region.shrine;
-      const start = { x, z: z + 5 };
+      const hokora = hokoraOf(region)!;
       const caps = new Set<Capability>([cap]);
-      expect(shrineInReach(terrain, start)).toBeNull();
-      expect(blockerAt(terrain, none, start.x, start.z)).toBe(biome);
-      const arrived = movePlayer(start, { x: 0, z: -1 }, 5 / PLAYER_SPEED, terrain, caps, solids);
+      // Arriving in front of the gate is out of reach; rowing round to the hokora behind it is not.
+      expect(shrineInReach(terrain, standPoint(region))).toBeNull();
+      const side = { x: hokora.x + 4, z: hokora.z };
+      expect(blockerAt(terrain, none, side.x, side.z)).toBe(biome);
+      const arrived = movePlayer(side, { x: -1, z: 0 }, 4 / PLAYER_SPEED, terrain, caps, solids);
       expect(arrived.blockedBy).toBeNull();
       expect(shrineInReach(terrain, arrived.pos)).toBe(region);
       expect(terrain.tileAtPoint(arrived.pos.x, arrived.pos.z).biome).toBe(biome);
-      if (biome === "water") expect(arrived.pos.z).toBeGreaterThan(z + 1.2);
-      else expect(arrived.pos.z).toBeCloseTo(z);
+      // The hokora itself is solid: the boat stops beside it.
+      expect(arrived.pos.x).toBeGreaterThan(hokora.x + 0.6);
     }
   });
 
-  it("keeps the usual activation radius for ordinary shrines", () => {
-    const region = terrain.world.region(0, 0);
-    const { x, z } = region.shrine;
-    expect(shrineInReach(terrain, { x: x + SHRINE_REACH - 0.1, z })).toBe(region);
-    expect(shrineInReach(terrain, { x: x + SHRINE_REACH + 0.1, z })).toBeNull();
+  it("restores ordinary shrines at their hokora", () => {
+    const region = terrain.world.region(1, 0);
+    expect(region.landmark).toBeNull();
+    const hokora = hokoraOf(region)!;
+    expect(shrineInReach(terrain, { x: hokora.x + HOKORA_REACH - 0.1, z: hokora.z })).toBe(region);
+    expect(shrineInReach(terrain, { x: hokora.x + HOKORA_REACH + 0.1, z: hokora.z })).toBeNull();
+  });
+});
+
+describe("hokora", () => {
+  const terrain = createTerrain(createWorld("hokora"));
+  const solids = createObstacles(terrain, planMonuments(terrain, []));
+  const start = terrain.world.region(0, 0);
+  const hokora = hokoraOf(start)!;
+
+  it("stands behind the start region's gate, level with it", () => {
+    expect(hokora).not.toBeNull();
+    expect(hokora.x).toBeCloseTo(start.shrine.x);
+    expect(hokora.z).toBeLessThan(start.shrine.z);
+    // The terrace around the gate is still level this far back, so the hokora's base sits on flat ground.
+    for (const [dx, dz] of [[0, 0], [0.55, 0.55], [-0.55, 0.55], [0.55, -0.55], [-0.55, -0.55]] as const) {
+      expect(Math.abs(terrain.groundAt(hokora.x + dx, hokora.z + dz) - terrain.groundAt(start.shrine.x, start.shrine.z))).toBeLessThan(0.05);
+    }
+  });
+
+  it("is what the player restores and the compass aims at; travel still arrives at the gate", () => {
+    expect(anchorOf(start)).toEqual(hokora);
+    const arrive = standPoint(start);
+    expect(arrive.z).toBeGreaterThan(start.shrine.z);
+    expect(shrineInReach(terrain, { x: hokora.x, z: hokora.z + HOKORA_REACH - 0.1 })).toBe(start);
+    expect(shrineInReach(terrain, { x: hokora.x, z: hokora.z + HOKORA_REACH + 0.1 })).toBeNull();
+  });
+
+  it("belongs to every ordinary shrine, and to no landmark", () => {
+    for (let rx = -6; rx <= 6; rx++) {
+      for (let rz = -6; rz <= 6; rz++) {
+        const region = terrain.world.region(rx, rz);
+        expect(hokoraOf(region) === null).toBe(region.landmark !== null);
+      }
+    }
+    for (const region of terrain.world.landmarks) expect(hokoraOf(region)).toBeNull();
+  });
+
+  it("stands on level ground behind every land gate, however steep the hills", () => {
+    const hilly = createTerrain(createWorld("hokora-hills"));
+    let checked = 0;
+    for (let rx = -8; rx <= 8; rx++) {
+      for (let rz = -8; rz <= 8; rz++) {
+        const region = hilly.world.region(rx, rz);
+        const h = hokoraOf(region);
+        if (!h || region.biome === "water" || region.biome === "sea") continue;
+        const gate = hilly.groundAt(region.shrine.x, region.shrine.z);
+        for (const [dx, dz] of [[0, 0], [0.6, 0.6], [-0.6, 0.6], [0.6, -0.6], [-0.6, -0.6]] as const) {
+          expect(Math.abs(hilly.groundAt(h.x + dx, h.z + dz) - gate), `${region.id} ${region.biome}`).toBeLessThan(0.02);
+        }
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(100);
+  });
+
+  it("is solid", () => {
+    const inside = { x: hokora.x, z: hokora.z + 0.1 };
+    const pushed = clearOfObstacles(terrain, none, solids, inside);
+    expect(Math.hypot(pushed.x - hokora.x, pushed.z - hokora.z)).toBeGreaterThan(0.5 + PLAYER_RADIUS);
   });
 });

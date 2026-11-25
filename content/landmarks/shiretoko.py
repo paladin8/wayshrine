@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/shiretoko.glb"
 BLEND=ROOT+"/content/landmarks/shiretoko.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"eef2f4","rock":"6e6a66","forest":"3f5a48","reed":"a8a07a","ice":"cfe2ea","water":"2f5a6e","fir":"2f4f3e","bark":"4e3a30","deck":"9a7a5a","post":"6b5440","bear":"5a3e2a","deerc":"9a6a42"}
+PAL={"terrain":"dbe5eb","snow":"eef2f4","rock":"6e6a66","forest":"3f5a48","reed":"a8a07a","ice":"cfe2ea","water":"2f5a6e","fir":"2f4f3e","bark":"4e3a30","deck":"9a7a5a","post":"6b5440","bear":"5a3e2a","deerc":"9a6a42"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -169,7 +169,7 @@ for j in range(N):
             ps=[g[k] for k in t]; hh=[p[2] for p in ps]; cx,cy=sum(p[0] for p in ps)/3,sum(p[1] for p in ps)/3
             sl=(max(hh)-min(hh))/STEP; h=sum(hh)/3
             u,v=to_uv(cx,cy)
-            m="snow"
+            m="terrain"
             if sl>1.15 and h>1.2: m="rock"
             elif 0.3<h<2.0 and u<-2.0 and sl>0.25: m="forest"
             elif h<0.05 and lake_d(u,v)<1.25: m="reed"

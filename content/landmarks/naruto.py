@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/naruto.glb"
 BLEND=ROOT+"/content/landmarks/naruto.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"grass":"5f8a45","rock":"6e665c","water":"244e6e","foam":"e8f0f0","deep":"112a3e","bridge":"dfe2e0","concrete":"b5b0a6","white":"f0ede6","red":"c8473a","pine":"3a5e36","bark":"4e3a30","wood":"7a5a3e"}
+PAL={"terrain":"86a75e","rock":"6e665c","water":"244e6e","foam":"e8f0f0","deep":"112a3e","bridge":"dfe2e0","concrete":"b5b0a6","white":"f0ede6","red":"c8473a","pine":"3a5e36","bark":"4e3a30","wood":"7a5a3e"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -175,7 +175,7 @@ def H(x,y):
 def water_disc(x,y): return False
 def gmat(x,y,h,sl):
     if h<LV+0.3 or sl>1.6: return "rock"
-    return "grass"
+    return "terrain"
 draw_ground(H,gmat,0.62)
 draw_sea()
 # Skip terrain faces in the collision bake without excluding later boulders of the same material.

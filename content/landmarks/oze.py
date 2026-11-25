@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/oze.glb"
 BLEND=ROOT+"/content/landmarks/oze.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"moor":"7f9c4a","grassd":"5f7e3a","plank":"a8a090","post":"6b5a48","water":"3c5455","white":"f2f2ee","yellow":"e8b93a","leaf":"4f6e3c","leafd":"3f5a33","rock":"7d7a78","roof":"4e6b4a","glow_cream":"e8dcb0"}
+PAL={"terrain":"6a794a","moor":"7f9c4a","grassd":"5f7e3a","plank":"a8a090","post":"6b5a48","water":"3c5455","white":"f2f2ee","yellow":"e8b93a","leaf":"4f6e3c","leafd":"3f5a33","rock":"7d7a78","roof":"4e6b4a","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -154,7 +154,7 @@ for i in range(40):
     u=-0.4+10.4*math.cos(t)*(1+0.06*math.sin(5*t)); v=0.0+10.0*math.sin(t)*(1+0.06*math.sin(7*t+1))
     x,y=to_xy(u,v); x=max(-FH+0.6,min(FH-0.6,x)); y=max(-FH+0.6,min(FH-0.6,y))
     pts.append((x,y))
-solid([[(x,y,-0.02) for x,y in pts],[(x,y,0.02) for x,y in pts]],"moor",mb=None)
+solid([[(x,y,-0.02) for x,y in pts],[(x,y,0.02) for x,y in pts]],"terrain",mb=None)
 
 # ---- the stream wandering across, and the ponds (ikeda) dotting the moor, with little floating islands
 def st_u(v): return 2.4+0.9*math.sin(0.55*v+0.3)
@@ -170,7 +170,7 @@ for u0,v0,ru,rv in PONDS:
     pp=[to_xy(u0+ru*(1+0.1*math.sin(3*t+u0))*math.cos(t),v0+rv*(1+0.1*math.sin(3*t+u0))*math.sin(t)) for t in [2*math.pi*i/11 for i in range(11)]]
     solid([[(x,y,-0.03) for x,y in pp],[(x,y,0.06) for x,y in pp]],"water")
     if ru>0.85:
-        ix,iy=to_xy(u0+0.25*ru,v0-0.2*rv); ico("moor",0,0,0.05,0.3,0.24,0.06,dict(cx=ix,cy=iy))
+        ix,iy=to_xy(u0+0.25*ru,v0-0.2*rv); ico("terrain",0,0,0.05,0.3,0.24,0.06,dict(cx=ix,cy=iy))
 def in_water(x,y,pad=0.0):
     u,v=to_uv(x,y)
     if -9.2<=v<=9.2 and abs(u-st_u(v))<st_w(v)+pad: return True

@@ -157,3 +157,155 @@ function paper({ box, timber }: ShrineParts, y: number, color: number): void {
     box(0.095, 0.19, 0.042, color, side * 0.55, y - 0.15, 0.14, side * 0.13);
   }
 }
+
+/** How a hokora stands: on stone steps, on piles over a lake, on a boardwalk, or on a rock in the sea. */
+type HokoraFooting = "steps" | "piles" | "boardwalk" | "rock";
+
+interface HokoraStyle {
+  readonly footing: HokoraFooting;
+  /** The footing's two tones: lower and upper step, piles and deck, or rock and slab. */
+  readonly foot: readonly [number, number];
+  readonly body: number;
+  readonly post: number;
+  readonly door: number;
+  /** The band above the doorway. */
+  readonly trim: number;
+  readonly roof: number;
+  readonly ridge: number;
+  /** Rise of each roof slope over its 0.44 run. */
+  readonly rise: number;
+  /** Roof thickness: thin shingles, thick thatch or a stone slab. */
+  readonly thick: number;
+  /** A layer of snow on the roof. */
+  readonly snow?: number;
+  /** Straw rope and paper streamers across the eaves, in the paper's colour. */
+  readonly paper?: number;
+}
+
+/**
+ * One hokora per biome, in the materials of that biome's gate, so a gate and its shrine read as a pair.
+ * Roofs stay lighter than a gate's black cap where the two overlap on screen.
+ */
+const HOKORA_STYLES: Readonly<Record<Biome, HokoraStyle>> = {
+  meadow: {
+    footing: "steps", foot: [0x9a958c, 0xb3aea3], body: 0xa9784f, post: 0x7f5a3c, door: 0x3a2f2a, trim: palette.red,
+    roof: 0x7d5b43, ridge: 0x5a4031, rise: 0.27, thick: 0.07, paper: IVORY,
+  },
+  water: {
+    // Raised on piles beside the dock's cedar, like the gate it stands behind.
+    footing: "piles", foot: [0x716753, 0xc6a583], body: 0xb08d66, post: 0x896847, door: 0x3d342c, trim: IVORY,
+    roof: 0x987955, ridge: 0x6e5a42, rise: 0.25, thick: 0.07, paper: IVORY,
+  },
+  snow: {
+    // Blue-grey timber and a steep roof that sheds snow, keeping a white cap.
+    footing: "steps", foot: [0x91a4aa, 0xa6b8bc], body: 0x7d93a1, post: 0x536874, door: 0x2f3a42, trim: 0x8da2ad,
+    roof: 0x536874, ridge: 0x45565f, rise: 0.42, thick: 0.08, snow: 0xe7eef0, paper: IVORY,
+  },
+  mountain: {
+    // A stone hokora: dressed granite walls under one heavy slab, with a bronze band.
+    footing: "steps", foot: [0x777975, 0x858781], body: 0x9c9d93, post: 0x858781, door: 0x3b3c3a, trim: 0xb88959,
+    roof: 0x8d918b, ridge: 0x6f716d, rise: 0.16, thick: 0.14,
+  },
+  marsh: {
+    // Weathered boards and a thick rush thatch, on a short boardwalk above the wet ground.
+    footing: "boardwalk", foot: [0x67634a, 0x898060], body: 0x8a7a5c, post: 0x72634c, door: 0x3c3a2e, trim: IVORY,
+    roof: 0x7d8560, ridge: 0x5a6146, rise: 0.34, thick: 0.12, paper: 0xd9c48a,
+  },
+  forest: {
+    // Dark cedar with a moss-grown roof and warm paper, as at the forest gate.
+    footing: "steps", foot: [0x66735d, 0x7d8a70], body: 0x6b5442, post: 0x584537, door: 0x2c241e, trim: 0xe6d696,
+    roof: 0x4f7a68, ridge: 0x658165, rise: 0.30, thick: 0.08, paper: 0xe6d696,
+  },
+  volcanic: {
+    // Basalt walls under a copper roof gone warm with heat.
+    footing: "steps", foot: [0x51474a, 0x635054], body: 0x4b4145, post: 0x433b3e, door: 0x241f21, trim: 0xb16140,
+    roof: 0x9c593c, ridge: 0xc17b4d, rise: 0.22, thick: 0.07,
+  },
+  sea: {
+    // Vermilion like the offshore torii, set on a rock that stands out of the water.
+    footing: "rock", foot: [0x4c585b, 0x667d72], body: VERMILION, post: 0x8f3a2e, door: 0x2d2523, trim: 0xe4c9a7,
+    roof: 0x56636a, ridge: 0x414b50, rise: 0.27, thick: 0.07, paper: IVORY,
+  },
+  dunes: {
+    footing: "steps", foot: [0xad9475, 0xc2a985], body: 0x997a57, post: 0x7d6346, door: 0x3a2f26, trim: 0xe7cfad,
+    roof: 0x6e5641, ridge: INK, rise: 0.24, thick: 0.07, paper: 0xe7cfad,
+  },
+};
+
+/** Authored scale of every hokora: about 1.4 to the ridge on steps. */
+const HOKORA_SCALE = 1.15;
+
+/**
+ * A hokora: a small gabled shrine with its doorway facing +z (toward the gate), drawn at (x, z) in the
+ * shrine's frame in the style of `biome`. Returns the height of its ridge, for placing the orb above it.
+ */
+export function modelHokora(biome: Biome, p: ShrineParts, x: number, z: number): number {
+  const s = HOKORA_STYLES[biome];
+  const at = shift(p, x, z, HOKORA_SCALE);
+  const { box, round } = at;
+  const [low, high] = s.foot;
+
+  // The footing; `floor` is where the body stands.
+  let floor: number;
+  switch (s.footing) {
+    case "steps":
+      box(1.04, 0.24, 0.94, low, 0, 0.12, 0);
+      box(0.86, 0.12, 0.78, high, 0, 0.30, 0);
+      floor = 0.36;
+      break;
+    case "piles":
+      // Level with the dock's deck, its piles running down into the lake.
+      for (const sx of [-0.38, 0.38]) for (const sz of [-0.34, 0.34]) round(0.06, 0.07, 1.0, 6, low, sx, -0.08, sz);
+      box(1.0, 0.08, 0.92, 0xa78765, 0, 0.42, 0);
+      box(0.94, 0.05, 0.86, high, 0, 0.485, 0);
+      floor = 0.51;
+      break;
+    case "boardwalk":
+      for (const sx of [-0.4, 0.4]) for (const sz of [-0.36, 0.36]) round(0.05, 0.06, 0.3, 5, 0x4d674d, sx, 0.05, sz);
+      box(1.02, 0.08, 0.94, low, 0, 0.2, 0);
+      for (let i = -2; i <= 2; i++) box(0.96, 0.04, 0.17, high, 0, 0.25, i * 0.18);
+      floor = 0.27;
+      break;
+    case "rock":
+      round(0.6, 0.74, 1.0, 7, low, 0, -0.08, 0);
+      box(0.92, 0.12, 0.84, high, 0, 0.48, 0);
+      floor = 0.54;
+      break;
+  }
+
+  // Body: walls, corner posts, a dark doorway and the band above it.
+  box(0.60, 0.52, 0.50, s.body, 0, floor + 0.26, -0.02);
+  for (const sx of [-0.3, 0.3]) for (const sz of [-0.25, 0.23]) box(0.07, 0.54, 0.07, s.post, sx, floor + 0.27, sz);
+  box(0.30, 0.34, 0.02, s.door, 0, floor + 0.22, 0.235);
+  box(0.36, 0.05, 0.03, s.trim, 0, floor + 0.41, 0.24);
+
+  // Gabled roof, its ridge running across the front.
+  const eaves = floor + 0.52;
+  const run = 0.44;
+  const pitch = Math.atan2(s.rise, run);
+  const slope = Math.hypot(s.rise, run);
+  for (const side of [-1, 1]) {
+    const y = eaves + s.rise / 2 + s.thick / 2;
+    box(0.88, s.thick, slope + 0.06, s.roof, 0, y, side * run * 0.5, side * pitch);
+    if (s.snow !== undefined) box(0.82, 0.045, slope * 0.9, s.snow, 0, y + s.thick / 2 + 0.02, side * run * 0.47, side * pitch);
+  }
+  const ridge = eaves + s.rise + s.thick / 2 + 0.03;
+  box(0.94, 0.07, 0.09, s.snow ?? s.ridge, 0, ridge, 0);
+
+  if (s.paper !== undefined) {
+    at.timber([-0.33, eaves - 0.02, 0.30], [0.33, eaves - 0.02, 0.30], 0.045, 0.045, 0xd9c48a);
+    for (const sx of [-0.13, 0.13]) box(0.06, 0.13, 0.015, s.paper, sx, eaves - 0.11, 0.31);
+  }
+  return (ridge + 0.035) * HOKORA_SCALE;
+}
+
+/** The same parts, scaled by `k` about the origin and then moved to (x, z). */
+function shift(p: ShrineParts, x: number, z: number, k = 1): ShrineParts {
+  const at = (v: TimberEnd): TimberEnd => [v[0] * k + x, v[1] * k, v[2] * k + z];
+  return {
+    box: (w, h, d, color, bx, y, bz, pitch) => p.box(w * k, h * k, d * k, color, bx * k + x, y * k, bz * k + z, pitch),
+    round: (top, bottom, h, sides, color, rx, y, rz) =>
+      p.round(top * k, bottom * k, h * k, sides, color, rx * k + x, y * k, rz * k + z),
+    timber: (start, end, w, d, color) => p.timber(at(start), at(end), w * k, d * k, color),
+  };
+}

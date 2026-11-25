@@ -28,6 +28,7 @@ export {
   ringRadius,
 } from "./landmarks";
 export type { Landmark, LandmarkSpec } from "./landmarks";
+export { HOKORA_RADIUS, HOKORA_REACH, HOKORA_SETBACK, hokoraOf, waveOriginOf } from "./hokora";
 export { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
 export type { LandmarkGround } from "./landmark-ground";
 export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, landmarkWaterLevel, plateauBase, plateauDistance } from "./terrain-grid";

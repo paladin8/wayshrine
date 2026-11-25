@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/kenroku-en.glb"
 BLEND=ROOT+"/content/landmarks/kenroku-en.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"f1f4f6","packed":"cfd7de","water":"3fb2bd","stone":"a39e98","darkstone":"7f7a74","bark":"4e3a30","pine":"3f6b47","straw":"e2cf9c","darkwood":"4a3426","tile":"6a6e74","glow_cream":"e8dcb0"}
+PAL={"terrain":"dbe5eb","snow":"f1f4f6","packed":"cfd7de","water":"3fb2bd","stone":"a39e98","darkstone":"7f7a74","bark":"4e3a30","pine":"3f6b47","straw":"e2cf9c","darkwood":"4a3426","tile":"6a6e74","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -187,7 +187,7 @@ for j in range(NG):
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
             zc=sum(p[2] for p in P)/3
-            gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.05 else "snow")
+            gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.05 else "terrain")
 emit(gverts,gf,gm,orient=False)
 solid([[(-FH,-FH,-1.0),(FH,-FH,-1.0),(FH,FH,-1.0),(-FH,FH,-1.0)],[(-FH,-FH,0.0),(FH,-FH,0.0),(FH,FH,0.0),(-FH,FH,0.0)]],"stone",mb=None,mt=None)
 # the water: a polygon round the pond's outline, just above the bed, under the banks

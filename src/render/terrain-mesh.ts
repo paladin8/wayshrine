@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { CHUNK_SIZE, ginzanStream, ginzanWarmth, type Terrain } from "../world";
+import { CHUNK_SIZE, ginzanStream, waveOriginOf, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
+import { buildGinzanSurfaces, ginzanFlowAt, type GinzanStrip } from "./ginzan-water";
 import { combine, meshFromData, VitalityBuilder, type MeshData, type VitalityMesh } from "./vitality-mesh";
 
 const SIDE_SHADE = 0.8;
@@ -13,78 +14,20 @@ const fieldColors = {
   channel: 0x6f9faf,
 };
 
-// Match the water material in the Ginzan Onsen landmark.
-const ginzanWater = 0x2a4e62;
-const springColors = {
-  stream: ginzanWater,
-  bank: 0x9f927b,
-  bath: ginzanWater,
-  rim: 0x9d8f78,
-  bridge: 0xb69772,
-};
-
-/** The spring surfaces of one region within a chunk, as plain arrays. */
-export interface StripData {
-  readonly id: string;
-  readonly vertices: Float32Array;
-  readonly colors: Float32Array;
-}
-
-function buildGinzanSurfaces(
-  terrain: Terrain,
-  strips: readonly StripData[],
-  progressOf: (id: string) => number,
-): VitalityMesh | undefined {
-  const ginzan = ginzanStream(terrain.world);
-  if (!ginzan || strips.length === 0) return;
-  const object = new THREE.Group();
-  const parts = strips.map(({ id, vertices, colors }) => {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-    geometry.computeVertexNormals();
-    const material = new THREE.MeshStandardMaterial({
-      transparent: true, depthWrite: false, vertexColors: true, flatShading: true,
-      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.receiveShadow = true;
-    object.add(mesh);
-    return { id, mesh, geometry, material };
-  });
-  const regionIds = new Set([ginzan.sourceId, ...strips.map((strip) => strip.id)]);
-  const applyVitality: VitalityMesh["applyVitality"] = (progress, only) => {
-    if (only && ![...regionIds].some((id) => only.has(id))) return;
-    for (const { id, mesh, material } of parts) {
-      const warmth = ginzanWarmth(ginzan, id, progress);
-      material.opacity = warmth * warmth * (3 - 2 * warmth);
-      mesh.visible = warmth > 0.009;
-    }
-  };
-  applyVitality(progressOf);
-  return {
-    object, regionIds, applyVitality,
-    dispose: () => {
-      for (const { geometry, material } of parts) {
-        geometry.dispose();
-        material.dispose();
-      }
-    },
-  };
-}
-
 type V = readonly [number, number, number];
 
 /** Triangles for a quad, wound so the face normal points along `outward`. */
 function quad(a: V, b: V, c: V, d: V, outward: V): number[] {
-  const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]] as const;
-  const e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]] as const;
-  const n = [
-    e1[1] * e2[2] - e1[2] * e2[1],
-    e1[2] * e2[0] - e1[0] * e2[2],
-    e1[0] * e2[1] - e1[1] * e2[0],
+  const bx = b[0] - a[0], by = b[1] - a[1], bz = b[2] - a[2];
+  const cx = c[0] - a[0], cy = c[1] - a[1], cz = c[2] - a[2];
+  const dx = d[0] - a[0], dy = d[1] - a[1], dz = d[2] - a[2];
+  // A tapering wall can end in one degenerate triangle. Count both when choosing the winding.
+  const normal = [
+    by * cz - bz * cy + cy * dz - cz * dy,
+    bz * cx - bx * cz + cz * dx - cx * dz,
+    bx * cy - by * cx + cx * dy - cy * dx,
   ];
-  const flip = n[0]! * outward[0] + n[1]! * outward[1] + n[2]! * outward[2] < 0;
+  const flip = normal[0]! * outward[0] + normal[1]! * outward[1] + normal[2]! * outward[2] < 0;
   return (flip ? [a, c, b, a, d, c] : [a, b, c, a, c, d]).flat();
 }
 
@@ -104,7 +47,7 @@ export function buildTerrainChunk(
 /** The ground of a chunk as plain data: the ground itself plus any spring surfaces laid over it. */
 export interface TerrainData {
   readonly ground: MeshData;
-  readonly strips: readonly StripData[];
+  readonly strips: readonly GinzanStrip[];
 }
 
 /** Makes the drawable ground from `terrainChunkData`. */
@@ -115,9 +58,11 @@ export function meshTerrain(terrain: Terrain, data: TerrainData, vitalityOf: (re
 }
 
 export function terrainChunkData(terrain: Terrain, cx: number, cz: number): TerrainData {
-  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
+  const builder = new VitalityBuilder((id) => waveOriginOf(terrain.world.regionById(id)));
   const art = biomeArt(terrain);
-  const strips = new Map<string, { vertices: number[]; colors: number[] }>();
+  const ginzan = ginzanStream(terrain.world);
+  const strips = new Map<string, { vertices: number[]; flow: number[] }>();
+  const flowAt = new Map<string, readonly number[]>();
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
@@ -129,9 +74,6 @@ export function terrainChunkData(terrain: Terrain, cx: number, cz: number): Terr
         : art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
       if (!field && tile.fujiVerge) top.lerp(fujiGrass, tile.fujiVerge * 0.90);
       const spring = tile.ginzanSurface;
-      if (spring === "stream" || spring === "bath") top.setHex(0xa9c7d8);
-      else if (spring === "rim") top.setHex(0xb1b2ac);
-      else if (spring === "bridge") top.setHex((tx + tz) % 2 ? 0x9e8b74 : 0x8d7b67);
       const side = top.clone().multiplyScalar(SIDE_SHADE);
       const c = terrain.corners(tx, tz);
       const surface = quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]);
@@ -143,12 +85,19 @@ export function terrainChunkData(terrain: Terrain, cx: number, cz: number): Terr
           : field === "channel" ? { water: "water" } : undefined,
       );
 
-      if (spring) {
-        const strip = strips.get(tile.regionId) ?? { vertices: [], colors: [] };
-        const color = new THREE.Color(springColors[spring]);
-        if (spring === "bridge" || spring === "rim") color.multiplyScalar((tx + tz) % 2 ? 0.87 : 1);
+      if (ginzan && spring) {
+        const strip = strips.get(tile.regionId) ?? { vertices: [], flow: [] };
         strip.vertices.push(...surface);
-        for (let i = 0; i < 6; i++) strip.colors.push(color.r, color.g, color.b);
+        for (let i = 0; i < surface.length; i += 3) {
+          const x = surface[i]!, z = surface[i + 2]!;
+          const key = `${x},${z}`;
+          let flow = flowAt.get(key);
+          if (!flow) {
+            flow = ginzanFlowAt(ginzan, x, z);
+            flowAt.set(key, flow);
+          }
+          strip.flow.push(...flow);
+        }
         strips.set(tile.regionId, strip);
       }
       if (field === "rice") {
@@ -174,11 +123,26 @@ export function terrainChunkData(terrain: Terrain, cx: number, cz: number): Terr
         { out: [0, 0, -1], a: [tx, 0, tz], b: [tx + 1, 0, tz], ph: [c[0], c[1]], qh: [m0[2], m0[3]] },
       ];
       for (const e of edges) {
-        const lo0 = Math.min(e.ph[0], e.qh[0]);
-        const lo1 = Math.min(e.ph[1], e.qh[1]);
-        if (lo0 >= e.ph[0] && lo1 >= e.ph[1]) continue;
+        const riseA = e.ph[0] - e.qh[0];
+        const riseB = e.ph[1] - e.qh[1];
+        if (riseA <= 0 && riseB <= 0) continue;
+        let a: V = [e.a[0], e.ph[0], e.a[2]];
+        let b: V = [e.b[0], e.ph[1], e.b[2]];
+        let lowA: V = [e.a[0], e.qh[0], e.a[2]];
+        let lowB: V = [e.b[0], e.qh[1], e.b[2]];
+        if (riseA < 0 || riseB < 0) {
+          // The two walls meet at the exact place their sloping edges cross.
+          const t = riseA / (riseA - riseB);
+          const cross: V = [
+            a[0] + (b[0] - a[0]) * t,
+            a[1] + (b[1] - a[1]) * t,
+            a[2] + (b[2] - a[2]) * t,
+          ];
+          if (riseA < 0) a = lowA = cross;
+          else b = lowB = cross;
+        }
         builder.addTriangles(
-          quad([e.a[0], e.ph[0], e.a[2]], [e.b[0], e.ph[1], e.b[2]], [e.b[0], lo1, e.b[2]], [e.a[0], lo0, e.a[2]], e.out),
+          quad(a, b, lowB, lowA, e.out),
           side,
           tile.regionId,
         );
@@ -187,6 +151,6 @@ export function terrainChunkData(terrain: Terrain, cx: number, cz: number): Terr
   }
   return {
     ground: builder.finish()!,
-    strips: [...strips].map(([id, strip]) => ({ id, vertices: new Float32Array(strip.vertices), colors: new Float32Array(strip.colors) })),
+    strips: [...strips].map(([id, strip]) => ({ id, vertices: new Float32Array(strip.vertices), flow: new Float32Array(strip.flow) })),
   };
 }

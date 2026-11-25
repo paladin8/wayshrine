@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/hirosaki-castle.glb"
 BLEND=ROOT+"/content/landmarks/hirosaki-castle.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"f1f4f6","plaster":"e8e4dc","tile":"4f5458","stone":"a39e98","darkstone":"7f7a74","vermilion":"d96b59","water":"3fb2bd","bark":"4e3a30","roof":"2a2424","foliage":"4f8a55","glow_cream":"e8dcb0"}
+PAL={"terrain":"dbe5eb","snow":"f1f4f6","plaster":"e8e4dc","tile":"4f5458","stone":"a39e98","darkstone":"7f7a74","vermilion":"d96b59","water":"3fb2bd","bark":"4e3a30","roof":"2a2424","foliage":"4f8a55","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -185,7 +185,7 @@ for j in range(NG):
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
             zc=sum(p[2] for p in P)/3
-            gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.02 else "snow")
+            gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.02 else "terrain")
 emit(gverts,gf,gm,orient=False)
 def octo(z,h=FH,ch=1.2):
     # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
@@ -218,7 +218,7 @@ ZW=BED_Z; DW=1.2
 def wall_d(t): return DW*(1-t)**2
 for k in range(7):
     t=k/6; rings.append([(x,y,ZW+(HM-ZW)*t) for x,y in offs(HMP,SG*wall_d(t))])
-solid(rings,"stone",mt="snow")
+solid(rings,"stone",mt="terrain")
 for t in (0.3,0.62):                                              # coursing lines in the stone
     z=ZW+(HM-ZW)*t; r=[(x,y,z) for x,y in offs(HMP,SG*(wall_d(t)+0.02))]
     solid([r,[(x,y,z+0.05) for x,y,_ in r]],"darkstone",mb=None,mt=None)

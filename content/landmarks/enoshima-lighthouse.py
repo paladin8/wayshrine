@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/enoshima-lighthouse.glb"
 BLEND=ROOT+"/content/landmarks/enoshima-lighthouse.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"f1f4f6","water":"3fb2bd","foliage":"5f9a52","darkstone":"7f7a74","cream":"e8dcb0","stone":"a39e98","vermilion":"d96b59","roof":"2a2424","wood":"d1ab80","blossom":"f2b6c4","glow_cream":"e8dcb0"}
+PAL={"terrain":"86a75e","snow":"f1f4f6","water":"3fb2bd","foliage":"5f9a52","darkstone":"7f7a74","cream":"e8dcb0","stone":"a39e98","vermilion":"d96b59","roof":"2a2424","wood":"d1ab80","blossom":"f2b6c4","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -159,7 +159,7 @@ for j in range(NG):
             if area2(*P)<=1e-4: continue
             n=(P[1]-P[0]).cross(P[2]-P[0]).normalized()
             zc=(P[0].z+P[1].z+P[2].z)/3
-            gf.append([gid[k] for k in t3]); gm.append("darkstone" if (abs(n.z)<0.8 or zc<LV+0.35) else "foliage")
+            gf.append([gid[k] for k in t3]); gm.append("darkstone" if (abs(n.z)<0.8 or zc<LV+0.35) else "terrain")
 emit(gverts,gf,gm,orient=False)
 # the sea, just under the game's own water tiles: it fills any tile the game keeps as land along the shore
 emit([(-9.6,-9.6,LV-0.04),(9.6,-9.6,LV-0.04),(9.6,9.6,LV-0.04),(-9.6,9.6,LV-0.04)],[[0,1,2,3]],["water"],orient=False)

@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/shuri-castle.glb"
 BLEND=ROOT+"/content/landmarks/shuri-castle.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"red":"c8342a","white":"efeae0","roof":"c4604a","gold":"d9b04a","dark":"3a2a24","limestone":"d8cfb8","pave":"cfc6b0","grass":"5f8a45","sand":"e6dcc0","water":"2a6a8a","leaf":"3f7a42","bark":"5a4a3a"}
+PAL={"red":"c8342a","white":"efeae0","roof":"c4604a","gold":"d9b04a","dark":"3a2a24","limestone":"d8cfb8","pave":"cfc6b0","terrain":"86a75e","sand":"e6dcc0","water":"2a6a8a","leaf":"3f7a42","bark":"5a4a3a"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -176,7 +176,7 @@ def gmat(x,y,h,sl):
     u,v=to_uv(x,y)
     if top_m(u,v)<1.0: return "pave"
     if h<LV+0.35 or (isl_m(u,v)>0.92 and u>2.5 and abs(v)<1.4): return "sand"
-    return "grass"
+    return "terrain"
 draw_ground(H,gmat,0.62,skip=lambda x,y: top_m(*to_uv(x,y))<0.97)
 draw_sea()
 # the walls: curving coral limestone round the hilltop, battered, with rounded corners; tall on the seaward side

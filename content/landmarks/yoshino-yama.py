@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/yoshino-yama.glb"
 BLEND=ROOT+"/content/landmarks/yoshino-yama.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"grass":"7da15c","grassd":"668a4b","path":"c8bfa8","stone":"9a958c","wood":"7a5236","roof":"4a4440","plaster":"e9e4d8","blossom":"f2c4d0","blossom2":"e3a3b6","cedar":"2f4a35","bark":"5a4334","glow_cream":"e8dcb0"}
+PAL={"terrain":"878582","grass":"7da15c","grassd":"668a4b","path":"c8bfa8","stone":"9a958c","wood":"7a5236","roof":"4a4440","plaster":"e9e4d8","blossom":"f2c4d0","blossom2":"e3a3b6","cedar":"2f4a35","bark":"5a4334","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -156,7 +156,7 @@ for i in range(NG):
         if max(HV_[k][2] for k in q)<=0.0: continue
         for tri in ([q[0],q[1],q[2]],[q[0],q[2],q[3]]) if (i+j)%2==0 else ([q[0],q[1],q[3]],[q[1],q[2],q[3]]):
             a,b,c=[Vector(HV_[k]) for k in tri]; n=(b-a).cross(c-a).normalized()
-            faces.append([vi(k) for k in tri]); fm.append("grass" if n.z>0.86 else "grassd")
+            faces.append([vi(k) for k in tri]); fm.append("terrain" if (a.z+b.z+c.z)/3<0.55 else "grass")   # the foothills take the region's ground
 emit(verts,faces,fm,orient=False)
 
 # ---- the approach: a pale road winding up the ridge to the terrace, draped on the slope

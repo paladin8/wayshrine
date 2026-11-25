@@ -4,7 +4,7 @@ Design intent only. How it is built lives in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Pillars
 - **Open-ended, no combat.** The map extends as you explore. A session can be five minutes or five hours.
-- **Restoration is the core loop.** Each shrine is the energy source of its region. Restoring it takes the region from dead, dark and muted to lively and colourful. The reward is visible on the land itself. The moment is staged: energy radiates outward from the shrine, the camera pulls back to show the region waking, then holds before returning to the player. Landmark restorations use a gentler pullback and a closer view of the landmark.
+- **Restoration is the core loop.** Each shrine is the energy source of its region. A shrine is a torii gate with a small hokora (祠) behind it, in the materials of its biome; the hokora is what the player restores, and travel arrives in front of the gate. Restoring it takes the region from dead, dark and muted to lively and colourful. The reward is visible on the land itself. The moment is staged: energy radiates outward from the shrine, the camera pulls back to show the region waking, then holds before returning to the player. Landmark restorations use a gentler pullback and a closer view of the landmark.
 - **Discovery changes the world.** What you find changes what the generator produces next, so exploration stays fresh.
 - **Never stuck.** Terrain is opened by capabilities, and the world is built so the next capability is always reachable ([ADR 0006](decisions/0006-landmarks-and-progression.md)); abilities come from restoring landmarks, the hand-crafted places in [landmarks.md](landmarks.md).
 - **Look.** Low-poly, flat-shaded, isometric diorama, from the Blender shrine reference.

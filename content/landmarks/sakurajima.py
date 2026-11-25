@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/sakurajima.glb"
 BLEND=ROOT+"/content/landmarks/sakurajima.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"ash":"8a8178","scrub":"6f7d4f","green":"4f7a45","ground":"6b5a4c","lava":"3a3634","water":"3f7f99","plume":"9e9890","pave":"b9b2a2","wood":"7a5a3e","pine":"3a5e36","bark":"4e3a30","glow_cream":"e8dcb0"}
+PAL={"terrain":"574441","ash":"8a8178","scrub":"6f7d4f","green":"4f7a45","ground":"6b5a4c","lava":"3a3634","water":"3f7f99","plume":"9e9890","pave":"b9b2a2","wood":"7a5a3e","pine":"3a5e36","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -143,7 +143,7 @@ def facemat(x,y,h,slope):
     if h>4.1: return "ash"
     if h>2.5 or (h>1.6 and slope>1.1): return "scrub"
     if h>0.18: return "green"
-    return "ground"
+    return "terrain"                                                 # the foot of the island: the region's own ground
 vs=[(-FH+STEP*i,-FH+STEP*j,Z[j][i]) for j in range(NG) for i in range(NG)]
 faces=[];fm=[]
 for j in range(NG-1):

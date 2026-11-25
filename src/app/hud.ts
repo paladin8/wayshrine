@@ -1,11 +1,11 @@
-import { CAPABILITIES, CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, type Capability } from "../world";
+import { backpackContents } from "./backpack";
+import { BACKPACK_ICON } from "./gear-icons";
 import type { Locale, Messages } from "./i18n";
 import { UI_FONT, setText } from "./style";
 
 export interface HudModel {
   /** Text in the player's language. */
   readonly messages: Messages;
-  readonly capabilities: ReadonlySet<Capability>;
   readonly restoredLandmarks: readonly string[];
   /** Interaction prompt at the bottom of the screen, or null. */
   readonly prompt: string | null;
@@ -33,7 +33,12 @@ export interface LandmarkNameModel {
 }
 
 export interface Hud {
+  /** The buttons at the top right. */
   readonly actions: HTMLElement;
+  /** The buttons at the top left: the backpack, the journal and the rubbing box, in that order. */
+  readonly topLeft: HTMLElement;
+  /** Opens the backpack. */
+  readonly backpackButton: HTMLButtonElement;
   /** The landmark counter; clicking it opens the travel notebook. */
   readonly landmarkButton: HTMLButtonElement;
   update(model: HudModel): void;
@@ -42,20 +47,11 @@ export interface Hud {
 const CSS = `
 .hud{position:fixed;inset:0;pointer-events:none;font:14px/1.3 ${UI_FONT};color:#2a2424}
 .hud .chip{display:inline-block;margin-right:6px;padding:4px 10px;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422}
-.hud .gear-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0}
-.hud .gear-chip[hidden]{display:none}
-.hud .gear-chip.off{color:#5e5249;background:#f4ecd8bc}
-.hud .star-count{display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
-.hud .star-count::before{content:"";width:14px;height:14px;background:#b64e3d;clip-path:polygon(50% 0,64% 34%,100% 38%,74% 62%,81% 100%,50% 82%,19% 100%,26% 62%,0 38%,36% 34%)}
 .hud .hud-action{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;height:34px;padding:0;border-radius:999px;background:#fffaf0cc;border:1px solid #2a242422;color:inherit;font:inherit;cursor:pointer;pointer-events:auto}
 .hud .hud-action:hover,.hud .hud-action[aria-expanded=true]{background:#fffaf0}
 .hud .landmark-count{gap:6px;padding:0 10px;font-variant-numeric:tabular-nums}
 .hud .landmark-book-icon{font-size:17px;line-height:1}
-.hud .gear-stars{padding:1px 5px;border-radius:6px;background:#2a242410;font-size:12px}
-.hud .gear-stars::before{width:11px;height:11px}
-.hud .gear-chip.off .gear-stars::before{background:#88612c}
-.hud .tl{position:absolute;top:14px;left:14px;display:grid;grid-template-columns:repeat(2,max-content);gap:5px}
-@media(max-width:840px){.hud .tl{top:92px}}
+.hud .tl{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:8px}
 .hud .tr{--actions-top:14px;position:absolute;top:var(--actions-top);right:14px;display:flex;align-items:center;gap:8px}
 @media(max-width:600px){.hud .tr{--actions-top:56px}}
 .hud .bc{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);text-align:center}
@@ -94,24 +90,16 @@ export function createHud(container: HTMLElement): Hud {
   root.append(tl, tr, bc);
   container.appendChild(root);
 
-  // Every ability, then Pilgrim’s Wake (which opens no terrain) as the last chip.
-  const gear: ReadonlyArray<{ id: Capability | "pilgrimsWake"; stars: number }> = [
-    ...CAPABILITIES.map((id) => ({ id, stars: CAPABILITY_THRESHOLDS[id] })),
-    { id: "pilgrimsWake", stars: PILGRIMS_WAKE_STARS },
-  ];
-  const chips = gear.map((item) => {
-    const chip = document.createElement("span");
-    chip.className = "chip gear-chip off";
-    chip.hidden = true;
-    const name = document.createElement("span");
-    const stars = document.createElement("span");
-    stars.className = "star-count gear-stars";
-    stars.setAttribute("role", "img");
-    stars.textContent = String(item.stars);
-    chip.append(name, stars);
-    tl.appendChild(chip);
-    return { item, chip, name, stars };
-  });
+  const backpackButton = document.createElement("button");
+  backpackButton.type = "button";
+  backpackButton.className = "hud-action backpack-button";
+  const backpackIcon = document.createElement("span");
+  backpackIcon.className = "backpack-icon";
+  backpackIcon.innerHTML = BACKPACK_ICON;
+  const backpackCount = document.createElement("span");
+  backpackCount.className = "backpack-count";
+  backpackButton.append(backpackIcon, backpackCount);
+  tl.appendChild(backpackButton);
   const count = document.createElement("button");
   count.type = "button";
   count.className = "hud-action landmark-count";
@@ -123,7 +111,7 @@ export function createHud(container: HTMLElement): Hud {
   const countValue = document.createElement("span");
   count.append(bookIcon, countValue);
 
-  tr.append(count);
+  tl.appendChild(count);
 
   let renderedLandmarks: readonly string[] | undefined;
   let renderedLandmarkMessages: Messages | undefined;
@@ -192,6 +180,8 @@ export function createHud(container: HTMLElement): Hud {
 
   return {
     actions: tr,
+    topLeft: tl,
+    backpackButton,
     landmarkButton: count,
     update(m) {
       const t = m.messages;
@@ -202,18 +192,7 @@ export function createHud(container: HTMLElement): Hud {
         setText(gearHint, message.hint);
       }
       gearReveal.hidden = m.gearReveal === null;
-      let showedNext = false;
-      for (const { item, chip, name, stars } of chips) {
-        const held = item.id === "pilgrimsWake" ? m.restoredLandmarks.length >= item.stars : m.capabilities.has(item.id);
-        chip.hidden = !held && showedNext;
-        if (chip.hidden) continue;
-        if (!held) showedNext = true;
-        const status = held ? "unlocked" : "locked";
-        setText(name, item.id === "pilgrimsWake" ? t.pilgrimsWake : t.capability[item.id]);
-        chip.classList.toggle("off", status !== "unlocked");
-        const requirement = t.gearRequirement(item.stars, status);
-        if (stars.getAttribute("aria-label") !== requirement) stars.setAttribute("aria-label", requirement);
-      }
+      setText(backpackCount, String(backpackContents(m.restoredLandmarks.length).held.length));
       if (renderedLandmarks !== m.restoredLandmarks || renderedLandmarkMessages !== t) {
         renderedLandmarks = m.restoredLandmarks;
         renderedLandmarkMessages = t;

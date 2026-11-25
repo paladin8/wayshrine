@@ -10,7 +10,7 @@ GLB=ROOT+"/public/models/landmarks/kinkaku-ji.glb"
 BLEND=ROOT+"/content/landmarks/kinkaku-ji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"gold":"e2b34c","water":"3c6f6c","shimmer":"b39445","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","darkwood":"6e5442","snow":"f1f4f6","foliage":"5f9a52","vermilion":"d96b59","glow_cream":"e8dcb0"}
+PAL={"terrain":"86a75e","gold":"e2b34c","water":"3c6f6c","shimmer":"b39445","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","darkwood":"6e5442","snow":"f1f4f6","foliage":"5f9a52","vermilion":"d96b59","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -150,7 +150,7 @@ for j in range(NG):
         tr=[(a,b,c),(a,c,d4)] if (i+j)%2==0 else [(a,b,d4),(b,c,d4)]
         for t3 in tr:
             if area2(*[gv[k] for k in t3])>1e-4: gf.append([gid[k] for k in t3])
-emit(gverts,gf,["foliage"]*len(gf),orient=False)
+emit(gverts,gf,["terrain"]*len(gf),orient=False)
 # water surface, larger than the pond so its edge tucks under the banks
 NW=32
 emit([pond_pt(2*math.pi*k/NW,1.18)+(WATER_Z,) for k in range(NW)],[list(range(NW))],["water"],orient=False)
@@ -160,7 +160,7 @@ def rock(cx,cy,cz,r):
 def island(cx,cy,r,n=7):
     rs=[r*rng.uniform(0.8,1.15) for _ in range(n)]; ph=rng.uniform(0,6.28)
     ring=lambda k,z: [(cx+k*rs[i]*math.cos(ph+2*math.pi*i/n), cy+k*0.75*rs[i]*math.sin(ph+2*math.pi*i/n), z) for i in range(n)]
-    solid([ring(1.0,BED_Z-0.05),ring(0.82,-0.02),ring(0.5,0.2)],"foliage")
+    solid([ring(1.0,BED_Z-0.05),ring(0.82,-0.02),ring(0.5,0.2)],"terrain")
 def pine(cx,cy,cz,s,ang):
     # cloud-pruned garden pine: leaning trunk, flat foliage pads
     T=dict(cx=cx,cy=cy,cz=cz,rot=ang,s=s)

@@ -1,7 +1,7 @@
 import { perfMark, perfInfo, perfGpuBegin, perfGpuEnd } from "./profile";
 import * as THREE from "three";
 import { lifeAt, railwayPowered, vitality, type GameState, type RestorationWake, type TrainFrame, type VoyageFrame } from "../game";
-import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
+import { BIOME_REQUIRES, CHUNK_SIZE, hokoraOf, waveOriginOf, isWater, plateauBase, railwayClearance, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
 import { createAmbient } from "./ambient";
 import { buildFujiTrain } from "./fuji-train";
 import { createFujiVista } from "./fuji-vista";
@@ -19,6 +19,7 @@ import { createFootprints } from "./footprints";
 import { buildPlayer } from "./player-mesh";
 import { SHIP_DECK_HEIGHT } from "./ship-mesh";
 import { buildLandmark } from "./landmark-mesh";
+import { biomeArt } from "./biome-art";
 import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
 import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
@@ -149,6 +150,18 @@ export function createStage(
   chunkSource: ChunkSource | null = null,
 ): Stage {
   const world = terrain.world;
+  // Landmark models colour their natural ground from the region's terrain, so their footprint's edge doesn't show.
+  const art = biomeArt(terrain);
+  const groundPaint = (x: number, y: number, z: number): THREE.Color => {
+    const tx = Math.floor(x);
+    const tz = Math.floor(z);
+    const tile = terrain.tileAt(tx, tz);
+    const region = world.regionById(tile.regionId);
+    // An island in a water region keeps its lawn: the model draws its own beaches, so the terrain's low-shore sand
+    // isn't applied to its grass.
+    const height = isWater(region.biome) ? Math.max(y, 1.2) : y;
+    return art.top(tx, tz, { ...tile, biome: isWater(tile.biome) ? "meadow" : tile.biome, height, shoal: 0 }, region);
+  };
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -310,7 +323,10 @@ export function createStage(
         const region = world.region(here.rx + dx, here.rz + dz);
         keep.add(region.id);
         if (shrines.has(region.id)) continue;
-        const shrine = region.landmark ? buildLandmark(region.landmark.id) : buildShrine(region.biome);
+        const hokora = hokoraOf(region);
+        const shrine = region.landmark
+          ? buildLandmark(region.landmark.id, groundPaint)
+          : buildShrine(region.biome, hokora && { x: hokora.x - region.shrine.x, z: hokora.z - region.shrine.z });
         // A landmark model's origin sits at its plateau's base height; its own ground rises from there.
         const ground = region.landmark ? plateauBase(region) : terrain.tileAtPoint(region.shrine.x, region.shrine.z).height;
         shrine.group.position.set(region.shrine.x, ground, region.shrine.z);
@@ -363,13 +379,14 @@ export function createStage(
   function lifeAtPoint(x: number, z: number): number {
     const region = world.regionAt(x, z);
     const wake = wakeOf(region.id);
-    const origin = wake?.origin ?? region.shrine;
+    const origin = wake?.origin ?? waveOriginOf(region);
     return lifeAt(shownProgress(region.id), Math.hypot(x - origin.x, z - origin.z), wake?.extent);
   }
 
   function shrineVitality(region: ReturnType<typeof world.regionById>): number {
     const wake = wakeOf(region.id);
-    return wake ? lifeAt(wake.progress, Math.hypot(region.shrine.x - wake.origin.x, region.shrine.z - wake.origin.z), wake.extent)
+    const at = waveOriginOf(region);
+    return wake ? lifeAt(wake.progress, Math.hypot(at.x - wake.origin.x, at.z - wake.origin.z), wake.extent)
       : shownProgress(region.id);
   }
 

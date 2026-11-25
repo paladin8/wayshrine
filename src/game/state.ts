@@ -1,5 +1,5 @@
 import { createRng } from "../core";
-import { capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
+import { PILGRIMS_WAKE_STARS, REGION_SIZE, capabilitiesForCount, canTraverse, createWorld, type Biome, type Capability, type Point, type Region, type World } from "../world";
 
 /**
  * Everything the player has changed about the world. A save is the world seed
@@ -29,10 +29,13 @@ export interface GameState {
   readonly shipLaunched: boolean;
 }
 
-/** A region counts as seen when the player is within this distance of its shrine. */
-export const DISCOVER_RADIUS = 40;
+/** A region counts as seen when the player is within this distance of its shrine. Small at first: about what the camera shows. */
+export const DISCOVER_RADIUS = 26;
 /** A region also counts as seen once any of its ground is this close, so a neighbour shows up as the player nears its edge. */
-export const REVEAL_DISTANCE = 28;
+export const REVEAL_DISTANCE = 12;
+/** The same two distances once Pilgrim’s Wake is held: the traveller senses the land far beyond the camera. */
+export const WAKE_DISCOVER_RADIUS = 150;
+export const WAKE_REVEAL_DISTANCE = 110;
 const RUBBINGS_PER_REVEAL = 7;
 
 export function newGame(seed: string): GameState {
@@ -56,6 +59,15 @@ export function isExplored(state: GameState, region: Region): boolean {
 /** Whether the map shows this unrestored landmark with a gold star. */
 export function isLandmarkRevealed(state: GameState, region: Region): boolean {
   return region.landmark !== null && state.revealedLandmarks.has(region.landmark.id);
+}
+
+/**
+ * Whether the map shows this landmark with a star: restored, revealed by rubbings (see `revealLandmarks`), or
+ * simply discovered by exploring its region. The three are independent: exploring never changes
+ * `revealedLandmarks`, so rubbings keep revealing stars exactly as before.
+ */
+export function isLandmarkMarked(state: GameState, region: Region): boolean {
+  return region.landmark !== null && (isRestored(state, region) || isLandmarkRevealed(state, region) || isExplored(state, region));
 }
 
 /**
@@ -86,21 +98,26 @@ export function revealLandmarks(state: GameState, world: World): GameState {
  */
 export function discoverNear(state: GameState, world: World, pos: Point): GameState {
   const here = world.regionAt(pos.x, pos.z);
+  const woke = landmarksRestored(state, world) >= PILGRIMS_WAKE_STARS;
+  const sight = woke ? WAKE_DISCOVER_RADIUS : DISCOVER_RADIUS;
+  const reveal = woke ? WAKE_REVEAL_DISTANCE : REVEAL_DISTANCE;
+  const reach = Math.max(1, Math.ceil(sight / REGION_SIZE));
   let next: Set<string> | null = null;
-  for (let dz = -1; dz <= 1; dz++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  for (let dz = -reach; dz <= reach; dz++) {
+    for (let dx = -reach; dx <= reach; dx++) {
       const r = world.region(here.coord.rx + dx, here.coord.rz + dz);
-      const seen = r.id === here.id || Math.hypot(r.shrine.x - pos.x, r.shrine.z - pos.z) <= DISCOVER_RADIUS;
+      const seen = r.id === here.id || Math.hypot(r.shrine.x - pos.x, r.shrine.z - pos.z) <= sight;
       if (seen && !state.explored.has(r.id)) {
         next ??= new Set(state.explored);
         next.add(r.id);
       }
     }
   }
-  // Any region whose ground lies within REVEAL_DISTANCE: probe rings around the player.
-  for (const radius of [REVEAL_DISTANCE / 2, REVEAL_DISTANCE]) {
-    for (let k = 0; k < 12; k++) {
-      const a = (k * Math.PI) / 6;
+  // Any region whose ground lies within the reveal distance: probe rings around the player, spaced well inside a region.
+  for (const radius of [reveal / 3, (reveal * 2) / 3, reveal]) {
+    const probes = Math.max(12, Math.ceil((2 * Math.PI * radius) / 16));
+    for (let k = 0; k < probes; k++) {
+      const a = (k * 2 * Math.PI) / probes;
       const r = world.regionAt(pos.x + Math.cos(a) * radius, pos.z + Math.sin(a) * radius);
       if (!state.explored.has(r.id) && !next?.has(r.id)) {
         next ??= new Set(state.explored);

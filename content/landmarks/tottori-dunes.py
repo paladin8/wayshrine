@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/tottori-dunes.glb"
 BLEND=ROOT+"/content/landmarks/tottori-dunes.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"sand":"e2c890","sand2":"d4b77c","sanddk":"b89a62","sea":"2f6f8f","seamid":"3f86a0","shallow":"62a7b5","foam":"eef2f0","wood":"7a5a3e","grass":"7a8a4a","camel":"b08a5c","red":"c8473a"}
+PAL={"terrain":"dab983","sand":"e2c890","sand2":"d4b77c","sanddk":"b89a62","sea":"2f6f8f","seamid":"3f86a0","shallow":"62a7b5","foam":"eef2f0","wood":"7a5a3e","grass":"7a8a4a","camel":"b08a5c","red":"c8473a"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -172,7 +172,7 @@ for j in range(N):
         for t in ([(a,b,c),(a,c,d)] if (i+j)%2==0 else [(a,b,d),(b,c,d)]):
             ps=[g[k] for k in t]; cx,cy=sum(p[0] for p in ps)/3,sum(p[1] for p in ps)/3; hh=sum(p[2] for p in ps)/3
             u,v=to_uv(cx,cy)
-            m="sand" if math.sin(2.2*u+0.6*v+0.4*math.sin(0.8*v))>-0.2 else "sand2"
+            m="terrain"                                                   # the region's own sand
             if u<ridge_u(v)-0.2 and u>ridge_u(v)-3.4: m="sanddk"            # the shadowed lee face
             if hh<SEA-0.05: m="sanddk"
             fs.append([ix[k] for k in t]); ms.append(m)

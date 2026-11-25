@@ -34,12 +34,20 @@ export interface Messages {
     readonly next: string;
     readonly close: string;
   };
+  /** The backpack that shows the gear collected so far, and the star count of the next piece, unnamed. */
+  readonly backpack: {
+    readonly title: string;
+    /** The name shown for the next piece of gear, which stays a mystery. */
+    readonly mystery: string;
+    /** Shown once every piece of gear has been found. */
+    readonly complete: string;
+    readonly close: string;
+  };
   /** The celebration after restoring every landmark. */
   readonly completion: {
     readonly title: string;
     readonly summary: (count: number) => string;
     readonly resume: string;
-    readonly reopen: string;
   };
   readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern" | "ashSandals" | "ship" | "pilgrimsWake", { readonly title: string; readonly hint: string }>>;
   readonly promptRestore: string;

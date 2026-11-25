@@ -108,11 +108,16 @@ export const en: Messages = {
     next: "Next page",
     close: "Close",
   },
+  backpack: {
+    title: "Backpack",
+    mystery: "???",
+    complete: "Your pack is full. Every piece of gear is yours.",
+    close: "Close",
+  },
   completion: {
     title: "Congratulations, traveller",
     summary: (count) => `You restored all ${count} landmarks.`,
     resume: "Continue exploring",
-    reopen: "View star chart",
   },
   gearReveal: {
     boat: { title: "Boat unlocked", hint: "Walk into the water to launch." },

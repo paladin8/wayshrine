@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/taketomi.glb"
 BLEND=ROOT+"/content/landmarks/taketomi.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"tile":"c8553a","white":"f2efe6","coral":"9e9a90","sand":"ece4cc","grass":"6f9a4a","dark":"3a3430","leaf":"3f7a42","tile2":"a8503c","buffalo":"4a4440","wood":"8a6a4a","water":"2a6a8a","bark":"5a4a3a"}
+PAL={"tile":"c8553a","white":"f2efe6","coral":"9e9a90","sand":"ece4cc","terrain":"86a75e","dark":"3a3430","leaf":"3f7a42","tile2":"a8503c","buffalo":"4a4440","wood":"8a6a4a","water":"2a6a8a","bark":"5a4a3a"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -180,7 +180,7 @@ def gmat(x,y,h,sl):
     u,v=to_uv(x,y); m=isl_m(u,v)
     if m>0.86 or h<TOP-0.05: return "sand"
     if m<0.83 and in_lane(u,v): return "sand"
-    return "grass"
+    return "terrain"
 draw_ground(H,gmat,0.55,0.1)
 draw_sea()
 # the plots: coral-stone walls, a house with its red hip roof and white-mortared ridges, a shisa on top, a hibiscus

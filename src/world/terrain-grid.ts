@@ -1,3 +1,4 @@
+import { HOKORA_SETBACK } from "./hokora";
 import { createNoise } from "../core";
 import { fujiRailway, railwayBank, railwayGround } from "./fuji-railway";
 import { ginzanStream, ginzanTile, type GinzanSurface } from "./ginzan-stream";
@@ -14,7 +15,7 @@ import type { Region, World } from "./world";
 /** Tiles are 1x1 world units; chunks are CHUNK_SIZE x CHUNK_SIZE tiles. */
 export const CHUNK_SIZE = 16;
 
-/** Within this distance of a shrine the ground is flat, so the shrine has a base. */
+/** Within this distance of a shrine's gate, and of the line back to its hokora, the ground is flat. */
 export const PLATEAU_RADIUS = 2.5;
 /** Keep the gate above the nearby slope, then blend its terrace into the hill. */
 const SHRINE_SURVEY_RADIUS = 6.75;
@@ -22,12 +23,15 @@ const SHRINE_APPROACH = 9.25;
 
 /**
  * Distance from a point to the edge of its region's flat plateau; negative on
- * the plateau. Round around a shrine, a wider square around a landmark.
+ * the plateau. A wider square around a landmark; around an ordinary shrine, a
+ * capsule from its gate back to its hokora, so both stand on the same level.
  */
 export function plateauDistance(region: Region, x: number, z: number): number {
   const dx = x - region.shrine.x;
   const dz = z - region.shrine.z;
-  return region.landmark ? Math.max(Math.abs(dx), Math.abs(dz)) - footprintHalf(region.landmark) : Math.hypot(dx, dz) - PLATEAU_RADIUS;
+  if (region.landmark) return Math.max(Math.abs(dx), Math.abs(dz)) - footprintHalf(region.landmark);
+  const along = dz > 0 ? dz : dz < -HOKORA_SETBACK ? dz + HOKORA_SETBACK : 0;
+  return Math.hypot(dx, along) - PLATEAU_RADIUS;
 }
 
 /** The height a region's plateau stands at: where a crafted model's origin sits. */

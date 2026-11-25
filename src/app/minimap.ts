@@ -1,4 +1,4 @@
-import { capabilitiesOf, isExplored, isLandmarkRevealed, isRestored, type GameState } from "../game";
+import { capabilitiesOf, isExplored, isLandmarkMarked, isRestored, type GameState } from "../game";
 import { BIOMES, BIOME_REQUIRES, REGION_SIZE, canTraverse, type Biome, type Capability, type Monument, type Point, type Region, type World } from "../world";
 import { UI_FONT, setText } from "./style";
 
@@ -235,7 +235,7 @@ export function createMinimap(
   function draw(input: MapInput, size: number, block: number): void {
     const { pos, state, target } = input;
     const caps = capabilitiesOf(state, world);
-    const markedLandmarks = world.landmarks.filter((region) => isLandmarkRevealed(state, region) || isRestored(state, region));
+    const markedLandmarks = world.landmarks.filter((region) => isLandmarkMarked(state, region));
     // View: centre (ground point) and scale (world units per pixel).
     let centre: Point = pos;
     let scale = SMALL_SCALE;
@@ -393,7 +393,7 @@ export function createMinimap(
         }
       }
     }
-    if (target && (!target.landmark || isLandmarkRevealed(state, target))) {
+    if (target && (!target.landmark || isLandmarkMarked(state, target))) {
       const [x, y] = project(target.shrine);
       ctx.beginPath();
       ctx.arc(x, y, dotR + 4, 0, Math.PI * 2);

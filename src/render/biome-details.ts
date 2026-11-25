@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createRng, type Rng } from "../core";
-import { CHUNK_SIZE, MONUMENT_CLEARING, plateauDistance, type Monument, type Terrain } from "../world";
+import { CHUNK_SIZE, MONUMENT_CLEARING, plateauDistance, waveOriginOf, type Monument, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
 import { meshFromData, VitalityBuilder, type MeshData, type Motion, type VitalityMesh } from "./vitality-mesh";
 
@@ -45,7 +45,7 @@ export function buildBiomeDetails(
 export function biomeDetailData(
   terrain: Terrain, cx: number, cz: number, monuments: readonly Monument[],
 ): MeshData | null {
-  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
+  const builder = new VitalityBuilder((id) => waveOriginOf(terrain.world.regionById(id)));
   const art = biomeArt(terrain);
   const rng = createRng(terrain.world.seed).fork(`brushwork:${cx},${cz}`);
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;

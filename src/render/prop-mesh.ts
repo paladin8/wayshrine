@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CHUNK_SIZE, MONUMENT_CLEARING, propsInChunk, type Biome, type Monument, type Prop, type PropKind, type Terrain } from "../world";
+import { CHUNK_SIZE, MONUMENT_CLEARING, propsInChunk, waveOriginOf, type Biome, type Monument, type Prop, type PropKind, type Terrain } from "../world";
 import { biomePropLook, biomePropParts } from "./biome-props";
 import { addMonument } from "./monument-mesh";
 import { palette } from "./palette";
@@ -181,7 +181,7 @@ export function propChunkData(
   cz: number,
   monuments: readonly Monument[] = [],
 ): MeshData | null {
-  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
+  const builder = new VitalityBuilder((id) => waveOriginOf(terrain.world.regionById(id)));
   const clearings = monuments.map((m) => ({ x: m.x, z: m.z, radius: MONUMENT_CLEARING }));
   for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p, terrain.world.regionById(p.regionId).biome);
   for (const m of monuments) {

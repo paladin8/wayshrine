@@ -87,13 +87,13 @@ export function vertexLife(mesh: THREE.Mesh, i: number): number {
 
 // --- shared material: wind sway for plants, ripples for water ---------------
 
-const timeUniform = { value: 0 };
+export const lifeTimeUniform = { value: 0 };
 const vitAUniform = { value: slotA };
 const vitBUniform = { value: slotB };
 
 /** Advances the clock used by the wind and water motion. */
 export function setLifeTime(seconds: number): void {
-  timeUniform.value = seconds;
+  lifeTimeUniform.value = seconds;
 }
 
 /**
@@ -107,7 +107,7 @@ const lifeMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, flatSh
 const GLOW = new THREE.Color(palette.glow);
 const GLOW_STRENGTH = 0.55;
 lifeMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uTime = timeUniform;
+  shader.uniforms.uTime = lifeTimeUniform;
   shader.uniforms.uVitA = vitAUniform;
   shader.uniforms.uVitB = vitBUniform;
   shader.vertexShader = shader.vertexShader

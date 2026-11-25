@@ -1,3 +1,4 @@
+import { ginzanApproachClearing, ginzanStream } from "./ginzan-stream";
 import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
 import { fujiValley } from "./fuji-valley";
@@ -185,6 +186,9 @@ export function propsInChunk(
   const railway = fujiRailway(world);
   const valleyProps = fujiValley(world)?.props ?? [];
   const hirosaki = hirosakiGarden(world);
+  const springs = ginzanStream(world)?.springs.filter(({ x, z }) =>
+    x >= x0 - 9 && x <= x0 + CHUNK_SIZE + 9 && z >= z0 - 9 && z <= z0 + CHUNK_SIZE + 9,
+  ) ?? [];
 
   // Check neighboring shrines too. Their approaches and sightlines can cross chunk and region boundaries.
   const rxMin = Math.floor(x0 / REGION_SIZE) - 1;
@@ -216,6 +220,7 @@ export function propsInChunk(
 
       if (tile.ginzanSurface || tile.tokyoSurface || tile.fujiField || valleyProps.some((p) => p.kind === "farmhouse" && Math.hypot(x - p.x, z - p.z) < 2.8)) continue;
       if (hirosaki && tile.regionId === hirosaki.regionId && hirosakiClearing(hirosaki, x, z)) continue;
+      if (springs.some((spring) => ginzanApproachClearing(spring, x, z))) continue;
       const region = world.regionAt(x, z);
       const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;

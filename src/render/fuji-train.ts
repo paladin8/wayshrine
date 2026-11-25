@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { railPoint, PLATFORM_END, PLATFORM_TOP, RAIL_HALF_WIDTH, type FujiRailway, type Obstacle, type Terrain } from "../world";
+import { railPoint, waveOriginOf, PLATFORM_END, PLATFORM_TOP, RAIL_HALF_WIDTH, type FujiRailway, type Obstacle, type Terrain } from "../world";
 import { lifeAt, type TrainFrame } from "../game";
 import { combine, deadOf, VitalityBuilder } from "./vitality-mesh";
 
@@ -111,7 +111,7 @@ function clipRailFace(points: readonly THREE.Vector3[], axis: "x" | "z", edge: n
 }
 
 function bakeRailScenery(group: THREE.Group, terrain: Terrain) {
-  const siteOf = (id: string) => terrain.world.regionById(id).shrine;
+  const siteOf = (id: string) => waveOriginOf(terrain.world.regionById(id));
   const ordinary = new VitalityBuilder(siteOf);
   const shadowed = new VitalityBuilder(siteOf);
   const subdivided = new Map<number, THREE.BoxGeometry>();

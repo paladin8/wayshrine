@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/zao-juhyo.glb"
 BLEND=ROOT+"/content/landmarks/zao-juhyo.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"snow":"f1f4f6","rime":"dde6ee","packed":"cfd7de","fir":"3f5f4a","steel":"c4c9ce","red":"d96b59","roof":"2a2424","stone":"a39e98","glow_cream":"e8dcb0"}
+PAL={"terrain":"dbe5eb","snow":"f1f4f6","rime":"dde6ee","packed":"cfd7de","fir":"3f5f4a","steel":"c4c9ce","red":"d96b59","roof":"2a2424","stone":"a39e98","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -179,7 +179,7 @@ for j in range(NG):
         for t3 in tr:
             P=[gv[k] for k in t3]
             if area2(*P)<=1e-4: continue
-            gf.append([gid[k] for k in t3]); gm.append("snow")
+            gf.append([gid[k] for k in t3]); gm.append("terrain")
 emit(gverts,gf,gm,orient=False)
 def octo(z,h=9.6,ch=1.2):
     # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round

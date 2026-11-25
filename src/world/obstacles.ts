@@ -1,4 +1,5 @@
 import { REGION_SIZE } from "./coords";
+import { HOKORA_RADIUS, hokoraOf } from "./hokora";
 import { groundOf } from "./landmark-ground";
 import { LANDMARK_SOLID_RADIUS } from "./landmarks";
 import { MONUMENT_CLEARING, monumentsAroundChunk, type MonumentPlan } from "./monuments";
@@ -68,7 +69,8 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
     const rzMax = Math.floor(((cz + 1) * CHUNK_SIZE) / REGION_SIZE) + 1;
     for (let rz = rzMin; rz <= rzMax; rz++) {
       for (let rx = rxMin; rx <= rxMax; rx++) {
-        const { shrine, landmark, biome } = world.region(rx, rz);
+        const region = world.region(rx, rz);
+        const { shrine, landmark, biome } = region;
         if (landmark) {
           // The landmark is the shrine: no gate pillars. A crafted model brings its own solids.
           const model = groundOf(landmark.id);
@@ -86,11 +88,13 @@ export function createObstacles(terrain: Terrain, monuments: MonumentPlan): Obst
           for (const dx of [-0.68, 0, 0.68]) {
             if (inside(shrine.x + dx, shrine.z + 0.12)) list.push({ x: shrine.x + dx, z: shrine.z + 0.12, r: 0.91 });
           }
-          continue;
+        } else {
+          for (const dx of [-SHRINE_PILLAR_OFFSET, SHRINE_PILLAR_OFFSET]) {
+            if (inside(shrine.x + dx, shrine.z)) list.push({ x: shrine.x + dx, z: shrine.z, r: SHRINE_PILLAR_RADIUS });
+          }
         }
-        for (const dx of [-SHRINE_PILLAR_OFFSET, SHRINE_PILLAR_OFFSET]) {
-          if (inside(shrine.x + dx, shrine.z)) list.push({ x: shrine.x + dx, z: shrine.z, r: SHRINE_PILLAR_RADIUS });
-        }
+        const hokora = hokoraOf(region);
+        if (hokora && inside(hokora.x, hokora.z)) list.push({ x: hokora.x, z: hokora.z, r: HOKORA_RADIUS });
       }
     }
     cache.set(key, list);

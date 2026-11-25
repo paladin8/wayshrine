@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { expect, it } from "vitest";
 import { FRONT_WIDTH, lifeAt, WAVE_EXTENT } from "../game";
-import { createTerrain, createWorld, fujiRailway } from "../world";
+import { createTerrain, createWorld, fujiRailway, waveOriginOf } from "../world";
 import { buildFujiTrain } from "./fuji-train";
 import { vertexLife } from "./vitality-mesh";
 
@@ -11,7 +11,7 @@ it("restores rail and station surfaces with the terrain tile beneath them", () =
   const terrain = createTerrain(world);
   const { scenery } = buildFujiTrain(line, terrain);
   const { shrineId, stand } = line.stations[0];
-  const shrine = world.regionById(shrineId).shrine;
+  const shrine = waveOriginOf(world.regionById(shrineId));
   const stationDistance = Math.hypot(stand.x - shrine.x, stand.z - shrine.z);
   const progress = (stationDistance + FRONT_WIDTH / 2) / (WAVE_EXTENT + FRONT_WIDTH);
   const restored = new Map([[line.landmarkId, 1], [shrineId, progress]]);
@@ -26,7 +26,7 @@ it("restores rail and station surfaces with the terrain tile beneath them", () =
       const x = (position.getX(i) + position.getX(i + 1) + position.getX(i + 2)) / 3;
       const z = (position.getZ(i) + position.getZ(i + 1) + position.getZ(i + 2)) / 3;
       const tile = terrain.tileAtPoint(x, z);
-      const { shrine } = world.regionById(tile.regionId);
+      const shrine = waveOriginOf(world.regionById(tile.regionId));
       for (let vertex = i; vertex < i + 3; vertex++) {
         const distance = Math.hypot(position.getX(vertex) - shrine.x, position.getZ(vertex) - shrine.z);
         const expected = lifeAt(restored.get(tile.regionId) ?? 0, distance);

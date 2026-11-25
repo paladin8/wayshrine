@@ -13,6 +13,7 @@ interface StreamPoint extends Point {
 
 interface Spring extends StreamPoint {
   readonly radius: number;
+  readonly entranceAngle: number;
 }
 
 interface Bridge extends StreamPoint {
@@ -27,6 +28,7 @@ interface StreamTile {
 
 interface GinzanStream {
   readonly sourceId: string;
+  readonly path: readonly StreamPoint[];
   readonly springs: readonly Spring[];
   readonly bridges: readonly Bridge[];
   readonly cells: ReadonlyMap<string, ReadonlyMap<string, StreamTile>>;
@@ -74,7 +76,14 @@ function springsAlong(world: World, source: Region, path: readonly StreamPoint[]
       world.regionAt(point.x + dx, point.z + dz) === region
       && Math.hypot(point.x + dx - region.shrine.x, point.z + dz - region.shrine.z) > 11.75,
     ));
-    if (fits && point.distance + 6 <= (path.at(-1)?.distance ?? 0)) springs.push({ ...point, radius });
+    if (fits && point.distance + 6 <= (path.at(-1)?.distance ?? 0)) {
+      const previous = path[point.distance / 2 - 1]!;
+      const next = path[point.distance / 2 + 1]!;
+      const downstream = Math.atan2(next.z - previous.z, next.x - previous.x);
+      // Put the steps on the more visible side of the stream in the isometric view.
+      const entranceAngle = downstream + (Math.cos(downstream) > Math.sin(downstream) ? Math.PI / 2 : -Math.PI / 2);
+      springs.push({ ...point, radius, entranceAngle });
+    }
     if (springs.length === 2) break;
   }
   return springs;
@@ -107,7 +116,10 @@ function rasterize(world: World, source: Region, path: readonly StreamPoint[], s
           : bridges.some((bridge) => Math.abs(distance - bridge.distance) < 1.2) && across < 2.9 ? "bridge"
           : across < 1.3 ? "stream" : "bank";
         const depth = surface === "stream" || surface === "bath" ? -0.30 : surface === "bridge" ? 0.12 : 0;
-        const grade = bath ? 1 : Math.min(1, (3.8 - across) / 1.45);
+        const blending = bath && surface === "rim"
+          ? Math.max(0, Math.min(1, (bath.radius + 0.9 - bathDistance) / 0.9))
+          : Math.min(1, Math.max(0, (3.8 - across) / 1.45));
+        const grade = bath && surface === "bath" ? 1 : blending * blending * (3 - 2 * blending);
         const regionCells = cells.get(region.id) ?? new Map<string, StreamTile>();
         regionCells.set(key, { surface, heightOffset: depth - 0.003 * distance, grade });
         cells.set(region.id, regionCells);
@@ -148,7 +160,7 @@ export function ginzanStream(world: World): GinzanStream | null {
     bridges.push({ ...point, yaw: Math.atan2(after.x - before.x, after.z - before.z) });
   }
   const cells = rasterize(world, source, path, springs, bridges);
-  const result = { sourceId: source.id, springs, bridges, cells };
+  const result = { sourceId: source.id, path, springs, bridges, cells };
   streams.set(world, result);
   return result;
 }
@@ -171,4 +183,12 @@ export function isThawedGinzanWater(
 ): boolean {
   return plan !== null && (tile.ginzanSurface === "stream" || tile.ginzanSurface === "bath")
     && restored.has(plan.sourceId) && restored.has(tile.regionId);
+}
+
+/** Keep procedural trees and boulders out of the short walk to the bathing steps. */
+export function ginzanApproachClearing(spring: Spring, x: number, z: number): boolean {
+  const dx = x - spring.x, dz = z - spring.z;
+  const c = Math.cos(spring.entranceAngle), s = Math.sin(spring.entranceAngle);
+  const along = dx * c + dz * s;
+  return along > spring.radius - 0.2 && along < spring.radius + 4.4 && Math.abs(dz * c - dx * s) < 2.25;
 }

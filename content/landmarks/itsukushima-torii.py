@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/itsukushima-torii.glb"
 BLEND=ROOT+"/content/landmarks/itsukushima-torii.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","snow":"f1f4f6","foliage":"5f9a52","water":"3fb2bd","gold":"e2b34c","glow_cream":"e8dcb0"}
+PAL={"terrain":"86a75e","vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","snow":"f1f4f6","foliage":"5f9a52","water":"3fb2bd","gold":"e2b34c","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -162,7 +162,7 @@ for j in range(NG):
             if area2(*P)<=1e-4: continue
             cx=sum(p[0] for p in P)/3; cy=sum(p[1] for p in P)/3
             sand=isl_m(cx,cy)>0.9 or (cx>5.0 and cy<1.5 and isl_m(cx,cy)>0.8)
-            gf.append([gid[k] for k in t3]); gm.append("cream" if sand else "foliage")
+            gf.append([gid[k] for k in t3]); gm.append("cream" if sand else "terrain")
 emit(gverts,gf,gm,orient=False)
 # the sea, just under the game's own water tiles: it fills any tile the game keeps as land along the shore
 emit([(-FH,-FH,LV-0.04),(FH,-FH,LV-0.04),(FH,FH,LV-0.04),(-FH,FH,LV-0.04)],[[0,1,2,3]],["water"],orient=False)

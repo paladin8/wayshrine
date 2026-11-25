@@ -10,7 +10,7 @@ GLB=ROOT+"/public/models/landmarks/fushimi-inari.glb"
 BLEND=ROOT+"/content/landmarks/fushimi-inari.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","snow":"f1f4f6","foliage":"5f9a52","glow_cream":"e8dcb0"}
+PAL={"vermilion":"d96b59","roof":"2a2424","stone":"a39e98","cream":"e8dcb0","wood":"d1ab80","snow":"f1f4f6","foliage":"5f9a52","terrain":"86a75e","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -149,7 +149,7 @@ for n in range(len(loop)):
     faces.append([bot[a],bot[b],vid[b],vid[a]])
 faces.append([bot[k] for k in reversed(loop)])
 ntop=len(TRIS)
-emit(verts,faces,["foliage"]*ntop+["stone"]*len(loop)+[None])   # stone retaining walls at the slab edge
+emit(verts,faces,["terrain"]*ntop+["stone"]*len(loop)+[None])   # stone retaining walls at the slab edge
 def Hm(x,y):
     for (a,b,c) in TRIS:
         dd=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1])
@@ -165,7 +165,7 @@ H=Hm
 def octo(z,h=FH,ch=1.2):
     # the full square footprint: no cut corners, so the model's ground meets the game's terrain all round
     return [(-h,-h,z),(h,-h,z),(h,h,z),(-h,h,z)]
-solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt="foliage")
+solid([octo(-1.0),octo(0.0)],"stone",mb=None,mt="terrain")
 
 # forecourt, steps, gate platform
 box("cream",0,-10.275,-0.05,0.04,1.5,0.675)

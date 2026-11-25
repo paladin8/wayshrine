@@ -1,5 +1,7 @@
 export {
   DISCOVER_RADIUS,
+  WAKE_DISCOVER_RADIUS,
+  WAKE_REVEAL_DISTANCE,
   REVEAL_DISTANCE,
   canEnter,
   capabilitiesOf,
@@ -9,6 +11,7 @@ export {
   discoverNear,
   isCollected,
   isExplored,
+  isLandmarkMarked,
   isLandmarkRevealed,
   isRestored,
   newGame,
@@ -31,7 +34,6 @@ export type { GameState, SaveData, SaveV1, SaveV2, SaveV3, SaveV4, SaveV5 } from
 export {
   PLAYER_RADIUS,
   PLAYER_SPEED,
-  SHRINE_REACH,
   blockerAt,
   clearOfObstacles,
   movePlayer,

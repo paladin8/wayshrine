@@ -108,11 +108,16 @@ export const ja: Messages = {
     next: "次のページ",
     close: "閉じる",
   },
+  backpack: {
+    title: "背負い袋",
+    mystery: "ひみつ",
+    complete: "背負い袋はいっぱいです。道具はすべてそろいました。",
+    close: "閉じる",
+  },
   completion: {
     title: "旅人よ、おめでとうございます",
     summary: (count) => `すべての名所（${count}か所）を蘇らせました。`,
     resume: "旅を続ける",
-    reopen: "星図を見る",
   },
   gearReveal: {
     boat: { title: "小舟を手に入れた", hint: "水辺から水に入ると、舟に乗れます。" },

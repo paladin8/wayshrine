@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/matsumoto-castle.glb"
 BLEND=ROOT+"/content/landmarks/matsumoto-castle.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"grass":"7aad61","foliage":"4f8a55","black":"2e2e33","plaster":"e8e4dc","tile":"6a6e74","stone":"a39e98","darkstone":"7f7a74","vermilion":"d96b59","water":"3fb2bd","bark":"4e3a30","glow_cream":"e8dcb0"}
+PAL={"terrain":"86a75e","foliage":"4f8a55","black":"2e2e33","plaster":"e8e4dc","tile":"6a6e74","stone":"a39e98","darkstone":"7f7a74","vermilion":"d96b59","water":"3fb2bd","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -181,7 +181,7 @@ for j in range(NG):
         for t3 in [(a,b,c),(a,c,d4)]:
             P=[gv[k] for k in t3]
             zc=sum(p[2] for p in P)/3
-            gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.02 else "grass")
+            gf.append([gid[k] for k in t3]); gm.append("darkstone" if zc<-0.02 else "terrain")
 emit(gverts,gf,gm,orient=False)
 solid([[(-FH,-FH,-1.0),(FH,-FH,-1.0),(FH,FH,-1.0),(-FH,FH,-1.0)],[(-FH,-FH,0.0),(FH,-FH,0.0),(FH,FH,0.0),(-FH,FH,0.0)]],"darkstone",mb=None,mt=None)
 emit([(MS[0],MS[2],WATER_Z),(MS[1],MS[2],WATER_Z),(MS[1],MS[3],WATER_Z),(MS[0],MS[3],WATER_Z)],[[0,1,2,3]],["water"],orient=False)
@@ -201,7 +201,7 @@ def offs(P,d):
     return out   # pushed outward along the right-hand normal of a counter-clockwise outline
 ZW=BED_Z; DW=1.0
 def wall_d(t): return DW*(1-t)**2
-solid([[(x,y,ZW+(HM-ZW)*k/6) for x,y in offs(HMP,wall_d(k/6))] for k in range(7)],"stone",mt="grass")
+solid([[(x,y,ZW+(HM-ZW)*k/6) for x,y in offs(HMP,wall_d(k/6))] for k in range(7)],"stone",mt="terrain")
 for t in (0.32,0.64):
     z=ZW+(HM-ZW)*t; r=[(x,y,z) for x,y in offs(HMP,wall_d(t)+0.02)]
     solid([r,[(x,y,z+0.05) for x,y,_ in r]],"darkstone",mb=None,mt=None)
@@ -237,7 +237,7 @@ def tower(cx,cy,S,z0,o=0.3,top_ridge_x=True):
     return zs
 # main keep (daitenshu): five roofs, gables layered up the front and the right side
 KX,KY=0.0,0.7
-box("stone",KX,KY,HM-0.05,HM+0.25,2.35,1.95,mt="grass")
+box("stone",KX,KY,HM-0.05,HM+0.25,2.35,1.95,mt="terrain")
 S=[(2.2,1.8,1.55),(1.9,1.55,1.25),(1.62,1.32,1.15),(1.36,1.1,1.1),(1.12,0.92,1.15)]
 zs=tower(KX,KY,S,HM+0.25,top_ridge_x=False)
 gable_b(KX-0.9,KY-S[0][1]-0.25,zs[1]+0.06,0.0,0.62,0.6,0.5)
@@ -250,7 +250,7 @@ hx,hy,_=S[-1]
 for sy,rot in ((-1,0.0),(1,math.pi)): gable_b(KX,KY+sy*(hy*0.55-0.05),zs[-1]+0.45,rot,hx*0.6-0.05,0.55,0.1)
 # the small keep (Inui-kotenshu) on the left, linked by a two-storey passage tower (watari-yagura)
 IX,IY=-4.05,1.0
-box("stone",IX,IY,HM-0.05,HM+0.15,1.35,1.15,mt="grass")
+box("stone",IX,IY,HM-0.05,HM+0.15,1.35,1.15,mt="terrain")
 tower(IX,IY,[(1.2,1.0,1.25),(1.0,0.84,1.05),(0.82,0.68,1.0)],HM+0.15,o=0.28)
 storey(-2.45,0.9,0.45,0.85,HM,HM+1.25); storey(-2.45,0.9,0.38,0.75,HM+1.05,HM+2.05)
 skirt(0.45,0.85,HM+1.25,0.38,0.75,HM+1.5,-2.45,0.9,o=0.25)

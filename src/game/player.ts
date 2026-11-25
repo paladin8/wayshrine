@@ -1,5 +1,6 @@
 import {
   BIOME_REQUIRES,
+  HOKORA_REACH,
   anchorOf,
   canTraverse,
   LANDMARK_REACH_MARGIN,
@@ -15,13 +16,11 @@ import {
 
 export const PLAYER_SPEED = 4.5;
 export const PLAYER_RADIUS = 0.3;
-/** How close the player must be to a shrine to interact with it. */
-export const SHRINE_REACH = 3.5;
 
 /** Largest distance moved in one collision step, to avoid skipping thin terrain. */
 const MAX_STEP = 0.25;
 
-/** Where a new player stands: beside the first shrine, on its plateau. */
+/** Where a new player stands: in front of the first shrine's gate, on its plateau. */
 export function startPosition(terrain: Terrain): Point {
   return standPoint(terrain.world.region(0, 0));
 }
@@ -130,8 +129,9 @@ export function shrineInReach(terrain: Terrain, pos: Point): Region | null {
   if (region.landmark) {
     return plateauDistance(region, pos.x, pos.z) <= LANDMARK_REACH_MARGIN ? region : null;
   }
+  // An ordinary shrine is restored at its hokora, behind the gate.
   const at = anchorOf(region);
-  return Math.hypot(at.x - pos.x, at.z - pos.z) <= SHRINE_REACH ? region : null;
+  return Math.hypot(at.x - pos.x, at.z - pos.z) <= HOKORA_REACH ? region : null;
 }
 
 /** The capability needed to cross a biome, for messages. */

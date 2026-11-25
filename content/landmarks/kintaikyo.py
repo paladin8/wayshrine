@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/kintaikyo.glb"
 BLEND=ROOT+"/content/landmarks/kintaikyo.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"wood":"6b4e36","deck":"8a6a4a","stonewall":"a39e94","water":"479ea3","gravel":"cfc9bb","grass":"6f8f4f","forest":"3f6a3a","white":"f0ede6","tile":"4e5256","blossom":"f0c4d4","leaf":"4f7a45","bark":"4e3a30"}
+PAL={"wood":"6b4e36","deck":"8a6a4a","stonewall":"a39e94","water":"479ea3","gravel":"cfc9bb","terrain":"86a75e","forest":"3f6a3a","white":"f0ede6","tile":"4e5256","blossom":"f0c4d4","leaf":"4f7a45","bark":"4e3a30"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -152,7 +152,7 @@ def zone(x,y):
     m=isl_m(x,y)
     zi=0.0 if m<0.9 else (LV+0.06)*smooth(0.9,0.98,m) if m<0.98 else (LV+0.06)+(FLOOR-(LV+0.06))*smooth(0.98,1.06,m)
     z=min(zr,zi)
-    mat="grass" if (d>=g+0.15 and m<0.93) else "gravel"
+    mat="terrain" if (d>=g+0.15 and m<0.93) else "gravel"
     return z,mat
 def H(x,y):
     u,v=to_uv(x,y); z,_=zone(x,y)
@@ -249,7 +249,7 @@ def tree(u,v,s,m):
     solid([ngon(0.14,-0.3,5),ngon(0.09,1.4,5,0,0.15,0)],"bark",T)
     ico(m,0,0,1.9,1.05,1.0,0.8,T); ico(m,0.5,0.3,1.55,0.65,0.6,0.5,T)
 def on_grass(u,v):
-    x,y=to_xy(u,v); return zone(x,y)[1]=="grass" and isl_m(x,y)<0.86
+    x,y=to_xy(u,v); return zone(x,y)[1]=="terrain" and isl_m(x,y)<0.86
 for u,v,s in [(-3.4,-7.5,0.9),(-1.4,-7.7,0.95),(0.6,-7.6,0.9),(2.6,-7.3,0.85),(-3.4,7.5,0.9),(-1.4,7.7,0.95),(0.6,7.6,0.9),(2.6,7.3,0.85)]:
     if on_grass(u,v): tree(u,v,s,"blossom")
 for u,v,s in [(-6.6,-4.6,1.1),(-6.4,4.8,1.1),(-4.2,-6.6,1.0),(-4.0,6.8,1.0),(4.8,-6.2,0.9),(5.0,6.0,0.9)]:

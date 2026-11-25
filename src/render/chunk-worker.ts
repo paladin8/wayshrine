@@ -36,6 +36,6 @@ scope.onmessage = (event) => {
   if (!terrain || !monuments) return;
   const data = buildChunkData(terrain, request.cx, request.cz, monuments);
   const transfer = [data.terrain.ground, data.props, data.details].flatMap((part) => (part ? transferablesOf(part) : []));
-  for (const strip of data.terrain.strips) transfer.push(strip.vertices.buffer as ArrayBuffer, strip.colors.buffer as ArrayBuffer);
+  for (const strip of data.terrain.strips) transfer.push(strip.vertices.buffer as ArrayBuffer, strip.flow.buffer as ArrayBuffer);
   scope.postMessage({ cx: request.cx, cz: request.cz, data }, transfer);
 };

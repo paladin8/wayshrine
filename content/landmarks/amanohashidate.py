@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/amanohashidate.glb"
 BLEND=ROOT+"/content/landmarks/amanohashidate.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"sand":"ece4cc","grass":"6f8a4a","pine":"355f36","bark":"5a4a3a","path":"d8cfb8","stone":"9a958c","steel":"8a8e90","red":"c8473a","concrete":"b5b0a6","darkwood":"4a3a2e","tile":"4e5256","water":"2a6a8a"}
+PAL={"sand":"ece4cc","terrain":"86a75e","pine":"355f36","bark":"5a4a3a","path":"d8cfb8","stone":"9a958c","steel":"8a8e90","red":"c8473a","concrete":"b5b0a6","darkwood":"4a3a2e","tile":"4e5256","water":"2a6a8a"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -112,7 +112,7 @@ def flared_roof(spec,mat="roof",ox=0.0,oy=0.0):
 import random
 rng=random.Random(55)
 # The beach and grassy shore are heightfield surfaces, even where the coast drops steeply.
-EXTRA_SOLIDS=[]; NOSOLID={"pine","sand","grass","water"}
+EXTRA_SOLIDS=[]; NOSOLID={"pine","sand","terrain","water"}
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 FH=11.2   # footprint half-width (the sidecar's half): the middle size, the sandbar curving across the bay
@@ -191,9 +191,9 @@ def H(x,y):
 def water_disc(x,y): return False
 def gmat(x,y,h,sl):
     u,v=to_uv(x,y)
-    if main_m(u,v)<1.0 and h>LV+0.35: return "grass"          # the wooded shore is green down to a thin beach
+    if main_m(u,v)<1.0 and h>LV+0.35: return "terrain"          # the wooded shore is green down to a thin beach
     if h<0.02 or (abs(u-cl(v))>bar_w(v)*0.45 and main_m(u,v)>0.9 and math.hypot(u-IC[0],v-IC[1])>IR*0.7): return "sand"
-    return "grass"
+    return "terrain"
 draw_ground(H,gmat,0.5,0.1)
 draw_sea()
 # the pines: crowded down the whole length of the bar, wind-bent, and thick on the hill
