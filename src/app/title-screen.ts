@@ -67,6 +67,8 @@ const CSS = `
 .ts-btn.primary:hover,.ts-btn.primary:focus-visible{background:#c85d4c;border-color:#c85d4c}
 .ts-btn[disabled]{opacity:.4;cursor:default;pointer-events:none}
 .ts-btn.quiet{background:transparent;border-color:transparent}
+.ts-btn.danger,.ts-root .sp-card .ts-btn.danger{background:#c4140b;border-color:#6e0a05;color:#fff;font-weight:700;text-shadow:0 1px 0 #4d0804;box-shadow:inset 0 1px 0 #ff8a80aa,0 2px 10px #c4140b88}
+.ts-btn.danger:hover,.ts-btn.danger:focus-visible,.ts-root .sp-card .ts-btn.danger:hover,.ts-root .sp-card .ts-btn.danger:focus-visible{background:#e3170d;border-color:#6e0a05;color:#fff;box-shadow:inset 0 1px 0 #ffb0a8cc,0 2px 14px #e3170dcc}
 .ts-btn.quiet:hover,.ts-btn.quiet:focus-visible{background:#2a242414}
 /* the dialogs: the same washi paper, with the rods as bands at the top and bottom */
 .ts-root .sp-overlay{background:#2a242466;font-family:var(--ts-font);font-size:calc(var(--ts-size) - 3px)}
@@ -342,20 +344,22 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
         button(m.delete, () => {
           row.replaceChildren();
           const ask = document.createElement("b");
-          ask.textContent = m.confirmDelete;
+          ask.textContent = m.confirmDelete(slot.seed);
           const confirm = document.createElement("div");
           confirm.className = "ts-row";
+          // Cancel (plain) on the left, the red delete on the right. Focus starts on the safe choice.
+          const cancel = button(m.cancel, () => loadGame.open());
           confirm.append(
-            button(m.delete, () => {
+            cancel,
+            button(m.deleteIt, () => {
               saves.remove(slot.id);
               if (saves.list().length === 0) loadGame.close();
               else loadGame.open();
               renderMenu();
-            }),
-            button(m.keep, () => loadGame.open(), "primary"),
+            }, "danger"),
           );
-          row.append(ask, confirm);
-          (confirm.lastElementChild as HTMLElement).focus();
+          row.append(ask, when, confirm);
+          cancel.focus();
         }),
       );
       row.append(title, when, actions);

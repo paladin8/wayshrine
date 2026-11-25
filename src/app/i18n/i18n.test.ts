@@ -28,6 +28,7 @@ function allText(m: Messages): string[] {
     ...Object.values(m.title).filter((v): v is string => typeof v === "string"),
     ...m.title.creditsLines,
     m.title.continueDetail("quiet-heron-1234", 7),
+    m.title.confirmDelete("quiet-heron-1234"),
     m.title.saveSummary("quiet-heron-1234", 7),
     m.monuments.promptRead,
     m.monuments.promptWorn,

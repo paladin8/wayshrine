@@ -38,21 +38,33 @@ const positionKey = (id: string): string => `wayshrine:slotPosition:${id}`;
 /** Saves from before there were slots: one per world seed. */
 const LEGACY_PREFIX = "wayshrine:save:";
 
+/** Short words (five letters at most) so a seed such as "misty-koi-482" stays easy to read, say and type. */
 const ADJECTIVES = [
-  "quiet", "misty", "gentle", "distant", "golden", "silver", "hidden", "winding", "autumn", "still", "morning", "pale",
-  "wandering", "fragrant", "northern", "southern", "frosted", "old", "bright", "sleeping",
+  "quiet", "misty", "calm", "soft", "pale", "old", "dim", "wild", "warm", "cool", "deep", "tall", "bold", "kind", "wise",
+  "fair", "new", "red", "blue", "jade", "snowy", "dusty", "windy", "rainy", "sunny", "mossy", "still", "lone", "slow",
+  "swift", "brisk", "crisp", "fresh", "lucky", "noble", "proud", "shy", "sweet", "gold", "amber", "ivory", "rosy", "inky",
+  "lilac", "dewy", "airy", "hazy", "cozy", "keen", "mild", "pure", "rare", "true", "vast", "zen", "north", "south", "east",
+  "west", "grand", "tiny", "dark",
 ] as const;
 const NOUNS = [
-  "heron", "lantern", "crane", "cedar", "maple", "fox", "stream", "bell", "plum", "torii", "willow", "moss", "pine",
-  "otter", "firefly", "mountain", "bridge", "harbour", "bamboo", "shrine",
+  "heron", "crane", "fox", "bell", "plum", "torii", "moss", "pine", "otter", "owl", "koi", "fern", "reed", "lily", "iris",
+  "lotus", "cedar", "maple", "birch", "oak", "elm", "pear", "peach", "tea", "rice", "mist", "rain", "snow", "dew", "wave",
+  "tide", "reef", "isle", "cape", "bay", "dune", "hill", "peak", "ridge", "vale", "glen", "pond", "lake", "brook", "creek",
+  "ford", "path", "gate", "hut", "mill", "lamp", "kite", "drum", "flute", "gong", "fan", "sage", "pearl", "moon", "sun",
+  "star", "dawn", "dusk", "wind", "cloud", "frog", "deer", "hare", "wren", "lark", "dove", "swan", "duck", "crow", "finch",
+  "moth", "bee", "carp", "seal", "stone", "rock", "cliff", "cove", "leaf", "bud", "vine", "bark", "ash", "sky", "ember",
+  "shell", "sand", "salt", "inn", "nest", "bow", "cave", "ice", "fog", "dale",
 ] as const;
 
-/** A readable random world seed, such as "quiet-heron-4821". */
+/** A readable random world seed, such as "misty-koi-482". */
 export function randomSeed(random: () => number = Math.random): string {
   const pick = <T>(list: readonly T[]): T => list[Math.min(list.length - 1, Math.floor(random() * list.length))]!;
-  const digits = String(Math.min(9999, Math.floor(random() * 10000))).padStart(4, "0");
+  const digits = String(Math.min(999, Math.floor(random() * 1000))).padStart(3, "0");
   return `${pick(ADJECTIVES)}-${pick(NOUNS)}-${digits}`;
 }
+
+/** The words a random seed is drawn from. */
+export const SEED_WORDS = { adjectives: ADJECTIVES, nouns: NOUNS } as const;
 
 function memoryStorage(): StorageLike {
   const map = new Map<string, string>();

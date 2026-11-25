@@ -1,8 +1,8 @@
-import type { Monument, MonumentPlan, Point } from "../world";
+import { HOKORA_REACH, type Monument, type MonumentPlan, type Point } from "../world";
 import type { GameState } from "./state";
 
-/** How close the player must stand to a monument to read it. */
-export const MONUMENT_REACH = 2.5;
+/** How close the player must stand to a monument to read it: the same as for restoring a shrine. */
+export const MONUMENT_REACH = HOKORA_REACH;
 
 /** The monument within reach of a point, if any (the nearest). */
 export function monumentInReach(plan: MonumentPlan, pos: Point): Monument | null {

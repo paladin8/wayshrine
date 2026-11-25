@@ -113,8 +113,10 @@ export interface Messages {
     readonly noSaves: string;
     readonly play: string;
     readonly delete: string;
-    readonly confirmDelete: string;
-    readonly keep: string;
+    /** The question before a save is deleted for good. */
+    readonly confirmDelete: (seed: string) => string;
+    readonly deleteIt: string;
+    readonly cancel: string;
     readonly saveSummary: (seed: string, landmarks: number) => string;
     readonly logoNote: string;
     /** Shown instead of the title when the 3D backdrop cannot be drawn. */

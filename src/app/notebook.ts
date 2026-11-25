@@ -25,12 +25,31 @@ export interface NotebookSource {
   readonly sound: (cue: "book-open" | "page-flip") => void;
 }
 
+const PANORAMIC_SKETCHES = new Set([
+  "kinkaku-ji", "itsukushima-torii", "meoto-iwa", "shirakawa-go", "matsumoto-castle",
+  "mount-fuji", "kappa-bashi", "yoshino-yama", "kushiro-shitsugen", "oze",
+  "kurashiki-bikan", "byodo-in", "ginkaku-ji", "ryoan-ji", "sakurajima", "mount-aso",
+  "kintaikyo", "gunkanjima", "shuri-castle", "matsushima", "amanohashidate",
+  "tottori-dunes", "shiretoko", "otaru-canal", "goryokaku", "blue-pond", "furano",
+  "ouchi-juku", "ginzan-onsen",
+]);
+const LEFT_SKETCHES = new Set([
+  "himeji-castle", "kiyomizu-dera", "enoshima-lighthouse", "shirakawa-go", "zao-juhyo",
+  "kenroku-en", "kegon-falls", "koyasan-okunoin", "yoshino-yama", "oze", "yanagawa",
+  "kurashiki-bikan", "senso-ji", "horyu-ji", "osaka-castle", "shiratani-unsuikyo",
+  "arashiyama", "ise-jingu", "takachiho", "iya-kazurabashi", "ryoan-ji", "mount-aso",
+  "owakudani", "dogo-onsen", "shuri-castle", "matsushima", "tottori-dunes", "otaru-canal",
+  "blue-pond", "ouchi-juku", "chuson-ji",
+]);
+const CENTER_SKETCHES = new Set(["meoto-iwa", "mount-fuji", "byodo-in", "kintaikyo", "amanohashidate", "goryokaku"]);
+
 const PER_PAGE = 2;
 /** How long after the cover starts to move the opening sound plays. */
 const SOUND_DELAY_MS = 400;
 const HAND_EN = '"Kaushan Script","Segoe Script","Bradley Hand","Brush Script MT",cursive';
 const HAND_JA = '"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif';
-const NARROW = "(max-width: 760px)";
+const NARROW = "(max-width: 760px), (max-height: 420px)";
+const SMALL_PAGE = "(max-width: 480px) and (max-height: 445px)";
 
 /** Fine speckle for leather and paper, and low-frequency brown stains for aged paper. */
 const GRAIN = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")`;
@@ -88,8 +107,38 @@ const CSS = `
 .nb-body{flex:1 1 0;min-height:0;overflow:hidden;margin:4px 0 0;font-size:calc(var(--lh) * .62);line-height:var(--lh);color:#2b2a4a;background:linear-gradient(transparent calc(var(--lh) - 1px),#7f9bb255 0) 0 3px/100% var(--lh)}
 .nb-body.en{font-family:${HAND_EN}}
 .nb-body.ja{font-family:${HAND_JA};font-size:calc(var(--lh) * .66);letter-spacing:.04em}
-.nb-entry:nth-child(odd) .nb-body{transform:rotate(-.25deg)}
-.nb-entry:nth-child(even) .nb-body{transform:rotate(.2deg)}
+.nb-body.illustrated{display:grid;grid-template-rows:minmax(0,1fr);gap:4px 8px;align-items:center;background:none}
+.nb-body.sketch-right{grid-template-areas:"caption sketch";grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+.nb-body.sketch-left{grid-template-areas:"sketch caption";grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+.nb-body.panorama{grid-template-areas:"sketch" "caption";grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+.nb-caption{grid-area:caption;min-width:0;line-height:1.38;font-size:max(14px,calc(var(--lh) * .56))}
+.nb-body.en .nb-caption{text-wrap:pretty}
+.nb-body.ja .nb-caption{font-size:max(14px,calc(var(--lh) * .6))}
+.sketch-right .nb-caption{align-self:start;margin-top:clamp(5px,2vh,18px)}
+.sketch-left .nb-caption{align-self:end;margin-bottom:clamp(5px,2vh,16px)}
+.panorama .nb-caption{justify-self:center;max-width:92%;margin:0}
+.nb-sketch{grid-area:sketch;display:block;width:100%;height:100%;min-height:0;object-fit:contain;opacity:.92;pointer-events:none;mix-blend-mode:multiply;filter:grayscale(1)}
+.sketch-right .nb-sketch{transform:rotate(2deg)}
+.sketch-left .nb-sketch{transform:rotate(-3deg)}
+.nb-sketch[src$="/fushimi-inari.webp"]{opacity:1;transform:rotate(3deg) scale(1.1)}
+.panorama.sketch-left .nb-sketch{width:83%;justify-self:start}
+.panorama.sketch-right .nb-sketch{width:88%;justify-self:end}
+.panorama.sketch-center .nb-sketch{width:94%;justify-self:center;transform:rotate(-2deg)}
+@media(max-height:550px) and (min-width:481px){
+  .nb-body.sketch-right,.nb-body.sketch-left,.nb-body.panorama{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(0,1fr)}
+  .nb-body.sketch-left{grid-template-areas:"sketch caption"}
+  .nb-body.sketch-right,.nb-body.sketch-center{grid-template-areas:"caption sketch"}
+  .nb-body.illustrated .nb-caption{align-self:center;justify-self:start;margin:0;max-width:none;line-height:1.3}
+  .nb-body.panorama .nb-sketch{width:100%}
+  .nb-body.illustrated .nb-sketch{transform:none}
+}
+@media(max-width:480px){
+  .nb-body.sketch-right:not(.panorama),.nb-body.sketch-left:not(.panorama){grid-template-columns:repeat(2,minmax(0,1fr))}
+  .nb-body.illustrated .nb-caption{align-self:center;margin:0;line-height:1.3}
+}
+
+.nb-entry:nth-child(odd) .nb-body:not(.illustrated){transform:rotate(-.25deg)}
+.nb-entry:nth-child(even) .nb-body:not(.illustrated){transform:rotate(.2deg)}
 .nb-go{all:unset;box-sizing:border-box;align-self:flex-end;cursor:pointer;margin-top:4px;padding:3px 12px;border:2px solid #b64e3d;border-radius:5px;color:#b64e3d;font:15px ${HAND_EN};letter-spacing:.02em;transform:rotate(-2deg);opacity:.92;transition:background .12s,color .12s}
 .nb-go:lang(ja){font-family:${HAND_JA};font-size:14px}
 .nb-go:hover{background:#b64e3d;color:#fbf3e2}
@@ -173,6 +222,7 @@ interface Item {
 interface View {
   readonly list: readonly Item[];
   readonly pages: number;
+  readonly entriesPerPage: number;
   readonly language: Locale;
 }
 
@@ -185,6 +235,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   overlay.className = "nb-overlay";
   container.appendChild(overlay);
   const narrow = window.matchMedia(NARROW);
+  const smallPage = window.matchMedia(SMALL_PAGE);
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   let open = false;
@@ -192,6 +243,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   let animation: HTMLElement | null = null;
   /** Index of the first visible page. */
   let page = 0;
+  let entriesPerPage = smallPage.matches ? 1 : PER_PAGE;
 
   const items = (): Item[] => {
     const have = new Set(source.restored());
@@ -200,7 +252,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   };
   const viewNow = (): View => {
     const list = items();
-    return { list, pages: Math.max(1, Math.ceil(list.length / PER_PAGE)), language: source.language() };
+    return { list, entriesPerPage, pages: Math.max(1, Math.ceil(list.length / entriesPerPage)), language: source.language() };
   };
   const perView = (): number => (narrow.matches ? 1 : 2);
   const animated = (): boolean => !narrow.matches && !reduced.matches;
@@ -228,7 +280,19 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     }
     const body = el("p", `nb-body ${language}`, node);
     body.lang = language;
-    body.textContent = item.restored ? (landmarkNotes[item.id]?.[language] ?? "") : t.notebook.locked;
+    const note = landmarkNotes[item.id]?.[language] ?? "";
+    if (item.restored) {
+      const alignment = CENTER_SKETCHES.has(item.id) ? "center" : LEFT_SKETCHES.has(item.id) ? "left" : "right";
+      body.classList.add("illustrated", `sketch-${alignment}`);
+      if (PANORAMIC_SKETCHES.has(item.id)) body.classList.add("panorama");
+      const sketch = el("img", "nb-sketch", body);
+      sketch.src = `${import.meta.env.BASE_URL}images/landmark-sketches/${item.id}.webp`;
+      sketch.alt = "";
+      sketch.decoding = "async";
+      el("span", "nb-caption", body).textContent = note;
+    } else {
+      body.textContent = t.notebook.locked;
+    }
     const go = el("button", "nb-go", node);
     go.type = "button";
     go.lang = language;
@@ -251,7 +315,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
       title.textContent = t.notebook.title;
       el("p", `nb-empty ${v.language}`, sheet).textContent = t.notebook.empty;
     } else {
-      for (const item of v.list.slice(index * PER_PAGE, (index + 1) * PER_PAGE)) entry(item, v.language, sheet);
+      for (const item of v.list.slice(index * v.entriesPerPage, (index + 1) * v.entriesPerPage)) entry(item, v.language, sheet);
     }
     el("div", "nb-folio", sheet).textContent = String(index + 1);
     return sheet;
@@ -413,12 +477,17 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   overlay.addEventListener("pointerdown", (e) => {
     if (e.target === overlay) close();
   });
-  narrow.addEventListener("change", () => {
+  function onPageSizeChange(): void {
+    const nextEntriesPerPage = smallPage.matches ? 1 : PER_PAGE;
+    page = Math.floor((page * entriesPerPage) / nextEntriesPerPage);
+    entriesPerPage = nextEntriesPerPage;
     if (!open) return;
     animation = null;
     render();
     focusBook();
-  });
+  }
+  narrow.addEventListener("change", onPageSizeChange);
+  smallPage.addEventListener("change", onPageSizeChange);
   // The notebook owns the keyboard while it is open.
   window.addEventListener(
     "keydown",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSaveStore, randomSeed } from "./saves";
+import { SEED_WORDS, createSaveStore, randomSeed } from "./saves";
 
 function storage(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));
@@ -112,8 +112,20 @@ describe("save slots", () => {
 
   it("makes readable random seeds", () => {
     const seeds = new Set(Array.from({ length: 50 }, (_, i) => randomSeed(() => ((i * 7919) % 1000) / 1000)));
-    for (const seed of seeds) expect(seed).toMatch(/^[a-z]+-[a-z]+-\d{4}$/);
+    for (const seed of seeds) expect(seed).toMatch(/^[a-z]+-[a-z]+-\d{3}$/);
     expect(seeds.size).toBeGreaterThan(10);
-    expect(randomSeed(() => 0.9999999)).toMatch(/^[a-z]+-[a-z]+-9999$/);
+    expect(randomSeed(() => 0.9999999)).toMatch(/^[a-z]+-[a-z]+-999$/);
+  });
+
+  it("draws seeds from many short words", () => {
+    const { adjectives, nouns } = SEED_WORDS;
+    for (const list of [adjectives, nouns]) {
+      expect(new Set(list).size).toBe(list.length);
+      for (const word of list) expect(word).toMatch(/^[a-z]{2,5}$/);
+    }
+    expect(adjectives.length).toBeGreaterThanOrEqual(50);
+    expect(nouns.length).toBeGreaterThanOrEqual(90);
+    // Never longer than five letters twice over plus three digits and two hyphens.
+    expect(randomSeed(() => 0.5).length).toBeLessThanOrEqual(15);
   });
 });

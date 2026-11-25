@@ -11,7 +11,7 @@ export const HOKORA_SETBACK = 2.5;
 /** The hokora's solid footprint. */
 export const HOKORA_RADIUS = 0.6;
 /** How close the player must be to the hokora to restore it. */
-export const HOKORA_REACH = 2.0;
+export const HOKORA_REACH = 2.6;
 
 /** Where a region's hokora stands, or null if its shrine has none. */
 export function hokoraOf(region: Region): Point | null {

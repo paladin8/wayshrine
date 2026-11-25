@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildContent, combineSources, englishOverrides, withoutExcluded } from "./build";
 import type { ExclusionFile, OverrideFile, Scenery, SourceFile } from "./build";
@@ -120,15 +120,22 @@ describe("landmark haiku placement", () => {
 });
 
 describe("landmark notebook notes", () => {
-  it("has a note in both languages for every landmark, short enough to fit a page", async () => {
+  it("has a note in both languages for every landmark, short enough to sit alongside a sketch", async () => {
     const { landmarkNotes } = await import("./index");
     const { LANDMARK_SPECS } = await import("../world");
     expect(Object.keys(landmarkNotes).sort()).toEqual(LANDMARK_SPECS.map((l) => l.id).sort());
     for (const [id, note] of Object.entries(landmarkNotes)) {
       expect(note.en.length, id).toBeGreaterThan(40);
-      expect(note.en.length, id).toBeLessThanOrEqual(190);
+      expect(note.en.length, id).toBeLessThanOrEqual(105);
       expect(note.ja.length, id).toBeGreaterThan(15);
-      expect(note.ja.length, id).toBeLessThanOrEqual(90);
+      expect(note.ja.length, id).toBeLessThanOrEqual(45);
     }
+  });
+
+  it("ships one sketch for every journal entry", async () => {
+    const { landmarkNotes } = await import("./index");
+    const folder = new URL("../../public/images/landmark-sketches/", import.meta.url);
+    const sketches = readdirSync(folder).filter((name) => name.endsWith(".webp")).sort();
+    expect(sketches).toEqual(Object.keys(landmarkNotes).sort().map((id) => `${id}.webp`));
   });
 });
