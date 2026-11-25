@@ -46,4 +46,25 @@ describe("large wildlife movement", () => {
     expect(whale.filter(pose => pose.blow > 0).length).toBeLessThan(whale.length / 7);
     expect(whale.some(pose => pose.blow > 0.9)).toBe(true);
   });
+
+  it("keeps a dolphin's leap to a short arc: under a second and a half out of the water, and a few between leaps", () => {
+    const step = 0.02;
+    const lifts = Array.from({ length: 2000 }, (_, i) => swimMotion("dolphin", i * step).lift);
+    const flights: number[] = [];
+    let run = 0;
+    for (const lift of lifts) {
+      if (lift > -0.1) run++;
+      else if (run) { flights.push(run * step); run = 0; }
+    }
+    expect(flights.length).toBeGreaterThan(4);
+    for (const flight of flights) {
+      expect(flight).toBeGreaterThan(0.6);
+      expect(flight).toBeLessThan(1.2);
+    }
+    // Nose up leaving the water, nose down coming back.
+    const rising = swimMotion("dolphin", 2.4 - 0.35 * 6.6 / (Math.PI * 2) + 0.15);
+    const falling = swimMotion("dolphin", 2.4 - 0.35 * 6.6 / (Math.PI * 2) + 0.95);
+    expect(rising.pitch).toBeLessThan(0);
+    expect(falling.pitch).toBeGreaterThan(0);
+  });
 });

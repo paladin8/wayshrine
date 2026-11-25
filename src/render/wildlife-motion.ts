@@ -38,15 +38,26 @@ export function wildlifeMotion(species: Species, time: number, radius: number) {
   return { angle, speed, gait, phase };
 }
 
+const DOLPHIN_PERIOD = 6.6;
+const DOLPHIN_OFFSET = 0.35 * DOLPHIN_PERIOD / TAU;
+/** Seconds into the cycle that a leap starts, and how long it lasts from water to water. */
+const DOLPHIN_LEAP_START = 2.4;
+const DOLPHIN_LEAP = 1.1;
+const DOLPHIN_SWIM = -0.36;
+const DOLPHIN_RISE = 1.17;
+
 export function swimMotion(species: Species, t: number) {
   if (species === "whale") {
     const surfacing = (0.5 + 0.5 * Math.sin(t * TAU / 15 + 0.95)) ** 2;
     return { lift: -0.83 + surfacing * 1.24, pitch: -Math.cos(t * TAU / 15 + 0.95) * 0.19, blow: Math.max(0, (surfacing - 0.96) / 0.04) };
   }
   if (species === "dolphin") {
-    const phase = t * TAU / 6.6 + 0.35;
-    const leap = Math.max(0, Math.sin(phase)) ** 1.6;
-    return { lift: -0.36 + leap * 1.17, pitch: -Math.cos(phase) * leap * 0.72, blow: 0 };
+    // A leap is a short parabolic arc between long swims just under the surface, nose up on the way out of the
+    // water and down on the way back in; spread over several seconds it reads as flying, not leaping.
+    const at = (t + DOLPHIN_OFFSET) % DOLPHIN_PERIOD - DOLPHIN_LEAP_START;
+    const u = at / DOLPHIN_LEAP;
+    if (u < 0 || u > 1) return { lift: DOLPHIN_SWIM + Math.sin(t * 2.1) * 0.02, pitch: Math.sin(t * 1.4) * 0.06, blow: 0 };
+    return { lift: DOLPHIN_SWIM + 4 * u * (1 - u) * DOLPHIN_RISE, pitch: -(1 - 2 * u) * 0.8, blow: 0 };
   }
   const roll = Math.sin(t * TAU / 6 + 0.45);
   return { lift: 0.025 - Math.max(0, -roll) ** 5 * 0.22, pitch: Math.cos(t * 2) * 0.08, blow: 0 };
