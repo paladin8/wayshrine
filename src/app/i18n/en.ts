@@ -169,13 +169,17 @@ export const en: Messages = {
   },
   title: {
     continue: "Continue",
-    continueDetail: (seed, restored) => `${seed} · ${restored} restored`,
+    continueDetail: (seed, landmarks) => `${seed} · ${landmarks} ${landmarks === 1 ? "landmark" : "landmarks"}`,
     newGame: "New game",
     loadGame: "Load game",
     options: "Options",
     credits: "Credits",
-    creditsText:
-      "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0. Haiku by Matsuo Bashō, Yosa Buson and Kobayashi Issa. Landmark names and rubbings: Yuji Syuku and Kaushan Script (SIL Open Font License 1.1).",
+    creditsLines: [
+      "Created by Jeffrey Wang",
+      "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0.",
+      "Haiku by Matsuo Bashō, Yosa Buson and Kobayashi Issa.",
+      "Landmark names and rubbings: Yuji Syuku and Kaushan Script (SIL Open Font License 1.1).",
+    ],
     back: "Back",
     seedLabel: "World seed",
     seedPlaceholder: "Leave blank for a random world",
@@ -187,7 +191,7 @@ export const en: Messages = {
     delete: "Delete",
     confirmDelete: "Delete this journey for good?",
     keep: "Keep it",
-    saveSummary: (seed, restored) => `World ${seed} · ${restored} restored`,
+    saveSummary: (seed, landmarks) => `World ${seed} · ${landmarks} ${landmarks === 1 ? "landmark" : "landmarks"}`,
     logoNote: "Logo placeholder",
   },
 };

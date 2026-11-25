@@ -21,10 +21,10 @@ export interface TitleScreenDeps {
 }
 
 const INK = "#2a2424";
-const RED = "#c8473a";
+const RED = "#d96b59";
 
 const CSS = `
-.ts-root{position:fixed;inset:0;overflow:hidden;background:#f2ede0;font:15px/1.4 ${UI_FONT};color:${INK};z-index:5}
+.ts-root{position:fixed;inset:0;overflow:hidden;background:#f2ede0;font:14px/1.4 ${UI_FONT};color:${INK};z-index:5}
 .ts-scene{position:absolute;inset:0;width:100%;height:100%}
 .ts-ui{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(14px,3.4vh,34px);padding:16px;box-sizing:border-box}
 .ts-logo{width:min(440px,84vw);min-height:clamp(72px,16vh,132px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;border:2px dashed #2a242466;border-radius:14px;background:#fffaf0aa;padding:10px 18px;text-align:center}
@@ -32,26 +32,28 @@ const CSS = `
 .ts-logo .ts-note{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.5}
 .ts-logo img{display:block;max-width:100%;max-height:clamp(90px,24vh,200px)}
 .ts-logo.has-image{border:0;background:none;padding:0}
-.ts-panel{width:min(340px,calc(100vw - 32px));box-sizing:border-box;padding:16px;border-radius:16px;background:#fffaf0d9;border:1px solid #2a242426;box-shadow:0 10px 36px #2a242440;backdrop-filter:blur(6px);display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 220px);overflow:auto}
-.ts-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:42px;padding:9px 14px;border-radius:12px;border:1px solid #2a242433;background:#fff;text-align:center;font-size:16px;transition:background .15s,border-color .15s,color .15s}
+.ts-panel{width:min(340px,calc(100vw - 32px));box-sizing:border-box;padding:18px 20px 20px;border-radius:16px;background:#fffaf0;border:1px solid #2a242433;box-shadow:0 8px 32px #0005;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 220px);overflow:auto}
+.ts-btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:9px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;text-align:center;font-size:14px}
 .ts-btn small{font-size:12px;opacity:.6}
-.ts-btn:hover,.ts-btn:focus-visible{background:${RED};border-color:${RED};color:#fff}
+.ts-btn:hover,.ts-btn:focus-visible{background:#f6efe2}
+.ts-btn:focus-visible{outline:2px solid ${RED};outline-offset:1px}
 .ts-btn.primary{background:${RED};border-color:${RED};color:#fff}
-.ts-btn.primary:hover,.ts-btn.primary:focus-visible{background:#b03b30;border-color:#b03b30}
+.ts-btn.primary:hover,.ts-btn.primary:focus-visible{background:#c85d4c;border-color:#c85d4c}
 .ts-btn[disabled]{opacity:.4;cursor:default;pointer-events:none}
-.ts-btn.quiet{min-height:34px;font-size:14px;background:transparent;border-color:transparent}
-.ts-btn.quiet:hover,.ts-btn.quiet:focus-visible{background:#2a242414;color:${INK};border-color:transparent}
+.ts-btn.quiet{background:transparent;border-color:transparent}
+.ts-btn.quiet:hover,.ts-btn.quiet:focus-visible{background:#2a242414}
 .ts-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
-.ts-input{box-sizing:border-box;width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a242444;background:#fff;font:inherit;font-size:16px;color:${INK};outline:none}
-.ts-input:focus{border-color:${RED};box-shadow:0 0 0 2px #c8473a33}
+.ts-input{box-sizing:border-box;width:100%;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;font:inherit;font-size:14px;color:${INK};outline:none;text-transform:none;letter-spacing:normal}
+.ts-input:focus{border-color:${RED}}
 .ts-help{margin:0;font-size:12px;opacity:.65}
-.ts-credits{margin:0;font-size:13px;line-height:1.55}
+.ts-credit{margin:8px 0;font-size:13px;line-height:1.45}
+.ts-credit.author{font-size:15px;font-weight:600}
 .ts-list{display:flex;flex-direction:column;gap:8px}
-.ts-save{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid #2a242426;background:#fff}
+.ts-save{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .ts-save b{font-weight:600;word-break:break-all}
 .ts-save span{font-size:12px;opacity:.6}
 .ts-row{display:flex;gap:8px}
-.ts-row .ts-btn{flex:1;min-height:34px;font-size:14px;padding:6px 10px}
+.ts-row .ts-btn{flex:1;padding:7px 10px}
 .ts-empty{margin:6px 0;text-align:center;opacity:.65}
 .ts-loading{margin:6px 0;text-align:center}
 .ts-sun{animation:ts-breathe 9s ease-in-out infinite;transform-origin:1090px 300px}
@@ -174,7 +176,75 @@ function scene(): string {
 </svg>`;
 }
 
-type View = "menu" | "new" | "load" | "credits";
+interface CreditsDialog {
+  isOpen(): boolean;
+  toggle(): void;
+  close(): void;
+  destroy(): void;
+}
+
+/** The credits, in a dialog like the settings one. */
+function createCreditsDialog(container: HTMLElement, settings: SettingsStore): CreditsDialog {
+  const overlay = document.createElement("div");
+  overlay.className = "sp-overlay";
+  const card = document.createElement("div");
+  card.className = "sp-card";
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+  card.tabIndex = -1;
+  const head = document.createElement("div");
+  head.className = "sp-head";
+  const heading = document.createElement("h2");
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "sp-x";
+  close.textContent = "✕";
+  head.append(heading, close);
+  const body = document.createElement("div");
+  card.append(head, body);
+  overlay.appendChild(card);
+  container.appendChild(overlay);
+  const render = (): void => {
+    const m = messagesFor(settings.get().language).title;
+    heading.textContent = m.credits;
+    close.setAttribute("aria-label", m.back);
+    body.replaceChildren(
+      ...m.creditsLines.map((line, i) => {
+        const p = document.createElement("p");
+        p.className = i === 0 ? "ts-credit author" : "ts-credit";
+        p.textContent = line;
+        return p;
+      }),
+    );
+  };
+  const isOpen = (): boolean => overlay.classList.contains("open");
+  const api: CreditsDialog = {
+    isOpen,
+    toggle() {
+      if (isOpen()) api.close();
+      else {
+        render();
+        overlay.classList.add("open");
+        card.focus();
+      }
+    },
+    close: () => overlay.classList.remove("open"),
+    destroy: () => overlay.remove(),
+  };
+  close.addEventListener("click", api.close);
+  overlay.addEventListener("pointerdown", (e) => {
+    if (e.target === overlay) api.close();
+  });
+  const unsubscribe = settings.subscribe(() => isOpen() && render());
+  const destroy = api.destroy;
+  api.destroy = () => {
+    unsubscribe();
+    destroy();
+  };
+  return api;
+}
+
+type View = "menu" | "new" | "load";
 
 export function createTitleScreen(container: HTMLElement, { saves, settings }: TitleScreenDeps): TitleScreen {
   const style = document.createElement("style");
@@ -210,6 +280,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
 
   const options = createSettingsPanel(root, null, settings, { escapeToggles: false });
 
+  const credits = createCreditsDialog(root, settings);
   let view: View = "menu";
   let busy = false;
   let resolve!: (slot: SaveSlot) => void;
@@ -264,7 +335,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
         button(m.newGame, () => ((view = "new"), render()), last ? "" : "primary"),
         load,
         button(m.options, () => options.toggle()),
-        button(m.credits, () => ((view = "credits"), render()), "quiet"),
+        button(m.credits, () => credits.toggle(), "quiet"),
       );
       focus = last ? cont : (panel.children[1] as HTMLElement);
     } else if (view === "new") {
@@ -335,20 +406,14 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
       }
       panel.append(list, button(m.back, () => ((view = "menu"), render()), "quiet"));
       focus = list.querySelector<HTMLElement>(".ts-btn.primary") ?? (panel.lastElementChild as HTMLElement);
-    } else {
-      const text = document.createElement("p");
-      text.className = "ts-credits";
-      text.textContent = m.creditsText;
-      const back = button(m.back, () => ((view = "menu"), render()), "quiet");
-      panel.append(text, back);
-      focus = back;
     }
     focus?.focus();
   };
 
   const onKey = (e: KeyboardEvent): void => {
     if (e.code !== "Escape" || e.repeat || busy) return;
-    if (options.isOpen()) options.close();
+    if (credits.isOpen()) credits.close();
+    else if (options.isOpen()) options.close();
     else if (view !== "menu") {
       view = "menu";
       render();
@@ -364,6 +429,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings }: T
       unsubscribe();
       window.removeEventListener("keydown", onKey);
       options.destroy();
+      credits.destroy();
       root.remove();
       style.remove();
     },

@@ -169,13 +169,17 @@ export const ja: Messages = {
   },
   title: {
     continue: "つづきから",
-    continueDetail: (seed, restored) => `${seed} · 蘇り ${restored}`,
+    continueDetail: (seed, landmarks) => `${seed} · 名所 ${landmarks}`,
     newGame: "はじめから",
     loadGame: "旅をえらぶ",
     options: "設定",
     credits: "クレジット",
-    creditsText:
-      "諺・慣用句: JMdict/EDICT (© 電子辞書研究開発グループ、CC BY-SA 4.0)。俳句: 松尾芭蕉、与謝蕪村、小林一茶。 名所の名前・拓本の書体: 佑字 粛、Kaushan Script (SIL OFL 1.1)。",
+    creditsLines: [
+      "制作: Jeffrey Wang",
+      "諺・慣用句: JMdict/EDICT (© 電子辞書研究開発グループ、CC BY-SA 4.0)。",
+      "俳句: 松尾芭蕉、与謝蕪村、小林一茶。",
+      "名所の名前・拓本の書体: 佑字 粛、Kaushan Script (SIL OFL 1.1)。",
+    ],
     back: "戻る",
     seedLabel: "世界のシード",
     seedPlaceholder: "空欄ならランダムな世界",
@@ -187,7 +191,7 @@ export const ja: Messages = {
     delete: "削除",
     confirmDelete: "この旅を完全に削除しますか?",
     keep: "やめる",
-    saveSummary: (seed, restored) => `世界 ${seed} · 蘇り ${restored}`,
+    saveSummary: (seed, landmarks) => `世界 ${seed} · 名所 ${landmarks}`,
     logoNote: "ロゴ仮置き",
   },
 };

@@ -164,7 +164,10 @@ const POSITION_SAVE_SECONDS = 1;
  */
 export function startApp(container: HTMLElement): void {
   const settings = createSettingsStore(undefined, navigator.languages);
-  const saves = createSaveStore();
+  const saves = createSaveStore(undefined, undefined, undefined, (seed, ids) => {
+    const world = createWorld(seed);
+    return ids.filter((id) => world.regionById(id).landmark).length;
+  });
   const seed = new URLSearchParams(window.location.search).get("seed");
   if (seed !== null) {
     startGame(container, saves.forSeed(seed), settings, saves);
@@ -470,7 +473,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
 
-  const saveGame = (game: GameState): void => saves.write(slot.id, JSON.stringify(serialize(game)), game.restored.size);
+  const saveGame = (game: GameState): void => saves.write(slot.id, JSON.stringify(serialize(game)), landmarksRestored(game, world));
   /** Remembers where the player stands, unless a scripted moment is carrying them. */
   const savePosition = (): void => {
     if (momentBusy() || (pos.x === savedAt.x && pos.z === savedAt.z)) return;

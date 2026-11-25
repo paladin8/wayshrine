@@ -7,7 +7,7 @@ export interface SaveSlot {
   readonly createdAt: number;
   /** When the slot was last played or saved; the list is ordered by it. */
   readonly playedAt: number;
-  /** How many regions have been restored, for the list. */
+  /** How many landmarks have been restored, for the list. */
   readonly restored: number;
 }
 
@@ -89,6 +89,8 @@ export function createSaveStore(
   storage: StorageLike | null = browserStorage(),
   now: () => number = Date.now,
   random: () => number = Math.random,
+  /** How many of a legacy save's restored regions are landmarks; the default counts them all. */
+  countLandmarks: (seed: string, restoredIds: readonly string[]) => number = (_seed, ids) => ids.length,
 ): SaveStore {
   const store: StorageLike = storage ?? memoryStorage();
   let slots: SaveSlot[] = [];
@@ -125,7 +127,7 @@ export function createSaveStore(
       let restored = 0;
       try {
         const data = JSON.parse(json) as { restored?: unknown };
-        if (Array.isArray(data.restored)) restored = data.restored.length;
+        if (Array.isArray(data.restored)) restored = countLandmarks(seed, data.restored.filter((id): id is string => typeof id === "string"));
       } catch {
         // A damaged save still gets a slot; loading it falls back to a new game.
       }

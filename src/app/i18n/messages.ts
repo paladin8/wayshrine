@@ -84,12 +84,13 @@ export interface Messages {
   readonly title: {
     readonly continue: string;
     /** The line under Continue: which journey it resumes. */
-    readonly continueDetail: (seed: string, restored: number) => string;
+    readonly continueDetail: (seed: string, landmarks: number) => string;
     readonly newGame: string;
     readonly loadGame: string;
     readonly options: string;
     readonly credits: string;
-    readonly creditsText: string;
+    /** One entry per line; the first is the author. */
+    readonly creditsLines: readonly string[];
     readonly back: string;
     readonly seedLabel: string;
     readonly seedPlaceholder: string;
@@ -101,7 +102,7 @@ export interface Messages {
     readonly delete: string;
     readonly confirmDelete: string;
     readonly keep: string;
-    readonly saveSummary: (seed: string, restored: number) => string;
+    readonly saveSummary: (seed: string, landmarks: number) => string;
     readonly logoNote: string;
   };
 }
