@@ -28,11 +28,13 @@ Meadow steps, snow footsteps, and lake rowing loop while the player moves on the
 
 The clips use the supplied recordings `walking_on_grass_#2-1795380631967.mp3`, `footsteps_in_snow_#1-1795389766172.mp3`, and `sound_of_water_light_#1-1795381169811.mp3`. The game assets are trimmed, gain-matched WAVs with short edge fades in `public/audio/cues/`.
 
+Walking in Ginzan Onsen’s thawed stream and baths loops the supplied splash recording (`three_light_water_sp_#4-1795574894159.mp3`, stored as `public/audio/cues/walk-water.mp3`). Snow footsteps still play on the banks and on frozen stream and bath tiles.
+
 ## Music sets
 
 **Breeze**, **Waves**, and **Ridgewalk** use **Dawn Reverence** for ordinary shrines. **Snowline** and **Marshwalk** use **Winter Light Restored**. Every set uses **Radiant Arrival** for landmarks and the same awakening burst.
 
-The **music button** at the top right (two eighth notes and a number) cycles the background through the themes the traveller has unlocked. The number is the playing theme's place among them. Breeze is always unlocked; Waves, Snowline, Ridgewalk, Marshwalk, Lantern, Basalt, and Open sea unlock with the first use of the matching gear (boat, snowshoes, climbing gear, geta, lantern, ash sandals, ship), and Sunlit fields with Pilgrim’s Wake. A click moves to the next unlocked theme and wraps; after the newest one it returns to following progression. A pick applies to the next restoration. It is ignored during a gear moment, and a new unlock or gear moment hands the music back to progression. The pick is not saved, so a reload follows progression again.
+The **music button** at the top right (two eighth notes and a number) cycles the background through the themes the traveller has unlocked. The number is the playing theme's place among them. Breeze is always unlocked; Waves, Snowline, Ridgewalk, Marshwalk, Lantern, Basalt, and Open sea unlock with the first use of the matching gear (boat, snowshoes, climbing gear, geta, lantern, ash sandals, ship), and Sunlit fields with Pilgrim’s Wake. A click moves to the next unlocked theme and wraps; after the newest one it returns to following progression. A pick applies to normal travel and shrine restorations and persists across reloads. Gear moments play their scripted transitions, then the saved choice resumes. In a world where the saved theme is still locked, the soundtrack follows progression until that theme is earned.
 
 ## Boat prototype
 
@@ -91,6 +93,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
 | `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
 | `marshwalk` | `marshwalk.mp3` | Supplied by the project owner (`Still_Water_Reeds`). Three minutes, stereo MP3, about -16.7 LUFS. Becomes the background after the first geta step. |
+| `lantern-trail` | `lantern-trail.mp3` | Dark forest background supplied by the project owner (`Pale_Shafts_in_the_Trees_2026-11-25T022808`). Three minutes, stereo MP3. Plays after the first lantern use. |
 | `open-sea` | `open-sea.mp3` | Supplied by the project owner (`Beyond_The_Headland`). Three minutes, stereo MP3, about -12 LUFS, so it plays at gain 0.65 to sit level with the others. Becomes the background after the first sailing. |
 
 | `road-through-sunlit-fields` | `road-through-sunlit-fields.mp3` | Supplied by the project owner (`Road_Through_Sunlit_Fields`). Three minutes, stereo MP3. Final background after Pilgrim’s Wake. |

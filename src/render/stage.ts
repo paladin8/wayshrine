@@ -4,10 +4,11 @@ import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, typ
 import { createAmbient } from "./ambient";
 import { buildFujiTrain } from "./fuji-train";
 import { createFujiVista } from "./fuji-vista";
-import { createTokyoStreetLife } from "./tokyo-street-life";
 import { lightBiome } from "./biome-light";
 import { createHaikuScenes, type HaikuSounds } from "./haiku-scenes";
+import { createGinzanScenery } from "./ginzan-scenery";
 import { createGlimmer } from "./glimmer";
+import { createHirosakiScenery } from "./hirosaki-scenery";
 import { buildChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
@@ -343,7 +344,8 @@ export function createStage(
 
   const particlePixelScale = (): number =>
     renderer.getPixelRatio() * Math.min(1.6, Math.max(0.8, heightPixels / 720));
-  const updateTokyo = createTokyoStreetLife(scene, terrain, lifeAtPoint);
+  const updateGinzan = createGinzanScenery(scene, terrain, shownProgress, lifeAtPoint);
+  const updateHirosaki = createHirosakiScenery(scene, terrain, lifeAtPoint);
   const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
   const sightings = createLargeWildlife(terrain, lifeAtPoint);
   const haiku = createHaikuScenes(terrain, monuments, obstacles, lifeAtPoint, haikuSounds);
@@ -438,7 +440,9 @@ export function createStage(
       streamChunks(centre, zoom, riding);
       streamShrines(centre);
       updateProgress(dt);
-      updateTokyo(dt, clock, centre);
+      const sceneryPixelScale = particlePixelScale() * (VIEW_SIZE / viewSize);
+      updateGinzan(clock, sceneryPixelScale, centre);
+      updateHirosaki(clock, sceneryPixelScale, centre);
       if (railway && railwayMesh) {
         const visible = riding || railwayClearance(railway, centre.x, centre.z) < 85;
         railwayMesh.root.visible = visible;
@@ -507,13 +511,15 @@ export function createStage(
       }
       if (worn === "lantern" && !view.state.lanternUsed) worn = null;
       if (lighting) worn = lighting.progress >= 0.10 ? "lantern" : null;
+      if (worn === "snowshoes" && (tile.ginzanSurface === "stream" || tile.ginzanSurface === "bath")) worn = null;
       player.setGear(worn);
       player.setLanternLighting(lighting);
       // Aboard the ship the traveller only walks while boarding; under sail they stand at the helm.
       const walking = vessel === "ship" ? voyage?.walking ?? false : view.moving ?? false;
       for (const step of player.animate(dt, strapping === undefined && drawing === undefined && !lighting && walking)) {
-        const surface = terrain.biomeAt(Math.floor(step.x), Math.floor(step.z));
-        if (surface === "dunes" || (surface === "snow" && worn === "snowshoes")) {
+        const stepTile = terrain.tileAtPoint(step.x, step.z);
+        const surface = stepTile.biome;
+        if (surface === "dunes" || (surface === "snow" && worn === "snowshoes" && !stepTile.ginzanSurface)) {
           footprints.add(step.x, terrain.groundAt(step.x, step.z), step.z, view.facing, surface === "dunes" ? "sand" : "snow");
         }
       }

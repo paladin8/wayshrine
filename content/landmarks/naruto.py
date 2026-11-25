@@ -178,6 +178,8 @@ def gmat(x,y,h,sl):
     return "grass"
 draw_ground(H,gmat,0.62)
 draw_sea()
+# Skip terrain faces in the collision bake without excluding later boulders of the same material.
+terrain_faces={key:len(faces) for key,(_,faces) in B.items()}
 for k in range(26):                                   # boulders and reefs round the headlands
     cu,cv,ru,rv=HDS[k%2]; a=rng.uniform(0,6.28)
     u,v=cu+ru*1.05*math.cos(a),cv+rv*1.05*math.sin(a)
@@ -276,7 +278,7 @@ solid_cells=set(); cellg={}
 BAND0,BAND1=0.35,1.6
 for key,(bv,bf) in B.items():
     if key in NOSOLID: continue      # foliage overhead (crowns, hanging tresses) doesn't block; trunks do
-    for f in bf:
+    for f in bf[terrain_faces.get(key,0):]:
         for i in range(1,len(f)-1):
             a,b,c=[Vector(bv[k]) for k in (f[0],f[i],f[i+1])]
             n=(b-a).cross(c-a); ln=math.sqrt(n.dot(n))

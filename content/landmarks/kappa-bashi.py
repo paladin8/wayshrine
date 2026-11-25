@@ -206,7 +206,7 @@ for sy in (-1,1):
     box("wood",0,sy*(DW-0.04),DZ+0.72,DZ+0.82,L,0.05,TB)
     box("wood",0,sy*(DW-0.04),DZ+0.36,DZ+0.42,L,0.03,TB)
 for sx in (-1,1):
-    box("rock",sx*(L+0.75),0,-0.15,DZ,0.8,1.3,TB)                           # abutment
+    box("rock",sx*(L+0.75),0,-0.15,DZ-0.02,0.8,1.3,TB)                      # abutment (just under the deck)
     extrude_y("rock",[(sx*(L+1.55),-0.1),(sx*(L+1.55+RL),-0.1),(sx*(L+1.55+RL),0.02),(sx*(L+1.55),DZ)],-1.0,1.0,TB)   # ramp down to the bank
     for sy in (-1,1): extrude_y("darkwood",[(sx*(L+1.55),DZ-0.05),(sx*(L+1.55+RL),-0.03),(sx*(L+1.55+RL),0.1),(sx*(L+1.55),DZ+0.08)],sy*1.0-0.06,sy*1.0+0.06,TB)   # kerbs
 TX=L+0.6; TZ=DZ+2.3

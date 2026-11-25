@@ -145,8 +145,8 @@ def eave(cx,cy,hx,hy,z,o=0.45,mat="tile",top=None):
 
 # the square before it: smaller now and off-centre, with the walk coming in from the front-right corner
 box("pave",1.2,-3.7,-0.04,0.03,3.2,2.1)
-for k in range(5):
-    t=k/4; box("pave",4.4+2.6*t,-5.8-2.4*t,-0.04,0.03,0.9,0.9)
+# the walk: one strip, a hair below the square's surface so the two never share a plane where they meet
+box("pave",0,0,-0.04,0.02,2.2,0.75,dict(cx=5.75,cy=-7.0,rot=-0.75))
 box("stone",0.4,0.6,-0.05,0.25,4.6,3.4)
 
 # ---- the main block (Kami-no-yu): three storeys of dark timber, the upper two screened with bamboo blinds,
@@ -176,7 +176,7 @@ box("white",MX+0.22,MY,hz+0.25,hz+0.43,0.03,0.025)
 # ---- the entrance wing at the front under its great curving gable, and a second gable above it
 EX,EY=-0.3,-1.6
 storey(EX,EY,1.55,0.95,0.25,1.4,blinds=False,nwin=3)
-box("glow_door",EX,EY-0.96,0.3,1.2,0.55,0.01)
+box("glow_door",EX,EY-0.985,0.3,1.2,0.55,0.012)      # proud of the window screens behind it
 eave(EX,EY,1.55,0.95,1.4,0.4,"tile",(1.1,0.5))
 kara(EX,EY-0.95,1.42,0,1.25,1.05,0.6)
 for sx in (-1,1): prism("wood",EX+sx*1.2,EY-1.5,0.0,1.45,0.08,0.08,8)
@@ -186,7 +186,7 @@ WX,WY=3.4,0.3
 storey(WX,WY,1.2,1.5,0.25,1.4,blinds=False)
 eave(WX,WY,1.2,1.5,1.4,0.4,"green",(0.95,1.2))
 storey(WX,WY,0.95,1.2,1.8,2.7)
-flared_roof([(1.35,1.6,2.7,0.18),(1.35,1.6,2.78,0.18),(0.9,1.1,3.0,0.05),(0.12,0.85,3.45,0.0)],"green",WX,WY)
+flared_roof([(1.3,1.6,2.7,0.18),(1.3,1.6,2.78,0.18),(0.9,1.1,3.0,0.05),(0.12,0.85,3.45,0.0)],"green",WX,WY)
 chidori(WX,WY-1.2,2.72,0,0.7,0.55,0.45,"green")
 
 # ---- the front-left wing and shopfronts: crowded timber frontage brought forward onto the old forecourt, close to
@@ -197,11 +197,12 @@ eave(FX,FY,1.35,1.25,1.15,0.4,"tile",(1.0,0.9))
 storey(FX,FY,1.1,1.0,1.5,2.45)
 flared_roof([(1.5,1.4,2.45,0.18),(1.5,1.4,2.53,0.18),(1.0,0.85,2.8,0.05),(0.75,0.1,3.2,0.0)],"tile",FX,FY)
 chidori(FX,FY-1.0,2.5,0,0.8,0.6,0.45)
-box("sudare",FX+0.4,FY-1.27,1.3,1.45,0.9,0.01)
-for k,(cy,hy) in enumerate(((-4.65,0.65),(-5.95,0.55))):        # little shops along the square's left edge
-    storey(-2.75,cy,0.7,hy,0.0,1.05,blinds=False,nwin=2)
-    box("glow_lantern_s%d"%k,-2.04,cy,0.15,0.8,0.01,hy*0.7)
-    flared_roof([(0.98,hy+0.25,1.05,0.12),(0.98,hy+0.25,1.12,0.12),(0.1,hy-0.05,1.6,0.0)],"tile",-2.75,cy)
+# little shops along the square's left edge, at different heights and with their eaves kept apart: two roofs
+# meeting in one plane would flicker
+for k,(cy,hy,h) in enumerate(((-4.6,0.65,1.05),(-6.1,0.5,0.9))):
+    storey(-2.75,cy,0.7,hy,0.0,h,blinds=False,nwin=2)
+    box("glow_lantern_s%d"%k,-1.98,cy,0.15,h-0.25,0.015,hy*0.7)      # the shop-front lantern, stood proud of the blinds behind it
+    flared_roof([(0.98,hy+0.2,h,0.12),(0.98,hy+0.2,h+0.07,0.12),(0.1,hy-0.05,h+0.52,0.0)],"tile",-2.75,cy)
 
 # ---- trees behind, a few lanterns about the square
 def tree(x,y,s):

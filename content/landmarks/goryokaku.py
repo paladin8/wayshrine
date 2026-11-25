@@ -250,7 +250,10 @@ def terrain_at(x,y):
     # bed would ride up above the water against the walls
     if inside(OUT,x,y) and not inside(IN,x,y): return -1.8
     return G(x,y)
-def water_disc(x,y): return inside(OUT,x,y) and not inside(IN,x,y) and edist(IN,x,y)>0.15 and edist(OUT,x,y)>0.15 and not on_bridge(x,y)
+def bridge_passage(x,y):
+    # Include the approaches at both ends of the bridge, where the walls meet the deck.
+    return abs(x)<BRX and BY0-0.55<y<BY1+0.55
+def water_disc(x,y): return inside(OUT,x,y) and not inside(IN,x,y) and edist(IN,x,y)>0.15 and edist(OUT,x,y)>0.15 and not bridge_passage(x,y)
 INTERACT=(0.0,-3.3)   # just inside the gate, on the walk to the magistrate's office
 STAND=(1.2,-3.6)
 
@@ -282,12 +285,18 @@ for key,(bv,bf) in B.items():
                     if g is None: g=cellg[ck]=ground_at(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5))
                     if z<g+BAND0 or z>g+BAND1: continue
                     if nz>0.92 and z<g+0.6: continue
+                    if bridge_passage(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5)): continue
                     solid_cells.add(ck)
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 for ix in range(int(2*HALF/0.6)+1):
     for iy in range(int(2*HALF/0.6)+1):
         x,y=-HALF+0.3+ix*0.6,-HALF+0.3+iy*0.6
         if water_disc(x,y): EXTRA_SOLIDS.append((x,y,0.43))
+# Model the narrow rails separately so the player fits between them.
+for k in range(14):
+    y=BY0+(BY1-BY0)*k/13
+    for x in (-(BRX-0.05),BRX-0.05):
+        EXTRA_SOLIDS.append((x,y,0.08))
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}

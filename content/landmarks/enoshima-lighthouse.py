@@ -260,7 +260,7 @@ def palm(cx,cy,s,lean):
         cone("foliage",ring,(top[0]+ux*1.0,top[1]+uy*1.0,top[2]-0.4),T)
 for (x,y,s,l) in [(-3.1,3.2,0.9,2.4),(0.9,3.4,0.85,0.8),(-3.4,0.1,0.8,3.6),(1.4,0.6,0.75,5.5),(-1.6,4.4,0.8,1.6)]: palm(x,y,s,l)
 for (x,y,rx,ry,m) in [(-2.6,1.4,0.55,0.35,"blossom"),(0.6,2.5,0.5,0.3,"blossom"),(-1.9,3.4,0.45,0.3,"cream"),(-2.4,-0.6,0.45,0.28,"cream")]:
-    g=H(x,y); box(m,x,y,g-0.1,g+0.12,rx,ry); box("foliage",x,y,g-0.1,g+0.08,rx+0.12,ry+0.12)
+    g=H(x,y); box(m,x,y,g-0.1,g+0.14,rx,ry); box("foliage",x,y,g-0.1,g+0.08,rx+0.12,ry+0.12)
 GX,GY=-3.3,1.7; GZ=H(GX,GY)
 box("snow",GX,GY,GZ-0.1,GZ+0.12,0.7,0.5)
 box("water",GX,GY,GZ+0.12,GZ+0.75,0.62,0.42)

@@ -1,8 +1,11 @@
+import { TRACK_IDS, type TrackId } from "../audio";
 import { detectLocale, isLocale, type Locale } from "./i18n";
 
 /** Player preferences that persist across sessions (separate from per-world saves). */
 export interface Settings {
   readonly musicVolume: number;
+  /** A manually selected background theme. Null follows progression. */
+  readonly musicTrack: TrackId | null;
   readonly sfxVolume: number;
   /** Silences all sound, music and effects alike. */
   readonly muted: boolean;
@@ -22,6 +25,7 @@ const KEY = "wayshrine:settings";
 export function defaultSettings(preferredLanguages: readonly string[] = []): Settings {
   return {
     musicVolume: 0.5,
+    musicTrack: null,
     sfxVolume: 0.7,
     muted: false,
     showMinimap: true,
@@ -44,8 +48,10 @@ export function parseSettings(raw: unknown, preferredLanguages: readonly string[
   const d = defaultSettings(preferredLanguages);
   if (typeof raw !== "object" || raw === null) return d;
   const p = raw as Record<string, unknown>;
+  const musicTrack = TRACK_IDS.find((id) => id === p.musicTrack) ?? d.musicTrack;
   return {
     musicVolume: volume(p.musicVolume, d.musicVolume),
+    musicTrack,
     sfxVolume: volume(p.sfxVolume, d.sfxVolume),
     muted: flag(p.muted, flag(p.musicMuted, d.muted)),
     showMinimap: flag(p.showMinimap, d.showMinimap),

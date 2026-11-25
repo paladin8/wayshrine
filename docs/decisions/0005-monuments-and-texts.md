@@ -10,7 +10,7 @@ Status: accepted
 - Haiku carry a scenery tag (biome now; season and scene recorded for later) and are placed in regions of that biome. A haiku tagged with a landmark instead stands in that landmark's region. Other texts are placed at random.
 - Japanese mode shows the Japanese text alone, no English and no readings. English mode adds the translation.
 - The texts live outside the layers in `content/` (source, hand-written tags) and `src/content/` (generated JSON, built by `npm run content`; a test fails if they drift). The placement index ships in the main bundle; the texts themselves load on first read.
-- English glosses are lightly cleaned: spelling variants and slot-fillers are dropped, explanatory asides kept. (Since extended: `content/english-overrides.json` now holds literal-first renderings for most texts; see DESIGN.md.)
+- English glosses are lightly cleaned: spelling variants and slot-fillers are dropped, explanatory asides kept. (Since extended: `content/english-overrides.json` now holds literal-first renderings for most texts; see DESIGN.md. `content/excluded-texts.json` leaves individual entries out of the game.)
 - Code is Apache-2.0. The texts are CC BY-SA 4.0 (JMdict/EDICT derived; the haiku are public domain), kept apart in `content/LICENSE.md` and credited in settings.
 
 **Consequences.** Ids in the source file are the permanent key: renaming one orphans saves. Adding texts shifts the layout of later rings and so moves existing monuments for current players; append only after the world has shipped. Changing the count weights or placement rules does the same.

@@ -189,7 +189,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
 
   let open = false;
   /** True while the cover or a page is moving; input to the book waits. */
-  let busy = false;
+  let animation: HTMLElement | null = null;
   /** Index of the first visible page. */
   let page = 0;
 
@@ -285,13 +285,19 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
       b.title = label;
       b.setAttribute("aria-label", label);
       b.addEventListener("click", run);
-      if (cls.includes("prev")) b.disabled = page === 0;
-      if (cls.includes("next")) b.disabled = page + per >= v.pages;
     };
     button("nb-turn prev", "‹", t.notebook.prev, () => turn(-1));
     button("nb-turn next", "›", t.notebook.next, () => turn(1));
     button("nb-x", "×", t.notebook.close, close);
+    updatePageButtons(v, per);
     opener.setAttribute("aria-expanded", String(open));
+  }
+
+  function updatePageButtons(v: View, per: number): void {
+    const prev = overlay.querySelector<HTMLButtonElement>(".nb-turn.prev");
+    const next = overlay.querySelector<HTMLButtonElement>(".nb-turn.next");
+    if (prev) prev.disabled = page === 0;
+    if (next) next.disabled = page + per >= v.pages;
   }
 
   const focusBook = (): void => overlay.querySelector<HTMLElement>(".nb-book")?.focus({ preventScroll: true });
@@ -309,24 +315,30 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   }
 
   function turn(by: number): void {
-    if (busy) return;
+    if (animation?.classList.contains("nb-lid")) return;
     const per = perView();
     const v = viewNow();
     const target = page + by * per;
     if (target < 0 || target >= v.pages) return;
+    // Finish the previous turn at its destination before starting the next one.
+    if (animation) {
+      animation = null;
+      render();
+      focusBook();
+    }
     const spread = overlay.querySelector<HTMLElement>(".nb-spread");
     const sheets = spread?.querySelectorAll<HTMLElement>(":scope > .nb-page");
+    page = target;
     source.sound("page-flip");
     if (!animated() || !spread || !sheets || sheets.length !== 2) {
-      page = target;
       render();
       focusBook();
       return;
     }
     // A leaf carrying the old page on its front and the new one on its back turns over the spread.
     const [oldLeft, oldRight] = [sheets[0]!, sheets[1]!];
-    const newLeft = buildPage(v, target, "left");
-    const newRight = buildPage(v, target + 1, "right");
+    const newLeft = buildPage(v, page, "left");
+    const newRight = buildPage(v, page + 1, "right");
     const forward = by > 0;
     const leaf = el("div", forward ? "nb-leaf fwd" : "nb-leaf back");
     const front = el("div", "nb-face", leaf);
@@ -334,11 +346,11 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     front.appendChild(forward ? oldRight : oldLeft);
     rear.appendChild(forward ? newLeft : newRight);
     spread.replaceChildren(forward ? oldLeft : newLeft, forward ? newRight : oldRight, leaf);
-    busy = true;
+    updatePageButtons(v, per);
+    animation = leaf;
     whenDone(leaf, 900, () => {
-      busy = false;
-      if (!open) return;
-      page = target;
+      if (animation !== leaf) return;
+      animation = null;
       render();
       focusBook();
     });
@@ -360,32 +372,34 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     label.textContent = messagesFor(v.language).notebook.title;
     const inside = el("div", "nb-face inside rear", lid);
     el("div", "nb-inset", inside).appendChild(buildPage(v, page, "left"));
-    busy = true;
+    animation = lid;
     whenDone(lid, 1400, () => {
-      busy = false;
-      if (open) render();
+      if (animation !== lid) return;
+      animation = null;
+      render();
       focusBook();
     });
+    // The sound lands as the cover lifts, a beat after the animation starts.
+    window.setTimeout(() => {
+      if (animation === lid) source.sound("book-open");
+    }, SOUND_DELAY_MS);
   }
 
   function show(): void {
     open = true;
-    busy = false;
+    animation = null;
     page = 0;
     overlay.classList.add("open");
     render();
-    if (animated()) {
-      openCover();
-      // The sound lands as the cover lifts, a beat after the animation starts.
-      window.setTimeout(() => open && source.sound("book-open"), SOUND_DELAY_MS);
-    } else source.sound("book-open");
+    if (animated()) openCover();
+    else source.sound("book-open");
     focusBook();
   }
 
   function close(): void {
     if (!open) return;
     open = false;
-    busy = false;
+    animation = null;
     overlay.classList.remove("open");
     opener.setAttribute("aria-expanded", "false");
     const focused = document.activeElement;
@@ -399,7 +413,10 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     if (e.target === overlay) close();
   });
   narrow.addEventListener("change", () => {
-    if (open && !busy) render();
+    if (!open) return;
+    animation = null;
+    render();
+    focusBook();
   });
   // The notebook owns the keyboard while it is open.
   window.addEventListener(
@@ -410,6 +427,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
         e.stopImmediatePropagation();
         if (!e.repeat) close();
       } else if (e.code === "ArrowLeft" || e.code === "ArrowRight") {
+        e.preventDefault();
         e.stopImmediatePropagation();
         turn(e.code === "ArrowLeft" ? -1 : 1);
       }
@@ -422,7 +440,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     toggle: () => (open ? close() : show()),
     close,
     refresh: () => {
-      if (open && !busy) render();
+      if (open && !animation) render();
     },
   };
 }

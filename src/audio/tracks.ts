@@ -15,10 +15,10 @@ export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "snowline-walk": { url: `${base}audio/music/snowline-walk.mp3`, gain: 1.4 },
   "ridgewalk": { url: `${base}audio/music/ridgewalk.mp3`, gain: 1.25 },
   "marshwalk": { url: `${base}audio/music/marshwalk.mp3` },
-  "lantern-trail": { url: `${base}audio/music/lantern-trail.mp3`, gain: 1.25 },
+  "lantern-trail": { url: `${base}audio/music/lantern-trail.mp3`, gain: 1.4 },
   "basalt-crossing": { url: `${base}audio/music/basalt-crossing.mp3` },
   "open-sea": { url: `${base}audio/music/open-sea.mp3`, gain: 0.8 },
-  "road-through-sunlit-fields": { url: `${base}audio/music/road-through-sunlit-fields.mp3` },
+  "road-through-sunlit-fields": { url: `${base}audio/music/road-through-sunlit-fields.mp3`, gain: 0.9 },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 

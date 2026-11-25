@@ -210,7 +210,7 @@ box("post",0,0,1.25,1.33,1.85,1.2,TL)
 for k in range(4):
     box("glow_window_%d"%k if k%2==0 else "post",-1.2+k*0.8,-1.16,0.7,1.05,0.22,0.02,TL)
     box("post",-1.2+k*0.8,-1.16,1.6,1.95,0.22,0.02,TL)
-box("post",0,-1.16,0.25,1.1,0.3,0.02,TL)
+box("post",0,-1.19,0.25,1.1,0.3,0.02,TL)        # the door, proud of the window boards
 extrude_x("roof",[(-1.6,2.3),(1.6,2.3),(1.6,2.42),(0,3.35),(-1.6,2.42)],-2.15,2.15,TL)
 LDZ=0.25
 

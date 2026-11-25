@@ -149,12 +149,14 @@ function addProp(builder: VitalityBuilder, p: Prop, biome: Biome): void {
     new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), p.rotation),
     new THREE.Vector3(p.scale, p.scale, p.scale),
   );
-  for (const part of cachedParts(p.kind, look, p.variant)) {
+  for (const [i, part] of cachedParts(p.kind, look, p.variant).entries()) {
     const geo = part.geometry.index ? part.geometry.toNonIndexed() : part.geometry.clone();
     instance.multiplyMatrices(place, part.matrix);
     geo.applyMatrix4(instance);
     const color = new THREE.Color(part.color).offsetHSL(0, 0, (p.variant - 0.5) * 0.08);
-    builder.addTriangles(geo.getAttribute("position").array, color, p.regionId, motion);
+    const cherryBlossom = p.kind === "cherry" && biome === "snow" && i > 0;
+    builder.addTriangles(geo.getAttribute("position").array, color, p.regionId,
+      cherryBlossom ? { ...motion, bloomBase: p.y - 0.02 } : motion);
     geo.dispose();
   }
 }

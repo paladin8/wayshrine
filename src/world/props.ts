@@ -2,9 +2,12 @@ import { createNoise, createRng } from "../core";
 import { REGION_SIZE } from "./coords";
 import { fujiValley } from "./fuji-valley";
 import { fujiRailway, railwayClearance } from "./fuji-railway";
+import { hirosakiClearing, hirosakiGarden } from "./hirosaki-garden";
+import { standPoint } from "./landmarks";
 import { CHUNK_SIZE, plateauDistance, type Terrain } from "./terrain-grid";
 import { tokyoBuildings } from "./tokyo-district";
 import { isWater, type Biome } from "./terrain";
+import type { Region } from "./world";
 
 export const PROP_KINDS = ["tree", "bush", "flower", "pine", "rock", "crag", "lantern", "cherry", "farmhouse", "city-building"] as const;
 export type PropKind = (typeof PROP_KINDS)[number];
@@ -111,6 +114,48 @@ export function blocksClearing(
   return toward > 0 && toward < reach && Math.abs(across) < c.radius * 0.6 + canopy;
 }
 
+/** Clear ground around a shrine, including its interaction range and arrival point. */
+export const SHRINE_CLEARING_RADIUS = 5;
+
+/** Conservative horizontal radius and height of each scenery kind at scale 1. */
+const SCENERY_BOUNDS: Readonly<Record<PropKind, readonly [number, number]>> = {
+  tree: [1.5, 4.5],
+  pine: [1.05, 3.5],
+  cherry: [1.2, 2.7],
+  bush: [0.65, 1.3],
+  flower: [0.4, 0.7],
+  rock: [0.52, 0.8],
+  crag: [0.65, 2],
+  farmhouse: [2.6, 2.6],
+  "city-building": [3.2, 7.8],
+  lantern: [0.25, 1],
+};
+
+/**
+ * Check the full prop footprint against the open ground. For ordinary shrines,
+ * also keep the +x/+z sightline clear at the camera's elevation angle.
+ * Landmark models have their own layouts, so protect their authored arrival points.
+ */
+function blocksShrine(
+  kind: PropKind,
+  scale: number,
+  x: number,
+  z: number,
+  clearing: { readonly x: number; readonly z: number; readonly landmark: boolean },
+): boolean {
+  const [baseRadius, height] = SCENERY_BOUNDS[kind];
+  const radius = baseRadius * scale;
+  const dx = x - clearing.x;
+  const dz = z - clearing.z;
+  const approach = clearing.landmark ? 3.5 : SHRINE_CLEARING_RADIUS;
+  if (dx * dx + dz * dz < (approach + radius) ** 2) return true;
+  if (clearing.landmark) return false;
+  const toward = (dx + dz) / Math.SQRT2;
+  const across = (dx - dz) / Math.SQRT2;
+  return toward > 0 && toward < Math.SQRT2 * (height * scale + 1) + radius
+    && Math.abs(across) < 1.75 + radius;
+}
+
 /**
  * All props within a chunk: a pure function of (seed, chunk coordinates),
  * so chunks can be built in any order and always agree.
@@ -139,6 +184,23 @@ export function propsInChunk(
   const props: Prop[] = [];
   const railway = fujiRailway(world);
   const valleyProps = fujiValley(world)?.props ?? [];
+  const hirosaki = hirosakiGarden(world);
+
+  // Check neighboring shrines too. Their approaches and sightlines can cross chunk and region boundaries.
+  const rxMin = Math.floor(x0 / REGION_SIZE) - 1;
+  const rxMax = Math.floor((x0 + CHUNK_SIZE) / REGION_SIZE) + 1;
+  const rzMin = Math.floor(z0 / REGION_SIZE) - 1;
+  const rzMax = Math.floor((z0 + CHUNK_SIZE) / REGION_SIZE) + 1;
+  const regions: Region[] = [];
+  for (let rz = rzMin; rz <= rzMax; rz++) {
+    for (let rx = rxMin; rx <= rxMax; rx++) regions.push(world.region(rx, rz));
+  }
+  const shrineClearings = regions.map((region) => ({
+    ...(region.landmark ? standPoint(region) : region.shrine),
+    landmark: region.landmark !== null,
+  }));
+  const blocksShrineApproach = (kind: PropKind, scale: number, x: number, z: number): boolean =>
+    shrineClearings.some((c) => blocksShrine(kind, scale, x, z, c));
 
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
@@ -152,7 +214,8 @@ export function propsInChunk(
       const variant = rng.next();
       let roll = rng.next();
 
-      if (tile.tokyoSurface || tile.fujiField || valleyProps.some((p) => p.kind === "farmhouse" && Math.hypot(x - p.x, z - p.z) < 2.8)) continue;
+      if (tile.ginzanSurface || tile.tokyoSurface || tile.fujiField || valleyProps.some((p) => p.kind === "farmhouse" && Math.hypot(x - p.x, z - p.z) < 2.8)) continue;
+      if (hirosaki && tile.regionId === hirosaki.regionId && hirosakiClearing(hirosaki, x, z)) continue;
       const region = world.regionAt(x, z);
       const clear = region.id === tile.regionId && plateauDistance(region, x, z) > 0.7;
       if (!clear) continue;
@@ -183,7 +246,7 @@ export function propsInChunk(
               : 0.65 + 0.95 * size;
           const familyField = shared.families(x / 13 + profile[3] * 47, z / 13 + profile[4] * 61);
           const family = ((kind === "flower" ? profile[3] : profile[4]) + familyField * 0.68 + (variant - 0.5) * 0.18 + 1) % 1;
-          if (clearings.some((c) => blocksClearing(kind, scale, x, z, c))) break;
+          if (blocksShrineApproach(kind, scale, x, z) || clearings.some((c) => blocksClearing(kind, scale, x, z, c))) break;
           props.push({ kind, x, y: terrain.groundAt(x, z), z, scale, rotation, variant, family, regionId: tile.regionId });
           break;
         }
@@ -195,33 +258,37 @@ export function propsInChunk(
   for (const prop of valleyProps) {
     const { x, z } = prop;
     if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
+    if (blocksShrineApproach(prop.kind, prop.scale, x, z)) continue;
     const radius = prop.kind === "farmhouse" ? 2.6 : 0.5;
     if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + radius || blocksClearing(prop.kind, prop.scale, x, z, c))) continue;
     props.push({ ...prop, y: terrain.groundAt(x, z), regionId: terrain.tileAtPoint(x, z).regionId });
   }
 
+  if (hirosaki) {
+    for (const cherry of hirosaki.trees) {
+      const { x, z } = cherry;
+      if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
+      if (clearings.some((c) => blocksClearing("cherry", cherry.scale, x, z, c))) continue;
+      props.push({ ...cherry, kind: "cherry", y: terrain.groundAt(x, z), regionId: hirosaki.regionId });
+    }
+  }
+
   for (const building of tokyoBuildings(world)) {
     const { x, z } = building;
     if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
+    if (blocksShrineApproach("city-building", building.scale, x, z)) continue;
     if (clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.radius + 3)) continue;
     props.push({ ...building, kind: "city-building", y: terrain.groundAt(x, z), regionId: terrain.tileAtPoint(x, z).regionId });
   }
 
-  // Freestanding lanterns for land shrines whose lanterns fall in this chunk.
-  const rxMin = Math.floor(x0 / REGION_SIZE) - 1;
-  const rxMax = Math.floor((x0 + CHUNK_SIZE) / REGION_SIZE) + 1;
-  const rzMin = Math.floor(z0 / REGION_SIZE) - 1;
-  const rzMax = Math.floor((z0 + CHUNK_SIZE) / REGION_SIZE) + 1;
-  for (let rz = rzMin; rz <= rzMax; rz++) {
-    for (let rx = rxMin; rx <= rxMax; rx++) {
-      const { shrine, id, landmark, biome } = world.region(rx, rz);
-      if (landmark || isWater(biome)) continue;
-      for (const a of LANTERN_ANGLES) {
-        const x = shrine.x + Math.cos(a) * LANTERN_RADIUS;
-        const z = shrine.z + Math.sin(a) * LANTERN_RADIUS;
-        if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
-        props.push({ kind: "lantern", x, y: terrain.groundAt(x, z), z, scale: 1, rotation: a, variant: 0.5, regionId: id });
-      }
+  // A shrine's own lanterns frame the gate, leaving its central paths open.
+  for (const { shrine, id, landmark, biome } of regions) {
+    if (landmark || isWater(biome)) continue;
+    for (const a of LANTERN_ANGLES) {
+      const x = shrine.x + Math.cos(a) * LANTERN_RADIUS;
+      const z = shrine.z + Math.sin(a) * LANTERN_RADIUS;
+      if (x < x0 || x >= x0 + CHUNK_SIZE || z < z0 || z >= z0 + CHUNK_SIZE) continue;
+      props.push({ kind: "lantern", x, y: terrain.groundAt(x, z), z, scale: 1, rotation: a, variant: 0.5, regionId: id });
     }
   }
   return props;

@@ -1,6 +1,8 @@
 import { createNoise } from "../core";
 import { fujiRailway, railwayBank, railwayGround } from "./fuji-railway";
+import { ginzanStream, ginzanTile, type GinzanSurface } from "./ginzan-stream";
 import { fujiFieldAt, fujiValley, fujiVergeAt, type FujiField } from "./fuji-valley";
+import { hirosakiGarden, hirosakiPath } from "./hirosaki-garden";
 import { createIsletRelief } from "./islets";
 import { createRegionalRelief } from "./landforms";
 import { groundHeight, groundOf, surfaceHeight, type LandmarkGround } from "./landmark-ground";
@@ -58,6 +60,7 @@ export interface Tile {
   readonly fujiField?: FujiField;
   readonly fujiVerge?: number;
   readonly tokyoSurface?: TokyoSurface;
+  readonly ginzanSurface?: GinzanSurface;
   readonly regionId: string;
   /** Light shallows over the submerged edge of an islet. */
   readonly shoal?: number;
@@ -111,6 +114,8 @@ export function createTerrain(world: World): Terrain {
   const islandRelief = createIsletRelief(world);
   const railway = fujiRailway(world);
   const valley = fujiValley(world);
+  const ginzan = ginzanStream(world);
+  const hirosaki = hirosakiGarden(world);
   const waterStations = railway?.stations.filter(({ shrineId }) => isWater(world.regionById(shrineId).biome)) ?? [];
 
   /** Height of the natural ground of a biome, before any plateau. */
@@ -273,12 +278,22 @@ export function createTerrain(world: World): Terrain {
         skirt = true;
       }
     }
-    return { region, biome, height, skirt, shore, shoal, fujiField: field?.kind, fujiVerge, tokyoSurface, terrace: landShrine && onPlateau };
+    const stream = ginzan && !onPlateau ? ginzanTile(ginzan, region.id, tx, tz) : undefined;
+    if (stream) {
+      height += (plateauBase(region) + stream.heightOffset - height) * stream.grade;
+      skirt = true;
+    }
+    const approach = hirosaki && region.id === hirosaki.regionId && !onPlateau ? hirosakiPath(hirosaki, x, z) : 0;
+    if (approach > 0) {
+      height += (plateauBase(region) - height) * approach * 0.8;
+      skirt = true;
+    }
+    return { region, biome, height, skirt, shore, shoal, fujiField: field?.kind, fujiVerge, tokyoSurface, ginzanSurface: stream?.surface, terrace: landShrine && onPlateau };
   }
 
   function tileAt(tx: number, tz: number): Tile {
-    const { region, biome, height, skirt, shoal, fujiField, fujiVerge, tokyoSurface } = sample(tx, tz);
-    return { biome, height, regionId: region.id, skirt, shoal, fujiField, fujiVerge, tokyoSurface };
+    const { region, biome, height, skirt, shoal, fujiField, fujiVerge, tokyoSurface, ginzanSurface } = sample(tx, tz);
+    return { biome, height, regionId: region.id, skirt, shoal, fujiField, fujiVerge, tokyoSurface, ginzanSurface };
   }
 
   /**

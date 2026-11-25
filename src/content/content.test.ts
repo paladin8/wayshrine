@@ -1,13 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildContent, combineSources, englishOverrides } from "./build";
-import type { OverrideFile, Scenery, SourceFile } from "./build";
+import { buildContent, combineSources, englishOverrides, withoutExcluded } from "./build";
+import type { ExclusionFile, OverrideFile, Scenery, SourceFile } from "./build";
 
 const read = (path: string): unknown => JSON.parse(readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"));
-const source = combineSources(
-  read("content/source/japanese-texts.json") as SourceFile,
-  read("content/source/landmark-haiku.json") as SourceFile,
-  read("content/source/outer-rubbings.json") as SourceFile,
+const source = withoutExcluded(
+  combineSources(
+    read("content/source/japanese-texts.json") as SourceFile,
+    read("content/source/landmark-haiku.json") as SourceFile,
+    read("content/source/outer-rubbings.json") as SourceFile,
+  ),
+  read("content/excluded-texts.json") as ExclusionFile,
 );
 const scenery = read("content/haiku-scenery.json") as Record<string, Scenery>;
 delete (scenery as Record<string, unknown>)["_about"];
@@ -18,9 +21,10 @@ const overrides = englishOverrides(overrideFile, source);
 const built = buildContent(source, scenery, overrides, lines);
 
 describe("content", () => {
-  it("has 1209 unique texts", () => {
-    expect(built.texts).toHaveLength(1209);
-    expect(new Set(built.texts.map((t) => t.id)).size).toBe(1209);
+  it("has 1208 unique texts (1209 in the sources, one excluded)", () => {
+    expect(built.texts).toHaveLength(1208);
+    expect(new Set(built.texts.map((t) => t.id)).size).toBe(1208);
+    expect(built.texts.some((t) => t.id === "jmdict-1242770")).toBe(false);
   });
 
   it("adds 200 distinct inscriptions", () => {
@@ -65,6 +69,10 @@ describe("content", () => {
 
   it("drops spelling-variant parentheticals", () => {
     expect(built.texts.find((t) => t.id === "jmdict-2175010")?.en).toBe("love your neighbor");
+  });
+
+  it("rejects an exclusion whose Japanese no longer matches its source entry", () => {
+    expect(() => withoutExcluded(source, { "jmdict-2175010": { ja: "別の文", reason: "x" } })).toThrow();
   });
 
   it("rejects an override whose Japanese no longer matches its source entry", () => {

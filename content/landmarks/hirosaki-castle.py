@@ -276,12 +276,12 @@ for sx in (-1,1):
         extrude_x("vermilion",[(y0,bridge_z(y0)+0.4),(y1,bridge_z(y1)+0.4),(y1,bridge_z(y1)+0.47),(y0,bridge_z(y0)+0.47)],BX+sx*0.46-0.05,BX+sx*0.46+0.05)
         extrude_x("vermilion",[(y0,bridge_z(y0)+0.18),(y1,bridge_z(y1)+0.18),(y1,bridge_z(y1)+0.22),(y0,bridge_z(y0)+0.22)],BX+sx*0.46-0.03,BX+sx*0.46+0.03)
     for k in (2,4,6):
-        y=BY0+(BY1-BY0)*k/NB; box("bark",BX+sx*0.35,y,BED_Z,bridge_z(y)-0.1,0.07,0.07)
+        y=BY0+(BY1-BY0)*k/NB; box("bark",BX+sx*0.33,y,BED_Z,bridge_z(y)-0.1,0.07,0.07)
 # gate (yaguramon) set into the wall at the bridge's end
 GZ0=BDZ; GY=BY1+0.75
 box("stone",BX,BY1+0.35,BED_Z,BDZ,1.25,0.4,mt="snow")     # stone landing at the water for the gate
 box("plaster",BX,GY,GZ0,HM+1.0,1.15,0.75)
-box("bark",BX,GY-0.76,GZ0,GZ0+1.15,0.5,0.02)
+box("bark",BX,GY-0.76,GZ0,GZ0+1.15,0.47,0.02)      # the gate doors, inside the bridge rail posts
 box("roof",BX,GY-0.77,GZ0+1.15,GZ0+1.25,0.62,0.02)
 windows(BX,GY,1.15,0.75,HM+0.15,HM+1.0,3,2)
 flared_roof([(1.55,1.15,HM+1.0,0.25),(1.55,1.15,HM+1.1,0.25),(1.05,0.6,HM+1.45,0.06),(0.8,0.1,HM+1.9,0.0)],"tile",BX,GY)

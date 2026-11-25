@@ -85,6 +85,23 @@ export function englishOverrides(file: OverrideFile, source: SourceFile): Record
   return out;
 }
 
+/** Source entries left out of the game (content/excluded-texts.json). */
+export type ExclusionFile = Readonly<Record<string, { ja: string; reason: string }>>;
+
+/** The source without its excluded entries, checking each exclusion still matches its source text. */
+export function withoutExcluded(source: SourceFile, file: ExclusionFile): SourceFile {
+  const ja = new Map(source.entries.map((e) => [e.id, e.japanese]));
+  const drop = new Set<string>();
+  for (const [id, x] of Object.entries(file)) {
+    if (id.startsWith("_")) continue;
+    const text = ja.get(id);
+    if (text === undefined) throw new Error(`exclusion for unknown id: ${id}`);
+    if (text !== x.ja) throw new Error(`exclusion ${id} is for ${x.ja}, but the source now reads ${text}`);
+    drop.add(id);
+  }
+  return { entries: source.entries.filter((e) => !drop.has(e.id)) };
+}
+
 /** The main collection followed by any additions (content/source/*.json beyond the main file). */
 export function combineSources(main: SourceFile, ...additions: SourceFile[]): SourceFile {
   return { entries: [main, ...additions].flatMap((f) => f.entries) };

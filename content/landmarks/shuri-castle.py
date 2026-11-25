@@ -309,6 +309,9 @@ for key,(bv,bf) in B.items():
                     if g is None: g=cellg[ck]=ground_at(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5))
                     if z<g+BAND0 or z>g+BAND1: continue
                     if nz>0.92 and z<g+0.6: continue
+                    # The route down the Hoshinmon steps must stay open through the limestone wall.
+                    u,v=to_uv(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5))
+                    if SU0-0.85<=u<=JU1+0.4 and abs(v-JV)<0.65: continue
                     solid_cells.add(ck)
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 for ix in range(int(2*HALF/0.6)+1):

@@ -187,7 +187,7 @@ DZ=0.42
 quad("wood",[(U1+0.3,V0),(U1+1.15,V0),(U1+1.15,V1+1.1),(U1+0.3,V1+1.1)],DZ)
 for k in range(15):
     v=V0+0.2+(V1+0.9-V0)*k/14
-    for u in (U1+0.38,U1+1.07): x,y=to_xy(u,v); box("darkwood",x,y,-0.05,DZ,0.05,0.05)
+    for u in (U1+0.38,U1+1.07): x,y=to_xy(u,v); box("darkwood",x,y,-0.05,DZ-0.03,0.05,0.05)   # posts stop under the boards, not flush with them
 for k in range(3):
     quad("wood",[(U1+0.3,V0-0.3*(k+1)),(U1+1.15,V0-0.3*(k+1)),(U1+1.15,V0-0.3*k),(U1+0.3,V0-0.3*k)],DZ*(2-k)/3)
 HU0,HU1,HV0,HV1=-3.4,U1+1.15,V1+1.1,V1+3.6

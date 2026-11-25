@@ -134,7 +134,7 @@ def house(cx,cy,sd,hy,hx=1.15,h=1.35):
         box("wood",cx,y,0.5,h,hx+0.01,0.05)
     box("glow_screens",fx-sd*0.02,cy-hy*0.35,0.12,0.95,0.02,hy*0.32)
     box("wood",fx-sd*0.02,cy+hy*0.45,0.0,1.0,0.02,0.32)
-    box("glow_screens",fx-sd*0.02,cy+hy*0.05,0.82,1.18,0.02,0.18)
+    box("glow_screens",fx-sd*0.02,cy+hy*0.05,1.04,1.26,0.02,0.18)   # above the door, not overlapping it
     flared_roof([(hx+0.36,hy+0.26,h-0.05,0.34),(hx+0.36,hy+0.26,h+0.18,0.34),(0.55,hy-0.3,h+1.15,0.08),(0.08,hy-0.6,h+1.75,0.0)],"thatch",cx,cy)
     flared_roof([(hx+0.3,hy+0.2,h+0.3,0.08),(hx+0.3,hy+0.2,h+0.37,0.08),(0.52,hy-0.3,h+1.3,0.04),(0.06,hy-0.6,h+1.88,0.0)],"snow",cx,cy)
     box("wood",cx,cy,h+1.8,h+1.94,0.12,hy-0.55)           # the ridge cap

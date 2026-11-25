@@ -169,14 +169,14 @@ HX,HY=0.0,0.6
 box("stone",HX,HY,-0.3,0.28,2.6,2.05)                                   # podium
 box("white",HX,HY,0.28,1.75,1.75,1.3)
 for x in (-1.75,-1.05,-0.35,0.35,1.05,1.75):
-    for y in (-1.3,1.3): box("red",HX+x,HY+y,0.28,1.75,0.08,0.08)
-for y in (-0.65,0.0,0.65): box("red",HX-1.75,HY+y,0.28,1.75,0.08,0.08); box("red",HX+1.75,HY+y,0.28,1.75,0.08,0.08)
+    for y in (-1.3,1.3): box("red",HX+x,HY+y,0.28,1.73,0.08,0.08)
+for y in (-0.65,0.0,0.65): box("red",HX-1.75,HY+y,0.28,1.73,0.08,0.08); box("red",HX+1.75,HY+y,0.28,1.73,0.08,0.08)   # posts stop short of the wall top: no shared plane
 for x in (-0.7,0.0,0.7): box("red",HX+x,HY-1.31,0.35,1.45,0.24,0.02)   # the doors
 box("glow_door",HX,HY-1.32,0.45,1.3,0.18,0.015)                        # the Amida within, glimpsed through the open door
 box("red",HX,HY,0.95,1.05,1.85,1.4)                                    # tie beam under the pent roof
 flared_roof([(2.55,2.1,1.05,0.15),(2.55,2.1,1.13,0.15),(1.95,1.5,1.32,0.03)],"roof",HX,HY)   # the pent roof (mokoshi)
 box("white",HX,HY,1.32,2.25,1.4,1.0)
-for x in (-1.4,-0.7,0.0,0.7,1.4): box("red",HX+x,HY-1.0,1.32,2.25,0.07,0.07)
+for x in (-1.4,-0.7,0.0,0.7,1.4): box("red",HX+x,HY-1.0,1.32,2.23,0.07,0.07)
 box("red",HX,HY,2.18,2.3,1.5,1.1)
 flared_roof([(2.55,2.1,2.3,0.34),(2.55,2.1,2.4,0.34),(1.7,1.25,2.78,0.1),(1.15,0.2,3.22,0.0)],"roof",HX,HY)   # broad and gently pitched
 box("roof",HX,HY,3.17,3.3,1.2,0.14)

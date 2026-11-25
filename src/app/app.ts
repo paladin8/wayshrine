@@ -62,7 +62,7 @@ import {
 import { createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type MusicSet, type TrackId } from "../audio";
 import { createStage } from "../render";
 import { monumentSpecs } from "../content";
-import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
+import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type World } from "../world";
 import { createDebugPanel } from "./debug";
 import { createHud } from "./hud";
 import { messagesFor, type Messages } from "./i18n";
@@ -170,6 +170,7 @@ export function startApp(container: HTMLElement): void {
   const world = createWorld(seed);
   const terrain = createTerrain(world);
   const railway = fujiRailway(world);
+  const ginzan = ginzanStream(world);
   const debug = params.has("debug");
   const monuments = planMonuments(terrain, monumentSpecs);
   const sceneryObstacles = createObstacles(terrain, monuments);
@@ -300,29 +301,32 @@ export function startApp(container: HTMLElement): void {
   const leadingIn = (): boolean => (boatVoyage?.t ?? 0) < 0 || (shipVoyage?.t ?? 0) < 0 || (snowshoeMoment?.t ?? 0) < 0 || (climbMoment?.t ?? 0) < 0 || (getaMoment?.t ?? 0) < 0 || (lanternMoment?.t ?? 0) < 0 || (ashMoment?.t ?? 0) < 0;
   const momentBusy = (): boolean => trainRide !== null || awakening !== null
     || (gearReveal !== null && gearReveal.gear !== "pilgrimsWake") || boatVoyage !== null || shipVoyage !== null || snowshoeMoment !== null || climbMoment !== null || getaMoment !== null || lanternMoment !== null || ashMoment !== null;
-  /** The track the traveller picked with the music button, as an index into MUSIC_SETS, or -1 to follow progression. */
-  let musicChoice = -1;
-  /** The theme progression last chose, so a new unlock (or a gear moment) hands the music back to progression. */
-  let progressionSet: MusicSet | undefined;
-  /** Which themes the traveller has earned. The first needs nothing; each other follows a first use or the Pilgrim's Wake. */
-  const unlockedMusicSets = (): readonly number[] => {
-    const earned = [true, state.boatLaunched, state.snowshoesUsed, state.climbingUsed, state.getaUsed, state.lanternUsed, state.ashSandalsUsed, state.shipLaunched, restoredLandmarks.length >= PILGRIMS_WAKE_STARS];
-    // A theme that is playing because of a moment in progress counts as unlocked.
-    return unlockedThemes(earned, MUSIC_SETS.findIndex((set) => set === selectedMusicSet()));
-  };
+  const gearMusicActive = (): boolean => boatVoyage !== null || shipVoyage !== null || snowshoeMoment !== null
+    || climbMoment !== null || getaMoment !== null || lanternMoment !== null || ashMoment !== null
+    || awakening?.unlocksGear === "pilgrimsWake" || gearReveal?.gear === "pilgrimsWake";
   let lastRestored: GameState["restored"] | undefined;
   let restoredLandmarks: readonly string[] = [];
+  /** Themes are earned per world. A saved choice may belong to another seed. */
+  const earnedMusicSets = (): readonly boolean[] => [
+    true, state.boatLaunched, state.snowshoesUsed, state.climbingUsed, state.getaUsed,
+    state.lanternUsed, state.ashSandalsUsed, state.shipLaunched, restoredLandmarks.length >= PILGRIMS_WAKE_STARS,
+  ];
+  const musicSetIndex = (set: MusicSet): number => MUSIC_SETS.findIndex((candidate) => candidate === set);
+  const selectedMusicSet = (progression = progressionMusicSet()): MusicSet => {
+    const track = settings.get().musicTrack;
+    if (track === null || gearMusicActive()) return progression;
+    const earned = earnedMusicSets();
+    return MUSIC_SETS.find((set, i) => set.background === track && earned[i]) ?? progression;
+  };
   /** Moves on to the next unlocked theme, and back to following progression after the newest one. */
   const cycleMusic = (): void => {
     music.unlock();
-    // A gear moment is steering the music; a pick now would cut across it.
-    if (momentBusy()) return;
-    const unlocked = unlockedMusicSets();
-    const playing = MUSIC_SETS.findIndex((set) => set === selectedMusicSet());
-    const next = nextTheme(unlocked, playing);
-    musicChoice = MUSIC_SETS[next] === progressionMusicSet() ? -1 : next;
+    if (momentBusy() || gearMusicActive() || finalMusicPending) return;
+    const progression = progressionMusicSet();
+    const playing = musicSetIndex(selectedMusicSet(progression));
+    const next = MUSIC_SETS[nextTheme(unlockedThemes(earnedMusicSets(), playing), playing)] ?? progression;
+    settings.update({ musicTrack: next === progression ? null : next.background });
   };
-  const selectedMusicSet = (): MusicSet => MUSIC_SETS[musicChoice] ?? progressionMusicSet();
   const progressionMusicSet = (): MusicSet => {
     // Snowshoes come after the boat, so the moment starts on the sea theme and crosses over to the snow one.
     // Climbing comes after snowshoes, so its moment starts on the snow theme and crosses over to the ridge one.
@@ -363,7 +367,7 @@ export function startApp(container: HTMLElement): void {
   const startVoyage = (path: BoatLaunch, preview = false): void => {
     // If this save is already on the later score, let the debug run fade back to theme one first.
     const playing = music.status().track;
-    const lead = preview && musicChoice < 0 && playing && playing !== musicSetFor(false, false).background ? -3.1 : 0;
+    const lead = preview && playing && playing !== musicSetFor(false, false).background ? -3.1 : 0;
     boatVoyage = { path, preview, t: lead };
     pos = path.from;
     facing = path.facing;
@@ -378,7 +382,7 @@ export function startApp(container: HTMLElement): void {
   const startShipVoyage = (path: ShipLaunch, preview = false): void => {
     // If this save is already on the sea theme, let the debug run fade back to the basalt theme first.
     const playing = music.status().track;
-    const lead = preview && musicChoice < 0 && playing && playing !== MUSIC_SETS[6].background ? -3.1 : 0;
+    const lead = preview && playing && playing !== MUSIC_SETS[6].background ? -3.1 : 0;
     shipVoyage = { path, preview, t: lead };
     pos = path.from;
     facing = path.facing;
@@ -491,7 +495,6 @@ export function startApp(container: HTMLElement): void {
   const down = new Set<string>();
   if (debug) {
     const beginPreview = (): void => {
-      musicChoice = -1;
       awakening = null;
       ALL_AWAKENING_CUES.forEach((id) => cues.stop(id, 0.25));
       stopGearMoments();
@@ -595,7 +598,7 @@ export function startApp(container: HTMLElement): void {
         beginPreview();
         // If this save is already on the ridge theme, let the preview fade back to the snow theme first.
         const playing = music.status().track;
-        const lead = musicChoice < 0 && playing && playing !== MUSIC_SETS[2].background ? -3.1 : 0;
+        const lead = playing && playing !== MUSIC_SETS[2].background ? -3.1 : 0;
         climbMusicPreview = true;
         climbMoment = { t: lead };
       },
@@ -603,14 +606,14 @@ export function startApp(container: HTMLElement): void {
         beginPreview();
         // If this save is already on the marsh theme, let the preview fade back to the ridge theme first.
         const playing = music.status().track;
-        const lead = musicChoice < 0 && playing && playing !== MUSIC_SETS[3].background ? -3.1 : 0;
+        const lead = playing && playing !== MUSIC_SETS[3].background ? -3.1 : 0;
         getaMusicPreview = true;
         getaMoment = { t: lead };
       },
       previewLanternUse: () => {
         beginPreview();
         const playing = music.status().track;
-        const lead = musicChoice < 0 && playing && playing !== MUSIC_SETS[4].background ? -3.1 : 0;
+        const lead = playing && playing !== MUSIC_SETS[4].background ? -3.1 : 0;
         lanternMusicPreview = true;
         lanternMoment = { t: lead };
       },
@@ -618,7 +621,7 @@ export function startApp(container: HTMLElement): void {
         beginPreview();
         // If this save is already on the basalt theme, let the preview fade back to the lantern theme first.
         const playing = music.status().track;
-        const lead = musicChoice < 0 && playing && playing !== MUSIC_SETS[5].background ? -3.1 : 0;
+        const lead = playing && playing !== MUSIC_SETS[5].background ? -3.1 : 0;
         ashMusicPreview = true;
         ashMoment = { t: lead };
       },
@@ -631,7 +634,7 @@ export function startApp(container: HTMLElement): void {
         beginPreview();
         // If this save is already on the snow theme, let the preview fade back to the sea theme first.
         const playing = music.status().track;
-        const lead = musicChoice < 0 && playing && playing !== MUSIC_SETS[1].background ? -3.1 : 0;
+        const lead = playing && playing !== MUSIC_SETS[1].background ? -3.1 : 0;
         snowshoeMusicPreview = true;
         snowshoeMoment = { t: lead };
       },
@@ -762,6 +765,7 @@ export function startApp(container: HTMLElement): void {
   const releaseMovement = (): void => {
     down.clear();
     Object.values(MOVEMENT_CUES).forEach((id) => cues.stop(id));
+    cues.stop("walk-water");
     movementCue = undefined;
   };
   function travelToShrine(destination: Point): boolean {
@@ -1043,9 +1047,12 @@ export function startApp(container: HTMLElement): void {
     });
     minimap.update({ pos, state, target: guide?.region ?? null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
-    const nextMovementCue = moving && !voyageFrame && !lanternMoment
-      ? MOVEMENT_CUES[terrain.tileAtPoint(pos.x, pos.z).biome]
-      : undefined;
+    const movementTile = moving && !voyageFrame && !lanternMoment ? terrain.tileAtPoint(pos.x, pos.z) : undefined;
+    let nextMovementCue = movementTile && MOVEMENT_CUES[movementTile.biome];
+    if (ginzan && (movementTile?.ginzanSurface === "stream" || movementTile?.ginzanSurface === "bath")
+      && ginzanWarmth(ginzan, movementTile.regionId, (id) => Number(state.restored.has(id))) > 0) {
+      nextMovementCue = "walk-water";
+    }
     if (nextMovementCue !== movementCue) {
       if (movementCue) cues.stop(movementCue, MOVEMENT_FADE_OUT);
       if (nextMovementCue) cues.play(nextMovementCue, MOVEMENT_FADE_IN);
@@ -1053,6 +1060,7 @@ export function startApp(container: HTMLElement): void {
     }
     cues.update(dt);
     const audible = cues.playing();
+    const background = selectedMusicSet();
     // The threshold landmark still hands the score off directly from its swell.
     if (finalMusicPending) {
       if (!audible.includes(AWAKENING_SWELLS.landmark)) {
@@ -1060,26 +1068,21 @@ export function startApp(container: HTMLElement): void {
         finalMusicPending = false;
       }
     } else if (awakening?.unlocksGear !== "pilgrimsWake") {
-      // A new unlock or gear moment hands the music back to progression.
-      const progression = progressionMusicSet();
-      if (progression !== progressionSet) {
-        if (progressionSet) musicChoice = -1;
-        progressionSet = progression;
-      }
-      // Keep the background steady through a restoration if debug selects another track.
-      music.setTrack(awakening?.backgroundTrack ?? selectedMusicSet().background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview || lanternMusicPreview || ashMusicPreview) ? GEAR_FADE_SECONDS : undefined);
+      // Regular restorations keep the theme captured when their swell began.
+      music.setTrack(awakening?.backgroundTrack ?? background.background, !leadingIn() && (momentBusy() || snowshoeMusicPreview || climbMusicPreview || lanternMusicPreview || ashMusicPreview) ? GEAR_FADE_SECONDS : undefined);
     }
     const swellDuck = ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : railFrame?.windowView ? 0.3 : 1;
     music.setDuck(swellDuck);
     music.update(dt);
-    const unlockedThemes = unlockedMusicSets();
-    const themeNumber = unlockedThemes.indexOf(MUSIC_SETS.findIndex((set) => set === selectedMusicSet())) + 1;
+    const playing = musicSetIndex(background);
+    const availableThemes = unlockedThemes(earnedMusicSets(), playing);
+    const themeNumber = availableThemes.indexOf(playing) + 1;
     const heard = settings.get();
     musicButton.update({
       number: themeNumber,
-      total: unlockedThemes.length,
-      label: messagesFor(heard.language).musicTrack(themeNumber, unlockedThemes.length),
-      visible: unlockedThemes.length > 1 && heard.musicVolume > 0 && !heard.muted,
+      total: availableThemes.length,
+      label: messagesFor(heard.language).musicTrack(themeNumber, availableThemes.length),
+      visible: availableThemes.length > 1 && heard.musicVolume > 0 && !heard.muted,
     });
 
     const lightingProgress = lanternMoment ? Math.max(0, lanternMoment.t / LANTERN_MOMENT_SECONDS) : undefined;

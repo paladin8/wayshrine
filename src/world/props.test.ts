@@ -54,6 +54,34 @@ describe("propsInChunk", () => {
     }
   });
 
+  it("keeps shrine approaches and the camera foreground clear across chunk edges", () => {
+    const world = terrain.world;
+    const regions = [
+      ...Array.from({ length: 25 }, (_, i) => world.region(Math.floor(i / 5) - 2, i % 5 - 2)),
+      ...(["forest", "snow", "volcanic"] as const).map((biome) => ordinaryRegionNearLandmark(world, biome)),
+    ];
+    for (const region of regions) {
+      if (region.landmark) continue;
+      const cx = Math.floor(region.shrine.x / CHUNK_SIZE);
+      const cz = Math.floor(region.shrine.z / CHUNK_SIZE);
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (const prop of propsInChunk(terrain, cx + dx, cz + dz)) {
+            if (prop.kind === "lantern") continue;
+            const x = prop.x - region.shrine.x;
+            const z = prop.z - region.shrine.z;
+            expect(Math.hypot(x, z), `${region.id}: ${prop.kind} on the approach`).toBeGreaterThanOrEqual(5);
+            if (prop.kind !== "tree" && prop.kind !== "pine") continue;
+            const toward = (x + z) / Math.SQRT2;
+            const across = Math.abs(x - z) / Math.SQRT2;
+            const hidesShrine = toward > 0 && toward < 3.5 * prop.scale + 1 && across < 1.75 + prop.scale;
+            expect(hidesShrine, `${region.id}: ${prop.kind} in the foreground`).toBe(false);
+          }
+        }
+      }
+    }
+  });
+
   it("places freestanding lanterns around ordinary land shrines only", () => {
     const terrain = createTerrain(createWorld("wayshrine"));
     const world = terrain.world;

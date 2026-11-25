@@ -245,7 +245,7 @@ prism("white",lx,ly,TOP,TOP+1.5,0.22,0.17,8); prism("dark",lx,ly,TOP+1.5,TOP+1.7
 # the landing (Dolphin pier) and the stair up the wall
 ubox("concrete2",(PU0+PU1)/2,PV,FLOOR,JD,(PU1-PU0)/2,0.55)
 for k in range(5):
-    ubox("concrete",PU0-0.6+0.16*k,PV,JD,JD+(TOP-JD)*(k+1)/5.0,0.08,0.55)
+    ubox("concrete",PU0-0.6+0.16*k,PV,JD,JD+(TOP-0.02-JD)*(k+1)/5.0,0.08,0.55)   # the top step just below the deck, not flush
 for su in (PU0+0.6,PU0+1.8,PU0+3.0,PU1-0.15):
     for sd in (-1,1): ubox("steel",su,PV+sd*0.5,JD,JD+0.6,0.03,0.03)
 ubox("steel",(PU0+PU1)/2,PV+0.5,JD+0.55,JD+0.6,(PU1-PU0)/2,0.02); ubox("steel",(PU0+PU1)/2,PV-0.5,JD+0.55,JD+0.6,(PU1-PU0)/2,0.02)
@@ -286,12 +286,21 @@ for key,(bv,bf) in B.items():
                     if g is None: g=cellg[ck]=ground_at(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5))
                     if z<g+BAND0 or z>g+BAND1: continue
                     if nz>0.92 and z<g+0.6: continue
+                    # Reserve the approach down the landing stairs and along the pier.
+                    u,v=to_uv(-HALF+CELL*(ck[0]+0.5),-HALF+CELL*(ck[1]+0.5))
+                    if PU0-1.3<=u<=PU1+0.5 and abs(v-PV)<0.65: continue
                     solid_cells.add(ck)
 solids=[[round(-HALF+CELL*(cx+0.5),2), round(-(-HALF+CELL*(cy+0.5)),2), 0.22] for cx,cy in sorted(solid_cells)]
 for ix in range(int(2*HALF/0.6)+1):
     for iy in range(int(2*HALF/0.6)+1):
         x,y=-HALF+0.3+ix*0.6,-HALF+0.3+iy*0.6
         if water_disc(x,y): EXTRA_SOLIDS.append((x,y,0.43))
+# The baked discs are too wide for the pier. Use thin discs for its actual rails.
+for k in range(20):
+    u=PU0+(PU1-PU0)*k/19
+    for v in (PV-0.5,PV+0.5):
+        x,y=to_xy(u,v)
+        EXTRA_SOLIDS.append((x,y,0.06))
 solids+=[[round(x,2),round(-y,2),r] for x,y,r in EXTRA_SOLIDS]
 side={"half":HALF,"step":GSTEP,"ground":ground,"solids":solids,
       "interact":[INTERACT[0],-INTERACT[1]],"reach":3.6,"stand":[STAND[0],-STAND[1]]}

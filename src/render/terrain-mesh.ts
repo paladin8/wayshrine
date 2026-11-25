@@ -1,10 +1,10 @@
-import { Color } from "three";
-import { CHUNK_SIZE, type Terrain } from "../world";
+import * as THREE from "three";
+import { CHUNK_SIZE, ginzanStream, ginzanWarmth, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
-import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
+import { combine, VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
 
 const SIDE_SHADE = 0.8;
-const fujiGrass = new Color(0x90a96a);
+const fujiGrass = new THREE.Color(0x90a96a);
 const cityColors = { street: 0x666a71, sidewalk: 0xb4ab9d, garden: 0x879871 };
 const fieldColors = {
   bank: 0x81965a,
@@ -12,6 +12,59 @@ const fieldColors = {
   rice: 0x70984b,
   channel: 0x6f9faf,
 };
+
+// Match the water material in the Ginzan Onsen landmark.
+const ginzanWater = 0x2a4e62;
+const springColors = {
+  stream: ginzanWater,
+  bank: 0x9f927b,
+  bath: ginzanWater,
+  rim: 0x9d8f78,
+  bridge: 0xb69772,
+};
+
+function buildGinzanSurfaces(
+  terrain: Terrain,
+  strips: ReadonlyMap<string, { vertices: number[]; colors: number[] }>,
+  progressOf: (id: string) => number,
+): VitalityMesh | undefined {
+  const ginzan = ginzanStream(terrain.world);
+  if (!ginzan || strips.size === 0) return;
+  const object = new THREE.Group();
+  const parts = [...strips].map(([id, { vertices, colors }]) => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshStandardMaterial({
+      transparent: true, depthWrite: false, vertexColors: true, flatShading: true,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.receiveShadow = true;
+    object.add(mesh);
+    return { id, mesh, geometry, material };
+  });
+  const regionIds = new Set([ginzan.sourceId, ...strips.keys()]);
+  const applyVitality: VitalityMesh["applyVitality"] = (progress, only) => {
+    if (only && ![...regionIds].some((id) => only.has(id))) return;
+    for (const { id, mesh, material } of parts) {
+      const warmth = ginzanWarmth(ginzan, id, progress);
+      material.opacity = warmth * warmth * (3 - 2 * warmth);
+      mesh.visible = warmth > 0.009;
+    }
+  };
+  applyVitality(progressOf);
+  return {
+    object, regionIds, applyVitality,
+    dispose: () => {
+      for (const { geometry, material } of parts) {
+        geometry.dispose();
+        material.dispose();
+      }
+    },
+  };
+}
 
 type V = readonly [number, number, number];
 
@@ -40,26 +93,40 @@ export function buildTerrainChunk(
 ): VitalityMesh {
   const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
   const art = biomeArt(terrain);
+  const strips = new Map<string, { vertices: number[]; colors: number[] }>();
   const x0 = cx * CHUNK_SIZE;
   const z0 = cz * CHUNK_SIZE;
   for (let tz = z0; tz < z0 + CHUNK_SIZE; tz++) {
     for (let tx = x0; tx < x0 + CHUNK_SIZE; tx++) {
       const tile = terrain.tileAt(tx, tz);
       const field = tile.fujiField;
-      const top = field ? new Color(fieldColors[field]) : tile.tokyoSurface
-        ? new Color(cityColors[tile.tokyoSurface])
+      const top = field ? new THREE.Color(fieldColors[field]) : tile.tokyoSurface
+        ? new THREE.Color(cityColors[tile.tokyoSurface])
         : art.top(tx, tz, tile, terrain.world.regionById(tile.regionId));
       if (!field && tile.fujiVerge) top.lerp(fujiGrass, tile.fujiVerge * 0.90);
+      const spring = tile.ginzanSurface;
+      if (spring === "stream" || spring === "bath") top.setHex(0xa9c7d8);
+      else if (spring === "rim") top.setHex(0xb1b2ac);
+      else if (spring === "bridge") top.setHex((tx + tz) % 2 ? 0x9e8b74 : 0x8d7b67);
       const side = top.clone().multiplyScalar(SIDE_SHADE);
       const c = terrain.corners(tx, tz);
+      const surface = quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]);
       builder.addTriangles(
-        quad([tx, c[0], tz], [tx, c[2], tz + 1], [tx + 1, c[3], tz + 1], [tx + 1, c[1], tz], [0, 1, 0]),
+        surface,
         top,
         tile.regionId,
         tile.biome === "water" || tile.biome === "sea" ? { water: tile.biome }
           : field === "channel" ? { water: "water" } : undefined,
       );
 
+      if (spring) {
+        const strip = strips.get(tile.regionId) ?? { vertices: [], colors: [] };
+        const color = new THREE.Color(springColors[spring]);
+        if (spring === "bridge" || spring === "rim") color.multiplyScalar((tx + tz) % 2 ? 0.87 : 1);
+        strip.vertices.push(...surface);
+        for (let i = 0; i < 6; i++) strip.colors.push(color.r, color.g, color.b);
+        strips.set(tile.regionId, strip);
+      }
       if (field === "rice") {
         const plants: number[] = [];
         for (const [dx, dz] of [[0.25, 0.28], [0.67, 0.59]] as const) {
@@ -68,7 +135,7 @@ export function buildTerrainChunk(
           plants.push(x - 0.09, y, z, x + 0.04, y + 0.36, z + 0.13, x + 0.08, y, z,
             x, y, z - 0.09, x - 0.14, y + 0.29, z, x, y, z + 0.075);
         }
-        builder.addTriangles(plants, new Color(0x8faf5b), tile.regionId, { sway: { baseY: tile.height, height: 0.35 } });
+        builder.addTriangles(plants, new THREE.Color(0x8faf5b), tile.regionId, { sway: { baseY: tile.height, height: 0.35 } });
       }
 
       // A side face wherever this tile's edge stands above its neighbour's, down to the neighbour's edge.
@@ -94,5 +161,7 @@ export function buildTerrainChunk(
       }
     }
   }
-  return builder.build(vitalityOf);
+  const ground = builder.build(vitalityOf);
+  const springs = buildGinzanSurfaces(terrain, strips, vitalityOf);
+  return springs ? combine([ground, springs]) : ground;
 }

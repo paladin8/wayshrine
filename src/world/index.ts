@@ -32,7 +32,7 @@ export { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
 export type { LandmarkGround } from "./landmark-ground";
 export { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, plateauBase, plateauDistance } from "./terrain-grid";
 export type { Terrain, Tile } from "./terrain-grid";
-export { PROP_KINDS, propsInChunk } from "./props";
+export { PROP_KINDS, SHRINE_CLEARING_RADIUS, propsInChunk } from "./props";
 export type { Prop, PropKind } from "./props";
 export { MONUMENT_CLEARING, MONUMENT_EDGE_MARGIN, monumentsAroundChunk, planMonuments } from "./monuments";
 export type { HaikuSceneKind, Monument, MonumentPlan, MonumentSpec } from "./monuments";
@@ -40,3 +40,6 @@ export { SHRINE_PILLAR_OFFSET, createObstacles } from "./obstacles";
 export type { Obstacle, Obstacles } from "./obstacles";
 export { PLATFORM_END, PLATFORM_TOP, RAIL_HALF_LENGTH, RAIL_HALF_WIDTH, fujiRailway, railPoint, railwayClearance } from "./fuji-railway";
 export type { FujiRailway, FujiStation } from "./fuji-railway";
+
+export { ginzanStream, ginzanWarmth } from "./ginzan-stream";
+export { hirosakiGarden, hirosakiPathPoint } from "./hirosaki-garden";

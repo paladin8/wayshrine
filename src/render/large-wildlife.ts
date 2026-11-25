@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { createRng } from "../core";
-import { plateauDistance, type Biome, type Obstacle, type Point, type Region, type Terrain } from "../world";
+import { PLATEAU_RADIUS, SHRINE_CLEARING_RADIUS, plateauDistance, type Biome, type Obstacle, type Point, type Region, type Terrain } from "../world";
 import { appendAnimalObstacles, withinBoatHeight } from "./animal-collision";
 import { createAnimalModels, type Species } from "./animal-models";
 import { swimMotion, wildlifeMotion } from "./wildlife-motion";
@@ -50,13 +50,14 @@ export function createSightings(terrain: Terrain): (region: Region) => Sighting 
     const radius = species === "whale" ? 7.4 : species === "dolphin" ? 5.5
       : afloat ? 3.1 : species === "boar" ? 2.55 : species === "fox" ? 2.35 : 1.7;
     const clearance = radius + (afloat ? 2.9 : 1.4);
+    const shrineClearance = clearance + (region.landmark ? 0 : SHRINE_CLEARING_RADIUS - PLATEAU_RADIUS);
     for (let i = 0; i < 24; i++) {
       const bearing = local.range(0, TAU);
       const distance = local.range(7, 31);
       const x = region.site.x + Math.sin(bearing) * distance;
       const z = region.site.z + Math.cos(bearing) * distance;
       const tile = terrain.tileAtPoint(x, z);
-      if (tile.regionId !== region.id || tile.biome !== region.biome || plateauDistance(region, x, z) < clearance) continue;
+      if (tile.regionId !== region.id || tile.biome !== region.biome || plateauDistance(region, x, z) < shrineClearance) continue;
       const viable = Array.from({ length: 12 }, (_, step) => {
         const a = TAU * step / 12;
         return terrain.tileAtPoint(x + Math.cos(a) * clearance, z + Math.sin(a) * clearance);

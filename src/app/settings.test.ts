@@ -46,6 +46,21 @@ describe("settings", () => {
     expect(again).toMatchObject({ showMinimap: false, language: "ja", sfxVolume: 0.1 });
   });
 
+  it("persists a selected theme by track ID and can return to progression", () => {
+    const storage = new MemoryStorage();
+    const store = createSettingsStore(storage);
+    store.update({ musicTrack: "snowline-walk" });
+    const reloaded = createSettingsStore(storage);
+    expect(reloaded.get().musicTrack).toBe("snowline-walk");
+    reloaded.update({ musicTrack: null });
+    expect(createSettingsStore(storage).get().musicTrack).toBeNull();
+  });
+
+  it("follows progression for older settings and unknown track IDs", () => {
+    expect(parseSettings({ musicVolume: 0.3 }).musicTrack).toBeNull();
+    expect(parseSettings({ musicTrack: "a-removed-track" }).musicTrack).toBeNull();
+  });
+
   it("survives storage that throws", () => {
     const broken = {
       getItem: () => {

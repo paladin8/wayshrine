@@ -111,7 +111,8 @@ def flared_roof(spec,mat="roof",ox=0.0,oy=0.0):
 
 import random
 rng=random.Random(55)
-EXTRA_SOLIDS=[]; NOSOLID={"pine"}
+# The beach and grassy shore are heightfield surfaces, even where the coast drops steeply.
+EXTRA_SOLIDS=[]; NOSOLID={"pine","sand","grass","water"}
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 FH=11.2   # footprint half-width (the sidecar's half): the middle size, the sandbar curving across the bay

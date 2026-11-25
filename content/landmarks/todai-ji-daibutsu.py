@@ -120,7 +120,7 @@ def ell(rx,ry,z,n=8,ox=0.0,oy=0.0,ph=math.pi/8):
 
 # The terrain supplies the grass under the courtyard and along its edges.
 # ---- courtyard: gravel, stone path on the axis
-box("cream",0,-5.4,-0.05,0.02,7.0,4.0)
+box("cream",0,-5.39,-0.05,0.02,7.0,3.99)
 box("stone",0,-6.0,-0.05,0.045,0.9,3.4)
 
 # ---- Daibutsuden (Great Buddha Hall)
@@ -170,7 +170,7 @@ BAY=10.0/7; COLX=[-5.0+BAY*k for k in range(8)]      # seven bays; the middle th
 OPEN=COLX[5]                                          # half-width of the opening (2.14)
 for sx in (-1,1):
     box("cream",sx*(OPEN+5.0)/2,3.075,0.5,6.0,(5.0-OPEN)/2,2.925)   # side blocks of the hall body
-    box("darkwood",sx*(OPEN-0.04),1.575,0.5,6.0,0.06,1.43)          # dark lining inside the opening
+    box("darkwood",sx*(OPEN-0.04),1.575,0.5,5.98,0.06,1.43)         # dark lining inside the opening (just under the wall top)
 box("darkwood",0,4.5,0.5,6.0,OPEN,1.5)                # back wall behind the Buddha
 for k in (0,1,2,5,6,7): box("darkwood",COLX[k],0.1,0.5,5.95,0.13,0.13)
 for xc in (-4.29,-2.86,2.86,4.29):
@@ -238,7 +238,7 @@ for sx in (-1,1):
     box("cream",sx*8.1,yc,0.15,1.9,0.08,L)
     for k in range(7):
         y=-9.0+k*1.3; box("vermilion",sx*7.15,y,0.15,1.95,0.1,0.1); box("vermilion",sx*8.1,y,0.15,1.95,0.11,0.11)
-    box("vermilion",sx*7.15,yc,1.85,2.0,0.1,L)
+    box("vermilion",sx*7.15,yc,1.85,2.0,0.1,L-0.03)
     x0,x1=sorted((sx*6.85,sx*8.35))
     extrude_y("roof",[(x0,1.95),(x1,1.95),(x1,2.07),(x,2.6),(x0,2.07)],-9.1,-1.2)
     for k in range(21): EXTRA_SOLIDS.append([x,-9.0+k*0.39,0.5])

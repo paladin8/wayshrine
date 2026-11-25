@@ -183,7 +183,7 @@ box("museum",0,-0.6,1.95,2.25,1.45,0.75,TM)                 # entablature over t
 extrude_x("museum",[(-1.45,2.25),(-0.05,2.25),(-0.75,2.75)],-1.5,1.5,TM)                  # the pediment
 box("roof",0,0.35,2.3,2.42,1.95,1.3,TM)
 box("black",0,-1.01,0.3,1.25,0.32,0.02,TM)
-for k in range(3): box("pave",0,-1.35-0.18*k,-0.05,0.3-0.1*k,1.2,0.09,TM)
+for k in range(3): box("pave",0,-1.35-0.18*k,-0.05,0.28-0.1*k,1.2,0.09,TM)
 
 # ---- the near bank: low shops at either end, so the canal stays in view
 def shop(v,w):
