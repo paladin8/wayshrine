@@ -12,7 +12,7 @@
 #
 # Positions are in the model's own frame (Blender x, y, z; the game's z is -y). The usual fix is to pull one of the
 # two surfaces back 1-3 cm so they no longer share a plane.
-import bpy, sys, os, math, glob
+import bpy, sys, os, math, glob, json
 from collections import defaultdict
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
@@ -22,6 +22,8 @@ CAM = Vector((0.55, -0.55, 0.63)).normalized()   # toward the game's isometric c
 PLANE_TOL = 0.004     # surfaces closer than this (units) count as one plane
 MIN_AREA = 0.004      # smallest overlap reported (square units)
 OCCLUDE = 2.5         # geometry this close toward the camera hides a spot
+MODEL_PAD = 0.6       # the game's terrain under a model with its own ground sits this far below it
+SURFACE_PAD = 0.01    # the game's terrain under a terrainSurface model sits this far below the sidecar surface
 
 def material(obj_name):
     if obj_name.startswith("glow_"): return "glow"          # every glow_* object shares the glow material
@@ -53,6 +55,66 @@ def overlap(A, B):
     cx = sum(p[0] for p in P)/len(P); cy = sum(p[1] for p in P)/len(P)
     return a, [(cx, cy)] + [(cx+0.7*(p[0]-cx), cy+0.7*(p[1]-cy)) for p in P]
 
+def terrain(name):
+    """The game's terrain under the model, as triangles. Under a terrainSurface model: 1-unit tiles whose corners
+    sample the sidecar's terrain (or ground) grid bilinearly, SURFACE_PAD below it (terrain-grid.ts cornerOf), the
+    base height 0 outside."""
+    side = os.path.join(D, "..", "..", "src", "world", "landmark-grounds", name + ".json")
+    if not os.path.exists(side): return []
+    g = json.load(open(side))
+    gh, gs, gg = g["half"], g["step"], g.get("terrain") or g["ground"]; n = len(gg)
+    if not g.get("terrainSurface"): return sunk(gh, gs, gg)
+    def surf(dx, dz):
+        if max(abs(dx), abs(dz)) >= gh: return 0.0
+        return grid(dx, dz) - SURFACE_PAD
+    def grid(dx, dz):
+        fx = min(n-1, max(0.0, (dx+gh)/gs)); fz = min(n-1, max(0.0, (dz+gh)/gs))
+        x0 = min(n-2, int(fx)); z0 = min(n-2, int(fz)); tx = fx-x0; tz = fz-z0
+        return gg[z0][x0]*(1-tx)*(1-tz) + gg[z0][x0+1]*tx*(1-tz) + gg[z0+1][x0]*(1-tx)*tz + gg[z0+1][x0+1]*tx*tz
+    m = int(math.ceil(gh)) + 1
+    V = {(x, z): Vector((x, -z, surf(x, z))) for x in range(-m, m+1) for z in range(-m, m+1)}
+    out = []
+    for x in range(-m, m):
+        for z in range(-m, m):
+            a, b, c, d = V[(x, z)], V[(x+1, z)], V[(x+1, z+1)], V[(x, z+1)]
+            for vs in ((a, c, b), (a, d, c)):
+                nn = (vs[1]-vs[0]).cross(vs[2]-vs[0])
+                if nn.length < 1e-9: continue
+                nn.normalize()
+                if nn.z < 0: vs = vs[::-1]; nn = -nn
+                out.append(("terrain", nn, list(vs)))
+    return out
+
+def sunk(gh, gs, gg):
+    """The game's terrain sunk under a model with its own ground (terrain-grid.ts sunkUnder): flat 1-unit tiles at
+    the lowest surface of the tile and its neighbours (sampled at tile centres) less MODEL_PAD, with the cliffs
+    between them, which stand on tile lines where a model wall may stand too."""
+    n = len(gg)
+    def grid(dx, dz):
+        fx = min(n-1, max(0.0, (dx+gh)/gs)); fz = min(n-1, max(0.0, (dz+gh)/gs))
+        x0 = min(n-2, int(fx)); z0 = min(n-2, int(fz)); tx = fx-x0; tz = fz-z0
+        return gg[z0][x0]*(1-tx)*(1-tz) + gg[z0][x0+1]*tx*(1-tz) + gg[z0+1][x0]*(1-tx)*tz + gg[z0+1][x0+1]*tx*tz
+    m = int(math.ceil(gh))
+    h = {}
+    for x in range(-m, m):
+        for z in range(-m, m):
+            if max(abs(x+0.5), abs(z+0.5)) > gh-0.5: continue      # tiles at the edge belong to the blend
+            h[(x, z)] = min(grid(x+0.5+i, z+0.5+j) for i in (-1, 0, 1) for j in (-1, 0, 1)) - MODEL_PAD
+    out = []
+    up = Vector((0, 0, 1))
+    for (x, z), t in h.items():
+        out.append(("terrain", up, [Vector((x, -z, t)), Vector((x+1, -z, t)), Vector((x+1, -z-1, t))]))
+        out.append(("terrain", up, [Vector((x, -z, t)), Vector((x+1, -z-1, t)), Vector((x, -z-1, t))]))
+        for (ox, oz) in ((1, 0), (0, 1)):
+            u = h.get((x+ox, z+oz))
+            if u is None or abs(u-t) < 1e-6: continue
+            lo, hi = min(t, u), max(t, u)
+            if ox: a, b = Vector((x+1, -z, 0)), Vector((x+1, -z-1, 0)); nn = Vector((1 if t > u else -1, 0, 0))
+            else:  a, b = Vector((x, -z-1, 0)), Vector((x+1, -z-1, 0)); nn = Vector((0, -1 if t > u else 1, 0))
+            q = [a+up*lo, b+up*lo, b+up*hi, a+up*hi]
+            out.append(("terrain", nn, [q[0], q[1], q[2]])); out.append(("terrain", nn, [q[0], q[2], q[3]]))
+    return out
+
 def check(path):
     bpy.ops.wm.open_mainfile(filepath=path)
     tris = []
@@ -67,6 +129,7 @@ def check(path):
             n.normalize()
             if n.z < -0.3: continue
             tris.append((o.name, n, vs))
+    tris += terrain(os.path.splitext(os.path.basename(path))[0])
     verts, faces = [], []
     for _, _, vs in tris:
         b = len(verts); verts += [tuple(v) for v in vs]; faces.append((b, b+1, b+2))

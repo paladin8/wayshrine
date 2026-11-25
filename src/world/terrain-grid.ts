@@ -53,6 +53,26 @@ function isOpenWater(region: Region, model: LandmarkGround, dx: number, dz: numb
 /** Terrain under a landmark's model sits this far below the model's own ground, so the model is never z-fought. */
 const MODEL_PAD = 0.6;
 
+/**
+ * Where the terrain is the model's visible ground (terrainSurface), it follows the model's surface this far below it,
+ * so the model's own terraces, decks and paving laid at that surface are never coplanar with it (z-fighting).
+ */
+export const SURFACE_PAD = 0.01;
+
+/**
+ * Height of a terrain tile sunk under a model's own ground: the lowest model surface on the tile and its eight
+ * neighbours, less MODEL_PAD. Sunk tiles are flat, so where the model's ground steps the terrain steps too, in a cliff
+ * on a tile line; taking the lowest neighbour keeps that cliff below the model's ground on both sides, where it would
+ * otherwise rise into a model wall standing on the same line and z-fight with it (Fushimi Inari's gate platform).
+ */
+function sunkUnder(model: LandmarkGround, dx: number, dz: number): number {
+  let low = Infinity;
+  for (let i = -1; i <= 1; i++) {
+    for (let j = -1; j <= 1; j++) low = Math.min(low, surfaceHeight(model, dx + i, dz + j));
+  }
+  return low - MODEL_PAD;
+}
+
 export interface Tile {
   readonly biome: Biome;
   /** Height of the tile's top surface. */
@@ -204,10 +224,10 @@ export function createTerrain(world: World): Terrain {
       } else if (model?.terrainSurface) {
         // The terrain is the model's visible ground: it follows the sidecar's surface, down into the model's
         // channels, moats and pools and up its hills, so it never covers what the model sinks below the plateau.
-        height = plateauBase(region) + surfaceHeight(model, dx, dz);
+        height = plateauBase(region) + surfaceHeight(model, dx, dz) - SURFACE_PAD;
         skirt = true;
       } else {
-        height = model ? plateauBase(region) + surfaceHeight(model, dx, dz) - MODEL_PAD : PLATEAU_HEIGHT[biome];
+        height = model ? plateauBase(region) + sunkUnder(model, dx, dz) : PLATEAU_HEIGHT[biome];
       }
     } else if (region.landmark && away < LANDMARK_BLEND) {
       // Ease from the footprint's edge height to natural ground, so it never stands as a wall.
@@ -307,7 +327,7 @@ export function createTerrain(world: World): Terrain {
     const region = world.regionAt(cx, cz);
     const model = region.landmark ? groundOf(region.landmark.id) : undefined;
     if (model?.terrainSurface && plateauDistance(region, cx, cz) < 0) {
-      return plateauBase(region) + surfaceHeight(model, cx - region.shrine.x, cz - region.shrine.z);
+      return plateauBase(region) + surfaceHeight(model, cx - region.shrine.x, cz - region.shrine.z) - SURFACE_PAD;
     }
     let sum = 0;
     let n = 0;

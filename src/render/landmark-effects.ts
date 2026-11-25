@@ -7,20 +7,40 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
  *
  * - steam and smoke (`steam`, `plume`, `smoke`): each blob drifts along its cluster's own direction, swelling and
  *   thinning, and is replaced from below by the next, so the cluster reads as a rising column;
- * - waterfalls (`FALLS`): tall thin pieces of foam are the streaks of the fall and slide down it, flat ones (the
- *   lip of a cascade) glint in place, and the low pieces at its foot boil up as spray;
+ * - waterfalls (`FALLS`): anchored sheets carry animated streaks down into the pool, where the foam churns in place;
  * - whirlpools (`VORTEX`): each dark eye turns together with the white arms around it.
  *
  * Dormant places stay still and hidden or unmoving, so the motion arrives with the restoration.
  */
 const PUFF_MATERIAL = /(?:^|_)(steam|plume|smoke)$/;
 
-/** Waterfall landmarks: the material that holds the fall's white pieces, and whether only pieces at ground level count. */
-const FALLS: Readonly<Record<string, { readonly material: string; readonly baseOnly?: boolean }>> = {
-  "kegon-falls": { material: "foam" },
-  takachiho: { material: "foam" },
-  "shiratani-unsuikyo": { material: "foam" },
-  "nachi-falls": { material: "white", baseOnly: true },
+interface FallStyle {
+  readonly materials: readonly string[];
+  readonly across: readonly [number, number];
+  readonly speed: number;
+  /** Lighten the inner water sheet where it otherwise reads as a dark stripe. */
+  readonly paleCore?: number;
+  /** Where the fall shares a material with scenery, select just its own pieces. */
+  readonly contains?: (centre: THREE.Vector3) => boolean;
+}
+
+const DIAGONAL_ACROSS = [Math.SQRT1_2, -Math.SQRT1_2] as const;
+const FALLS: Readonly<Record<string, FallStyle>> = {
+  "kegon-falls": { materials: ["foam"], across: DIAGONAL_ACROSS, speed: 3.7 },
+  takachiho: {
+    materials: ["foam"], across: DIAGONAL_ACROSS, speed: 2.8,
+    contains: ({ x, z }) => x < -1.5 && z > 0 && z < 2,
+  },
+  "shiratani-unsuikyo": { materials: ["foam"], across: [1, 0], speed: 2.4 },
+  "nachi-falls": {
+    materials: ["white", "water"], across: DIAGONAL_ACROSS, speed: 4.1, paleCore: 0.7,
+    contains: ({ x, z }) => x > -3 && x < 0 && z < -5,
+  },
+  "ginzan-onsen": {
+    materials: ["snow"], across: [1, 0], speed: 2.5,
+    contains: ({ x, z }) => Math.abs(x) < 0.6 && z > -7.6 && z < -6.6,
+  },
+  "kiyomizu-dera": { materials: ["water"], across: [1, 0], speed: 1.8 },
 };
 const VORTEX = { id: "naruto", eye: "deep", arms: "foam" } as const;
 
@@ -83,20 +103,15 @@ export function splitComponents(geometry: THREE.BufferGeometry): THREE.BufferGeo
 }
 
 
-type Mode = "rise" | "flow" | "spray";
-
 interface Puff {
   readonly mesh: THREE.Mesh;
   readonly material: THREE.MeshStandardMaterial;
   readonly home: THREE.Vector3;
   readonly phase: number;
   readonly period: number;
-  /** Height of a streak, which is how far it slides. */
-  readonly height: number;
 }
 
 interface Cluster {
-  readonly mode: Mode;
   readonly puffs: Puff[];
   readonly dir: THREE.Vector3;
   readonly travel: number;
@@ -154,8 +169,8 @@ function boxOf(geometry: THREE.BufferGeometry): THREE.Box3 {
   return geometry.boundingBox!;
 }
 
-/** The pieces nobody animates go back into one plain mesh with the original material. */
-function addStill(holder: THREE.Object3D, pieces: THREE.BufferGeometry[], material: THREE.Material): void {
+/** Reassemble the pieces that share a material in one draw. */
+function addPieces(holder: THREE.Object3D, pieces: THREE.BufferGeometry[], material: THREE.Material): void {
   if (!pieces.length) return;
   const merged = mergeGeometries(pieces);
   if (!merged) return;
@@ -163,6 +178,57 @@ function addStill(holder: THREE.Object3D, pieces: THREE.BufferGeometry[], materi
   mesh.castShadow = false;
   mesh.receiveShadow = false;
   holder.add(mesh);
+}
+
+/** Move the shading inside the mesh, keeping the lip, pool and silhouette fixed. */
+function waterfallMaterial(
+  base: THREE.MeshStandardMaterial,
+  style: FallStyle,
+  falling: boolean,
+  time: THREE.IUniform<number>,
+  life: THREE.IUniform<number>,
+): THREE.MeshStandardMaterial {
+  const material = base.clone();
+  const axis = new THREE.Vector2(...style.across);
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uFallTime = time;
+    shader.uniforms.uFallLife = life;
+    shader.uniforms.uFallAcross = { value: axis };
+    shader.uniforms.uFallSpeed = { value: style.speed };
+    shader.uniforms.uFallPaleCore = { value: base.name === "water" ? style.paleCore ?? 0 : 0 };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vFallPoint;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvFallPoint = position;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", `#include <common>
+varying vec3 vFallPoint;
+uniform float uFallTime;
+uniform float uFallLife;
+uniform vec2 uFallAcross;
+uniform float uFallSpeed;
+uniform float uFallPaleCore;`)
+      .replace("#include <color_fragment>", `#include <color_fragment>
+${falling ? `
+float lane = dot(vFallPoint.xz, uFallAcross) * 9.0;
+// Keeping this phase constant moves it down the sheet as time increases.
+float downstream = vFallPoint.y + uFallTime * uFallSpeed;
+float ribbon = sin(lane * 2.25 + 0.65 * sin(downstream * 3.6 + lane));
+float pulse = sin(downstream * 6.3 + lane * 1.6) * sin(downstream * 2.7 - lane * 0.87);
+float detail = 1.0 - smoothstep(0.25, 1.4, fwidth(lane));
+float waterLight = 0.5 + 0.32 * ribbon * detail + 0.18 * pulse;
+vec3 waterTint = mix(vec3(0.61, 0.76, 0.88), vec3(1.13, 1.16, 1.17), waterLight);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.58, 0.72, 0.79), uFallPaleCore * uFallLife);
+` : `
+vec2 current = vFallPoint.xz;
+float ripple = sin(dot(current, vec2(14.0, 8.0)) - uFallTime * 6.6);
+float eddy = sin(dot(current, vec2(-7.0, 12.0)) + uFallTime * 4.7);
+float waterLight = 0.5 + 0.32 * ripple + 0.18 * eddy;
+vec3 waterTint = mix(vec3(0.76, 0.87, 0.94), vec3(1.12, 1.14, 1.15), waterLight);
+`}
+diffuseColor.rgb *= mix(vec3(1.0), waterTint, uFallLife);`);
+  };
+  material.customProgramCacheKey = () => falling ? "landmark-falling-water" : "landmark-water-foam";
+  return material;
 }
 
 /**
@@ -184,7 +250,6 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
   const addPuff = (holder: THREE.Object3D, geometry: THREE.BufferGeometry, base: THREE.MeshStandardMaterial, period: number): Puff => {
     const box = boxOf(geometry);
     const centre = box.getCenter(new THREE.Vector3());
-    const height = box.max.y - box.min.y;
     geometry.translate(-centre.x, -centre.y, -centre.z);
     const material = fadingMaterial(base);
     const mesh = new THREE.Mesh(geometry, material);
@@ -193,7 +258,7 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
     mesh.receiveShadow = false;
     holder.add(mesh);
     const n = count++;
-    return { mesh, material, home: centre, phase: hash(n + 1), period: period * (0.8 + 0.4 * hash(n + 40)), height };
+    return { mesh, material, home: centre, phase: hash(n + 1), period: period * (0.8 + 0.4 * hash(n + 40)) };
   };
 
   // Steam and smoke.
@@ -215,29 +280,38 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
       if (line.length() > 0.3) dir.copy(line.normalize());
       travel = Math.min(3.2, Math.max(1.2, highest.y - lowest.y));
     }
-    clusters.push({ mode: "rise", puffs: members, dir, travel, alpha: smoke ? 0.85 : 0.8 });
+    clusters.push({ puffs: members, dir, travel, alpha: smoke ? 0.85 : 0.8 });
   }
 
-  // A waterfall: tall thin pieces are the streaks of the fall, low ones at its foot are the spray.
+  // Only the falling water and its foam take the shader, even if their material is shared.
   const fall = FALLS[id];
-  for (const source of fall ? meshes.filter((m) => named(m) === fall.material) : []) {
-    const base = source.material as THREE.MeshStandardMaterial;
-    const holder = holderFor(source);
-    const streaks: Puff[] = [];
-    const spray: Puff[] = [];
-    const still: THREE.BufferGeometry[] = [];
-    for (const g of splitComponents(source.geometry)) {
-      const box = boxOf(g);
-      const size = box.getSize(new THREE.Vector3());
-      const width = Math.max(size.x, size.z);
-      if (fall!.baseOnly && box.min.y > 0.7) still.push(g);
-      else if (size.y < 0.3 || (size.y >= 1 && size.y > 2 * width)) streaks.push(addPuff(holder, g, base, 2.2));
-      else spray.push(addPuff(holder, g, base, 2.4));
+  const fallTime = { value: 0 };
+  const fallLife = { value: 0 };
+  let hasWaterfall = false;
+  if (fall) {
+    for (const source of meshes.filter((m) => fall.materials.includes(named(m)))) {
+      const base = source.material as THREE.MeshStandardMaterial;
+      const streaks: THREE.BufferGeometry[] = [];
+      const foam: THREE.BufferGeometry[] = [];
+      const still: THREE.BufferGeometry[] = [];
+      for (const g of splitComponents(source.geometry)) {
+        const box = boxOf(g);
+        if (fall.contains && !fall.contains(box.getCenter(new THREE.Vector3()))) {
+          still.push(g);
+          continue;
+        }
+        const size = box.getSize(new THREE.Vector3());
+        const falling = size.y >= 1 && size.y > 2 * Math.max(size.x, size.z);
+        (falling ? streaks : foam).push(g);
+      }
+      if (!streaks.length && !foam.length) continue;
+      hasWaterfall = true;
+      const holder = holderFor(source);
+      addPieces(holder, still, base);
+      if (streaks.length) addPieces(holder, streaks, waterfallMaterial(base, fall, true, fallTime, fallLife));
+      if (foam.length) addPieces(holder, foam, waterfallMaterial(base, fall, false, fallTime, fallLife));
+      swap(source, holder);
     }
-    addStill(holder, still, base);
-    swap(source, holder);
-    if (streaks.length) clusters.push({ mode: "flow", puffs: streaks, dir: new THREE.Vector3(0, 1, 0), travel: 0, alpha: 1 });
-    if (spray.length) clusters.push({ mode: "spray", puffs: spray, dir: new THREE.Vector3(0, 1, 0), travel: 0.5, alpha: 0.9 });
   }
 
   // Whirlpools: each dark eye turns together with the arms of foam around it.
@@ -291,7 +365,7 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
     }
   }
 
-  if (!clusters.length && !whirls.length) return null;
+  if (!clusters.length && !whirls.length && !hasWaterfall) return null;
   const at = new THREE.Vector3();
 
   let last = 0;
@@ -299,40 +373,23 @@ export function extractPuffs(root: THREE.Object3D, id = ""): Puffs | null {
     update(time, life) {
       const dt = Math.max(0, Math.min(0.25, time - last));
       last = time;
+      fallTime.value = time;
+      fallLife.value = life;
       for (const whirl of whirls) whirl.pivot.rotation.y += dt * whirl.rate * life;
       for (const { object, baseY } of riders) {
         object.getWorldPosition(at);
         object.position.y = baseY + life * (seaSwell(time, at.x, at.z) + WHIRL_CLEARANCE);
       }
-      for (const { mode, puffs, dir, travel, alpha } of clusters) {
+      for (const { puffs, dir, travel, alpha } of clusters) {
         for (const puff of puffs) {
-          const alive = life > 0.01;
-          if (mode === "rise") puff.mesh.visible = alive;
-          if (!alive) {
-            // Dormant water and foam keep their modelled shape.
-            if (mode !== "rise") {
-              puff.mesh.position.copy(puff.home);
-              puff.mesh.scale.setScalar(1);
-              puff.material.opacity = 1;
-            }
-            continue;
-          }
+          puff.mesh.visible = life > 0.01;
+          if (!puff.mesh.visible) continue;
           const u = (time / puff.period + puff.phase) % 1;
-          if (mode === "flow") {
-            puff.mesh.position.copy(puff.home);
-            puff.mesh.position.y += (0.5 - u) * 0.4 * puff.height * life;
-            puff.material.opacity = 1 + (alpha * (0.4 + 0.6 * Math.sin(Math.PI * u) ** 0.7) - 1) * life;
-          } else if (mode === "spray") {
-            puff.mesh.position.copy(puff.home).addScaledVector(dir, (u - 0.2) * travel * life);
-            puff.mesh.scale.setScalar(1 + (0.8 + 0.4 * u - 1) * life);
-            puff.material.opacity = 1 + (alpha * Math.sin(Math.PI * u) ** 0.5 - 1) * life;
-          } else {
-            const fade = Math.sin(Math.PI * u) ** 0.8;
-            puff.mesh.position.copy(puff.home).addScaledVector(dir, (u - 0.5) * travel);
-            puff.mesh.position.x += Math.sin(time * 0.6 + puff.phase * 6.28) * 0.07;
-            puff.mesh.scale.setScalar((0.6 + 0.8 * u) * (0.5 + 0.5 * life));
-            puff.material.opacity = alpha * fade * life;
-          }
+          const fade = Math.sin(Math.PI * u) ** 0.8;
+          puff.mesh.position.copy(puff.home).addScaledVector(dir, (u - 0.5) * travel);
+          puff.mesh.position.x += Math.sin(time * 0.6 + puff.phase * 6.28) * 0.07;
+          puff.mesh.scale.setScalar((0.6 + 0.8 * u) * (0.5 + 0.5 * life));
+          puff.material.opacity = alpha * fade * life;
         }
       }
     },

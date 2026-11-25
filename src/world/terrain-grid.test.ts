@@ -3,7 +3,7 @@ import { ordinaryRegionNearLandmark } from "../test-fixtures";
 import { createWorld } from "./world";
 import { LANDMARK_BLEND, footprintHalf } from "./landmarks";
 import { groundHeight, groundOf, surfaceHeight } from "./landmark-ground";
-import { CHUNK_SIZE, PLATEAU_RADIUS, createTerrain, landmarkWaterLevel, plateauBase, plateauDistance } from "./terrain-grid";
+import { CHUNK_SIZE, PLATEAU_RADIUS, SURFACE_PAD, createTerrain, landmarkWaterLevel, plateauBase, plateauDistance } from "./terrain-grid";
 
 describe("terrain", () => {
   it("is deterministic and independent of sampling order", () => {
@@ -125,7 +125,7 @@ describe("landmark terrain surface", () => {
       for (let cz = Math.ceil(site.z - reach); cz <= site.z + reach; cz++) {
         for (let cx = Math.ceil(site.x - reach); cx <= site.x + reach; cx++) {
           if (terrain.world.regionAt(cx, cz) !== region) continue;
-          const want = plateauBase(region) + surfaceHeight(model, cx - site.x, cz - site.z);
+          const want = plateauBase(region) + surfaceHeight(model, cx - site.x, cz - site.z) - SURFACE_PAD;
           // Every tile meeting at the corner shares its height, so the surface has no cracks.
           for (const [tx, tz, k] of [[cx, cz, 0], [cx - 1, cz, 1], [cx, cz - 1, 2], [cx - 1, cz - 1, 3]] as const) {
             expect(terrain.corners(tx, tz)[k], `${region.landmark!.id} corner ${cx - site.x},${cz - site.z}`).toBeCloseTo(want, 5);

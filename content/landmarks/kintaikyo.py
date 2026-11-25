@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/kintaikyo.glb"
 BLEND=ROOT+"/content/landmarks/kintaikyo.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"wood":"6b4e36","deck":"8a6a4a","stonewall":"a39e94","water":"4f9aa0","gravel":"cfc9bb","stone":"8a857c","forest":"3f6a3a","white":"f0ede6","tile":"4e5256","blossom":"f0c4d4","leaf":"4f7a45","bark":"4e3a30"}
+PAL={"wood":"6b4e36","deck":"8a6a4a","stonewall":"a39e94","water":"479ea3","gravel":"cfc9bb","grass":"6f8f4f","forest":"3f6a3a","white":"f0ede6","tile":"4e5256","blossom":"f0c4d4","leaf":"4f7a45","bark":"4e3a30"}
 def lin(h):
     o=[]
     for i in (0,2,4):
@@ -115,7 +115,6 @@ EXTRA_SOLIDS=[]; NOSOLID={"leaf","blossom","pine"}
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 FH=11.2   # footprint half-width (the sidecar's half): the middle size, the five arches across the river, the castle hill
-TERRAIN_SURFACE=True; EDGE_LEVEL=0.0
 S2=math.sqrt(0.5)
 def to_xy(u,v): return (S2*(u+v),S2*(v-u))     # u toward the camera, v screen-right
 def to_uv(x,y): return (S2*(x-y),S2*(x+y))
@@ -129,40 +128,59 @@ def tube(mat,pts,rs,n=6):
         rings.append([tuple(Vector(p)+rs[k]*(math.cos(2*math.pi*i/n)*u+math.sin(2*math.pi*i/n)*w)) for i in range(n)])
     solid(rings,mat)
 
-# ---- the Nishiki river runs toward the camera between broad gravel beds; at low water it sinks into the gravel
-# before either edge, so it stays inside the footprint. Broad gravel banks, edged irregularly, fall away to the grass
-WZ=-0.2; RIV=-0.5; GRV=-0.32; GM=-0.25    # GM: the gravel's drawn surface, just above the terrain beneath it
-def rw(u): return 3.6*smooth(7.2,4.6,abs(u-0.6))+0.2      # half-width of the flowing water
-def in_water(u,v,m=0.0): return abs(v-0.25*math.sin(0.3*u))<rw(u)-m and -6.6<u<7.8
-BC=(1.2,0.0); BA,BB=7.8,7.3                          # the gravel bed: a rounded, wobbling squircle in (u,v)
-def bwob(t): return 1+0.05*math.sin(3*t+0.7)+0.04*math.sin(7*t+2.0)
-def bed_f(u,v):
-    du,dv=(u-BC[0])/BA,(v-BC[1])/BB; t=math.atan2(dv,du)
-    return (du**4+dv**4)**0.25/bwob(t)
-def in_bed(u,v): return bed_f(u,v)<1.0
-def G(u,v):
-    if in_water(u,v): return RIV
-    if in_bed(u,v): return GRV
-    return 0.0
-us=[-6.6+14.4*k/24 for k in range(25)]
-for ua,ub in zip(us,us[1:]):
-    wa,wb=rw(ua),rw(ub)
-    if wa<0.25 and wb<0.25: continue
-    ca,cb=0.25*math.sin(0.3*ua),0.25*math.sin(0.3*ub)
-    q=[to_xy(ua,ca-wa),to_xy(ua,ca+wa),to_xy(ub,cb+wb),to_xy(ub,cb-wb)]
-    emit([(*p,WZ) for p in q],[[0,1,2,3]],["water"])
-NB=48; ring=[]
-for k in range(NB):
-    t=2*math.pi*k/NB; c,s_=math.cos(t),math.sin(t)
-    r=bwob(t)/((c**4+s_**4)**0.25)*1.02
-    ring.append(to_xy(BC[0]+BA*r*c,BC[1]+BB*r*s_))
-cx,cy=to_xy(*BC)
-emit([(*p,GM) for p in ring]+[(cx,cy,GM)],[[k,(k+1)%NB,NB] for k in range(NB)],["gravel"]*NB)
-for k in range(36):
-    u,v=rng.uniform(-6.4,8.8),rng.uniform(-7.0,7.0)
-    if not in_bed(u,v): continue
-    if in_water(u,v,-0.1): continue
-    x,y=to_xy(u,v); ico("stone",x,y,GM,rng.uniform(0.12,0.25),rng.uniform(0.1,0.2),0.08)
+# ---- the Nishiki river and its banks, an island in the region's water: the river is the region's own open water,
+# running in from the sea past the bridge and ending below the castle hill; broad gravel beds shelve into it, and
+# the grass banks round off into a pebble shore all round, so the footprint has no square edge (the boat can sail
+# up the river to the bridge)
+LV=-0.6; FLOOR=LV-0.5; TERRAIN_SURFACE=False; EDGE_LEVEL=LV
+def water_disc(x,y): return False     # the river is the region's own open water
+def rc(u): return 0.25*math.sin(0.3*u)                              # the river's wandering centreline (v)
+def rw(u): return 4.2*smooth(-4.8,-3.2,u)                          # half-width of the flowing water: ends below the hill
+def gw(u): return 1.4*smooth(-6.6,-4.6,u)                          # width of the gravel beds either side
+def isl_m(x,y):                                                    # the island: a wobbling rounded square, 1 at the shore
+    th=math.atan2(y,x); r=1+0.04*math.sin(3*th+0.7)+0.025*math.sin(5*th+2.1)+0.015*math.sin(9*th+0.4)
+    return ((abs(x)/10.0)**2.5+(abs(y)/10.0)**2.5)**0.4/r
+HC=(-7.2,0.4)                                                      # the castle hill, behind the river's head
+def hill(u,v):
+    d=math.hypot((u-HC[0])/1.0,(v-HC[1])/1.35); return 3.4*max(0.0,1-d/2.6)**1.2
+def zone(x,y):
+    """(height of the drawn ground, material): the river bed, the gravel beds, the grass, the pebble shore."""
+    u,v=to_uv(x,y); d=abs(v-rc(u))-rw(u); g=gw(u)
+    if d<0: zr=LV-0.12-0.4*smooth(0.0,-1.2,d)                      # under water, deepening from the edge
+    elif d<g: zr=(LV+0.05)+(-0.3-(LV+0.05))*(d/g)**0.7            # gravel shelving up from the waterline
+    else: zr=-0.3*min(1.0,g/1.0)*(1-smooth(g,g+0.4,d))            # a low step up to the grass
+    m=isl_m(x,y)
+    zi=0.0 if m<0.9 else (LV+0.06)*smooth(0.9,0.98,m) if m<0.98 else (LV+0.06)+(FLOOR-(LV+0.06))*smooth(0.98,1.06,m)
+    z=min(zr,zi)
+    mat="grass" if (d>=g+0.15 and m<0.93) else "gravel"
+    return z,mat
+def H(x,y):
+    u,v=to_uv(x,y); z,_=zone(x,y)
+    return z+hill(u,v)*smooth(1.02,0.85,isl_m(x,y))
+GS=0.8; NG=int(round(2*FH/GS))
+gv={}
+for j in range(NG+1):
+    for i in range(NG+1):
+        x=-FH+i*GS; y=-FH+j*GS
+        if 0<i<NG and 0<j<NG: x+=rng.uniform(-0.2,0.2); y+=rng.uniform(-0.2,0.2)
+        gv[(i,j)]=(x,y,zone(x,y)[0])
+gverts=[]; gid={}
+for k,v in gv.items(): gid[k]=len(gverts); gverts.append(v)
+gf=[]; gm=[]
+for j in range(NG):
+    for i in range(NG):
+        a,b,c,d4=(i,j),(i+1,j),(i+1,j+1),(i,j+1)
+        for t3 in ([(a,b,c),(a,c,d4)] if (i+j)%2==0 else [(a,b,d4),(b,c,d4)]):
+            P3=[gv[k] for k in t3]
+            if max(p[2] for p in P3)<LV-0.05: continue
+            gf.append([gid[k] for k in t3]); gm.append(zone(sum(p[0] for p in P3)/3,sum(p[1] for p in P3)/3)[1])
+emit(gverts,gf,gm,orient=False)
+emit([(-FH,-FH,LV-0.04),(FH,-FH,LV-0.04),(FH,FH,LV-0.04),(-FH,FH,LV-0.04)],[[0,1,2,3]],["water"],orient=False)   # fills shore tiles the game keeps as land
+for k in range(40):
+    u,v=rng.uniform(-5.0,9.0),rng.uniform(-6.6,6.6)
+    x,y=to_xy(u,v); z,mt=zone(x,y)
+    if mt!="gravel" or z<LV+0.04 or isl_m(x,y)>0.95: continue
+    ico("stonewall",x,y,z,rng.uniform(0.12,0.25),rng.uniform(0.1,0.2),0.08)
 
 # ---- Kintaikyo: five timber arches, three great ones on tall stone piers and a lower one at each end on posts;
 # the deck climbs and falls over each arch, railed
@@ -178,8 +196,8 @@ def P(u,v,z): x,y=to_xy(u,v); return (x,y,z)
 for v in PIERS:                                         # the piers: stone, pointed upstream and down
     x,y=to_xy(0,v); T=dict(cx=x,cy=y,rot=-math.pi/4)     # long axis along the stream (u), pointed up and down it
     def pr(k,z): return [(k*a,k*b,z) for a,b in ((-1.6,0.0),(-1.0,-0.6),(1.0,-0.6),(1.6,0.0),(1.0,0.6),(-1.0,0.6))]
-    solid([pr(1.0,RIV-0.1),pr(0.78,0.92)],"stonewall",T)                 # cutwaters pointed up and downstream
-    solid([pr(0.82,0.92),pr(0.82,1.05)],"stone",T)                       # the coping course
+    solid([pr(1.0,FLOOR-0.1),pr(0.78,0.92)],"stonewall",T)                 # cutwaters pointed up and downstream
+    solid([pr(0.82,0.92),pr(0.82,1.05)],"tile",T)                       # the coping course
 N=10
 for sp in range(5):
     v0,v1=([-VE]+PIERS+[VE])[sp],([-VE]+PIERS+[VE])[sp+1]
@@ -203,27 +221,17 @@ for sp in range(5):
     if sp in (0,4):                                      # the end spans stand on timber posts
         for v in vs[2:-1:3]:
             for su in (-0.4,0.4):
-                x,y=to_xy(su,v); box("wood",x,y,GRV-0.05,deck(v)-0.3,0.07,0.07)
+                x,y=to_xy(su,v); box("wood",x,y,H(x,y)-0.08,deck(v)-0.3,0.07,0.07)
     else:
         for v in vs[1:-1:2]:                            # the copper-capped struts in the arch's spandrels
             for su in (-0.45,0.45):
                 x,y=to_xy(su,v); box("wood",x,y,deck(v)-0.25-0.35*(1-((v-(v0+v1)/2)/(v1-v0)*2)**2),deck(v)-0.2,0.03,0.03)
 
-# ---- the castle hill behind the far bank: forested, Iwakuni's white keep on its crown
-HC=(-9.4,0.4)
-def hill(u,v):
-    d=math.hypot((u-HC[0])/1.0,(v-HC[1])/1.35); return 3.4*max(0.0,1-d/2.6)**1.2
 def ground_at(x,y):
     u,v=to_uv(x,y)
-    if on_bridge(u,v): return max(deck(v),G(u,v))
-    return G(u,v)+hill(u,v)
-def terrain_at(x,y):
-    # the game samples the terrain on 1-unit tiles: under the bed it sits well below the gravel, so it never
-    # rides up through it at the bed's edges
-    u,v=to_uv(x,y)
-    if in_bed(u,v): return min(G(u,v),-0.55)+hill(u,v)   # above the region water level (-0.6): not open water
-    return G(u,v)+hill(u,v)
-def water_disc(x,y): u,v=to_uv(x,y); return in_water(u,v,0.15) and not on_bridge(u,v)
+    if on_bridge(u,v): return max(deck(v),H(x,y))
+    return H(x,y)
+# ---- the castle hill behind the river's head: forested, Iwakuni's white keep on its crown
 hx,hy=to_xy(*HC); NA=12
 rings=[]
 for r,z in ((2.6,-0.1),(1.9,1.0),(1.15,2.2),(0.45,3.1),(0.0,3.4)):
@@ -240,12 +248,12 @@ def tree(u,v,s,m):
     x,y=to_xy(u,v); T=dict(cx=x,cy=y,s=s,rot=rng.uniform(0,6.28))
     solid([ngon(0.14,-0.3,5),ngon(0.09,1.4,5,0,0.15,0)],"bark",T)
     ico(m,0,0,1.9,1.05,1.0,0.8,T); ico(m,0.5,0.3,1.55,0.65,0.6,0.5,T)
-for u,v,s in [(-4.6,-8.3,0.9),(-2.4,-8.5,0.95),(-0.2,-8.3,0.9),(2.0,-8.5,0.9),(4.2,-8.3,0.85),(-4.6,8.3,0.9),(-2.4,8.5,0.95),(-0.2,8.3,0.9),(2.0,8.5,0.9),(4.2,8.3,0.85)]:
-    x,y=to_xy(u,v)
-    if abs(x)<FH-1.1 and abs(y)<FH-1.1: tree(u,v,s,"blossom")
-for u,v,s in [(-8.6,-4.4,1.1),(-8.0,5.0,1.1),(-6.0,8.4,1.0),(-6.4,-8.0,1.0),(6.8,-7.8,0.9),(7.2,7.0,0.9)]:
-    x,y=to_xy(u,v)
-    if abs(x)<FH-1.1 and abs(y)<FH-1.1: tree(u,v,s,"leaf")
+def on_grass(u,v):
+    x,y=to_xy(u,v); return zone(x,y)[1]=="grass" and isl_m(x,y)<0.86
+for u,v,s in [(-3.4,-7.5,0.9),(-1.4,-7.7,0.95),(0.6,-7.6,0.9),(2.6,-7.3,0.85),(-3.4,7.5,0.9),(-1.4,7.7,0.95),(0.6,7.6,0.9),(2.6,7.3,0.85)]:
+    if on_grass(u,v): tree(u,v,s,"blossom")
+for u,v,s in [(-6.6,-4.6,1.1),(-6.4,4.8,1.1),(-4.2,-6.6,1.0),(-4.0,6.8,1.0),(4.8,-6.2,0.9),(5.0,6.0,0.9)]:
+    if on_grass(u,v): tree(u,v,s,"leaf")
 INTERACT=to_xy(0.0,VE+1.1)   # at the bridge's near-bank foot
 STAND=to_xy(1.4,VE+1.6)
 

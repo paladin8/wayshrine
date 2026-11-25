@@ -24,14 +24,14 @@ if os.environ.get("FI_GROUND"):
     gj=json.load(open(side)) if os.path.exists(side) else None
     if gj and gj.get("terrainSurface"):
         # follow the sidecar's surface as the game's terrain does: 1-unit tiles whose corners sample the grid
-        # bilinearly (terrain-grid.ts cornerOf), so sunken ground (gorges, moats) and hills show as in game
+        # bilinearly (terrain-grid.ts cornerOf) 0.01 below it (SURFACE_PAD), so sunken ground (gorges, moats) and hills show as in game
         gh,gs,gg=gj["half"],gj["step"],gj.get("terrain") or gj["ground"]; n=len(gg)
         def surf(dx,dz):
             fx=min(n-1,max(0.0,(dx+gh)/gs)); fz=min(n-1,max(0.0,(dz+gh)/gs))
             x0=min(n-2,int(fx)); z0=min(n-2,int(fz)); tx=fx-x0; tz=fz-z0
             return gg[z0][x0]*(1-tx)*(1-tz)+gg[z0][x0+1]*tx*(1-tz)+gg[z0+1][x0]*(1-tx)*tz+gg[z0+1][x0+1]*tx*tz
         m=int(math.ceil(gh))+1; k=2*m+1
-        gm.from_pydata([(ix-m,-(iz-m),surf(ix-m,iz-m) if max(abs(ix-m),abs(iz-m))<gh else 0.0) for iz in range(k) for ix in range(k)],[],
+        gm.from_pydata([(ix-m,-(iz-m),surf(ix-m,iz-m)-0.01 if max(abs(ix-m),abs(iz-m))<gh else 0.0) for iz in range(k) for ix in range(k)],[],
                        [[iz*k+ix,(iz+1)*k+ix,(iz+1)*k+ix+1,iz*k+ix+1] for iz in range(k-1) for ix in range(k-1)])
     else:
         gm.from_pydata([(-h,-h,-0.01),(h,-h,-0.01),(h,h,-0.01),(-h,h,-0.01)],[],[[0,1,2,3]])

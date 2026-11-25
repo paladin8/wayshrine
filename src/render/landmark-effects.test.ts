@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { extractPuffs, splitComponents } from "./landmark-effects";
 
 function blob(x: number): THREE.BufferGeometry {
@@ -58,12 +60,12 @@ describe("landmark steam", () => {
     return found;
   };
 
-  it("slides the streaks of a waterfall down and lets spray boil, only for waterfall landmarks", () => {
+  it("animates the water inside fixed sheets and foam, only after restoration", () => {
     const build = (): THREE.Group => {
       const root = new THREE.Group();
-      const streak = new THREE.BoxGeometry(0.2, 3, 0.2).translate(0, 2, 0);
+      const sheet = new THREE.BoxGeometry(0.2, 3, 0.2).translate(0, 2, 0);
       const splash = new THREE.BoxGeometry(1, 0.5, 1).translate(3, 0.25, 0);
-      root.add(new THREE.Mesh(merged(streak, splash), new THREE.MeshStandardMaterial({ name: "foam" })));
+      root.add(new THREE.Mesh(merged(sheet, splash), new THREE.MeshStandardMaterial({ name: "foam" })));
       return root;
     };
     expect(extractPuffs(build(), "somewhere-else")).toBeNull();
@@ -71,31 +73,40 @@ describe("landmark steam", () => {
     const root = build();
     const falls = extractPuffs(root, "kegon-falls")!;
     const pieces = effectMeshes(root, "foam");
-    expect(pieces).toHaveLength(2);
-    const streak = pieces.find((m) => m.position.x === 0)!;
-    const splash = pieces.find((m) => m.position.x === 3)!;
-
-    // Dormant: they sit where they were modelled.
+    const material = (m: THREE.Mesh) => m.material as THREE.MeshStandardMaterial;
+    expect(pieces.map((m) => material(m).customProgramCacheKey()))
+      .toEqual(["landmark-falling-water", "landmark-water-foam"]);
+    const shader = {
+      ...THREE.ShaderLib.standard,
+      uniforms: {},
+    } as Parameters<THREE.Material["onBeforeCompile"]>[0];
+    material(pieces[0]!).onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+    const before = new THREE.Box3().setFromObject(root, true);
     falls.update(1, 0);
-    expect(streak.position.y).toBeCloseTo(2, 5);
-    expect((streak.material as THREE.Material).opacity).toBe(1);
-    // Restored: the streak slides, the splash rises and swells.
-    falls.update(2, 1);
-    const y0 = streak.position.y, s0 = splash.position.y;
+    expect(shader.uniforms.uFallLife!.value).toBe(0);
     falls.update(2.5, 1);
-    expect(streak.position.y).not.toBeCloseTo(y0, 3);
-    expect(splash.position.y).not.toBeCloseTo(s0, 3);
+    expect(shader.uniforms.uFallTime!.value).toBe(2.5);
+    expect(shader.uniforms.uFallLife!.value).toBe(1);
+    expect(new THREE.Box3().setFromObject(root, true)).toEqual(before);
+    expect(pieces.every((m) => !material(m).transparent)).toBe(true);
   });
 
-  it("keeps the other pieces of a fall's material still", () => {
-    const root = new THREE.Group();
-    const fall = new THREE.BoxGeometry(1, 8, 1).translate(0, 4, 0);
-    const wall = new THREE.BoxGeometry(0.4, 0.5, 0.2).translate(4, 3, 0);
-    root.add(new THREE.Mesh(merged(fall, wall), new THREE.MeshStandardMaterial({ name: "white" })));
-    extractPuffs(root, "nachi-falls");
-    const meshes = effectMeshes(root, "white");
-    expect(meshes).toHaveLength(2);
-    expect(meshes.some((m) => m.geometry.getAttribute("position").count === 36 && m.position.lengthSq() === 0)).toBe(true);
+  it.each([
+    ["nachi-falls", 2, 2], ["kegon-falls", 9, 4], ["takachiho", 3, 1],
+    ["shiratani-unsuikyo", 1, 3], ["ginzan-onsen", 1, 1], ["kiyomizu-dera", 3, 1],
+  ] as const)("animates exactly the waterfall pieces in %s", async (id, falling, foam) => {
+    const bytes = await readFile(new URL(`../../public/models/landmarks/${id}.glb`, import.meta.url));
+    const model = await new GLTFLoader().parseAsync(Uint8Array.from(bytes).buffer, "");
+    expect(extractPuffs(model.scene, id)).not.toBeNull();
+    const counts = new Map<string, number>();
+    model.scene.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const key = (o.material as THREE.Material).customProgramCacheKey();
+      if (key !== "landmark-falling-water" && key !== "landmark-water-foam") return;
+      counts.set(key, (counts.get(key) ?? 0) + splitComponents(o.geometry).length);
+    });
+    expect(counts.get("landmark-falling-water")).toBe(falling);
+    expect(counts.get("landmark-water-foam")).toBe(foam);
   });
 
   it("turns a whirlpool's eye together with the foam arms around it", () => {

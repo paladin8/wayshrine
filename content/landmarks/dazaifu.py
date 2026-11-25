@@ -128,55 +128,55 @@ def tube(mat,pts,rs,n=6):
     solid(rings,mat)
 
 # ---- Shinji-ike, the heart-shaped pond, crossed by three vermilion bridges: drum bridge, flat bridge, drum bridge
-PC=(0.0,-4.5)
+PC=(0.0,-4.7)
 def pr(a): return 1.0+0.22*abs(math.sin(a))**3 - 0.18*max(0.0,math.sin(a))**8
 def in_pond(x,y,m=0.0):
-    a=math.atan2((y-PC[1])/2.6,(x-PC[0])/4.2); r=math.hypot((x-PC[0])/4.2,(y-PC[1])/2.6); return r<pr(a)-m/3.4
-ISL=[(0.0,-5.3,0.75),(0.0,-3.7,0.75)]
-def on_island(x,y,m=0.0): return any(math.hypot((x-cx)/1.6,(y-cy)/r)<1.0+m for cx,cy,r in ISL)
-BR=[(-7.3,-5.75,"arch"),(-4.85,-4.15,"flat"),(-3.25,-1.7,"arch")]
+    a=math.atan2((y-PC[1])/3.1,(x-PC[0])/4.6); r=math.hypot((x-PC[0])/4.6,(y-PC[1])/3.1); return r<pr(a)-m/3.4
+ISL=[(0.0,-5.8,0.55),(0.0,-3.5,0.55)]
+def on_island(x,y,m=0.0): return any(math.hypot((x-cx)/1.4,(y-cy)/r)<1.0+m for cx,cy,r in ISL)
+BR=[(-8.75,-6.35,"arch"),(-5.5,-3.8,"flat"),(-2.95,-0.55,"arch")]   # the flat bridge rests a little way onto each island
+BW=0.6    # half-width: a drum bridge is long and narrow, three or four times as long as it is wide
 def bridge_z(x,y):
-    if abs(x)>0.75: return None
+    if abs(x)>BW+0.02: return None
     for y0,y1,kind in BR:
         if y0<=y<=y1:
             t=(y-y0)/(y1-y0)
-            return 0.18+(0.85*math.sin(math.pi*t)**0.8 if kind=="arch" else 0.12)
+            return 0.18+(0.95*math.sin(math.pi*t)**0.8 if kind=="arch" else 0.02+0.08*math.sin(math.pi*t))
     return None
 def water_disc(x,y): return in_pond(x,y,0.15) and not on_island(x,y,0.1) and bridge_z(x,y) is None
 NP=28
-ring=[(PC[0]+4.2*pr(2*math.pi*k/NP)*math.cos(2*math.pi*k/NP),PC[1]+2.6*pr(2*math.pi*k/NP)*math.sin(2*math.pi*k/NP)) for k in range(NP)]
+ring=[(PC[0]+4.6*pr(2*math.pi*k/NP)*math.cos(2*math.pi*k/NP),PC[1]+3.1*pr(2*math.pi*k/NP)*math.sin(2*math.pi*k/NP)) for k in range(NP)]
 emit([(x,y,0.04) for x,y in ring]+[(PC[0],PC[1],0.04)],[[k,(k+1)%NP,NP] for k in range(NP)],["water"]*NP)
 for k in range(NP):
-    a=2*math.pi*(k+0.5)/NP; x=PC[0]+(4.2*pr(a)+0.12)*math.cos(a); y=PC[1]+(2.6*pr(a)+0.12)*math.sin(a)
+    a=2*math.pi*(k+0.5)/NP; x=PC[0]+(4.6*pr(a)+0.12)*math.cos(a); y=PC[1]+(3.1*pr(a)+0.12)*math.sin(a)
     if abs(x)<1.0: continue
     ico("stone",x,y,0.0,rng.uniform(0.25,0.4),rng.uniform(0.22,0.36),rng.uniform(0.15,0.25))
 for cx,cy,r in ISL:
-    emit([(cx+1.6*math.cos(2*math.pi*k/12),cy+r*math.sin(2*math.pi*k/12),0.08) for k in range(12)]+[(cx,cy,0.08)],[[k,(k+1)%12,12] for k in range(12)],["pave"]*12)
+    emit([(cx+1.4*math.cos(2*math.pi*k/12),cy+r*math.sin(2*math.pi*k/12),0.08) for k in range(12)]+[(cx,cy,0.08)],[[k,(k+1)%12,12] for k in range(12)],["pave"]*12)
 for y0,y1,kind in BR:
-    n=10 if kind=="arch" else 3
+    n=12 if kind=="arch" else 4; th=0.12 if kind=="arch" else 0.08
     ys=[y0+(y1-y0)*k/n for k in range(n+1)]
     for ya,yb in zip(ys,ys[1:]):
         za,zb=bridge_z(0,ya+1e-6),bridge_z(0,yb-1e-6)
-        solid([[(-0.78,ya,za-0.12),(0.78,ya,za-0.12),(0.78,ya,za),(-0.78,ya,za)],[(-0.78,yb,zb-0.12),(0.78,yb,zb-0.12),(0.78,yb,zb),(-0.78,yb,zb)]],"red")
+        solid([[(-BW,ya,za-th),(BW,ya,za-th),(BW,ya,za),(-BW,ya,za)],[(-BW,yb,zb-th),(BW,yb,zb-th),(BW,yb,zb),(-BW,yb,zb)]],"red")
     for sx in (-1,1):
-        tube("red",[(sx*0.78,y,bridge_z(0,min(max(y,y0+1e-6),y1-1e-6))+0.55) for y in ys],[0.04]*len(ys),4)
-        for y in ys[::2]: box("red",sx*0.78,y,bridge_z(0,min(max(y,y0+1e-6),y1-1e-6))-0.05,bridge_z(0,min(max(y,y0+1e-6),y1-1e-6))+0.6,0.04,0.04)
-    if kind=="arch":
-        for t in (0.2,0.5,0.8):
-            y=y0+(y1-y0)*t
-            for sx in (-1,1): box("red",sx*0.65,y,-0.1,bridge_z(0,y)-0.1,0.05,0.05)
+        tube("red",[(sx*BW,y,bridge_z(0,min(max(y,y0+1e-6),y1-1e-6))+0.5) for y in ys],[0.04]*len(ys),4)
+        for y in ys[::2]: box("red",sx*BW,y,bridge_z(0,min(max(y,y0+1e-6),y1-1e-6))-0.05,bridge_z(0,min(max(y,y0+1e-6),y1-1e-6))+0.56,0.04,0.04)
+    for t in ((0.2,0.5,0.8) if kind=="arch" else (0.3,0.7)):       # legs down into the pond
+        y=y0+(y1-y0)*t
+        for sx in (-1,1): box("red",sx*(BW-0.12),y,-0.1,bridge_z(0,y)-th+0.02,0.05,0.05)
 
 # ---- the approach: a granite torii at the edge, the bronze bull, stone lanterns, paving to the gate
-box("pave",0,-9.0,-0.04,0.03,0.8,1.7)
-box("pave",0,-0.2,-0.04,0.03,0.8,1.5)
-for sx in (-1,1): prism("stone",sx*1.25,-9.6,-0.05,2.4,0.14,0.12,10)
-box("stone",0,-9.6,1.85,1.97,1.45,0.08); box("stone",0,-9.6,2.35,2.5,1.7,0.12)
-BX,BY=1.6,-8.2
+box("pave",0,-9.95,-0.04,0.03,0.8,1.2)
+box("pave",0,-0.15,-0.04,0.03,0.8,0.45)
+for sx in (-1,1): prism("stone",sx*1.25,-10.4,-0.05,2.4,0.14,0.12,10)
+box("stone",0,-10.4,1.85,1.97,1.45,0.08); box("stone",0,-10.4,2.35,2.5,1.7,0.12)
+BX,BY=2.0,-9.8
 box("stone",BX,BY,-0.05,0.3,0.55,0.3)
 solid([[(BX-0.42,BY-0.18,0.3),(BX+0.3,BY-0.18,0.3),(BX+0.3,BY+0.18,0.3),(BX-0.42,BY+0.18,0.3)],[(BX-0.38,BY-0.16,0.62),(BX+0.26,BY-0.16,0.66),(BX+0.26,BY+0.16,0.66),(BX-0.38,BY+0.16,0.62)]],"bronze")
 solid([[(BX+0.26,BY-0.11,0.42),(BX+0.26,BY+0.11,0.42),(BX+0.26,BY+0.11,0.66),(BX+0.26,BY-0.11,0.66)],[(BX+0.52,BY-0.08,0.36),(BX+0.52,BY+0.08,0.36),(BX+0.52,BY+0.08,0.56),(BX+0.52,BY-0.08,0.56)]],"bronze")
 for sy in (-1,1): tube("bronze",[(BX+0.3,BY+sy*0.09,0.66),(BX+0.36,BY+sy*0.2,0.78)],[0.025,0.01],4)
-for k,(x,y) in enumerate(((-1.4,-8.0),(-2.4,-0.9),(2.4,-0.9),(-2.8,4.0),(2.8,4.0))):
+for k,(x,y) in enumerate(((-1.7,-9.5),(-2.4,-0.9),(2.4,-0.9),(-2.8,4.0),(2.8,4.0))):
     prism("stone",x,y,-0.05,0.55,0.12,0.09,6); box("stone",x,y,0.55,0.6,0.2,0.2)
     box("glow_lantern_%d"%k,x,y,0.6,0.82,0.12,0.12); flared_roof([(0.26,0.26,0.82,0.04),(0.26,0.26,0.87,0.04),(0.03,0.03,1.07,0.0)],"stone",x,y)
 
@@ -222,8 +222,8 @@ def ground_at(x,y):
     z=bridge_z(x,y)
     return z if z is not None else 0.0
 def terrain_at(x,y): return 0.0                   # the bridges stand over the water
-INTERACT=(0.0,-0.5)   # on the paving before the tower gate
-STAND=(-0.5,-0.9)
+INTERACT=(0.0,0.0)    # on the paving before the tower gate
+STAND=(-1.2,0.0)
 
 # ---- sidecar for the game: ground heights, solid footprints and where to stand.
 # Written to src/world/landmark-grounds/dazaifu.json and read by the world layer (see docs/landmarks.md).
