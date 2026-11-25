@@ -80,6 +80,23 @@ describe("first ship departure", () => {
     expect(launch.approach).toEqual(launch.berth);
   });
 
+  it("does not send the ship into an adjacent lake during its approach or departure", () => {
+    const classify = (x: number, z: number) => x < 0 || x >= 3 || z > 1 ? "water" : "sea";
+    const seam: Terrain = {
+      ...terrain,
+      biomeAt: classify,
+      tileAtPoint: (x, z) => ({ biome: classify(x, z), height: 1, regionId: "0,0", skirt: false }),
+    };
+    const path = planShipLaunch(seam, caps, { near: () => [] }, from, entry);
+    expect(path.approach).toEqual(path.berth);
+    expect(path.afloat.x).toBeGreaterThan(path.berth.x);
+    expect(path.afloat.x).toBeLessThan(3);
+    for (let seconds = 0; seconds <= SHIP_LAUNCH_SECONDS; seconds += 0.05) {
+      const { hull } = shipLaunchFrame(path, seconds);
+      expect(classify(hull.x, hull.z)).toBe("sea");
+    }
+  });
+
   it("keeps the rider level with the deck once up the gangway", () => {
     const launch = planShipLaunch(terrain, caps, { near: () => [] }, from, entry);
     for (const t of [1.8, 2.0, 2.2]) expect(shipLaunchFrame(launch, SHIP_ARRIVE_SECONDS + t).lift).toBe(1);

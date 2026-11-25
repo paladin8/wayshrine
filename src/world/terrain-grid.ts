@@ -386,7 +386,8 @@ export function createTerrain(world: World): Terrain {
       const [a, b, c, d] = corners(tx, tz);
       const fx = x - tx;
       const fz = z - tz;
-      return a * (1 - fx) * (1 - fz) + b * fx * (1 - fz) + c * (1 - fx) * fz + d * fx * fz;
+      // The mesh splits this tile along its (0,0) to (1,1) diagonal.
+      return fx >= fz ? a + (b - a) * fx + (d - b) * fz : a + (c - a) * fz + (d - c) * fx;
     },
   };
 }

@@ -108,7 +108,7 @@ describe("landmark haiku placement", () => {
     const { createWorld, createTerrain, planMonuments } = await import("../world");
     const linked = monumentSpecs.filter((s) => s.landmark);
     expect(linked).toHaveLength(9);
-    for (const seed of ["wayshrine", "another"]) {
+    for (const seed of ["wayshrine", "another", "quality-pass-005", "quality-pass-067"]) {
       const terrain = createTerrain(createWorld(seed));
       const plan = planMonuments(terrain, monumentSpecs);
       for (const spec of linked) {

@@ -124,8 +124,7 @@ export interface Puffs {
 }
 
 /**
- * How far the open sea's surface is lifted at a point and time: the swell in `vitality-mesh`'s water shader
- * (the ocean case), so that things floating just above the water are not buried under a crest.
+ * Vertical bob for things floating at sea, using the swell phase from the water-lighting shader.
  */
 export function seaSwell(time: number, x: number, z: number): number {
   const gust = (0.5 + 0.5 * Math.sin(time * 0.72 + x * 0.071 - z * 0.095)) ** 4;

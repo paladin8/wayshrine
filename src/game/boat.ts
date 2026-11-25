@@ -1,4 +1,4 @@
-import { isWater, type Capability, type Obstacles, type Point, type Terrain } from "../world";
+import { isWater, type Biome, type Capability, type Obstacles, type Point, type Terrain } from "../world";
 import { movePlayer, PLAYER_SPEED } from "./player";
 
 export const BOAT_LAUNCH_SECONDS = 3.1;
@@ -29,16 +29,18 @@ function drift(
   start: Point,
   direction: Point,
   distance: number,
+  biome: Extract<Biome, "water" | "sea">,
 ): Point {
   const length = Math.hypot(direction.x, direction.z);
   if (length === 0) return start;
   let afloat = start;
-  const stride = distance / 10;
+  const steps = Math.ceil(distance / 0.23);
+  const stride = distance / steps;
   // Check the drift in small steps so a narrow inlet cannot carry the hull through a bank.
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < steps; i++) {
     const step = movePlayer(afloat, direction, stride / PLAYER_SPEED, terrain, caps, obstacles).pos;
     const expected = { x: afloat.x + direction.x / length * stride, z: afloat.z + direction.z / length * stride };
-    if (!onWater(terrain, step) || Math.hypot(expected.x - step.x, expected.z - step.z) > 1e-4) break;
+    if (terrain.tileAtPoint(step.x, step.z).biome !== biome || Math.hypot(expected.x - step.x, expected.z - step.z) > 1e-4) break;
     afloat = step;
   }
   return afloat;
@@ -54,7 +56,7 @@ export function planBoatLaunch(
 ): BoatLaunch {
   const direction = { x: entry.x - from.x, z: entry.z - from.z };
   const facing = Math.atan2(direction.x, direction.z);
-  return { from, entry, afloat: drift(terrain, caps, obstacles, entry, direction, DRIFT_DISTANCE), facing };
+  return { from, entry, afloat: drift(terrain, caps, obstacles, entry, direction, DRIFT_DISTANCE, "water"), facing };
 }
 
 /** What a launch looks like at one moment: where the hull and the rider are, and how the rider is posed. */
@@ -134,14 +136,14 @@ export function planShipLaunch(
 ): ShipLaunch {
   const direction = { x: entry.x - from.x, z: entry.z - from.z };
   const facing = Math.atan2(direction.x, direction.z);
-  const berth = drift(terrain, caps, obstacles, entry, direction, SHIP_BERTH_DISTANCE);
+  const berth = drift(terrain, caps, obstacles, entry, direction, SHIP_BERTH_DISTANCE, "sea");
   // Sailing off, the ship turns bow-out and goes at least far enough that its stern clears the bank.
-  const afloat = drift(terrain, caps, obstacles, berth, direction, SHIP_DRIFT_DISTANCE);
+  const afloat = drift(terrain, caps, obstacles, berth, direction, SHIP_DRIFT_DISTANCE, "sea");
   // The ship holds its bow along the bank, so it comes in from astern. It only does that over open water.
   const astern = { x: -Math.cos(facing), z: Math.sin(facing) };
-  let approach = berth;
-  const along = (d: number): Point => ({ x: berth.x + astern.x * d, z: berth.z + astern.z * d });
-  if ([1, 2, 3, 4].every((i) => onWater(terrain, along(SHIP_GLIDE_DISTANCE * i / 4)))) approach = along(SHIP_GLIDE_DISTANCE);
+  const asternEnd = drift(terrain, caps, obstacles, berth, astern, SHIP_GLIDE_DISTANCE, "sea");
+  const glide = Math.hypot(asternEnd.x - berth.x, asternEnd.z - berth.z);
+  const approach = glide >= SHIP_GLIDE_DISTANCE - 1e-5 ? asternEnd : berth;
   return { from, entry, berth, approach, afloat, facing };
 }
 

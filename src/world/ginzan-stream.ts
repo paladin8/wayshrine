@@ -1,6 +1,7 @@
 import { createRng } from "../core";
 import type { Point } from "./coords";
 import { footprintHalf } from "./landmarks";
+import type { Tile } from "./terrain-grid";
 import type { Region, World } from "./world";
 
 export type GinzanSurface = "stream" | "bank" | "bath" | "rim" | "bridge";
@@ -160,4 +161,14 @@ export function ginzanTile(plan: GinzanStream, regionId: string, tx: number, tz:
 /** Warmth needs the source and the local shrine. Progress can be sampled mid-wave. */
 export function ginzanWarmth(plan: GinzanStream, regionId: string, progressOf: (id: string) => number): number {
   return Math.min(progressOf(plan.sourceId), progressOf(regionId));
+}
+
+/** A bath or channel holds liquid water only after both ends of the spring are restored. */
+export function isThawedGinzanWater(
+  plan: GinzanStream | null,
+  tile: Pick<Tile, "ginzanSurface" | "regionId">,
+  restored: ReadonlySet<string>,
+): boolean {
+  return plan !== null && (tile.ginzanSurface === "stream" || tile.ginzanSurface === "bath")
+    && restored.has(plan.sourceId) && restored.has(tile.regionId);
 }

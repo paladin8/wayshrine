@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { createRng, type Rng } from "../core";
 import { CHUNK_SIZE, MONUMENT_CLEARING, plateauDistance, type Monument, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
-import { VitalityBuilder, type Motion, type VitalityMesh } from "./vitality-mesh";
+import { meshFromData, VitalityBuilder, type MeshData, type Motion, type VitalityMesh } from "./vitality-mesh";
 
 type V = readonly [number, number, number];
 
@@ -37,6 +37,14 @@ const TAU = Math.PI * 2;
 export function buildBiomeDetails(
   terrain: Terrain, cx: number, cz: number, vitalityOf: (id: string) => number, monuments: readonly Monument[],
 ): VitalityMesh | null {
+  const data = biomeDetailData(terrain, cx, cz, monuments);
+  return data ? meshFromData(data, vitalityOf) : null;
+}
+
+/** The brushwork of one chunk as plain data (it casts no shadow), or null if there is none. */
+export function biomeDetailData(
+  terrain: Terrain, cx: number, cz: number, monuments: readonly Monument[],
+): MeshData | null {
   const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
   const art = biomeArt(terrain);
   const rng = createRng(terrain.world.seed).fork(`brushwork:${cx},${cz}`);
@@ -165,10 +173,7 @@ export function buildBiomeDetails(
       }
     }
   }
-  if (builder.isEmpty) return null;
-  const detail = builder.build(vitalityOf);
-  detail.object.castShadow = false;
-  return detail;
+  return builder.finish(false);
 }
 
 /** A loose radial fan of faceted leaves. Their stems are sunk during restoration. */

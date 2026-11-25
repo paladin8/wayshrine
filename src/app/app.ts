@@ -60,7 +60,7 @@ import {
   type SaveData,
 } from "../game";
 import { createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
-import { createStage } from "../render";
+import { createChunkSource, createStage, perfBegin, perfMark, perfEnd } from "../render";
 import { monumentSpecs } from "../content";
 import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type Region, type World } from "../world";
 import { createDebugPanel } from "./debug";
@@ -200,7 +200,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       if (audible) cues.play("haiku-cicadas", 1.1);
       else cues.stop("haiku-cicadas", 1.35);
     },
-  }, railway);
+  }, railway, createChunkSource(world.seed, monumentSpecs));
   const obstacles: Obstacles = {
     near(x, z, reach) {
       const nearby = sceneryObstacles.near(x, z, reach);
@@ -834,9 +834,13 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
 
   let last = performance.now();
   const frame = (now: number): void => {
+    const perfDt = perfBegin(now);
+    const perfT0 = performance.now();
     const dt = fixedDt ?? Math.min(0.05, (now - last) / 1000);
     last = now;
+    perfMark("appPre");
     stage.tick(dt);
+    perfMark("stageTick");
     positionTimer += dt;
     if (positionTimer >= POSITION_SAVE_SECONDS) {
       positionTimer = 0;
@@ -1159,6 +1163,8 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
     });
     shrineArrival = false;
     for (const [id, wake] of wakes) if (wake.progress === 1) wakes.delete(id);
+    perfMark("appPost");
+    perfEnd(perfDt, perfT0);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);

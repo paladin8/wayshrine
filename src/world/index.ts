@@ -41,5 +41,5 @@ export type { Obstacle, Obstacles } from "./obstacles";
 export { PLATFORM_END, PLATFORM_TOP, RAIL_HALF_LENGTH, RAIL_HALF_WIDTH, fujiRailway, railPoint, railwayClearance } from "./fuji-railway";
 export type { FujiRailway, FujiStation } from "./fuji-railway";
 
-export { ginzanStream, ginzanWarmth } from "./ginzan-stream";
+export { ginzanStream, ginzanWarmth, isThawedGinzanWater } from "./ginzan-stream";
 export { hirosakiGarden, hirosakiPathPoint } from "./hirosaki-garden";

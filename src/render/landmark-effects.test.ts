@@ -137,3 +137,26 @@ describe("landmark steam", () => {
     expect(arms.map(world).every((p, i) => Math.abs(p.y - before[i]!.y) < 1e-6)).toBe(true);
   });
 });
+
+it("keeps the Zao gondola bodies and windows together through a complete ropeway loop", async () => {
+  const bytes = await readFile(new URL("../../public/models/landmarks/zao-juhyo.glb", import.meta.url));
+  const model = await new GLTFLoader().parseAsync(Uint8Array.from(bytes).buffer, "");
+  expect(model.animations).toHaveLength(2);
+  const mixer = new THREE.AnimationMixer(model.scene);
+  for (const clip of model.animations) {
+    expect(clip.duration).toBeCloseTo(24);
+    mixer.clipAction(clip).play();
+  }
+  for (const n of [1, 2]) {
+    const cabin = model.scene.getObjectByName(`zao_gondola_${n}`)!;
+    expect(cabin.children.map(({ name }) => name)).toEqual(expect.arrayContaining([
+      `glow_gondola_${n}`, `zao_cabin_${n}_red`, `zao_cabin_${n}_roof`,
+    ]));
+    mixer.setTime(0);
+    const start = cabin.position.clone();
+    mixer.setTime(4);
+    expect(cabin.position.distanceTo(start)).toBeGreaterThan(1);
+    mixer.setTime(23.99);
+    expect(cabin.position.distanceTo(start)).toBeLessThan(0.05);
+  }
+});

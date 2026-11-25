@@ -217,19 +217,29 @@ for sy in (-1,1):
     pts=[P0,T1,T2,P3]
     for a,b in zip(pts,pts[1:]):
         tube((a[0]+px*sy*0.5,a[1]+py*sy*0.5,a[2]-0.04),(b[0]+px*sy*0.5,b[1]+py*sy*0.5,b[2]-0.04),0.025,"roof")
+CABINS=[]
+def cable_point(t,side):
+    pts=[P0,T1,T2,P3]; lengths=[math.dist(a,b) for a,b in zip(pts,pts[1:])]
+    distance=t*sum(lengths)
+    for k,length in enumerate(lengths):
+        if distance<=length or k==len(lengths)-1: break
+        distance-=length
+    a,b=pts[k],pts[k+1]; u=min(1.0,distance/length)
+    return (a[0]+(b[0]-a[0])*u+px*side*0.5,
+            a[1]+(b[1]-a[1])*u+py*side*0.5,
+            a[2]+(b[2]-a[2])*u-0.04)
+
 def gondola(t,side,idx):
-    # interpolate along the cable path and hang the cabin
-    pts=[P0,T1,T2,P3]; L=[math.dist(a,b) for a,b in zip(pts,pts[1:])]; s=t*sum(L)
-    for k,l in enumerate(L):
-        if s<=l: break
-        s-=l
-    a,b=pts[k],pts[k+1]; u=s/l
-    x=a[0]+(b[0]-a[0])*u+px*side*0.5; y=a[1]+(b[1]-a[1])*u+py*side*0.5; z=a[2]+(b[2]-a[2])*u-0.04
-    T=dict(cx=x,cy=y,cz=z,rot=rh)
+    # Keep each cabin's hanger, painted body and lit windows on one animation parent.
+    global B
+    scenery=B; B={}
+    T=dict(rot=rh)
     box("roof",0,0,-0.45,0.0,0.02,0.02,T)
     box("red",0,0,-1.05,-0.45,0.32,0.28,T)
     box("glow_gondola_%d"%idx,0,0,-0.82,-0.58,0.33,0.29,T)
     box("red",0,0,-1.12,-1.05,0.28,0.24,T)
+    CABINS.append((idx,side,t,B))
+    B=scenery
 gondola(0.48,1,1); gondola(0.22,-1,2)
 
 # ---- the ski trail, packed snow draped over the slope from the summit station down past the monsters
@@ -351,19 +361,40 @@ def getmat(name):
     mats[name]=m; return m
 col=bpy.context.scene.collection
 stats={}; allv=[]
-for key in sorted(B):
-    vs,fs=B[key]
-    matname="glow_cream" if key.startswith("glow_") else key
-    objname=key if key.startswith("glow_") else "zao_"+key
+def add_piece(objname,matname,vs,fs,parent=None):
     me=bpy.data.meshes.new(objname); me.from_pydata(vs,[],fs); me.validate(); me.update()
     for p in me.polygons: p.use_smooth=False
     me.materials.append(getmat(matname))
     ob=bpy.data.objects.new(objname,me); col.objects.link(ob)
+    ob.parent=parent
     stats[objname]=sum(len(p.vertices)-2 for p in me.polygons)
-    allv+= [v.co.copy() for v in me.vertices]
+    allv.extend(v.co.copy()+(parent.location if parent else Vector()) for v in me.vertices)
+
+for key,(vs,fs) in sorted(B.items()):
+    glow=key.startswith("glow_")
+    add_piece(key if glow else "zao_"+key,"glow_cream" if glow else key,vs,fs)
+
+scene=bpy.context.scene
+scene.render.fps=24
+scene.frame_start=0
+scene.frame_end=576
+for idx,side,start,pieces in CABINS:
+    cabin=bpy.data.objects.new("zao_gondola_%d"%idx,None); col.objects.link(cabin)
+    phase=math.acos(1-2*start)*side
+    for frame in range(scene.frame_start,scene.frame_end+1,4):
+        cycle=frame/scene.frame_end
+        # Slow into the stations, then return on the same rope without a loop jump.
+        t=(1-math.cos(cycle*2*math.pi+phase))/2
+        cabin.location=cable_point(t,side)
+        cabin.keyframe_insert(data_path="location",frame=frame)
+    cabin.location=cable_point(start,side)
+    for key,(vs,fs) in sorted(pieces.items()):
+        glow=key.startswith("glow_")
+        add_piece(key if glow else "zao_cabin_%d_%s"%(idx,key),"glow_cream" if glow else key,vs,fs,cabin)
+scene.frame_set(scene.frame_start)
 mn=[min(v[i] for v in allv) for i in range(3)]; mx=[max(v[i] for v in allv) for i in range(3)]
 bpy.ops.wm.save_as_mainfile(filepath=BLEND)
 bpy.ops.export_scene.gltf(filepath=GLB, export_format='GLB', export_yup=True, export_apply=True,
-    export_cameras=False, export_lights=False, export_extras=True, export_materials='EXPORT')
+    export_cameras=False, export_lights=False, export_extras=True, export_animations=True, export_animation_mode='SCENE', export_materials='EXPORT')
 res={"tris":sum(stats.values()),"per_obj":stats,"materials":len(bpy.data.materials),"min":[round(v,3) for v in mn],"max":[round(v,3) for v in mx],"glb_bytes":os.path.getsize(GLB)}
 json.dump(res,open("/tmp/lm_build.json","w"))

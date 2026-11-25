@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { ginzanStream, ginzanWarmth } from "./ginzan-stream";
+import { ginzanStream, ginzanWarmth, isThawedGinzanWater } from "./ginzan-stream";
 import { createTerrain } from "./terrain-grid";
 import { createWorld } from "./world";
 
@@ -23,6 +23,11 @@ it.each(["wayshrine", "spring"])("fits a downstream path and baths into the snow
     expect(ginzanWarmth(plan, regionId, (id) => Number(id === plan.sourceId))).toBe(0);
     expect(ginzanWarmth(plan, regionId, (id) => Number(id === regionId))).toBe(0);
     expect(ginzanWarmth(plan, regionId, (id) => id === regionId ? 0.6 : 1)).toBe(0.6);
+    expect(isThawedGinzanWater(plan, tile, new Set([plan.sourceId]))).toBe(false);
+    expect(isThawedGinzanWater(plan, tile, new Set([regionId]))).toBe(false);
+    const restored = new Set([plan.sourceId, regionId]);
+    expect(isThawedGinzanWater(plan, tile, restored)).toBe(true);
+    expect(isThawedGinzanWater(plan, { ...tile, ginzanSurface: "bridge" }, restored)).toBe(false);
   }
   expect(plan.springs).toEqual(ginzanStream(createWorld(seed))?.springs);
 });

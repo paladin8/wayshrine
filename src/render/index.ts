@@ -5,3 +5,6 @@ export { CHARACTER_VARIANTS } from "./character";
 export type { CharacterVariant, GearId } from "./character";
 export { createTitleScene } from "./title-scene";
 export type { TitleScene } from "./title-scene";
+export { perfBegin, perfMark, perfEnd } from "./profile";
+export { createChunkSource } from "./chunk-source";
+export type { ChunkSource } from "./chunk-source";

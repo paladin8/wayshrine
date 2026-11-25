@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CHUNK_SIZE, ginzanStream, ginzanWarmth, type Terrain } from "../world";
 import { biomeArt } from "./biome-art";
-import { combine, VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
+import { combine, meshFromData, VitalityBuilder, type MeshData, type VitalityMesh } from "./vitality-mesh";
 
 const SIDE_SHADE = 0.8;
 const fujiGrass = new THREE.Color(0x90a96a);
@@ -23,18 +23,25 @@ const springColors = {
   bridge: 0xb69772,
 };
 
+/** The spring surfaces of one region within a chunk, as plain arrays. */
+export interface StripData {
+  readonly id: string;
+  readonly vertices: Float32Array;
+  readonly colors: Float32Array;
+}
+
 function buildGinzanSurfaces(
   terrain: Terrain,
-  strips: ReadonlyMap<string, { vertices: number[]; colors: number[] }>,
+  strips: readonly StripData[],
   progressOf: (id: string) => number,
 ): VitalityMesh | undefined {
   const ginzan = ginzanStream(terrain.world);
-  if (!ginzan || strips.size === 0) return;
+  if (!ginzan || strips.length === 0) return;
   const object = new THREE.Group();
-  const parts = [...strips].map(([id, { vertices, colors }]) => {
+  const parts = strips.map(({ id, vertices, colors }) => {
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geometry.computeVertexNormals();
     const material = new THREE.MeshStandardMaterial({
       transparent: true, depthWrite: false, vertexColors: true, flatShading: true,
@@ -45,7 +52,7 @@ function buildGinzanSurfaces(
     object.add(mesh);
     return { id, mesh, geometry, material };
   });
-  const regionIds = new Set([ginzan.sourceId, ...strips.keys()]);
+  const regionIds = new Set([ginzan.sourceId, ...strips.map((strip) => strip.id)]);
   const applyVitality: VitalityMesh["applyVitality"] = (progress, only) => {
     if (only && ![...regionIds].some((id) => only.has(id))) return;
     for (const { id, mesh, material } of parts) {
@@ -91,6 +98,23 @@ export function buildTerrainChunk(
   cz: number,
   vitalityOf: (regionId: string) => number,
 ): VitalityMesh {
+  return meshTerrain(terrain, terrainChunkData(terrain, cx, cz), vitalityOf);
+}
+
+/** The ground of a chunk as plain data: the ground itself plus any spring surfaces laid over it. */
+export interface TerrainData {
+  readonly ground: MeshData;
+  readonly strips: readonly StripData[];
+}
+
+/** Makes the drawable ground from `terrainChunkData`. */
+export function meshTerrain(terrain: Terrain, data: TerrainData, vitalityOf: (regionId: string) => number): VitalityMesh {
+  const ground = meshFromData(data.ground, vitalityOf);
+  const springs = buildGinzanSurfaces(terrain, data.strips, vitalityOf);
+  return springs ? combine([ground, springs]) : ground;
+}
+
+export function terrainChunkData(terrain: Terrain, cx: number, cz: number): TerrainData {
   const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
   const art = biomeArt(terrain);
   const strips = new Map<string, { vertices: number[]; colors: number[] }>();
@@ -161,7 +185,8 @@ export function buildTerrainChunk(
       }
     }
   }
-  const ground = builder.build(vitalityOf);
-  const springs = buildGinzanSurfaces(terrain, strips, vitalityOf);
-  return springs ? combine([ground, springs]) : ground;
+  return {
+    ground: builder.finish()!,
+    strips: [...strips].map(([id, strip]) => ({ id, vertices: new Float32Array(strip.vertices), colors: new Float32Array(strip.colors) })),
+  };
 }

@@ -5,7 +5,7 @@ import { addMonument } from "./monument-mesh";
 import { palette } from "./palette";
 import { at, box, cone, cylinder, ico, type Part } from "./shapes";
 import { vegetationHeight, vegetationLook, vegetationParts } from "./vegetation-forms";
-import { VitalityBuilder, type VitalityMesh } from "./vitality-mesh";
+import { meshFromData, VitalityBuilder, type MeshData, type VitalityMesh } from "./vitality-mesh";
 
 const LEAF = 0x5f9a52;
 const PINE = 0x4f8a5a;
@@ -150,21 +150,47 @@ function addProp(builder: VitalityBuilder, p: Prop, biome: Biome): void {
     new THREE.Vector3(p.scale, p.scale, p.scale),
   );
   for (const [i, part] of cachedParts(p.kind, look, p.variant).entries()) {
-    const geo = part.geometry.index ? part.geometry.toNonIndexed() : part.geometry.clone();
     instance.multiplyMatrices(place, part.matrix);
-    geo.applyMatrix4(instance);
-    const color = new THREE.Color(part.color).offsetHSL(0, 0, (p.variant - 0.5) * 0.08);
+    const color = scratchColor.set(part.color).offsetHSL(0, 0, (p.variant - 0.5) * 0.08);
     const cherryBlossom = p.kind === "cherry" && biome === "snow" && i > 0;
-    builder.addTriangles(geo.getAttribute("position").array, color, p.regionId,
+    builder.addTransformed(flatPositions(part), instance, color, p.regionId,
       cherryBlossom ? { ...motion, bloomBase: p.y - 0.02 } : motion);
-    geo.dispose();
   }
 }
 
+const scratchColor = new THREE.Color();
+const flatCache = new WeakMap<Part, ArrayLike<number>>();
+/** A part's triangles as plain x,y,z (non-indexed), computed once. */
+function flatPositions(part: Part): ArrayLike<number> {
+  let flat = flatCache.get(part);
+  if (!flat) {
+    const geo = part.geometry.index ? part.geometry.toNonIndexed() : part.geometry;
+    flat = geo.getAttribute("position").array;
+    flatCache.set(part, flat);
+  }
+  return flat;
+}
+
 /**
- * The scenery of one chunk, or null if it has none. `monuments` are those near
+ * The scenery of one chunk as plain data, or null if it has none. `monuments` are those near
  * the chunk: stones inside it are drawn, and scatter is cleared around all of them.
  */
+export function propChunkData(
+  terrain: Terrain,
+  cx: number,
+  cz: number,
+  monuments: readonly Monument[] = [],
+): MeshData | null {
+  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
+  const clearings = monuments.map((m) => ({ x: m.x, z: m.z, radius: MONUMENT_CLEARING }));
+  for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p, terrain.world.regionById(p.regionId).biome);
+  for (const m of monuments) {
+    if (Math.floor(m.x / CHUNK_SIZE) === cx && Math.floor(m.z / CHUNK_SIZE) === cz) addMonument(builder, m);
+  }
+  return builder.finish();
+}
+
+/** The scenery of one chunk, or null if it has none. */
 export function buildPropChunk(
   terrain: Terrain,
   cx: number,
@@ -172,11 +198,6 @@ export function buildPropChunk(
   vitalityOf: (regionId: string) => number,
   monuments: readonly Monument[] = [],
 ): VitalityMesh | null {
-  const builder = new VitalityBuilder((id) => terrain.world.regionById(id).shrine);
-  const clearings = monuments.map((m) => ({ x: m.x, z: m.z, radius: MONUMENT_CLEARING }));
-  for (const p of propsInChunk(terrain, cx, cz, clearings)) addProp(builder, p, terrain.world.regionById(p.regionId).biome);
-  for (const m of monuments) {
-    if (Math.floor(m.x / CHUNK_SIZE) === cx && Math.floor(m.z / CHUNK_SIZE) === cz) addMonument(builder, m);
-  }
-  return builder.isEmpty ? null : builder.build(vitalityOf);
+  const data = propChunkData(terrain, cx, cz, monuments);
+  return data ? meshFromData(data, vitalityOf) : null;
 }

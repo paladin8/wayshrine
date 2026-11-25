@@ -31,7 +31,7 @@ export function createRestorationWake(region: Region, origin: Point): Restoratio
 }
 
 /** Progress after which the last stragglers beyond WAVE_EXTENT fill in, so nothing pops at the end. */
-const SETTLE_FROM = 0.9;
+export const SETTLE_FROM = 0.9;
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 const smooth = (t: number): number => t * t * (3 - 2 * t);

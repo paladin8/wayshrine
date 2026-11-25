@@ -206,10 +206,18 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
   let plan: ReturnType<typeof planRegions> | null = null;
   const regionPlan = () => (plan ??= planRegions(seed, ambient, layout, layout === "graded" ? nearbyBiomes : undefined));
 
+  // Region lookups sit under every tile and prop query, so the common hit avoids building the id string.
+  const byCell = new Map<number, Region>();
   function region(rx: number, rz: number): Region {
+    const cell = (rx + 1048576) * 2097152 + (rz + 1048576);
+    const fast = byCell.get(cell);
+    if (fast) return fast;
     const id = regionId(rx, rz);
     const hit = cache.get(id);
-    if (hit) return hit;
+    if (hit) {
+      byCell.set(cell, hit);
+      return hit;
+    }
     const rng = root.fork(`region:${id}`);
     const jitter = SITE_JITTER * REGION_SIZE;
     const jittered: Point = {
@@ -236,6 +244,7 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
       landmark,
     };
     cache.set(id, made);
+    byCell.set(cell, made);
     return made;
   }
 
@@ -270,6 +279,8 @@ export function createWorld(seed: string, layout: LandmarkLayout = "graded"): Wo
   }
 
   const regionById = (id: string): Region => {
+    const known = cache.get(id);
+    if (known) return known;
     const { rx, rz } = parseRegionId(id);
     return region(rx, rz);
   };

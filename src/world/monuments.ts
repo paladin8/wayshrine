@@ -2,7 +2,7 @@ import { createRng, type Rng } from "../core";
 import type { Point } from "./coords";
 import { fujiRailway, railwayClearance } from "./fuji-railway";
 import { CHUNK_SIZE, type Terrain } from "./terrain-grid";
-import { monumentClearance } from "./landmarks";
+import { footprintHalf, monumentClearance } from "./landmarks";
 import type { Biome } from "./terrain";
 import type { Region, World } from "./world";
 
@@ -151,15 +151,18 @@ function edgeMargin(world: World, region: Region, x: number, z: number): number 
   return margin;
 }
 
-function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, avoid: Point | null): Point | null {
+function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, avoid: Point | null, linkedFallback = false): Point | null {
   const railway = fujiRailway(world);
   const { site, shrine, landmark } = region;
-  const maxDistance = MAX_SITE_DISTANCE + (landmark ? 6 : 0);
+  const maxDistance = linkedFallback ? 60 : MAX_SITE_DISTANCE + (landmark ? 6 : 0);
+  // A linked stone may use the outer part of the landscaped slope if its region
+  // has no room past the blend. Leave space between the stone and the authored model.
+  const clearance = landmark ? linkedFallback ? footprintHalf(landmark) + 3 : monumentClearance(landmark) : 0;
   const fits = (p: Point): boolean => {
     const dx = p.x - shrine.x;
     const dz = p.z - shrine.z;
     if (Math.hypot(dx, dz) < MONUMENT_SHRINE_CLEARANCE) return false;
-    if (landmark && Math.max(Math.abs(dx), Math.abs(dz)) < monumentClearance(landmark)) return false;
+    if (Math.max(Math.abs(dx), Math.abs(dz)) < clearance) return false;
     if (avoid && Math.hypot(p.x - avoid.x, p.z - avoid.z) < PAIR_SEPARATION) return false;
     if (world.regionAt(p.x, p.z) !== region || terrain.tileAtPoint(p.x, p.z).biome !== region.biome) return false;
     if (railway && railwayClearance(railway, p.x, p.z) < 1.0) return false;
@@ -169,17 +172,18 @@ function pickPosition(world: World, terrain: Terrain, region: Region, rng: Rng, 
     }
     return true;
   };
-  for (let attempt = 0; attempt < 60; attempt++) {
+  for (let attempt = 0; !linkedFallback && attempt < 60; attempt++) {
     const a = rng.range(0, Math.PI * 2);
-    const r = rng.range(landmark ? monumentClearance(landmark) : 10, maxDistance);
+    const r = rng.range(landmark ? clearance : 10, maxDistance);
     const p = { x: site.x + Math.cos(a) * r, z: site.z + Math.sin(a) * r };
     if (fits(p) && edgeMargin(world, region, p.x, p.z) >= MONUMENT_EDGE_MARGIN) return p;
   }
   // Search all sides of a squeezed region instead of giving up the clearance.
   let best: Point | null = null;
   let bestMargin = MONUMENT_EDGE_MARGIN;
-  for (let dz = -maxDistance; dz <= maxDistance; dz += 2) {
-    for (let dx = -maxDistance; dx <= maxDistance; dx += 2) {
+  const step = linkedFallback ? 1 : 2;
+  for (let dz = -maxDistance; dz <= maxDistance; dz += step) {
+    for (let dx = -maxDistance; dx <= maxDistance; dx += step) {
       if (Math.hypot(dx, dz) > maxDistance) continue;
       const p = { x: site.x + dx, z: site.z + dz };
       if (!fits(p)) continue;
@@ -224,10 +228,12 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
   const slots: Slot[] = [];
   const pinnedSpecs: MonumentSpec[] = [];
   const reservedIn = new Map<string, Point[]>();
-  const reserve = (region: Region, rng: Rng): boolean => {
+  const reserve = (region: Region, rng: Rng, linked = false): boolean => {
     const here = reservedIn.get(region.id) ?? [];
     if (here.length >= 2) return false;
-    const position = pickPosition(world, terrain, region, rng, here[0] ?? null);
+    const avoid = here[0] ?? null;
+    const position = pickPosition(world, terrain, region, rng, avoid)
+      ?? (linked ? pickPosition(world, terrain, region, rng, avoid, true) : null);
     if (!position) return false;
     here.push(position);
     reservedIn.set(region.id, here);
@@ -238,7 +244,7 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
   for (const spec of specs) {
     const region = spec.landmark ? landmarkRegions.get(spec.landmark) : undefined;
     if (!region) continue;
-    if (reserve(region, root.fork(`landmark:${spec.id}`))) pinnedSpecs.push(spec);
+    if (reserve(region, root.fork(`landmark:${spec.id}`), true)) pinnedSpecs.push(spec);
   }
 
   // Give the full collection a foothold near every landmark, including those beyond the
@@ -318,7 +324,7 @@ export function planMonuments(terrain: Terrain, specs: readonly MonumentSpec[]):
       kind: spec.kind,
       x: position.x,
       z: position.z,
-      y: terrain.tileAtPoint(position.x, position.z).height,
+      y: terrain.groundAt(position.x, position.z),
       regionId: region.id,
       rotation,
       variant,

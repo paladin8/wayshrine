@@ -60,7 +60,7 @@ export {
   type AwakeningKind,
 } from "./awakening";
 export type { AwakeningFrame } from "./awakening";
-export { createRestorationWake, FRONT_WIDTH, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";
+export { createRestorationWake, FRONT_WIDTH, SETTLE_FROM, WAVE_EXTENT, frontGlow, frontRadius, lifeAt } from "./vitality-field";
 export type { RestorationWake } from "./vitality-field";
 export { MONUMENT_REACH, isLegible, monumentInReach } from "./monuments";
 

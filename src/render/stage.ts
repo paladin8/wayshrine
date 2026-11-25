@@ -1,3 +1,4 @@
+import { perfMark, perfInfo, perfGpuBegin, perfGpuEnd } from "./profile";
 import * as THREE from "three";
 import { lifeAt, railwayPowered, vitality, type GameState, type RestorationWake, type TrainFrame, type VoyageFrame } from "../game";
 import { BIOME_REQUIRES, CHUNK_SIZE, isWater, plateauBase, railwayClearance, type MonumentPlan, type Obstacle, type Obstacles, type Point, type Terrain, type Capability, type FujiRailway } from "../world";
@@ -9,7 +10,7 @@ import { createHaikuScenes, type HaikuSounds } from "./haiku-scenes";
 import { createGinzanScenery } from "./ginzan-scenery";
 import { createGlimmer } from "./glimmer";
 import { createHirosakiScenery } from "./hirosaki-scenery";
-import { buildChunk } from "./chunk-mesh";
+import { buildChunk, meshChunk } from "./chunk-mesh";
 import { disposeObject } from "./dispose";
 import { palette } from "./palette";
 import type { CharacterVariant, GearId, LanternLighting } from "./character";
@@ -21,6 +22,8 @@ import { buildLandmark } from "./landmark-mesh";
 import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
 import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
+import type { ChunkSource } from "./chunk-source";
+
 
 /** World units visible vertically in normal play, and when pulled back to see a whole region. */
 const VIEW_SIZE = 16;
@@ -31,6 +34,9 @@ const LOAD_RADIUS = 2;
 const EXTRA_LOAD_RADIUS = 3;
 const CHUNKS_PER_FRAME = 2;
 const CHUNKS_PER_FRAME_WIDE = 8;
+/** With worker-built chunks: how many may be in flight at once (so the nearest are always asked for first), and how many are meshed per frame. */
+const CHUNKS_IN_FLIGHT = 6;
+const CHUNKS_MESHED_PER_FRAME = 3;
 /** Regions (around the camera's) whose shrines are shown. */
 const SHRINE_RADIUS = 2;
 /** Progress change per second for regions that are restored or reset without the full sequence. */
@@ -139,6 +145,8 @@ export function createStage(
   obstacles: Obstacles,
   haikuSounds: HaikuSounds,
   railway: FujiRailway | null,
+  /** Builds chunk geometry on worker threads when given; otherwise the stage builds chunks itself. */
+  chunkSource: ChunkSource | null = null,
 ): Stage {
   const world = terrain.world;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -229,40 +237,64 @@ export function createStage(
     return v;
   }
 
+  const pendingChunks = new Set<string>();
+
   function streamChunks(centre: Point, zoom: number, riding: boolean): void {
     const radius = LOAD_RADIUS + Math.ceil(zoom * EXTRA_LOAD_RADIUS);
     const pcx = Math.floor(centre.x / CHUNK_SIZE);
     const pcz = Math.floor(centre.z / CHUNK_SIZE);
-    const wanted: Array<{ cx: number; cz: number; d: number }> = [];
-    for (let dz = -radius; dz <= radius; dz++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        if (!chunks.has(chunkKey(pcx + dx, pcz + dz))) wanted.push({ cx: pcx + dx, cz: pcz + dz, d: dx * dx + dz * dz });
+    // Keep a margin so chunks are not rebuilt as the camera zooms in and out.
+    const keep = Math.max(LOAD_RADIUS + EXTRA_LOAD_RADIUS + 1, radius + 1);
+    const add = (key: string, built: VitalityMesh): void => {
+      chunks.set(key, built);
+      scene.add(built.object);
+    };
+    if (chunkSource) {
+      // Chunks built on the workers arrive a few frames after they were asked for; wrapping them is cheap.
+      for (const arrived of chunkSource.take(CHUNKS_MESHED_PER_FRAME)) {
+        const key = chunkKey(arrived.cx, arrived.cz);
+        pendingChunks.delete(key);
+        const wanted = Math.max(Math.abs(arrived.cx - pcx), Math.abs(arrived.cz - pcz)) <= keep || (riding && stationChunks.has(key));
+        if (wanted && !chunks.has(key)) add(key, meshChunk(terrain, arrived.data, shownProgress));
       }
     }
-    wanted.sort((a, b) => a.d - b.d);
-    // The first frame builds everything so the screen is never empty; later frames are budgeted.
-    const budget = chunks.size === 0 ? wanted.length : zoom > 0 ? CHUNKS_PER_FRAME_WIDE : CHUNKS_PER_FRAME;
-    for (const w of wanted.slice(0, budget)) {
-      const built = buildChunk(terrain, w.cx, w.cz, shownProgress, monuments);
-      chunks.set(chunkKey(w.cx, w.cz), built);
-      scene.add(built.object);
+    const missing: Array<{ cx: number; cz: number; d: number }> = [];
+    for (let dz = -radius; dz <= radius; dz++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const key = chunkKey(pcx + dx, pcz + dz);
+        if (!chunks.has(key) && !pendingChunks.has(key)) missing.push({ cx: pcx + dx, cz: pcz + dz, d: dx * dx + dz * dz });
+      }
+    }
+    missing.sort((a, b) => a.d - b.d);
+    if (chunkSource && chunks.size > 0) {
+      for (const w of missing) {
+        if (chunkSource.outstanding() >= CHUNKS_IN_FLIGHT) break;
+        pendingChunks.add(chunkKey(w.cx, w.cz));
+        chunkSource.request(w.cx, w.cz);
+      }
+    } else {
+      // The first frame builds everything so the screen is never empty; later frames are budgeted.
+      const budget = chunks.size === 0 ? missing.length : zoom > 0 ? CHUNKS_PER_FRAME_WIDE : CHUNKS_PER_FRAME;
+      for (const w of missing.slice(0, budget)) add(chunkKey(w.cx, w.cz), buildChunk(terrain, w.cx, w.cz, shownProgress, monuments));
     }
     if (riding) {
       let remaining = 5;
       for (const [key, { cx, cz }] of stationChunks) {
-        if (chunks.has(key)) continue;
-        const built = buildChunk(terrain, cx, cz, shownProgress, monuments);
-        chunks.set(key, built);
-        scene.add(built.object);
-        if (--remaining === 0) break;
+        if (chunks.has(key) || pendingChunks.has(key)) continue;
+        if (chunkSource) {
+          if (chunkSource.outstanding() >= CHUNKS_IN_FLIGHT) break;
+          pendingChunks.add(key);
+          chunkSource.request(cx, cz);
+        } else {
+          add(key, buildChunk(terrain, cx, cz, shownProgress, monuments));
+          if (--remaining === 0) break;
+        }
       }
     }
-    // Keep a margin so chunks are not rebuilt as the camera zooms in and out.
-    const keep = LOAD_RADIUS + EXTRA_LOAD_RADIUS + 1;
     for (const [key, chunk] of chunks) {
       if (riding && stationChunks.has(key)) continue;
       const [cx, cz] = key.split(",").map(Number) as [number, number];
-      if (Math.max(Math.abs(cx - pcx), Math.abs(cz - pcz)) > Math.max(keep, radius + 1)) {
+      if (Math.max(Math.abs(cx - pcx), Math.abs(cz - pcz)) > keep) {
         scene.remove(chunk.object);
         chunk.dispose();
         chunks.delete(key);
@@ -433,12 +465,17 @@ export function createStage(
 
       wasRiding = riding;
       wasAtWindow = false;
+      perfMark("setup");
       streamChunks(centre, zoom, riding);
+      perfMark("streamChunks");
       streamShrines(centre);
+      perfMark("streamShrines");
       updateProgress(dt);
+      perfMark("updateProgress");
       const sceneryPixelScale = particlePixelScale() * (VIEW_SIZE / viewSize);
       updateGinzan(clock, sceneryPixelScale, centre);
       updateHirosaki(clock, sceneryPixelScale, centre);
+      perfMark("scenery");
       if (railway && railwayMesh) {
         const visible = riding || railwayClearance(railway, centre.x, centre.z) < 85;
         railwayMesh.root.visible = visible;
@@ -446,7 +483,9 @@ export function createStage(
           railwayMesh.update(view.train, view.parkedTrain ?? railway.stations[0].distance, railwayPowered(railway, view.state), shownProgress);
         }
       }
+      perfMark("railway");
       haiku.update(dt, centre, pos, viewSize, awakening);
+      perfMark("haiku");
       ambient.update(dt, {
         focus: centre,
         zoom,
@@ -454,6 +493,7 @@ export function createStage(
         wakes,
       });
 
+      perfMark("ambient");
       // During the wide shot, let the restoration wave light the stones in that region.
       const candidates = awakening
         ? monuments.inRegion(awakening.regionId)
@@ -464,6 +504,7 @@ export function createStage(
         .filter(({ life }) => life > 0);
       glimmer.update(clock, particlePixelScale() * (VIEW_SIZE / viewSize), unread);
 
+      perfMark("glimmer");
       const tile = terrain.tileAtPoint(pos.x, pos.z);
       lightBiome(sun, fill, tile.biome, dt);
       const voyage = view.voyage;
@@ -537,13 +578,20 @@ export function createStage(
       player.setBoat(vessel === "boat", wake, clock);
       player.setShip(vessel === "ship", wake, clock, voyage?.gangway ?? 0);
 
+      perfMark("player");
       applyZoom(zoom, viewSize);
       camera.position.copy(target).add(offset);
       camera.lookAt(target);
       sun.position.set(target.x - 14, target.y + 27, target.z + 11);
       sun.target.position.set(target.x, target.y - 1, target.z);
       sun.target.updateMatrixWorld();
+      perfMark("cameraSetup");
+      const glc = renderer.getContext() as WebGL2RenderingContext;
+      perfGpuBegin(glc);
       renderer.render(scene, camera);
+      perfGpuEnd(glc);
+      perfMark("renderer.render");
+      perfInfo({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures });
       if (waitingForView && arrivalProgress > 0) view.onShrineShimmer?.();
     },
   };

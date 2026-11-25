@@ -12,7 +12,7 @@ const CSS = `
 .journey-complete p{margin:0;font:clamp(14px,2.4vw,17px)/1.4 ${UI_FONT}}
 .journey-complete canvas{display:block;width:min(83vw,57dvh,520px);height:auto;aspect-ratio:1}
 .journey-complete button{appearance:none;min-height:38px;padding:5px 22px;border:0;border-bottom:1px solid #d8b87588;background:none;color:#ffe6ad;font:clamp(16px,2.8vw,22px)/1.35 Georgia,"Yu Mincho",serif;cursor:pointer}
-.journey-complete button:hover,.journey-complete button:focus-visible{outline:none;background:#ffe6ad12;border-bottom-color:#ffe6ad}
+.journey-complete button:hover,.journey-complete button:focus-visible{outline:none;border-bottom-color:#ffe6ad}
 @keyframes journey-enter{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.journey-complete[open]{animation:none}}
 `;
