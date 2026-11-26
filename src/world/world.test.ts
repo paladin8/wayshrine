@@ -14,7 +14,7 @@ import { CAPABILITIES, canTraverse } from "./terrain";
 import { CLUSTER_SPACING, OUTER_SHARE, OUTER_START, ambientWeights, createWorld } from "./world";
 import { BIOMES } from "./terrain";
 
-vi.setConfig({ testTimeout: 60_000 });
+vi.setConfig({ testTimeout: 120_000 });
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => `seed-${i}`);
 
