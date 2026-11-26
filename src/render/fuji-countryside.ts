@@ -398,9 +398,10 @@ export function buildFujiCountryside(scene: THREE.Scene) {
   }
 
   ridges(land, 415, 32, 5.2, 0x7e997a);
-  ridges(land, 590, 66, 0.9, 0x78938c);
-  ridges(land, 780, 81, 2.5, 0x7896a2);
-  ridges(land, 910, 109, 7.1, 0x839cae);
+  // Let Fuji's lower flanks read above the near ridges through the train window.
+  ridges(land, 590, 42, 0.9, 0x78938c);
+  ridges(land, 780, 49, 2.5, 0x7896a2);
+  ridges(land, 910, 58, 7.1, 0x839cae);
 
   const time = { value: 0 };
   const flat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true });

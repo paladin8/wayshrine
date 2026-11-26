@@ -6,6 +6,7 @@ export interface SettingsPanel {
   isOpen(): boolean;
   toggle(): void;
   close(): void;
+  allowLeavingWithoutSaving(action: (() => void) | null): void;
   /** Removes the dialog and its listeners. */
   destroy(): void;
 }
@@ -20,9 +21,10 @@ export interface SettingsPanelOptions {
 
 const CSS = `
 .hud .gear{width:34px;font-size:18px;line-height:1}
-.sp-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#2a242455;pointer-events:auto;font:14px/1.4 ${UI_FONT};color:#2a2424}
+.sp-overlay{position:fixed;inset:0;z-index:6;display:none;align-items:center;justify-content:center;background:#2a242455;pointer-events:auto;font:14px/1.4 ${UI_FONT};color:#2a2424}
 .sp-overlay.open{display:flex}
 .sp-card{width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:18px 20px 20px;border-radius:16px;background:#fffaf0;border:1px solid #2a242433;box-shadow:0 8px 32px #0005;outline:none}
+.sp-options .sp-card{box-sizing:border-box;height:100dvh;max-height:100dvh}
 .sp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .sp-head h2{margin:0;font-size:18px}
 .sp-card h3{margin:16px 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
@@ -40,13 +42,13 @@ const CSS = `
 .sp-tabs{display:flex;gap:6px;margin:4px 0 6px}
 .sp-tab{all:unset;cursor:pointer;flex:1;text-align:center;padding:6px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;font-size:17px}
 .sp-tab[aria-selected=true]{background:#2a2424;border-color:#2a2424;color:#fffaf0}
-.sp-tab:focus-visible{outline:2px solid #c8482f;outline-offset:2px}
 .sp-controls[hidden],.sp-main[hidden]{display:none}
 .sp-controls h3{font-size:14px}
 .sp-controls dl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:0;font-size:16px;line-height:1.35}
 .sp-controls dt{margin:0}
 .sp-controls dd{margin:0;text-align:right;font-weight:600;max-width:230px}
 .sp-title-button{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;margin-top:18px;text-align:center;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
+.sp-title-button[hidden]{display:none}
 .sp-title-button+.sp-title-button{margin-top:8px}
 .sp-title-button:hover{background:#f6efe2}
 `;
@@ -79,7 +81,7 @@ export function createSettingsPanel(
     gear.textContent = "⚙";
   }
 
-  const overlay = el("div", "sp-overlay", container);
+  const overlay = el("div", "sp-overlay sp-options", container);
   const card = el("div", "sp-card", overlay);
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-modal", "true");
@@ -171,11 +173,15 @@ export function createSettingsPanel(
   };
   const titleButton = actionButton(options.onTitle);
   const quitButton = actionButton(options.onQuit);
+  let leaveWithoutSaving: (() => void) | null = null;
+  const leaveButton = actionButton(options.onTitle && (() => leaveWithoutSaving?.()));
+  if (leaveButton) leaveButton.hidden = true;
 
   const percent = (v: number): string => `${Math.round(v * 100)}%`;
   const render = (): void => {
     const s = store.get();
     const t = messagesFor(s.language).settings;
+    if (leaveButton) setText(leaveButton, t.leaveWithoutSaving);
     document.documentElement.lang = s.language;
     if (gear) {
       gear.title = t.open;
@@ -268,6 +274,10 @@ export function createSettingsPanel(
     isOpen: () => open,
     toggle: () => setOpen(!open),
     close: () => setOpen(false),
+    allowLeavingWithoutSaving(action) {
+      leaveWithoutSaving = action;
+      if (leaveButton) leaveButton.hidden = action === null;
+    },
     destroy() {
       unsubscribe();
       unsubscribeFullscreen?.();

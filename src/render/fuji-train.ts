@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { railPoint, waveOriginOf, PLATFORM_END, PLATFORM_TOP, RAIL_HALF_WIDTH, type FujiRailway, type Obstacle, type Terrain } from "../world";
-import { lifeAt, type TrainFrame } from "../game";
+import { railPoint, waveOriginOf, PLATFORM_END, PLATFORM_FAR, PLATFORM_NEAR, PLATFORM_TOP, RAIL_HALF_WIDTH, type FujiRailway, type Obstacle, type Terrain } from "../world";
+import { lifeAt, TRAIN_CAR_LENGTH, TRAIN_CAR_OFFSET, TRAIN_CAR_WIDTH, type TrainFrame } from "../game";
 import { combine, deadOf, VitalityBuilder } from "./vitality-mesh";
 
 const steel = 0x4e5863;
@@ -35,14 +35,14 @@ function box(parent: THREE.Group, color: number, x: number, y: number, z: number
 
 function buildLocalTrain() {
   const train = new THREE.Group();
-  const length = 8.08;
+  const length = TRAIN_CAR_LENGTH;
   const wheel = new THREE.CylinderGeometry(0.19, 0.19, 0.14, 12).rotateX(Math.PI / 2);
   for (const direction of [-1, 1]) {
     const car = new THREE.Group();
-    car.position.x = direction * 4.2;
+    car.position.x = direction * TRAIN_CAR_OFFSET;
     train.add(car);
     box(car, steel, 0, 0.28, 0, length - 0.15, 0.39, 1.43);
-    box(car, cream, 0, 1.13, 0, length, 1.42, 1.76).castShadow = true;
+    box(car, cream, 0, 1.13, 0, length, 1.42, TRAIN_CAR_WIDTH).castShadow = true;
     box(car, roof, 0, 1.86, 0, length + 0.085, 0.17, 1.79);
     box(car, roof, 0, 1.98, 0, length - 0.2, 0.13, 1.50);
     box(car, 0x697474, -direction * 1.15, 2.077, 0, 1.42, 0.115, 0.64);
@@ -224,7 +224,7 @@ export function buildFujiTrain(line: FujiRailway, terrain: Terrain) {
 
   for (const station of line.stations) {
     const x = station.distance;
-    box(scenery, concrete, x, PLATFORM_TOP + 0.009, 2.5, PLATFORM_END * 2, 0.026, 2.91);
+    box(scenery, concrete, x, PLATFORM_TOP + 0.009, (PLATFORM_NEAR + PLATFORM_FAR) / 2, PLATFORM_END * 2, 0.026, PLATFORM_FAR - PLATFORM_NEAR);
     box(scenery, 0xd2bd91, x, PLATFORM_TOP + 0.025, 1.14, 19, 0.012, 0.13);
     const shelter = new THREE.Group();
     shelter.position.y = PLATFORM_TOP - 0.43;

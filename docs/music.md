@@ -103,10 +103,11 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 | `marshwalk` | `marshwalk.mp3` | Supplied by the project owner (`Still_Water_Reeds`). Three minutes, stereo MP3, about -16.7 LUFS. Becomes the background after the first geta step. |
 | `lantern-trail` | `lantern-trail.mp3` | Dark forest background supplied by the project owner (`Pale_Shafts_in_the_Trees_2026-11-25T022808`). Three minutes, stereo MP3. Plays after the first lantern use. |
 | `open-sea` | `open-sea.mp3` | Supplied by the project owner (`Beyond_The_Headland`). Three minutes, stereo MP3, about -12 LUFS, so it plays at gain 0.65 to sit level with the others. Becomes the background after the first sailing. |
-
 | `road-through-sunlit-fields` | `road-through-sunlit-fields.mp3` | Supplied by the project owner (`Road_Through_Sunlit_Fields`). Three minutes, stereo MP3. Final background after Pilgrim’s Wake. |
-
 | `starbound-farewell` | `starbound-farewell.mp3` | Supplied by the project owner. 30 s, stereo MP3. Plays once on the final star map. |
+| `mountain-line-morning` | `mountain-line-morning.mp3` | Supplied by the project owner. About 33 s, stereo MP3, including a reprise of the opening phrase. Plays once when the Mount Fuji train window opens. The train sounds continue after the piece ends, and exploration music returns after arrival or a skip. |
+
+The Fuji train uses `public/audio/cues/rail-roll.wav`, a 4.55 s stereo loop made from the project owner's `calm_train_ride_#3-1795704352997.mp3`. The asset crossfades the recording's tail into its head and adds 10.5 dB of gain before the game's sound-effects mix.
 
 Record the origin and licence of each track here when it is added.
 

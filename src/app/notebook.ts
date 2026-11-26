@@ -1,5 +1,6 @@
 import { landmarkNotes } from "../content";
 import { messagesFor, type Locale } from "./i18n";
+import { drawJournalStarMap, STAR_MAP_SIZE, type StarMapPoint } from "./star-map";
 import { UI_FONT } from "./style";
 
 /** The travel notebook: a handwritten entry for each restored landmark, with a way back to it. */
@@ -16,6 +17,7 @@ export interface NotebookSource {
   readonly all: readonly string[];
   /** The ids the player has restored. */
   readonly restored: () => readonly string[];
+  readonly starMap: () => readonly StarMapPoint[];
   /** Debug: lists unrestored landmarks too, grayed out. Travel is always offered. */
   readonly debug: boolean;
   readonly language: () => Locale;
@@ -151,6 +153,11 @@ const CSS = `
 .nb-empty.en{font-family:${HAND_EN}}
 .nb-empty.ja{font-family:${HAND_JA}}
 .nb-title{margin:auto 0;text-align:center;font-weight:400;font-size:clamp(24px,4.4vh,38px);color:#2b2a4a}
+.nb-star-map{--chart-hand:${HAND_EN};position:relative;flex:1 1 0;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;justify-items:center;gap:4px;padding:clamp(8px,1.6vh,16px) 0 4px;color:#2b2a4a}
+.nb-star-map:lang(ja){--chart-hand:${HAND_JA}}
+.nb-star-map h2{justify-self:start;margin:0;font:400 clamp(20px,3.7vh,30px)/1.2 var(--chart-hand);transform:rotate(-1.4deg)}
+.nb-star-map canvas{display:block;width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;mix-blend-mode:multiply}
+.nb-star-map p{margin:0;text-align:center;color:#51465b;font:400 clamp(14px,2.4vh,19px)/1.35 var(--chart-hand)}
 .nb-folio{position:absolute;bottom:clamp(8px,1.8vh,14px);left:0;right:0;text-align:center;font:13px ${HAND_EN};color:#9a8566;font-variant-numeric:tabular-nums}
 .nb-turn,.nb-x{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#2a1a14b8;color:#f1e3c4;font:20px/1 ${UI_FONT};border:1px solid #e2c58f55}
 .nb-turn:hover,.nb-x:hover{background:#2a1a14}
@@ -223,6 +230,7 @@ interface View {
   readonly list: readonly Item[];
   readonly pages: number;
   readonly entriesPerPage: number;
+  readonly hasStarMap: boolean;
   readonly language: Locale;
 }
 
@@ -245,16 +253,15 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
   let page = 0;
   let entriesPerPage = smallPage.matches ? 1 : PER_PAGE;
 
-  const items = (): Item[] => {
+  let sheetsPerSpread = narrow.matches ? 1 : 2;
+  const viewNow = (): View => {
     const have = new Set(source.restored());
     const all = source.all.map((id, i) => ({ id, no: i + 1, restored: have.has(id) }));
-    return source.debug ? all : all.filter((i) => i.restored);
+    const list = source.debug ? all : all.filter((item) => item.restored);
+    const hasStarMap = all.length > 0 && all.every((item) => item.restored);
+    const pages = Math.max(1, Math.ceil(list.length / entriesPerPage)) + Number(hasStarMap);
+    return { list, pages, entriesPerPage, hasStarMap, language: source.language() };
   };
-  const viewNow = (): View => {
-    const list = items();
-    return { list, entriesPerPage, pages: Math.max(1, Math.ceil(list.length / entriesPerPage)), language: source.language() };
-  };
-  const perView = (): number => (narrow.matches ? 1 : 2);
   const animated = (): boolean => !narrow.matches && !reduced.matches;
 
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: HTMLElement): HTMLElementTagNameMap[K] => {
@@ -309,7 +316,17 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     const sheet = el("section", side === "solo" ? "nb-page left right" : `nb-page ${side}`);
     if (index < 0 || index >= v.pages) return sheet;
     el("div", "nb-tape", sheet);
-    if (v.list.length === 0) {
+    if (v.hasStarMap && index === v.pages - 1) {
+      const map = el("div", "nb-star-map", sheet);
+      map.lang = v.language;
+      el("h2", "", map).textContent = t.notebook.starMap;
+      const chart = el("canvas", "", map);
+      chart.width = chart.height = STAR_MAP_SIZE;
+      chart.setAttribute("aria-hidden", "true");
+      const context = chart.getContext("2d");
+      if (context) drawJournalStarMap(context, source.starMap());
+      el("p", "", map).textContent = t.completion.summary(v.list.length);
+    } else if (v.list.length === 0) {
       const title = el("h2", `nb-title ${v.language}`, sheet);
       title.style.fontFamily = v.language === "ja" ? HAND_JA : HAND_EN;
       title.textContent = t.notebook.title;
@@ -323,7 +340,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
 
   function render(): void {
     const v = viewNow();
-    const per = perView();
+    const per = sheetsPerSpread;
     const lastFirst = v.pages - 1 - ((v.pages - 1) % per);
     page = Math.min(Math.max(0, page - (page % per)), lastFirst);
     const t = messagesFor(v.language);
@@ -381,7 +398,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
 
   function turn(by: number): void {
     if (animation?.classList.contains("nb-lid")) return;
-    const per = perView();
+    const per = sheetsPerSpread;
     const v = viewNow();
     const target = page + by * per;
     if (target < 0 || target >= v.pages) return;
@@ -478,9 +495,14 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     if (e.target === overlay) close();
   });
   function onPageSizeChange(): void {
+    const before = viewNow();
+    const showingStarMap = before.hasStarMap && page + sheetsPerSpread >= before.pages;
     const nextEntriesPerPage = smallPage.matches ? 1 : PER_PAGE;
-    page = Math.floor((page * entriesPerPage) / nextEntriesPerPage);
+    page = showingStarMap
+      ? Math.ceil(before.list.length / nextEntriesPerPage)
+      : Math.floor((page * entriesPerPage) / nextEntriesPerPage);
     entriesPerPage = nextEntriesPerPage;
+    sheetsPerSpread = narrow.matches ? 1 : 2;
     if (!open) return;
     animation = null;
     render();

@@ -9,7 +9,7 @@ GLB=ROOT+"/public/models/landmarks/mount-fuji.glb"
 BLEND=ROOT+"/content/landmarks/mount-fuji.blend"
 os.makedirs(os.path.dirname(GLB),exist_ok=True); os.makedirs(os.path.dirname(BLEND),exist_ok=True)
 
-PAL={"mountain_foot":"777c83","mountain_slope":"536c87","mountain_gully":"485e77","mountain_rib":"617a92",
+PAL={"mountain_foot":"455f78","mountain_slope":"486584","mountain_gully":"425e7c","mountain_rib":"4f6986",
      "mountain_snow":"edf3f8","mountain_snow_ice":"d7e6f2","mountain_snow_shade":"c1d3e5","hill":"6f8a50","greige":"8d837b","slate":"837d77","vermilion":"d96b59","roof":"3a3634","blossom":"f2b6c4","foliage":"779555","bark":"4e3a30","glow_cream":"e8dcb0"}
 def lin(h):
     o=[]
@@ -118,41 +118,43 @@ FH=16.8   # footprint half-width (the sidecar's half): Fuji is huge
 def smooth(e0,e1,x):
     t=max(0.0,min(1.0,(x-e0)/(e1-e0))); return t*t*(3-2*t)
 
-# ---- Mount Fuji: a broad skirt, radial erosion gullies and an uneven crater rim.
-# The snow boundary is a shared contour in the mesh. It follows the gullies without stair steps.
+# ---- Mount Fuji: a flared apron, long concave flanks and a short, irregular summit rim.
+# Hand-shaped after distant views of Fuji. Angles break up the skirt and the spring snow line.
 FX, FY = -3.2, 3.2
-FR, FHT = 12.8, 10.7
-SECTORS, LOWER, UPPER = 88, 20, 15
+FR, FHT = 13.8, 6.7
+SECTORS, LOWER, UPPER = 64, 11, 9
 
 def gully(angle):
-    return (0.5 + 0.5 * math.sin(11 * angle + 0.4 * math.sin(3 * angle))) ** 3
+    return (0.5 + 0.5 * math.sin(13 * angle + 0.65 * math.sin(4 * angle))) ** 4
 
 def snowline(angle):
-    return 0.59 + 0.037 * math.sin(5 * angle + 0.3) + 0.021 * math.sin(17 * angle) - 0.105 * gully(angle)
+    return (0.652 + 0.047 * math.cos(angle + 0.7) + 0.027 * math.sin(3 * angle + 0.3)
+            + 0.017 * math.sin(7 * angle) - 0.082 * gully(angle))
 
-def mountain_point(angle, t):
-    # The lower flank spreads much faster than the upper flank. Radial cuts die out at both ends.
-    rim = 1.48 + 0.12 * math.sin(3 * angle + 0.8) + 0.07 * math.sin(7 * angle)
-    skirt = FR * (1 + 0.028 * math.sin(3 * angle) + 0.016 * math.sin(5 * angle + 1.2))
-    skirt *= 1 + 0.32 * math.cos(angle - math.pi / 4) ** 2      # the lower slopes run out sideways across the view
-    ca, sa = math.cos(angle), 0.94 * math.sin(angle)            # ...but stop short of the footprint's edge
-    reach = min(((FH - 0.7) - FX * (1 if ca > 0 else -1)) / abs(ca) if abs(ca) > 1e-6 else 1e9,
-                ((FH - 0.7) - FY * (1 if sa > 0 else -1)) / abs(sa) if abs(sa) > 1e-6 else 1e9)
-    skirt = min(skirt, reach)
-    flank = 0.38 * (1 - t) + 0.62 * (1 - t) ** 1.65
+def mountain_point(angle, height):
+    ca, sa = math.cos(angle), math.sin(angle)
+    rim = 0.93 + 0.10 * math.cos(2 * angle + 0.8) + 0.05 * math.sin(5 * angle)
+    skirt = FR * (1 + 0.39 * math.cos(angle - math.pi / 4) ** 2
+                  + 0.072 * math.cos(angle - 0.65) + 0.025 * math.sin(3 * angle))
+    edge_x = (FH - 0.7 - math.copysign(1, ca) * FX) / max(abs(ca), 1e-6)
+    edge_y = (FH - 0.7 - math.copysign(1, sa) * FY) / max(abs(sa), 1e-6)
+    skirt = min(skirt, edge_x, edge_y)
+
+    descent = 1 - height
+    flank = 0.59 * descent + 0.41 * descent ** 2.8
     radius = rim + (skirt - rim) * flank
-    erosion = math.sin(math.pi * t) * (0.45 * gully(angle + 0.039 * t) - 0.12 * math.cos(6 * angle + 0.2))
-    radius -= erosion
-    crown = 0.16 * math.cos(angle + 0.65) + 0.10 * math.sin(2 * angle) + 0.065 * math.sin(5 * angle - 0.5)
-    z = FHT * t ** 1.3 + crown * t ** 5 - 0.27 * (1 - t) ** 24   # concave near the foot: it eases into the ground
-    return (FX + radius * math.cos(angle), FY + 0.94 * radius * math.sin(angle), z)
+    radius -= 0.24 * math.sin(math.pi * height) * gully(angle + 0.12 * descent)
+    crown = 0.13 * math.cos(angle + 0.4) + 0.11 * math.sin(3 * angle + 0.75)
+    shoulder = 0.35 * math.sin(math.pi * height) ** 3 * math.cos(2 * angle - 0.9)
+    z = FHT * height + crown * height ** 6 + shoulder - 0.26 * descent ** 19
+    return (FX + radius * ca, FY + radius * sa, z)
 
 verts, faces, colors = [], [], []
 angles = [math.tau * i / SECTORS for i in range(SECTORS)]
 for ring in range(LOWER + UPPER + 1):
     for angle in angles:
         line = snowline(angle)
-        t = line * (ring / LOWER) ** 1.18 if ring <= LOWER else line + (1 - line) * ((ring - LOWER) / UPPER)
+        t = line * (ring / LOWER) ** 1.37 if ring <= LOWER else line + (1 - line) * ((ring - LOWER) / UPPER)
         verts.append(mountain_point(angle, t))
 
 for ring in range(LOWER + UPPER):
@@ -162,9 +164,9 @@ for ring in range(LOWER + UPPER):
         cut = gully(angle + math.pi / SECTORS)
         illumination = math.sin(8 * angle + ring * 0.13) + 0.35 * math.sin(19 * angle - ring * 0.39)
         if ring >= LOWER:
-            color = "mountain_snow_shade" if cut > 0.84 and ring < LOWER + 10 else (
+            color = "mountain_snow_shade" if cut > 0.84 and ring < LOWER + 5 else (
                 "mountain_snow_ice" if cut > 0.42 or illumination < -0.63 else "mountain_snow")
-        elif ring < 6 + 1.6 * math.sin(4 * angle):
+        elif ring < 3 + 0.7 * math.sin(4 * angle):
             color = "mountain_foot"
         else:
             color = "mountain_gully" if cut > 0.52 else ("mountain_rib" if illumination > 0.72 else "mountain_slope")

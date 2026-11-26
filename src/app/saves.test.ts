@@ -19,6 +19,20 @@ function clock(start = 1000) {
 }
 
 describe("save slots", () => {
+  it("records time on old journeys and accumulates it across reloads and save writes", () => {
+    const old = { id: "old", seed: "test", createdAt: 1, playedAt: 2, restored: 3 };
+    const backing = storage({ "wayshrine:slots": JSON.stringify([old]), "wayshrine:slot:old": "{}" });
+    const first = createSaveStore(backing, clock());
+    const second = createSaveStore(backing, clock(5000));
+    expect(first.last()?.playtimeMs).toBeUndefined();
+    first.recordPlaytime("old", 61_250);
+    first.writePosition("old", { x: 2, z: 3 });
+    second.recordPlaytime("old", 800);
+    first.write("old", "{}", 4);
+    expect(createSaveStore(backing).last()?.playtimeMs).toBe(62_050);
+    expect(first.readPosition("old")).toEqual({ x: 2, z: 3 });
+  });
+
   it("keeps any number of journeys, newest played first, and offers the last one to continue", () => {
     const s = createSaveStore(storage(), clock());
     expect(s.list()).toEqual([]);
@@ -108,6 +122,36 @@ describe("save slots", () => {
     expect(s.list()).toHaveLength(1);
     const broken = createSaveStore(storage({ "wayshrine:slots": "{not json" }), clock());
     expect(broken.list()).toEqual([]);
+  });
+
+  it("keeps slots created, updated, and removed by either open store", () => {
+    const backing = storage();
+    const first = createSaveStore(backing, clock());
+    const second = createSaveStore(backing, clock(5000));
+    const a = first.create("first");
+    const b = second.create("second");
+    first.write(a.id, "A", 1);
+    second.write(b.id, "B", 2);
+    second.remove(a.id);
+    expect(() => first.write(a.id, "STALE", 3)).toThrow("Journey was removed");
+    first.write(b.id, "NEW", 4);
+    expect(second.list().map(({ seed, restored }) => [seed, restored])).toEqual([["second", 4]]);
+    expect(first.read(a.id)).toBeNull();
+  });
+
+  it("keeps the advertised landmark count when the journey body write fails", () => {
+    const backing = storage();
+    const saves = createSaveStore(backing, clock());
+    const slot = saves.create("quota");
+    saves.write(slot.id, "FIRST", 1);
+    const setItem = backing.setItem;
+    backing.setItem = (key, value) => {
+      if (key === `wayshrine:slot:${slot.id}`) throw new Error("quota");
+      setItem(key, value);
+    };
+    expect(() => saves.write(slot.id, "SECOND", 2)).toThrow("quota");
+    expect(saves.read(slot.id)).toBe("FIRST");
+    expect(saves.last()?.restored).toBe(1);
   });
 
   it("makes readable random seeds", () => {

@@ -28,6 +28,7 @@ describe("Steam journey storage", () => {
     expect(reloaded.read(slot.id)).toBe(body);
     expect(reloaded.readPosition(slot.id)).toEqual({ x: 2.35, z: 3.25 });
     reloaded.remove(slot.id);
+    await downloaded.flush();
     const afterDelete: SteamSaveSnapshot = JSON.parse(write.mock.lastCall![0]);
     expect(afterDelete.entries).toEqual({ "wayshrine:slots": "[]" });
   });
@@ -38,7 +39,7 @@ describe("Steam journey storage", () => {
       const write = vi.fn(async (_: string) => true).mockResolvedValueOnce(false);
       const cloud = createSteamSaveStorage({ snapshot: null, importLegacy: false }, write, null);
       cloud.persist();
-      await cloud.flush();
+      await expect(cloud.flush()).rejects.toThrow("Steam save failed");
       cloud.persist();
       await cloud.flush();
       expect(write).toHaveBeenCalledTimes(2);

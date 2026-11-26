@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("wayshrineDesktop", {
       ipcRenderer.removeListener("wayshrine:fullscreen-changed", receive);
     };
   },
+  enterSeed: (label, text) => ipcRenderer.invoke("wayshrine:steam-seed-keyboard", label, text),
   quit: () => ipcRenderer.send("wayshrine:quit"),
   loadSteamSaves: () => ipcRenderer.invoke("wayshrine:steam-saves"),
   writeSteamSaves: (snapshot) => ipcRenderer.invoke("wayshrine:steam-save", snapshot),

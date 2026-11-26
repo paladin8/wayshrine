@@ -45,6 +45,7 @@ export function createRailwayView(container: HTMLElement, skip: () => void) {
     pane.hidden = !frame.windowView;
     fade.style.opacity = String(frame.fade);
     status.hidden = !loading;
+    button.hidden = loading || !frame.windowView;
     if (status.textContent !== messages.preparing) status.textContent = messages.preparing;
     if (button.textContent !== messages.skip) button.textContent = messages.skip;
   };

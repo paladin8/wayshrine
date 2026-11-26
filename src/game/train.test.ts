@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   capabilitiesForCount, createTerrain, createWorld, footprintHalf, fujiRailway, isWater,
-  landmarksBeforeAct, LANDMARK_WINDOW, reachableRegions, railPoint, railwayClearance, PLATFORM_TOP, RAIL_HALF_LENGTH,
+  landmarksBeforeAct, LANDMARK_WINDOW, reachableRegions, railPoint, railwayClearance, railCoordinates, PLATFORM_END, PLATFORM_FAR, PLATFORM_NEAR, PLATFORM_TOP, RAIL_HALF_LENGTH,
 } from "../world";
-import { blockerAt } from "./player";
+import { blockerAt, clearOfObstacles, movePlayer } from "./player";
 import { newGame, restoreShrine } from "./state";
-import { railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS } from "./train";
+import { parkedTrainObstacle, railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS } from "./train";
 
 const world = createWorld("wayshrine");
 const terrain = createTerrain(world);
@@ -37,6 +37,40 @@ describe("Mount Fuji railway", () => {
         expect(terrain.groundAt(p.x, p.z)).toBeLessThan(line.height);
         expect(line.crossedRegions).toContain(terrain.tileAtPoint(p.x, p.z).regionId);
       }
+    }
+  });
+
+  it("allows boarding from both ends of the platform and its outer approach", () => {
+    for (const index of [0, 1] as const) {
+      const { distance } = line.stations[index];
+      for (const offset of [-PLATFORM_END, PLATFORM_END]) {
+        expect(stationInReach(line, railPoint(line, distance + offset, PLATFORM_NEAR))).toBe(index);
+        expect(stationInReach(line, railPoint(line, distance + offset, PLATFORM_FAR + 1))).toBe(index);
+      }
+      expect(stationInReach(line, railPoint(line, distance, 0))).toBeNull();
+      expect(stationInReach(line, railPoint(line, distance + PLATFORM_END + 2, PLATFORM_FAR))).toBeNull();
+    }
+  });
+
+  it("blocks walking through each carriage and frees a player loaded inside it", () => {
+    const caps = capabilitiesForCount(66);
+    for (const index of [0, 1] as const) {
+      const { distance } = line.stations[index];
+      const obstacles = {
+        near(x: number, z: number, radius: number) {
+          const train = parkedTrainObstacle(line, index, { x, z }, radius);
+          return train ? [train] : [];
+        },
+      };
+      for (const offset of [-5, 0, 5]) {
+        const from = railPoint(line, distance + offset, 2);
+        const toward = { x: -line.across.x, z: -line.across.z };
+        const stopped = movePlayer(from, toward, 1, terrain, caps, obstacles);
+        expect(railCoordinates(line, stopped.pos).across).toBeGreaterThan(1.2);
+      }
+      const inside = railPoint(line, distance + 4, 0);
+      expect(railCoordinates(line, clearOfObstacles(terrain, caps, obstacles, inside)).across).toBeGreaterThan(1.2);
+      expect(parkedTrainObstacle(line, index, line.stations[index === 0 ? 1 : 0].stand, 0.3)).toBeNull();
     }
   });
 

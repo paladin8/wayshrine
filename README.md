@@ -111,3 +111,7 @@ The macOS workflow produces ad hoc signed builds for testing. To build for relea
 ## License
 
 Code: [Apache License 2.0](LICENSE). The collection of Japanese texts shown on the monuments is separate and licensed CC BY-SA 4.0; see [content/LICENSE.md](content/LICENSE.md). Fonts are under the SIL Open Font License 1.1; see [NOTICE](NOTICE).
+
+### Browser smoke test
+
+Run `npx playwright-core install chromium` once, then `npm run build` and `npm run test:browser`. The web release workflow runs the smoke test against the production build before deployment.

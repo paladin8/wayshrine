@@ -24,6 +24,7 @@ import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
 import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
 import type { ChunkSource } from "./chunk-source";
+import { createZoomCut } from "./motion";
 import {
   browserTraits, createFrameGovernor, QUALITY_TIERS, renderQuality, startingPixelRatio,
   type QualityChoice, type QualityState, type RenderQuality,
@@ -178,6 +179,9 @@ export function createStage(
   const autoGovernor = () =>
     createFrameGovernor(renderer.getPixelRatio(), quality.minPixelRatio, (ratio) => renderer.setPixelRatio(ratio));
   let governor: ReturnType<typeof createFrameGovernor> | null = autoGovernor();
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+  const zoomCut = createZoomCut();
+  let wasAwakening = false;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   container.appendChild(renderer.domElement);
@@ -483,7 +487,11 @@ export function createStage(
       awakeningProgress = awakening?.progress ?? 0;
       const lighting = view.lighting;
       const closeUp = lighting ? smooth(lighting.progress / 0.28) * (1 - smooth((lighting.progress - 0.67) / 0.33)) : 0;
-      const zoom = awakening?.zoom ?? (Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0) - 0.17 * closeUp);
+      const requestedZoom = awakening?.zoom ?? (Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0) - 0.17 * closeUp);
+      // With reduced motion the camera cuts between framings rather than zooming.
+      const cutZoom = zoomCut(requestedZoom, dt);
+      const still = reducedMotion?.matches === true;
+      const zoom = still ? cutZoom : requestedZoom;
       const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       const pos = view.player;
       const riding = view.train !== undefined;
@@ -497,8 +505,10 @@ export function createStage(
 
       // The camera follows the player, or the shrine being restored.
       const focus = awakening ? world.regionById(awakening.regionId).shrine : pos;
-      const elevation = terrain.groundAt(focus.x, focus.z) + 0.65 * closeUp;
-      if (!targetReady || riding !== wasRiding || wasAtWindow) {
+      const elevation = terrain.groundAt(focus.x, focus.z) + (still ? 0 : 0.65 * closeUp);
+      const cutToFocus = still && (awakening !== null) !== wasAwakening;
+      wasAwakening = awakening !== null;
+      if (!targetReady || riding !== wasRiding || wasAtWindow || cutToFocus) {
         target.set(focus.x, elevation, focus.z);
         targetReady = true;
       } else {
@@ -512,7 +522,8 @@ export function createStage(
       wasRiding = riding;
       wasAtWindow = false;
       perfMark("setup");
-      streamChunks(centre, zoom, riding);
+      // Load for the framing the camera is heading to, so a cut doesn't show empty ground.
+      streamChunks(centre, Math.max(zoom, requestedZoom), riding);
       perfMark("streamChunks");
       streamShrines(centre);
       perfMark("streamShrines");

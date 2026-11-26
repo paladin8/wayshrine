@@ -25,7 +25,7 @@ export function defaultSettings(preferredLanguages: readonly string[] = []): Set
   return {
     musicVolume: 0.5,
     musicTrack: null,
-    sfxVolume: 0.7,
+    sfxVolume: 0.5,
     muted: false,
     showMinimap: true,
     language: detectLocale(preferredLanguages),

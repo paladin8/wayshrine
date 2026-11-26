@@ -91,7 +91,8 @@ export interface MapInput {
   /** Debug only: any explored shrine can be travelled to, not just restored ones. */
   readonly travelToAny?: boolean;
   /** The corner hint, in the player's language. */
-  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };
+  readonly showOverview: boolean;
+  readonly labels: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom?: string };
   /** Names for the legend of the expanded map, in the player's language. */
   readonly names: {
     /** A landmark's name, in the current language. */
@@ -554,6 +555,19 @@ export function createMinimap(
     if (target) onTravel(target.region);
   });
 
+  function toggleExpanded(): void {
+    if (!shown && !expanded) return;
+    expanded = !expanded;
+    frame.className = expanded ? "map large" : "map small";
+    hovered = null;
+    reticle = false;
+    lastKey = "";
+    panU = 0;
+    panV = 0;
+    zoomK = 1;
+    drag = null;
+  }
+
   return {
     isExpanded: () => expanded,
     pad(look, zoom, dt) {
@@ -587,26 +601,15 @@ export function createMinimap(
       onTravel(hovered.region);
       return true;
     },
-    toggleExpanded() {
-      if (!shown) return; // the key does nothing while the map is hidden
-      expanded = !expanded;
-      frame.className = expanded ? "map large" : "map small";
-      zoom.style.display = expanded ? "none" : "";
-      hovered = null;
-      reticle = false;
-      lastKey = "";
-      panU = 0;
-      panV = 0;
-      zoomK = 1;
-      drag = null;
-    },
+    toggleExpanded,
     update(input) {
       shown = input.visible;
+      if (!shown && expanded) toggleExpanded();
       frame.style.display = shown ? "" : "none";
       zoom.classList.toggle("alone", !shown);
-      zoom.style.display = expanded ? "none" : "";
-      zoom.title = input.labels.zoom;
-      zoom.setAttribute("aria-label", input.labels.zoom);
+      zoom.style.display = expanded || !input.showOverview ? "none" : "";
+      zoom.title = input.labels.zoom ?? "";
+      zoom.setAttribute("aria-label", zoom.title);
       if (!shown) return;
       setText(hint, expanded ? `${input.labels.close} · ${input.labels.travel}` : input.labels.expand);
       const size = expanded ? Math.max(240, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.78)) : SMALL_SIZE;

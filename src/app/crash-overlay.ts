@@ -7,7 +7,6 @@ const CSS = `
 .crash-card h2{margin:0 0 8px;font-size:19px}
 .crash-card p{margin:0 0 16px}
 .crash-card button{font:inherit;cursor:pointer;padding:9px 22px;border-radius:10px;border:1px solid #2a242433;background:#d96b59;color:#fff}
-.crash-card button:focus-visible{outline:2px solid #2a2424;outline-offset:2px}
 `;
 
 /** Whether an uncaught error came from the game's own code rather than a browser extension or another origin. */

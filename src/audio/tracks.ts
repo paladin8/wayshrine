@@ -1,5 +1,5 @@
 /** Every piece of music the game can play. */
-export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk", "marshwalk", "lantern-trail", "basalt-crossing", "open-sea", "road-through-sunlit-fields", "starbound-farewell"] as const;
+export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk", "marshwalk", "lantern-trail", "basalt-crossing", "open-sea", "road-through-sunlit-fields", "starbound-farewell", "mountain-line-morning"] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface TrackInfo {
@@ -22,6 +22,7 @@ export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "open-sea": { url: `${base}audio/music/open-sea.mp3`, gain: 0.7 },
   "road-through-sunlit-fields": { url: `${base}audio/music/road-through-sunlit-fields.mp3`, gain: 0.8 },
   "starbound-farewell": { url: `${base}audio/music/starbound-farewell.mp3`, loop: false },
+  "mountain-line-morning": { url: `${base}audio/music/mountain-line-morning.mp3`, loop: false },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 
@@ -32,6 +33,7 @@ export interface MusicSet {
 }
 
 export const COMPLETION_TRACK = "starbound-farewell" satisfies TrackId;
+export const FUJI_RIDE_TRACK = "mountain-line-morning" satisfies TrackId;
 
 export const FINAL_MUSIC = { label: "Sunlit fields", background: "road-through-sunlit-fields" } as const satisfies MusicSet;
 

@@ -6,6 +6,7 @@ declare global {
       getFullscreen(): Promise<boolean>;
       setFullscreen(fullscreen: boolean): void;
       onFullscreenChanged(listener: (fullscreen: boolean) => void): () => void;
+      enterSeed?(label: string, text: string): Promise<string | null>;
       quit(): void;
       loadSteamSaves(): Promise<SteamSaveBootstrap | null>;
       writeSteamSaves(snapshot: string): Promise<boolean>;

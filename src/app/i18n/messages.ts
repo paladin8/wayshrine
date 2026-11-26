@@ -8,6 +8,8 @@ export type Locale = (typeof LOCALES)[number];
  * Every piece of player-facing text. Both catalogs must provide all of it (the compiler
  * and `i18n.test.ts` enforce that), so a string can never be missing in one language.
  */
+interface MapLabels { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom?: string }
+
 export interface Messages {
   /** Names of the capabilities the player collects. */
   readonly capability: Readonly<Record<Capability, string>>;
@@ -26,6 +28,7 @@ export interface Messages {
   /** The travel notebook that lists restored landmarks. */
   readonly notebook: {
     readonly title: string;
+    readonly starMap: string;
     readonly entryNumber: (number: number) => string;
     readonly empty: string;
     readonly travel: string;
@@ -50,6 +53,7 @@ export interface Messages {
     readonly summary: (count: number) => string;
     readonly resume: string;
   };
+  readonly saveNotice: Readonly<Record<"load" | "write" | "conflict" | "cloud", string>>;
   readonly crash: {
     readonly title: string;
     readonly message: string;
@@ -77,7 +81,7 @@ export interface Messages {
     readonly unavailable: string;
     readonly skip: string;
   };
-  readonly map: { readonly expand: string; readonly close: string; readonly travel: string; readonly zoom: string };
+  readonly map: MapLabels & { readonly touch: MapLabels; readonly gamepad: MapLabels };
   /** The map legend's note beside a biome the player cannot cross yet, e.g. "needs Geta". */
   readonly mapNeeds: (gear: string) => string;
   readonly monuments: {
@@ -117,6 +121,7 @@ export interface Messages {
     /** The controls tab: a titled list of [what, how] rows per kind of device. */
     readonly controlGroups: readonly { readonly title: string; readonly rows: readonly (readonly [string, string])[] }[];
     readonly fullscreen: string;
+    readonly leaveWithoutSaving: string;
     readonly returnToTitle: string;
     readonly quitGame: string;
   };
@@ -141,6 +146,8 @@ export interface Messages {
     readonly confirmDelete: (seed: string) => string;
     readonly deleteIt: string;
     readonly cancel: string;
+    readonly playtimeUnknown: string;
+    readonly playtime: (hours: number, minutes: number) => string;
     readonly saveSummary: (seed: string, landmarks: number) => string;
     readonly logoNote: string;
     /** Shown instead of the title when the 3D backdrop cannot be drawn. */

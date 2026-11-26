@@ -24,6 +24,8 @@ import {
   otherStation,
   railwayPowered,
   stationInReach,
+  parkedTrainObstacle,
+  PLAYER_SPEED,
   trainFrame,
   TRAIN_BOARD_SECONDS,
   TRAIN_RUN_SECONDS,
@@ -59,7 +61,7 @@ import {
   type RestorationWake,
   type SaveData,
 } from "../game";
-import { COMPLETION_TRACK, createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
+import { COMPLETION_TRACK, createCuePlayer, createMusic, FINAL_MUSIC, FUJI_RIDE_TRACK, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
 import { createChunkSource, createStage, perfBegin, perfMark, perfEnd } from "../render";
 import { monumentSpecs } from "../content";
 import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type Region, type World } from "../world";
@@ -75,8 +77,9 @@ import { activateFocused, createInput, formatPrompt, navigatePanel, pressKey, wa
 import { NO_MOVE, strongest } from "./input/actions";
 import { createMusicButton } from "./music-button";
 import { createNotebook } from "./notebook";
+import { projectStarMap } from "./star-map";
 import { createRailwayView } from "./railway-view";
-import { browserStorage, createSaveStore, type SaveSlot, type SaveStore } from "./saves";
+import { browserStorage, createSaveStore, withJourneyLock, type SaveSlot, type SaveStore } from "./saves";
 import { createSettingsStore, type SettingsStore } from "./settings";
 import { createSteamSaveStorage, earnedSteamAchievements } from "./steam";
 import { createTitleScreen } from "./title-screen";
@@ -163,18 +166,47 @@ const KEY_UNRESTORE = "KeyU";
 const KEY_RUBBING = "KeyR";
 const KEY_NEXT_SHRINE = "KeyG";
 
-function loadGame(saves: SaveStore, slot: SaveSlot, world: World): GameState {
-  try {
-    const raw = saves.read(slot.id);
-    if (raw) return deserialize(JSON.parse(raw) as SaveData, world);
-  } catch {
-    // Unreadable or unavailable storage: start fresh.
+type SaveNotice = keyof Messages["saveNotice"];
+
+function createSaveNotice(container: HTMLElement, settings: SettingsStore) {
+  const alert = document.createElement("div");
+  alert.setAttribute("role", "alert");
+  alert.style.cssText = "position:fixed;z-index:55;left:50%;top:12px;transform:translateX(-50%);width:max-content;max-width:min(63vw,540px);box-sizing:border-box;padding:8px 14px;border:1px solid #a46b52;border-radius:6px;background:#fff5e4;color:#522e24;font:14px/1.4 system-ui;text-align:center;pointer-events:none";
+  container.append(alert);
+  let notice: SaveNotice | undefined;
+  const render = (): void => {
+    alert.hidden = !notice;
+    alert.textContent = notice ? messagesFor(settings.get().language).saveNotice[notice] : "";
+  };
+  settings.subscribe(render);
+  render();
+  return (next?: SaveNotice): void => {
+    if (next === notice) return;
+    notice = next;
+    render();
+  };
+}
+
+function loadGame(saves: SaveStore, slot: SaveSlot): { raw: string | null; state: GameState; world: World } {
+  const raw = saves.read(slot.id);
+  const world = createWorld(slot.seed);
+  if (raw === null) {
+    if (slot.restored > 0) throw new Error("Missing journey body");
+    return { raw, state: newGame(slot.seed), world };
   }
-  return newGame(world.seed);
+  const data = JSON.parse(raw) as SaveData;
+  const strings = (value: unknown): boolean => Array.isArray(value) && value.every((item) => typeof item === "string");
+  if (data?.seed !== slot.seed || !strings(data.restored)
+    || (data.v >= 2 && !strings((data as Extract<SaveData, { explored: unknown }>).explored))
+    || (data.v >= 3 && !strings((data as Extract<SaveData, { collected: unknown }>).collected))) {
+    throw new Error("Invalid journey body");
+  }
+  return { raw, state: deserialize(data, world), world };
 }
 
 /** How often the player's position is written to the save. */
 const POSITION_SAVE_SECONDS = 1;
+const PLAYTIME_SAVE_MS = 10_000;
 
 /**
  * Browser entry: the title screen, then the game. ?seed=anything skips the title and plays that world
@@ -184,44 +216,71 @@ export async function startApp(container: HTMLElement): Promise<void> {
   const settings = createSettingsStore(undefined, navigator.languages);
   installCrashOverlay(container, () => settings.get().language);
   const desktop = window.wayshrineDesktop;
+  const notify = createSaveNotice(container, settings);
+  const local = browserStorage();
   let cloud: ReturnType<typeof createSteamSaveStorage> | undefined;
   if (desktop) {
     try {
       const boot = await desktop.loadSteamSaves();
-      if (boot) cloud = createSteamSaveStorage(boot, desktop.writeSteamSaves, browserStorage());
+      if (boot) cloud = createSteamSaveStorage(boot, desktop.writeSteamSaves, local);
     } catch (error) {
       console.error("Could not load Steam saves. Using the standalone profile.", error);
+      notify("cloud");
     }
   }
   const reportAchievements = cloud && desktop?.reportSteamAchievements;
-  const saves = createSaveStore(cloud?.storage, undefined, undefined, (seed, ids) => {
+  const saves = await withJourneyLock(() => createSaveStore(cloud?.storage ?? local, undefined, undefined, (seed, ids) => {
     const world = createWorld(seed);
     return ids.filter((id) => world.regionById(id).landmark).length;
-  }, cloud?.persist);
-  if (cloud?.imported) cloud.persist();
+  }, cloud?.persist));
+  if (cloud?.imported) {
+    cloud.persist();
+    void cloud.flush().catch(() => notify("write"));
+  }
   const seed = new URLSearchParams(window.location.search).get("seed");
+  const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
+  let prepared: ReturnType<typeof loadGame> | undefined;
+  const canLoad = (slot: SaveSlot): boolean => {
+    try {
+      prepared = loadGame(saves, slot);
+      return true;
+    } catch (error) {
+      console.error("Could not open journey", error);
+      notify("load");
+      return false;
+    }
+  };
+  const play = (slot: SaveSlot, isNew: boolean): void => {
+    const loaded = isNew ? { raw: null, state: newGame(slot.seed), world: createWorld(slot.seed) } : prepared!;
+    startGame(container, slot, settings, saves, music, isNew, loaded, notify, !!(cloud || local), reportAchievements, cloud?.flush);
+  };
   if (seed !== null) {
     const slot = saves.forSeed(seed);
     const isNew = !saves.list().some((saved) => saved.id === slot.id);
-    startGame(container, slot, settings, saves, createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS }), isNew, reportAchievements, cloud?.flush);
-    return;
+    if (isNew || canLoad(slot)) {
+      play(slot, isNew);
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("seed");
+    window.history.replaceState(null, "", url);
   }
-  const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
-  const title = createTitleScreen(container, { saves, settings, music });
+  const title = createTitleScreen(container, { saves, settings, music, canLoad, onSaveError: () => notify("write"), flushSaves: cloud?.flush });
   void title.chosen.then(({ slot, isNew }) => {
     title.destroy();
-    startGame(container, slot, settings, saves, music, isNew, reportAchievements, cloud?.flush);
+    play(slot, isNew);
   });
 }
 
 /** Browser wiring: input, the game loop, the HUD and saving. */
 function startGame(
   container: HTMLElement, slot: SaveSlot, settings: SettingsStore, saves: SaveStore, music: Music, isNew: boolean,
+  loaded: ReturnType<typeof loadGame>, notify: (notice?: SaveNotice) => void, durable: boolean,
   reportAchievements?: (ids: readonly string[]) => void,
   flushSaves?: () => Promise<void>,
 ): void {
   const params = new URLSearchParams(window.location.search);
-  const world = createWorld(slot.seed);
+  const world = loaded.world;
   const terrain = createTerrain(world);
   const railway = fujiRailway(world);
   const ginzan = ginzanStream(world);
@@ -241,6 +300,10 @@ function startGame(
     near(x, z, reach) {
       const nearby = sceneryObstacles.near(x, z, reach);
       stage.appendObstaclesNear(x, z, reach, nearby);
+      if (railway && !trainRide && railwayPowered(railway, state)) {
+        const train = parkedTrainObstacle(railway, parkedTrain, { x, z }, reach);
+        if (train) nearby.push(train);
+      }
       return nearby;
     },
   };
@@ -270,7 +333,9 @@ function startGame(
   applyAudio();
   settings.subscribe(applyAudio);
 
-  let state = loadGame(saves, slot, world);
+  let state = loaded.state;
+  let savedBody = loaded.raw;
+  let saveConflict = false;
   const reported = new Set<string>();
   const reportProgress = (game: GameState, count: number): void => {
     if (!reportAchievements || debug) return;
@@ -285,25 +350,30 @@ function startGame(
     sound: (cue) => cues.play(cue),
   });
   const musicButton = createMusicButton(hud.actions, () => cycleMusic());
-  const saveJourney = async (): Promise<void> => {
-    saveGame(state);
-    savePosition();
-    await flushSaves?.();
+  let leaving = false;
+  const leave = async (exit: () => void): Promise<void> => {
+    if (leaving) return;
+    leaving = true;
+    try {
+      // Run behind any queued autosaves, keeping the current position and progress together.
+      const saved = await saveGame(state, true);
+      if (saved) exit();
+      else panel.allowLeavingWithoutSaving(exit);
+    } finally {
+      leaving = false;
+    }
   };
   const desktop = window.wayshrineDesktop;
   const panel = createSettingsPanel(container, hud.actions, settings, {
-    onTitle: () => {
-      void saveJourney().then(() => { window.location.href = window.location.pathname; });
-    },
-    onQuit: desktop && (() => {
-      void saveJourney().then(() => desktop.quit());
-    }),
+    onTitle: () => { void leave(() => { window.location.href = window.location.pathname; }); },
+    onQuit: desktop && (() => { void leave(() => desktop.quit()); }),
   });
   const backpack = createBackpack(container, hud.backpackButton);
   const completion = createJourneyCompletion(container, stage.groundDirection);
   const notebook = createNotebook(container, hud.landmarkButton, {
     all: world.landmarks.map((region) => region.landmark!.id),
     restored: () => world.landmarks.filter((region) => isRestored(state, region)).map((region) => region.landmark!.id),
+    starMap: () => projectStarMap(world.landmarks, stage.groundDirection),
     debug,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
@@ -325,6 +395,13 @@ function startGame(
   let pos: Point = savedPosition ? safePosition(terrain, capabilitiesOf(state, world), savedPosition) : startPosition(terrain);
   let savedAt: Point = pos;
   let positionTimer = 0;
+  let playtimeSince = document.hidden ? null : performance.now();
+  let pendingPlaytimeMs = 0;
+  const samplePlaytime = (): void => {
+    const now = performance.now();
+    if (playtimeSince !== null) pendingPlaytimeMs += Math.max(0, now - playtimeSince);
+    playtimeSince = document.hidden ? null : now;
+  };
   let facing = 0;
   /** The terrain the player just walked into without the means to cross it; shown briefly as a hint. */
   let blockedBy: Biome | null = null;
@@ -355,6 +432,7 @@ function startGame(
   let trainRide: {
     readonly from: StationIndex;
     readonly boardingFrom: Point;
+    readonly approachSeconds: number;
     readonly preview: boolean;
     readonly visibleState: GameState;
     wait: number;
@@ -438,11 +516,13 @@ function startGame(
     const visibleState = preview
       ? railway.requiredRegions.reduce((next, id) => restoreShrine(next, world.regionById(id)), state)
       : state;
-    trainRide = {
-      from, preview, visibleState, t: 0, wait: 0,
-      boardingFrom: preview ? railway.stations[from].stand : pos,
-    };
-    facing = Math.atan2(-railway.across.x, -railway.across.z);
+    const stand = railway.stations[from].stand;
+    const boardingFrom = preview ? stand : pos;
+    const dx = stand.x - boardingFrom.x;
+    const dz = stand.z - boardingFrom.z;
+    const approachSeconds = Math.hypot(dx, dz) / PLAYER_SPEED;
+    trainRide = { from, preview, visibleState, t: -approachSeconds, wait: 0, boardingFrom, approachSeconds };
+    facing = approachSeconds > 0 ? Math.atan2(dx, dz) : Math.atan2(-railway.across.x, -railway.across.z);
     overviewTime = OVERVIEW_SECONDS;
     trainLoadNotice = 0;
     down.clear();
@@ -485,16 +565,71 @@ function startGame(
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
 
-  const saveGame = (game: GameState): void => {
-    const count = landmarksRestored(game, world);
-    saves.write(slot.id, JSON.stringify(serialize(game)), count);
-    reportProgress(game, count);
+  const checkSave = (): boolean => {
+    if (!durable) {
+      notify("write");
+      return false;
+    }
+    if (saves.read(slot.id) !== savedBody || !saves.has(slot.id)) {
+      saveConflict = true;
+      notify("conflict");
+    }
+    return !saveConflict;
   };
-  /** Remembers where the player stands, unless a scripted moment is carrying them. */
-  const savePosition = (): void => {
-    if (momentBusy() || (pos.x === savedAt.x && pos.z === savedAt.z)) return;
-    savedAt = pos;
-    saves.writePosition(slot.id, pos);
+  const writePosition = (position: Point): void => {
+    if (position.x === savedAt.x && position.z === savedAt.z) return;
+    saves.writePosition(slot.id, position);
+    savedAt = position;
+  };
+  const writePlaytime = (): void => {
+    const elapsed = Math.floor(pendingPlaytimeMs);
+    if (elapsed === 0) return;
+    saves.recordPlaytime(slot.id, elapsed);
+    pendingPlaytimeMs -= elapsed;
+  };
+  const saveGame = async (game: GameState, exiting = false): Promise<boolean> => {
+    if (exiting) samplePlaytime();
+    const count = landmarksRestored(game, world);
+    reportProgress(game, count);
+    const body = JSON.stringify(serialize(game));
+    try {
+      const saved = await withJourneyLock(() => {
+        if (!checkSave()) return false;
+        saves.write(slot.id, body, count, () => { savedBody = body; });
+        if (exiting) {
+          writePlaytime();
+          if (!momentBusy()) writePosition(pos);
+        }
+        return true;
+      });
+      if (saved) {
+        await flushSaves?.();
+        if (!saveConflict) {
+          notify();
+          panel.allowLeavingWithoutSaving(null);
+        }
+      }
+      return saved;
+    } catch (error) {
+      console.error("Could not save journey", error);
+      notify("write");
+      return false;
+    }
+  };
+  /** Saves foreground playtime, and position when a scripted moment is not carrying the player. */
+  const saveCheckpoint = (forceTime = false): void => {
+    samplePlaytime();
+    const position = !momentBusy() && (pos.x !== savedAt.x || pos.z !== savedAt.z) ? pos : null;
+    const saveTime = pendingPlaytimeMs >= (forceTime ? 1 : PLAYTIME_SAVE_MS);
+    if (saveConflict || (!position && !saveTime)) return;
+    void withJourneyLock(() => {
+      if (!checkSave()) return;
+      if (position) writePosition(position);
+      if (saveTime) writePlaytime();
+    }).then(() => flushSaves?.()).catch((error) => {
+      console.error("Could not save journey checkpoint", error);
+      notify("write");
+    });
   };
 
   const restore = (id: string): void => {
@@ -808,6 +943,10 @@ function startGame(
       if (action === "act" || action === "back" || action === "menu") finishTrainRide(stage.railwayReady());
       return;
     }
+    if (completion.isOpen() && (action === "back" || action === "menu")) {
+      completion.close();
+      return;
+    }
     const modal = modalOpen();
     switch (action) {
       case "menu":
@@ -881,10 +1020,11 @@ function startGame(
     return true;
   }
 
-  window.addEventListener("pagehide", savePosition);
+  window.addEventListener("pagehide", () => saveCheckpoint(true));
   window.addEventListener("blur", releaseMovement);
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) releaseMovement();
+    saveCheckpoint(true);
   });
 
   let last = performance.now();
@@ -899,7 +1039,7 @@ function startGame(
     positionTimer += dt;
     if (positionTimer >= POSITION_SAVE_SECONDS) {
       positionTimer = 0;
-      savePosition();
+      saveCheckpoint();
     }
 
     if (lastRestored !== state.restored) {
@@ -917,14 +1057,14 @@ function startGame(
       state = seen;
       saveGame(state);
     }
+    const padInput = input.poll(now / 1000);
     const mapOpen = minimap.isExpanded();
     const live = !modalOpen() && !mapOpen; // the map freezes walking
-    const padInput = input.poll(now / 1000);
     const wanted = live ? strongest({ right: any(KEY_RIGHT) - any(KEY_LEFT), up: any(KEY_UP) - any(KEY_DOWN) }, padInput.move) : NO_MOVE;
     const right = wanted.right;
     const up = wanted.up;
     const walk = walkScale(wanted);
-    if (mapOpen && !modalOpen()) minimap.pad(strongest(padInput.pad.look, padInput.pad.move), padInput.pad.zoom, dt); // either stick or the D-pad pans
+    if (mapOpen && !modalOpen() && input.device() === "gamepad") minimap.pad(strongest(padInput.pad.look, padInput.pad.move), padInput.pad.zoom, dt); // either stick or the D-pad pans
     let moving = false;
     if (!momentBusy() && (right !== 0 || up !== 0)) {
       monumentUi.dismissReading();
@@ -1013,6 +1153,7 @@ function startGame(
     let railFrame: TrainFrame | undefined;
     let railPlayer = pos;
     let boardingHeight: number | undefined;
+    let railWalking = false;
     let railPreparing = false;
     trainLoadNotice = Math.max(0, trainLoadNotice - dt);
     if (railway && trainRide) {
@@ -1039,8 +1180,15 @@ function startGame(
           railFrame = undefined;
         } else if (ride.t >= TRAIN_BOARD_SECONDS + TRAIN_RUN_SECONDS) {
           railPlayer = railway.stations[otherStation(ride.from)].stand;
-        } else {
+        } else if (ride.t < 0) {
+          const stand = railway.stations[ride.from].stand;
           const from = ride.boardingFrom;
+          const remaining = -ride.t / ride.approachSeconds;
+          railPlayer = { x: stand.x + (from.x - stand.x) * remaining, z: stand.z + (from.z - stand.z) * remaining };
+          railWalking = !railPreparing;
+        } else {
+          const from = railway.stations[ride.from].stand;
+          facing = Math.atan2(-railway.across.x, -railway.across.z);
           const door = railPoint(railway, railway.stations[ride.from].distance + 1.4, 0.9);
           const step = railFrame.boarding;
           railPlayer = { x: from.x + (door.x - from.x) * step, z: from.z + (door.z - from.z) * step };
@@ -1179,7 +1327,7 @@ function startGame(
       nearLandmarkName: nearModel,
       messages: t,
     });
-    minimap.update({ pos, state, target: debug ? guide?.region ?? null : null, visible: prefs.showMinimap, labels: t.map, names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
+    minimap.update({ pos, state, target: debug ? guide?.region ?? null : null, visible: prefs.showMinimap, labels: device === "keyboard" ? t.map : t.map[device], showOverview: device === "keyboard", names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     const movementTile = moving && !voyageFrame && !lanternMoment ? terrain.tileAtPoint(pos.x, pos.z) : undefined;
     let nextMovementCue = movementTile && MOVEMENT_CUES[movementTile.biome];
@@ -1209,12 +1357,15 @@ function startGame(
     const background = selectedMusicSet();
     if (completion.isOpen()) {
       music.setTrack(COMPLETION_TRACK, 0.8);
+    } else if (trainRide && (railFrame?.windowView || trainRide.t >= TRAIN_BOARD_SECONDS)) {
+      // Start with the window reveal and keep the one-shot selected until disembarking.
+      music.setTrack(FUJI_RIDE_TRACK, 0.8);
     } else if (!finalMusicPending) {
       const restorationTrack = awakening?.unlocksGear === "pilgrimsWake" ? undefined : awakening?.backgroundTrack;
       const switching = gearMusic && gearMusic.t >= gearMusic.switchAt;
       music.setTrack(restorationTrack ?? background.background, switching ? GEAR_FADE_SECONDS : undefined);
     }
-    const swellDuck = ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : railFrame?.windowView ? 0.3 : 1;
+    const swellDuck = ALL_AWAKENING_CUES.some((id) => audible.includes(id)) ? SWELL_DUCK : 1;
     music.setDuck(swellDuck);
     music.update(dt);
     const playing = musicSetIndex(background);
@@ -1236,7 +1387,7 @@ function startGame(
     railView?.(railFrame, railPreparing, t.railway);
     stage.render(dt, {
       player: railPlayer, facing, state: trainRide?.visibleState ?? state,
-      moving: moving || (railFrame !== undefined && railFrame.boarding > 0 && railFrame.boarding < 1), drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : ashMoment && ashMoment.t >= 0 ? ashMoment.t / ASH_MOMENT_SECONDS : undefined, strapGear: ashMoment ? "ashSandals" : getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene, wakes,
+      moving: moving || railWalking || (railFrame !== undefined && railFrame.boarding > 0 && railFrame.boarding < 1), drawing: climbMoment && climbMoment.t >= 0 ? climbMoment.t / CLIMB_MOMENT_SECONDS : undefined, strapping: snowshoeMoment && snowshoeMoment.t >= 0 ? snowshoeMoment.t / SNOWSHOE_MOMENT_SECONDS : getaMoment && getaMoment.t >= 0 ? getaMoment.t / GETA_MOMENT_SECONDS : ashMoment && ashMoment.t >= 0 ? ashMoment.t / ASH_MOMENT_SECONDS : undefined, strapGear: ashMoment ? "ashSandals" : getaMoment ? "geta" : "snowshoes", character: settings.get().character, capabilities: caps, overviewZoom: overviewZoomAt(overviewTime), awakening: scene, wakes,
       lighting,
       voyage: voyageFrame,
       train: railFrame,

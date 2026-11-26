@@ -33,7 +33,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "walk-water": { url: `${base}audio/cues/walk-water.mp3`, loop: true, gain: FOOTSTEP_GAIN * 3 },
   "walk-mountain": { url: `${base}audio/cues/walk-mountain.wav`, loop: true, gain: FOOTSTEP_GAIN },
   "walk-marsh": { url: `${base}audio/cues/walk-marsh.wav`, loop: true, gain: FOOTSTEP_GAIN },
-  "rail-roll": { url: `${base}audio/cues/rail-roll.wav`, loop: true, gain: 0.4 },
+  "rail-roll": { url: `${base}audio/cues/rail-roll.wav`, loop: true, gain: 0.55 },
   "row-water": { url: `${base}audio/cues/row-water.wav`, loop: true, gain: MOVEMENT_GAIN * 0.7 },
   "box-flip": { url: `${base}audio/cues/box-flip.mp3` },
 };

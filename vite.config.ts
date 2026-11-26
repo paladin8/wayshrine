@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { defineConfig, loadEnv } from "vite";
 
 const socialImage = "images/wayshrine-social.jpg";
+const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
 export default defineConfig(({ mode }) => {
   const publicUrl = loadEnv(mode, process.cwd(), "VITE_SITE_URL").VITE_SITE_URL?.trim();
@@ -18,6 +20,8 @@ export default defineConfig(({ mode }) => {
     base: "./",
     define: {
       "import.meta.env.WAYSHRINE_SOCIAL_IMAGE": JSON.stringify(imageUrl.replaceAll("&", "&amp;")),
+      // Shown in the corner of the title screen, so bug reports can name the build.
+      "import.meta.env.WAYSHRINE_VERSION": JSON.stringify(version),
     },
     plugins: siteUrl ? [{
       name: "wayshrine-canonical-url",

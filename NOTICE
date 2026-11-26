@@ -12,6 +12,10 @@ and Kaushan Script (by the Kaushan Script Project Authors). The fonts are distri
 the SIL Open Font License 1.1 in public/fonts/OFL.txt. The landmark name images are not
 covered by the Apache License.
 
+The Japanese vertical repetition marks in rubbings use a two-glyph subset of
+Noto Serif CJK JP (Copyright 2017-2024 Adobe, https://github.com/notofonts/noto-cjk/releases/tag/Serif2.003),
+distributed under the SIL Open Font License 1.1 in public/fonts/OFL-noto-serif-cjk.txt.
+
 The title screen lettering uses Cormorant Garamond (Copyright 2015 The Cormorant Project
 Authors, https://github.com/CatharsisFonts/Cormorant), distributed under the SIL Open Font
 License 1.1 in public/fonts/OFL-cormorant-garamond.txt.

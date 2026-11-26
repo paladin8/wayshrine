@@ -22,7 +22,7 @@
 - **Awakening swell:** one-shot cue player, music ducking under it, background music halved.
 - **Restoration moment and ambient life:** radial vitality wave from the shrine, camera zooms out to frame the whole region, hold once fully energised, zoom back (E skips). Foliage sway, water ripple, fireflies, petals, snow and shrine sparks scale with vitality.
 - **Travel journal:** the landmark counter (or J) opens a notebook with a handwritten entry and a pencil sketch per restored landmark, two to a page, with a button to travel back; cover-opening and page-turn animations and sounds. With `?debug` all landmarks are listed and travel works for all of them.
-- **Landmark finale:** when the final restoration settles, the Far Sight star chart returns as a celebration showing every landmark in map orientation. Completed worlds can reopen the chart from the travel journal.
+- **Landmark finale:** when the final restoration settles, the Far Sight star chart returns as a celebration showing every landmark in map orientation. In a completed world, the lit star map is the last page of the travel journal.
 - **Backpack and gear:** the backpack (I, or the HUD button) shows each piece of gear with its icon, name and star threshold, and only the next threshold of what is still locked; the journal counter and rubbing box sit beside it. Landmarks are discovered on the map by walking near them (the radius is small at first and grows with Pilgrim's Wake) and by rubbings.
 - **Input:** one action layer for keyboard, gamepad and touch (`src/app/input/`, [ADR 0009](decisions/0009-input-actions.md)). Controller: stick or D-pad with analog walking speed, face and shoulder buttons for the game's verbs, focus navigation in every dialog and the title menu, and map panning, zoom and travel. Touch: floating joystick and a contextual act button. Prompts and the welcome hint follow the device used last, and keyboard focus is visible again.
 - **Performance:** chunk meshes are built in Web Workers, restoration vitality is evaluated on the GPU from a per-region table, and `?perf` exposes a frame-time probe. See ARCHITECTURE.
@@ -48,7 +48,7 @@
    - Open design question: whether bridges only decorate water that is already crossable or can open new routes. Anything that changes reachability must keep the no-soft-lock property tests passing, and probably needs an ADR.
 9. **Biome shrines.** Add regional variants of the existing gates and shelters.
 
-10. **Release polish.** Key rebinding, a text-size option and graphics quality settings; pinch zoom on the touch map; a notice when a save is open in two tabs; a browser smoke test of the built game; exact dependency versions on the release branch.
+10. **Release polish.** Key rebinding, a text-size option and graphics quality settings; pinch zoom on the touch map; a notice when a save is open in two tabs.
 
 ## Known gaps
 - Web saves live in the browser's local storage (the game asks the browser not to evict them). There is no export or import; desktop builds sync through Steam Cloud.

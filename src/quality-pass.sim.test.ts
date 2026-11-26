@@ -52,6 +52,24 @@ function hasExit(terrain: Terrain, obstacles: Obstacles, region: Region, caps: R
   return false;
 }
 
+/** Ordinary shrines are restored behind the gate. Search nearby paths with the normal collision rules. */
+function canApproachShrine(terrain: Terrain, obstacles: Obstacles, field: Region, caps: ReadonlySet<Capability>, arrival: Point): boolean {
+  const queue = [arrival];
+  const visited = new Set(["0,0"]);
+  for (const at of queue) {
+    if (shrineInReach(terrain, at)?.id === field.id) return true;
+    for (const [x, z] of CARDINAL) {
+      const next = movePlayer(at, { x, z }, 0.5 / PLAYER_SPEED, terrain, caps, obstacles).pos;
+      if (Math.max(Math.abs(next.x - arrival.x), Math.abs(next.z - arrival.z)) > 10) continue;
+      const key = `${Math.round((next.x - arrival.x) * 4)},${Math.round((next.z - arrival.z) * 4)}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      queue.push(next);
+    }
+  }
+  return false;
+}
+
 // Run with WAYSHRINE_QUALITY_PASS=1 npm test -- src/quality-pass.sim.test.ts.
 // QUALITY_GEOMETRY=1 also builds and checks the production chunk at every stop.
 // Set QUALITY_REPORT to an output path for the per-location evidence.
@@ -163,7 +181,7 @@ it.skipIf(!process.env.WAYSHRINE_QUALITY_PASS)("visits 100 independent locations
       const stage = reachedAt.get(field.id) ?? 0;
       const point = standPoint(field);
       visit(`shrine:${i}:${biome}`, field, stage, point);
-      if (shrineInReach(terrain, point)?.id !== field.id) issue("interaction-out-of-reach", field.id, point);
+      if (!canApproachShrine(terrain, obstacles, field, capabilitiesForCount(stage), point)) issue("interaction-out-of-reach", field.id, point);
     }
     // Exercise vessel planners on actual water-to-land and lake-to-sea seams.
     for (const biome of ["water", "sea"] as const) {

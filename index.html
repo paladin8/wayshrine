@@ -9,7 +9,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Wayshrine" />
     <meta property="og:site_name" content="Wayshrine" />
-    <meta property="og:description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore forgotten shrines, bring the land back to life, and uncover a lost civilization." />
+    <meta property="og:description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore forgotten shrines, bring the land back to life, and visit its most famous landmarks." />
     <meta property="og:image" content="%WAYSHRINE_SOCIAL_IMAGE%" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
@@ -18,15 +18,25 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Wayshrine" />
-    <meta name="twitter:description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore forgotten shrines, bring the land back to life, and uncover a lost civilization." />
+    <meta name="twitter:description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore forgotten shrines, bring the land back to life, and visit its most famous landmarks." />
     <meta name="twitter:image" content="%WAYSHRINE_SOCIAL_IMAGE%" />
     <meta name="twitter:image:alt" content="The Wayshrine logo above a mountain lake with a torii gate and floating lanterns at sunset." />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #f2ede0; }
-      /* Keep a visible focus ring for keyboard and controller users; mouse clicks show none. */
+      :root { --focus-light: #fff2d4; --focus-dark: #2a201b; }
+      /* Dialogs and reading panels can receive focus to announce their content. */
+      body :where([tabindex="-1"], dialog):focus,
       body :focus:not(:focus-visible) { outline: none; }
-      body :focus-visible { outline: 2px solid #c8482f; outline-offset: 2px; }
+      /* Show the two-tone ring on controls used with a keyboard or controller. */
+      body :is(button, a[href], input, select, textarea, summary, [contenteditable="true"], [tabindex]:not([tabindex="-1"])):is(:focus-visible, [data-controller-focus] :focus) {
+        outline: 2px solid var(--focus-light);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 2px var(--focus-dark);
+      }
+      @media (forced-colors: active) {
+        :root { --focus-light: Highlight; --focus-dark: transparent; }
+      }
       canvas { display: block; touch-action: none; }
     </style>
   </head>

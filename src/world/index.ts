@@ -39,7 +39,7 @@ export { MONUMENT_CLEARING, MONUMENT_EDGE_MARGIN, monumentsAroundChunk, planMonu
 export type { HaikuSceneKind, Monument, MonumentPlan, MonumentSpec } from "./monuments";
 export { SHRINE_PILLAR_OFFSET, createObstacles } from "./obstacles";
 export type { Obstacle, Obstacles } from "./obstacles";
-export { PLATFORM_END, PLATFORM_TOP, RAIL_HALF_LENGTH, RAIL_HALF_WIDTH, fujiRailway, railPoint, railwayClearance } from "./fuji-railway";
+export { PLATFORM_END, PLATFORM_FAR, PLATFORM_NEAR, PLATFORM_TOP, RAIL_HALF_LENGTH, RAIL_HALF_WIDTH, fujiRailway, railCoordinates, railPoint, railwayClearance } from "./fuji-railway";
 export type { FujiRailway, FujiStation } from "./fuji-railway";
 
 export { ginzanStream, ginzanWarmth, isThawedGinzanWater } from "./ginzan-stream";

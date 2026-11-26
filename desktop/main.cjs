@@ -4,7 +4,7 @@ const { stat } = require("node:fs/promises");
 const path = require("node:path");
 const { Readable } = require("node:stream");
 const { pathToFileURL } = require("node:url");
-const { startSteam } = require("./steam.cjs");
+const { enableSteamOverlay, startSteam } = require("./steam.cjs");
 
 const SCHEME = "app";
 const HOST = "wayshrine";
@@ -99,6 +99,10 @@ function createWindow(steam) {
     if (!fromGame(event)) return false;
     return steam?.save.write(snapshot) ?? false;
   });
+  contents.ipc.handle("wayshrine:steam-seed-keyboard", (event, label, text) => {
+    if (!fromGame(event) || typeof label !== "string" || typeof text !== "string") return null;
+    return steam?.enterText(label.slice(0, 160), text.slice(0, 64)) ?? null;
+  });
   contents.ipc.on("wayshrine:steam-achievements", (event, ids) => {
     if (fromGame(event)) steam?.awards.report(ids);
   });
@@ -121,6 +125,8 @@ function createWindow(steam) {
     app.exit(1);
   });
 }
+
+if (process.env.SteamAppId) enableSteamOverlay(process.resourcesPath);
 
 void app.whenReady().then(() => {
   protocol.handle(SCHEME, handleGameFiles);

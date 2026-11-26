@@ -9,6 +9,8 @@ export const RAIL_HALF_LENGTH = 60;
 export const RAIL_HALF_WIDTH = 0.97;
 export const PLATFORM_TOP = -0.12;
 export const PLATFORM_END = 9.75;
+export const PLATFORM_NEAR = 1.045;
+export const PLATFORM_FAR = 3.955;
 const GRADE_BLEND = 4;
 const STATION_TAIL = 11.7;
 const STATION_SIDE = 3.05;
@@ -41,6 +43,11 @@ export function railPoint(line: RailAlignment, distance: number, across = 0): Po
     x: line.origin.x + line.along.x * distance + line.across.x * across,
     z: line.origin.z + line.along.z * distance + line.across.z * across,
   };
+}
+
+export function railCoordinates(line: RailAlignment, pos: Point): { along: number; across: number } {
+  const dx = pos.x - line.origin.x, dz = pos.z - line.origin.z;
+  return { along: dx * line.along.x + dz * line.along.z, across: dx * line.across.x + dz * line.across.z };
 }
 
 function rectangleDistance(along: number, across: number, length: number, width: number): number {

@@ -67,4 +67,4 @@ export type { RestorationWake } from "./vitality-field";
 export { MONUMENT_REACH, isLegible, monumentInReach } from "./monuments";
 
 export { BOAT_PUSH_OFF_SECONDS, boatLaunchFrame, onWater, planBoatLaunch, planShipLaunch, SHIP_PUSH_OFF_SECONDS, SHIP_LAUNCH_SECONDS, shipLaunchFrame, type BoatLaunch, type ShipLaunch, type VoyageFrame } from "./boat";
-export { otherStation, railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS, type StationIndex, type TrainFrame } from "./train";
+export { otherStation, parkedTrainObstacle, railwayPowered, stationInReach, trainFrame, TRAIN_BOARD_SECONDS, TRAIN_CAR_LENGTH, TRAIN_CAR_OFFSET, TRAIN_CAR_WIDTH, TRAIN_RUN_SECONDS, TRAIN_TOTAL_SECONDS, type StationIndex, type TrainFrame } from "./train";

@@ -38,7 +38,8 @@ export function createSteamSaveStorage(
   }
 
   let last = boot.snapshot ? JSON.stringify(boot.snapshot) : undefined;
-  let pending = Promise.resolve();
+  let pending = Promise.resolve(true);
+  let revision = 0;
   const persist = (): void => {
     const entries: Record<string, string> = {};
     for (let i = 0; i < storage.length; i++) {
@@ -48,14 +49,25 @@ export function createSteamSaveStorage(
     const snapshot = JSON.stringify({ version: 1, entries } satisfies SteamSaveSnapshot);
     if (snapshot === last) return;
     last = snapshot;
-    pending = write(snapshot).then((written) => {
+    const version = ++revision;
+    pending = pending.then(() => write(snapshot)).then((written) => {
       if (!written) throw new Error("Steam save was not accepted");
+      return true;
     }).catch((error) => {
-      if (last === snapshot) last = undefined;
+      if (version === revision) last = undefined;
       console.error("Could not write Steam saves.", error);
+      return false;
     });
   };
-  return { storage, persist, flush: () => pending, imported };
+  return { storage, persist, async flush() {
+    let current: Promise<boolean>;
+    let written: boolean;
+    do {
+      current = pending;
+      written = await current;
+    } while (current !== pending);
+    if (!written) throw new Error("Steam save failed");
+  }, imported };
 }
 
 export function earnedSteamAchievements(state: GameState, landmarkCount: number, totalLandmarks: number): AchievementId[] {

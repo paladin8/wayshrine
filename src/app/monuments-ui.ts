@@ -14,12 +14,13 @@ export interface MonumentUi {
   refresh(): void;
 }
 
-const JA_SCRIPT = '"Yuji Syuku","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif';
+const JA_SCRIPT = '"Yuji Syuku","Wayshrine Repeat Marks","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif';
 const SHEETS_PER_BATCH = 6;
 const EN_SCRIPT = '"Kaushan Script","Brush Script MT",cursive';
 
 const CSS = `
-@font-face{font-family:"Yuji Syuku";src:url("${import.meta.env.BASE_URL}fonts/yuji-syuku.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Yuji Syuku";src:url("${import.meta.env.BASE_URL}fonts/yuji-syuku-subset.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Wayshrine Repeat Marks";src:url("${import.meta.env.BASE_URL}fonts/noto-serif-cjk-jp-repeat-marks.woff2") format("woff2");unicode-range:U+3033,U+3035;font-display:swap}
 @font-face{font-family:"Kaushan Script";src:url("${import.meta.env.BASE_URL}fonts/kaushan-script.ttf") format("truetype");font-display:swap}
 .hud .mu-box-button{gap:6px;padding:0 10px;line-height:1}
 .mu-paper-icon{position:relative;display:block;width:18px;height:18px;color:#775540}
@@ -54,7 +55,6 @@ const CSS = `
 .mu-card.box .mu-x{top:9px;right:9px;color:#f4e3ba;background:#3b221e85}
 .mu-card.box .mu-x:hover{background:#39201c}
 .mu-overlay.reading .mu-card{width:min(700px,calc(100vw - 48px));max-height:calc(100svh - 64px);padding:0;overflow:visible;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:0 1px 4px #120c0c,0 0 18px #120c0c99}
-.mu-overlay.reading .mu-card:focus{outline:none}
 .mu-overlay.reading .mu-x{top:-6px;right:0;pointer-events:auto;background:#120c0c80}
 .mu-overlay.reading .mu-x:hover{background:#120c0cbb}
 .mu-overlay.reading .mu-back{pointer-events:auto}

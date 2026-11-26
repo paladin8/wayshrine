@@ -83,6 +83,14 @@ function createAchievementReporter(client) {
   };
 }
 
+function enableSteamOverlay(resources) {
+  try {
+    require(path.join(resources, "steamworks.js")).electronEnableSteamOverlay(true);
+  } catch (error) {
+    console.warn("Could not configure the Steam overlay.", error.message);
+  }
+}
+
 function startSteam(userData, resources, expectedAppId) {
   const launchAppId = process.env.SteamAppId;
   const appId = process.env.WAYSHRINE_STEAM_APP_ID || launchAppId || expectedAppId;
@@ -96,11 +104,11 @@ function startSteam(userData, resources, expectedAppId) {
     const awards = createAchievementReporter(client);
     const retry = setInterval(awards.flush, 30000);
     retry.unref();
-    return { save, awards };
+    return { save, awards, enterText: (label, text) => client.utils.showGamepadTextInput(0, 0, label, 64, text) };
   } catch (error) {
     console.warn("Steamworks could not initialize. Using the standalone profile.", error.message);
     return null;
   }
 }
 
-module.exports = { createAchievementReporter, createSteamSaveFile, startSteam };
+module.exports = { createAchievementReporter, createSteamSaveFile, enableSteamOverlay, startSteam };
