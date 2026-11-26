@@ -78,12 +78,11 @@ test("production build starts, explores, and resumes a journey", { timeout: 90_0
   await page.locator(".map.large").waitFor();
   await page.keyboard.press("Escape");
   await page.locator(".map.small").waitFor();
-  await page.keyboard.press("z");
 
   await page.locator(".hud .gear").click();
   await Promise.all([
     page.waitForEvent("domcontentloaded", { timeout: navigation.timeout }),
-    page.getByRole("button", { name: "Return to title" }).click(),
+    page.getByRole("button", { name: "Return to title" }).click({ noWaitAfter: true }),
   ]);
   await menu.waitFor();
   assert.match(await resume.innerText(), /browser-smoke/);
