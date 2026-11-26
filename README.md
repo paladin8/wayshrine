@@ -2,7 +2,7 @@
 
 An open-ended, non-combat exploration game in a low-poly isometric style. Walk an endless procedural world of dead, grey lands; restore each region's shrine and the land around it comes alive. Each restoration unlocks the means to cross terrain that was closed to you (boat, snowshoes, walking sticks, geta, lantern, ash sandals, ship) and uncovers more of an older, more advanced civilisation that the shrines once powered.
 
-Three.js + TypeScript + Vite. Runs in the browser.
+Three.js + TypeScript + Vite. Runs in the browser and as a desktop app.
 
 ## Run
 
@@ -13,6 +13,19 @@ npm run check      # typecheck + tests + production build
 ```
 
 Press **Z** for a brief wide view while exploring.
+
+## Desktop builds
+
+Use Node.js 24 and run `npm ci`, then `npm run desktop:package` on your platform. The build goes in `release/`. The **Desktop release** GitHub Actions workflow also builds both platforms on demand and on `v*` tags.
+
+| Platform | Bundle | Steam launch option |
+| --- | --- | --- |
+| Windows x64 | `Wayshrine-win32-x64/` | `Wayshrine.exe` |
+| macOS (Apple silicon and Intel) | `Wayshrine-darwin-universal/` | `Wayshrine.app` |
+
+Download the workflow's ZIP artifacts, then upload the unpacked contents of each bundle folder to its own [SteamPipe depot](https://partner.steamgames.com/doc/sdk/uploading). Steam installs the whole folder. Progress and preferences are stored in the desktop app's own profile.
+
+The macOS workflow produces ad hoc signed builds for testing. To build for release, install a Developer ID Application certificate and create a `notarytool` keychain profile on a Mac. Set `WAYSHRINE_MAC_SIGN_IDENTITY` to that certificate name and `WAYSHRINE_MAC_NOTARY_PROFILE` to the profile name before running `npm run desktop:package -- mac`. [macOS signing and notarization](https://www.electronforge.io/guides/code-signing/code-signing-macos)
 
 ## Where to look
 

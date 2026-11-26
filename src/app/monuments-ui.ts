@@ -300,7 +300,7 @@ export function createMonumentUi(
     card.setAttribute("role", collectionOpen ? "dialog" : "region");
     if (collectionOpen) card.setAttribute("aria-modal", "true");
     else card.removeAttribute("aria-modal");
-    card.setAttribute("aria-label", t.monuments.box);
+    card.setAttribute("aria-label", reading ? t.monuments.inscription : t.monuments.box);
     const x = el("button", "mu-x", card);
     x.type = "button";
     x.textContent = "×";

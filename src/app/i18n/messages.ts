@@ -26,6 +26,7 @@ export interface Messages {
   /** The travel notebook that lists restored landmarks. */
   readonly notebook: {
     readonly title: string;
+    readonly entryNumber: (number: number) => string;
     readonly empty: string;
     readonly travel: string;
     /** Debug only: marks a landmark the player has not restored yet. */
@@ -68,6 +69,7 @@ export interface Messages {
     /** Shown beside a monument in a region that has not been restored: the inscription cannot be read. */
     readonly promptWorn: string;
     readonly kind: Readonly<Record<TextKind, string>>;
+    readonly inscription: string;
     readonly box: string;
     readonly boxOpen: string;
     readonly progress: (found: number, total: number) => string;

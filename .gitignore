@@ -8,3 +8,6 @@ dist
 
 # Fonts downloaded by scripts/landmark-names.py
 scripts/.fonts/
+
+# Packaged desktop builds
+/release/

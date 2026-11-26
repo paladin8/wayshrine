@@ -1,18 +1,18 @@
 {
  "fushimi-inari": {
   "en": "I lost count of the torii after a few bends.",
-  "ja": "角をいくつか曲がるうちに、鳥居が何本目かわからなくなった。"
+  "ja": "何度か角を曲がるうちに、鳥居の数がわからなくなった。"
  },
  "kinkaku-ji": {
   "en": "For a moment I could see the pavilion's railings in the pond. Then the wind picked up.",
-  "ja": "池に映った金閣は手すりまで見えた。風が吹くまでの、ほんのひととき。"
+  "ja": "池に映る金閣は、手すりまでくっきり見えた。風が吹くまでの、ほんのひととき。"
  },
  "todai-ji-daibutsu": {
   "en": "My eyes took a while to adjust. Then that enormous hand came out of the dark.",
   "ja": "暗さに目が慣れてきたころ、大仏さまの大きな手がふっと見えてきた。"
  },
  "itsukushima-torii": {
-  "en": "The tide was in. Little waves lapped at the feet of the great torii.",
+  "en": "The tide was in. Little waves lapped at the base of the great torii.",
   "ja": "潮が満ちて、小さな波が大鳥居の足もとに寄せていた。"
  },
  "himeji-castle": {
@@ -40,11 +40,11 @@
   "ja": "堀沿いを歩いて、赤い橋と黒い天守が一緒に見えるところで足を止めた。"
  },
  "hirosaki-castle": {
-  "en": "Hard to picture the cherry-blossom crowds. Today it was just my boots in the snow.",
+  "en": "Hard to picture the cherry-blossom crowds. Today all I could hear was the snow crunching under my boots.",
   "ja": "花見のにぎわいが想像できないほど静かで、足もとで雪を踏む音だけがした。"
  },
  "zao-juhyo": {
-  "en": "From the ropeway the snow monsters looked like a crowd waiting for something.",
+  "en": "From the ropeway, the snow monsters looked like a crowd waiting for something.",
   "ja": "ロープウェイから見た樹氷は、何かを待っている人たちのようだった。"
  },
  "kenroku-en": {
@@ -56,19 +56,19 @@
   "ja": "カメラをしまったところで雲が流れ、富士山がすっと姿を現した。"
  },
  "nikko-toshogu": {
-  "en": "After all that gold, I'd nearly walked past the little sleeping cat.",
-  "ja": "陽明門の金色に見とれて、小さな眠り猫をうっかり見過ごすところだった。"
+  "en": "I was still thinking about the gold on Yomeimon Gate when I nearly walked past the little sleeping cat.",
+  "ja": "陽明門の金色がまだ頭に残っていて、小さな眠り猫をうっかり見過ごすところだった。"
  },
  "kegon-falls": {
-  "en": "Spray on my face at the lower platform. I gave up trying to talk over the falls.",
-  "ja": "観瀑台までしぶきが飛んできた。滝の音がすごくて、話すのはあきらめた。"
+  "en": "Spray reached my face at the lower lookout. I gave up trying to talk over the falls.",
+  "ja": "下の観瀑台までしぶきが飛んできた。滝の音に負けて、話すのはあきらめた。"
  },
  "kappa-bashi": {
-  "en": "I could see each stone through the river. By the far bank, Hotaka was out of the clouds.",
-  "ja": "梓川の底の石が一つずつ見えた。渡りきるころには穂高にかかる雲も切れた。"
+  "en": "I could see every stone on the riverbed. By the far bank, Hotaka had come out of the clouds.",
+  "ja": "梓川の底の石が一つひとつ見えた。橋を渡りきるころには、穂高にかかる雲も切れていた。"
  },
  "tateyama-kurobe": {
-  "en": "A whole bus went by looking about the size of a toy between those snow walls.",
+  "en": "A passing bus looked like a toy between those walls of snow.",
   "ja": "あの雪の壁の間では、走っていくバスがおもちゃみたいに小さく見えた。"
  },
  "koyasan-okunoin": {
@@ -77,15 +77,15 @@
  },
  "yoshino-yama": {
   "en": "Petals underfoot down low, whole slopes in bloom higher up. Spring ran a few days behind up there.",
-  "ja": "下では花びらを踏んで歩いた。上の斜面はまだ満開で、春が少し遅れていた。"
+  "ja": "山の下の方では花びらを踏んで歩いた。見上げた先はまだ満開。上では春が少し遅いらしい。"
  },
  "kushiro-shitsugen": {
   "en": "Two white specks beyond the bend in the river. Through the binoculars, two cranes.",
-  "ja": "川の曲がり角の向こうに白い点が二つ。双眼鏡をのぞいたらタンチョウだった。"
+  "ja": "川の曲がり角の向こうに白い点が二つ。双眼鏡をのぞくと、タンチョウが二羽いた。"
  },
  "oze": {
   "en": "White tufts of cottongrass nodded by the boardwalk. The mountain in the pool barely moved.",
-  "ja": "木道のそばでワタスゲの白い穂が揺れた。池に映る山はほとんど動かなかった。"
+  "ja": "木道のそばでワタスゲの白い穂が揺れた。水面に映る山はほとんど揺れなかった。"
  },
  "yanagawa": {
   "en": "The boatman stopped singing just long enough to tell us to duck. Then right back to the song.",
@@ -97,7 +97,7 @@
  },
  "byodo-in": {
   "en": "I'd seen the hall on ten-yen coins for years. Across the pond, it finally looked like a bird.",
-  "ja": "十円玉で見慣れた鳳凰堂。池の向こうに見ると、本当に翼を広げた鳥のようだった。"
+  "ja": "十円玉で見慣れた鳳凰堂。池越しに見ると、本当に翼を広げた鳥のようだった。"
  },
  "senso-ji": {
   "en": "Just past the big lantern, toasted rice crackers. By the main hall, incense.",
@@ -112,7 +112,7 @@
   "ja": "見えなくなったと思ったら、次の角でまた東京タワーがオレンジ色に光っていた。"
  },
  "osaka-castle": {
-  "en": "The gold on the keep drew me in. Down by the moat, a single stone was taller than me.",
+  "en": "The gold on the keep drew my eye. Down by the moat, one stone in the wall stood taller than I did.",
   "ja": "天守の金色に目を引かれた。堀まで行ってみると、石垣には背丈より大きい石があった。"
  },
  "horyu-ji": {
@@ -120,20 +120,20 @@
   "ja": "五重塔を見上げると、屋根が上へ行くほど少しずつ小さくなっていた。"
  },
  "jomon-sugi": {
-  "en": "Hours to reach the deck. I stood there a long time, still trying to take in the whole cedar.",
+  "en": "It took hours to reach the viewing deck. I stood there a long time, looking up at the cedar's crown.",
   "ja": "何時間も歩いて展望デッキへ。縄文杉のてっぺんまで、しばらく見上げていた。"
  },
  "shiratani-unsuikyo": {
   "en": "The moss was bright after the rain. By the time I left, the wet leaves had soaked my sleeves.",
-  "ja": "雨上がりの苔はひときわ鮮やかだった。濡れた葉に触れて、袖まで湿った。"
+  "ja": "雨上がりの苔はひときわ鮮やかだった。濡れた葉をかき分けて歩くうちに、袖まで湿っていた。"
  },
  "arashiyama": {
   "en": "A breeze came through. The bamboo leaves rustled all the way up the path.",
   "ja": "風が吹くと、小径の奥まで竹の葉がさわさわと鳴った。"
  },
  "nachi-falls": {
-  "en": "The whole falls fit in a frame beside the pagoda. Down by the shrine, the sound was everywhere.",
-  "ja": "三重塔と滝が一枚に収まった。神社まで下りると、あたり一面が滝の音だった。"
+  "en": "The falls and pagoda fit in one shot. At the foot of the falls, I could hardly hear anything else.",
+  "ja": "三重塔と滝が一枚に収まった。滝の下まで行くと、ほかの音がほとんど聞こえなかった。"
  },
  "meiji-jingu": {
   "en": "By the time I was deep in the woods, I could hear my own footsteps on the gravel.",
@@ -148,12 +148,12 @@
   "ja": "塀の向こうに大屋根がのぞき、その上で千木が空に伸びていた。"
  },
  "takachiho": {
-  "en": "A rowboat turned under the basalt walls, leaving rings in the green water.",
+  "en": "A rowboat turned beneath the sheer, dark cliffs, sending ripples across the green water.",
   "ja": "黒い岩壁の下でボートが向きを変え、緑の水面に波紋が広がった。"
  },
  "iya-kazurabashi": {
   "en": "I meant to look straight ahead. Then I saw the river between the slats.",
-  "ja": "前を向いて渡るつもりだったのに、足場の隙間から川が見えてしまった。"
+  "ja": "前を向いて渡るつもりだったのに、足もとの板の隙間から川が見えてしまった。"
  },
  "ginkaku-ji": {
   "en": "The sand mound was so smooth that I kept wondering how they'd finished it.",
@@ -161,14 +161,14 @@
  },
  "ryoan-ji": {
   "en": "Fifteen stones, they say. I stopped counting and sat a little longer.",
-  "ja": "石は十五あるという。数えるのをやめて、もう少し縁側に座っていた。"
+  "ja": "石は十五あるという。数えるのはやめて、縁側にもう少し座っていた。"
  },
  "sakurajima": {
-  "en": "A grey plume across the bay. Later I found a thin layer of ash on the parked cars.",
-  "ja": "湾の向こうに灰色の噴煙。あとで、駐車中の車にうっすら灰が積もっていた。"
+  "en": "A gray plume across the bay. Later I found a thin layer of ash on the parked cars.",
+  "ja": "湾の向こうに灰色の噴煙。あとで、停めてある車にうっすら灰が積もっているのに気づいた。"
  },
  "mount-aso": {
-  "en": "From the rim, I could see whole towns on the caldera floor. I'd never pictured a volcano like this.",
+  "en": "From the rim, I could see whole towns in the caldera. I'd never pictured a volcano this big.",
   "ja": "外輪山から見下ろすと、カルデラの中に町がいくつもあった。こんなに広いとは。"
  },
  "beppu-hells": {
@@ -176,12 +176,12 @@
   "ja": "青い湯の次は赤い湯。どちらでも眼鏡が曇った。"
  },
  "owakudani": {
-  "en": "Ate a black egg. If the story's true, that's seven more years to come back.",
-  "ja": "黒たまごを一つ食べた。言い伝えどおりなら、また来る時間が七年増えた。"
+  "en": "Ate a black egg. If the legend holds, I've got seven extra years to make it back here.",
+  "ja": "黒たまごを一つ食べた。言い伝えどおり寿命が七年延びるなら、また来られそうだ。"
  },
  "kumamoto-castle": {
-  "en": "The wall rises gently at first, then almost straight up. It looks even steeper from below.",
-  "ja": "足もとはゆるやかで、上はほとんど垂直。見上げると、いっそう急に見えた。"
+  "en": "The stone wall starts gently, then curves almost straight up. I tipped my head back to follow it.",
+  "ja": "石垣は下の方こそゆるやかだけど、上はほとんど垂直。目でたどるうちに首が反った。"
  },
  "dazaifu": {
   "en": "I passed students on the bridges. By the shrine, I'd thought of a wish too.",
@@ -192,8 +192,8 @@
   "ja": "外に出ても耳がぽかぽかしていた。振り返ると、屋根の上の窓が赤く光っていた。"
  },
  "kintaikyo": {
-  "en": "Five spans from the riverbank. My legs noticed the three steep ones in the middle.",
-  "ja": "河原からは橋が五つ連なって見えた。渡ってみると、真ん中の三つが足にきた。"
+  "en": "Five spans from the riverbank. My legs remembered the three steep arches in the middle.",
+  "ja": "河原から見ると、橋が五つ連なっている。渡ってみると、真ん中の三つのアーチが足にきた。"
  },
  "gunkanjima": {
   "en": "It looked like a warship until we drew close enough to see all the empty windows.",
@@ -204,8 +204,8 @@
   "ja": "足もとで渦ができた。一瞬遅れて、ガラスの床に立っていたことを思い出した。"
  },
  "shuri-castle": {
-  "en": "The red of the rebuilt hall caught my eye first. Then I saw the stone dragons by the steps.",
-  "ja": "復元された正殿の朱色がまず目に入った。石段の脇には石の龍が立っていた。"
+  "en": "The hall's deep red caught my eye first. Then I noticed the stone dragons by the steps.",
+  "ja": "復元された正殿の深い赤がまず目に入った。それから、石段脇の龍の彫刻に気づいた。"
  },
  "taketomi": {
   "en": "The sanshin came around the corner first. Then the buffalo cart rolled by, slow as could be.",
@@ -224,7 +224,7 @@
   "ja": "海を眺めて引き返すと、つけたばかりの足跡を風がもう消しかけていた。"
  },
  "shiretoko": {
-  "en": "From the boardwalk I could see the sea. A little farther on, the mountains lay reflected in the lake.",
+  "en": "I saw the sea from the raised boardwalk. Farther on, the mountains lay reflected in the lake.",
   "ja": "高架木道から海が見えた。もう少し歩くと、湖に山並みが映っていた。"
  },
  "otaru-canal": {
@@ -233,26 +233,26 @@
  },
  "goryokaku": {
   "en": "I'd walked along the moat. It took a trip up the tower to see the whole star.",
-  "ja": "堀沿いを歩いたあと、タワーに上ってようやく星の形がひと目でわかった。"
+  "ja": "堀沿いを歩いたあと、タワーに上ってようやく星形の全体が見えた。"
  },
  "blue-pond": {
-  "en": "A cloud crossed the sun. By the time I got my camera out, the pond had changed colour.",
-  "ja": "雲が日を遮った。カメラを取り出す間にも、池の色が変わった。"
+  "en": "A cloud crossed the sun. By the time I got my camera out, the pond had changed color.",
+  "ja": "雲が日を遮った。カメラを取り出すうちに、池の色が変わっていた。"
  },
  "furano": {
-  "en": "The lavender hit me at the top of the hill. Up close, all that purple was humming with bees.",
+  "en": "The scent of lavender hit me at the top of the hill. Up close, all that purple was humming with bees.",
   "ja": "坂を上りきるとラベンダーが香った。花に近づくと、蜂の羽音がしていた。"
  },
  "ouchi-juku": {
-  "en": "Hot soba after the snowy street. It took me three tries to catch a noodle with the leek.",
-  "ja": "雪道を歩いたあとに温かいそば。長ねぎで一本すくうのに三度かかった。"
+  "en": "Hot soba after the snowy street. It took me three tries to scoop up a noodle with the long green onion.",
+  "ja": "雪道を歩いたあとに温かいそば。箸代わりの長ねぎでそばを一本すくうのに、三回もかかった。"
  },
  "ginzan-onsen": {
   "en": "Warm light in the inn windows, gas lamps on the snow. I took my time getting back.",
   "ja": "旅館の窓にはあたたかそうな明かり。ガス灯のともる雪道を、ゆっくり引き返した。"
  },
  "chuson-ji": {
-  "en": "After the cedars, a room full of gold. The hall itself was smaller than I'd imagined.",
+  "en": "After the cedars, all that gold. The hall itself was smaller than I'd imagined.",
   "ja": "杉並木の先で、目の前に金色が広がった。お堂は思っていたより小さかった。"
  },
  "yamadera": {

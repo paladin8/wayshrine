@@ -1,6 +1,6 @@
 import { backpackContents } from "./backpack";
 import { BACKPACK_ICON } from "./gear-icons";
-import type { Locale, Messages } from "./i18n";
+import { messagesFor, type Locale, type Messages } from "./i18n";
 import { UI_FONT, setText } from "./style";
 
 export interface HudModel {
@@ -129,6 +129,8 @@ export function createHud(container: HTMLElement): Hud {
   enBox.className = "en";
   const jaImg = document.createElement("img");
   const enImg = document.createElement("img");
+  jaImg.lang = "ja";
+  enImg.lang = "en";
   jaBox.appendChild(jaImg);
   enBox.appendChild(enImg);
   lname.append(jaBox, enBox);
@@ -145,6 +147,8 @@ export function createHud(container: HTMLElement): Hud {
   nearEnBox.className = "en";
   const nearJa = document.createElement("img");
   const nearEn = document.createElement("img");
+  nearJa.lang = "ja";
+  nearEn.lang = "en";
   nearJaBox.appendChild(nearJa);
   nearEnBox.appendChild(nearEn);
   near.append(nearJaBox, nearEnBox);
@@ -211,7 +215,7 @@ export function createHud(container: HTMLElement): Hud {
           jaImg.src = `${base}.ja.png`;
           enImg.src = `${base}.en.png`;
         }
-        jaImg.alt = n.label;
+        jaImg.alt = messagesFor("ja").landmarkNames[n.id] ?? n.id;
         enImg.alt = n.english ? n.label : "";
         enBox.style.display = n.english ? "block" : "none";
         lname.style.display = "block";
@@ -230,7 +234,7 @@ export function createHud(container: HTMLElement): Hud {
           nearJa.src = `${base}.ja.png`;
           nearEn.src = `${base}.en.png`;
         }
-        nearJa.alt = nn.label;
+        nearJa.alt = messagesFor("ja").landmarkNames[nn.id] ?? nn.id;
         nearEn.alt = nn.english ? nn.label : "";
         nearEnBox.style.display = nn.english ? "block" : "none";
         near.style.display = "flex";

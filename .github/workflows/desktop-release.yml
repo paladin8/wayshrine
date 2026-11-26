@@ -1,0 +1,51 @@
+name: Desktop release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            runner: windows-2025
+            bundle: Wayshrine-win32-x64
+          - target: mac
+            runner: macos-15
+            bundle: Wayshrine-darwin-universal
+    env:
+      # The packager downloads the runtime for the requested build architecture.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      BUNDLE: ${{ matrix.bundle }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: node scripts/package-desktop.mjs ${{ matrix.target }}
+      - name: Archive Windows bundle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -LiteralPath "release/$env:BUNDLE" -DestinationPath "release/$env:BUNDLE.zip"
+      - name: Archive macOS bundle
+        if: runner.os == 'macOS'
+        run: ditto -c -k --sequesterRsrc --keepParent "release/$BUNDLE" "release/$BUNDLE.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.bundle }}
+          path: release/${{ matrix.bundle }}.zip
+          if-no-files-found: error

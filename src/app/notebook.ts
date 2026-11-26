@@ -268,7 +268,7 @@ export function createNotebook(container: HTMLElement, opener: HTMLElement, sour
     const t = messagesFor(language);
     const node = el("div", item.restored ? "nb-entry" : "nb-entry locked", parent);
     const head = el("div", "nb-head", node);
-    el("span", "nb-no", head).textContent = language === "ja" ? `第${item.no}` : `No. ${item.no}`;
+    el("span", "nb-no", head).textContent = t.notebook.entryNumber(item.no);
     const name = el("h3", `nb-name ${language}`, head);
     name.lang = language;
     name.textContent = t.landmarkNames[item.id] ?? item.id;
