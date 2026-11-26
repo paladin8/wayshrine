@@ -15,7 +15,7 @@ export interface HudModel {
   readonly landmarkName: LandmarkNameModel | null;
   /** The small name shown near the bottom while the player is close to a restored landmark, or null. */
   readonly nearLandmarkName?: LandmarkNameModel | null;
-  readonly gearReveal: { readonly gear: keyof Messages["gearReveal"]; readonly locale: Locale } | null;
+  readonly notice: { readonly title: string; readonly hint: string; readonly locale: Locale } | null;
 }
 
 /**
@@ -189,13 +189,12 @@ export function createHud(container: HTMLElement): Hud {
     landmarkButton: count,
     update(m) {
       const t = m.messages;
-      if (m.gearReveal) {
-        gearReveal.lang = m.gearReveal.locale;
-        const message = t.gearReveal[m.gearReveal.gear];
-        setText(gearTitle, message.title);
-        setText(gearHint, message.hint);
+      if (m.notice) {
+        gearReveal.lang = m.notice.locale;
+        setText(gearTitle, m.notice.title);
+        setText(gearHint, m.notice.hint);
       }
-      gearReveal.hidden = m.gearReveal === null;
+      gearReveal.hidden = m.notice === null;
       setText(backpackCount, String(backpackContents(m.restoredLandmarks.length).held.length));
       if (renderedLandmarks !== m.restoredLandmarks || renderedLandmarkMessages !== t) {
         renderedLandmarks = m.restoredLandmarks;

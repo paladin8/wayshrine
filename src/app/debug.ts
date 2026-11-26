@@ -22,7 +22,6 @@ export interface DebugActions {
   readonly previewShipUnlock: () => void;
   readonly previewShipUse: () => void;
   readonly previewPilgrimsWake: () => void;
-  /** Switches gear transitions between their cue and a plain slow crossfade; returns the new mode. */
 }
 
 const CSS = `

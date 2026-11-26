@@ -14,7 +14,11 @@ npm run check      # typecheck + tests + production build
 
 Press **Z** for a brief wide view while exploring.
 
+For a public web build, set `VITE_SITE_URL` to the published site URL (including any subdirectory) before running `npm run build`. The build uses it for the canonical URL and social preview image.
+
 ## Desktop builds
+
+Toggle fullscreen in **Options** or with **F11**. **Quit game** is available on the title screen and in the in-game settings. Quitting from the game saves your journey.
 
 Use Node.js 24 and run `npm ci`, then `npm run desktop:package` on your platform. The build goes in `release/`. The **Desktop release** GitHub Actions workflow also builds both platforms on demand and on `v*` tags.
 

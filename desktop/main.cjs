@@ -65,19 +65,49 @@ function handleGameFiles(request) {
   return response.catch(() => new Response(null, { status: 404 }));
 }
 
+function isGameUrl(url) {
+  const { protocol, host } = new URL(url);
+  return protocol === `${SCHEME}:` && host === HOST;
+}
+
 function createWindow() {
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
     backgroundColor: "#18171a",
     autoHideMenuBar: true,
+    webPreferences: { preload: path.join(__dirname, "preload.cjs") },
   });
-  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-  window.webContents.on("will-navigate", (event, destination) => {
-    const url = new URL(destination);
-    if (url.protocol !== `${SCHEME}:` || url.host !== HOST) event.preventDefault();
+  const contents = window.webContents;
+  contents.setWindowOpenHandler(() => ({ action: "deny" }));
+  contents.on("will-navigate", (event, destination) => {
+    if (!isGameUrl(destination)) event.preventDefault();
   });
+
+  // Accept desktop commands only from this window's top-level game page.
+  const fromGame = ({ senderFrame }) => senderFrame?.parent === null && isGameUrl(senderFrame.url);
+  contents.ipc.handle("wayshrine:get-fullscreen", (event) => fromGame(event) && window.isFullScreen());
+  contents.ipc.on("wayshrine:set-fullscreen", (event, fullscreen) => {
+    if (fromGame(event) && typeof fullscreen === "boolean") window.setFullScreen(fullscreen);
+  });
+  contents.ipc.on("wayshrine:quit", (event) => {
+    if (fromGame(event)) app.quit();
+  });
+  const sendFullscreen = (fullscreen) => {
+    if (!contents.isDestroyed()) contents.send("wayshrine:fullscreen-changed", fullscreen);
+  };
+  window.on("enter-full-screen", () => sendFullscreen(true));
+  window.on("leave-full-screen", () => sendFullscreen(false));
+  contents.on("before-input-event", (event, input) => {
+    if (input.key !== "F11" || input.type !== "keyDown") return;
+    event.preventDefault();
+    if (!input.isAutoRepeat) window.setFullScreen(!window.isFullScreen());
+  });
+  let closing = false;
+  window.on("close", () => { closing = true; });
   void window.loadURL(`${SCHEME}://${HOST}/`).catch((error) => {
+    // Closing or replacing the startup page can cancel its load.
+    if (closing || error.code === "ERR_ABORTED") return;
     console.error(error);
     app.exit(1);
   });

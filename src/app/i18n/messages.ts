@@ -50,7 +50,17 @@ export interface Messages {
     readonly summary: (count: number) => string;
     readonly resume: string;
   };
+  readonly welcome: { readonly title: string; readonly hint: string };
   readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern" | "ashSandals" | "ship" | "pilgrimsWake", { readonly title: string; readonly hint: string }>>;
+  readonly controls: {
+    readonly rotate: string;
+    readonly act: { readonly restore: string; readonly read: string; readonly board: string; readonly skip: string };
+    readonly map: string;
+    readonly box: string;
+    readonly overview: string;
+    readonly welcomeGamepad: string;
+    readonly welcomeTouch: string;
+  };
   readonly promptRestore: string;
   readonly promptRestoreLandmark: string;
   readonly promptSkip: string;
@@ -94,8 +104,12 @@ export interface Messages {
     readonly female: string;
     readonly male: string;
     readonly instructions: string;
-    /** A few short paragraphs. */
+    /** A basic description of how to play, a few sentences. */
     readonly instructionsText: readonly string[];
+    readonly tabSettings: string;
+    readonly tabControls: string;
+    /** The controls tab: a titled list of [what, how] rows per kind of device. */
+    readonly controlGroups: readonly { readonly title: string; readonly rows: readonly (readonly [string, string])[] }[];
     readonly returnToTitle: string;
   };
   readonly title: {

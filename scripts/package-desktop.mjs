@@ -15,7 +15,9 @@ if (!target) throw new Error("Choose a desktop target: windows or mac");
 
 const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 const dist = join(root, "dist");
-await access(join(dist, "index.html"));
+const mac = target.platform === "darwin";
+const icon = join(root, "desktop", "icons", mac ? "wayshrine.icns" : "wayshrine.ico");
+await Promise.all([access(join(dist, "index.html")), access(icon)]);
 
 const staging = await mkdtemp(join(tmpdir(), "wayshrine-package-"));
 try {
@@ -24,6 +26,7 @@ try {
   await Promise.all([mkdir(appDirectory), mkdir(licenses)]);
   await Promise.all([
     copyFile(join(root, "desktop", "main.cjs"), join(appDirectory, "main.cjs")),
+    copyFile(join(root, "desktop", "preload.cjs"), join(appDirectory, "preload.cjs")),
     writeFile(join(appDirectory, "package.json"), JSON.stringify({
       name: manifest.name,
       productName: "Wayshrine",
@@ -38,7 +41,6 @@ try {
 
   const identity = process.env.WAYSHRINE_MAC_SIGN_IDENTITY;
   const notaryProfile = process.env.WAYSHRINE_MAC_NOTARY_PROFILE;
-  const mac = target.platform === "darwin";
   if (mac && notaryProfile && !identity) {
     throw new Error("Notarization requires a Developer ID signing identity");
   }
@@ -51,6 +53,7 @@ try {
     appBundleId: "io.github.paladin8.wayshrine",
     electronVersion: manifest.devDependencies.electron,
     ...target,
+    icon,
     asar: true,
     extraResource: [dist, licenses],
     overwrite: true,

@@ -19,13 +19,16 @@ function allText(m: Messages): string[] {
     m.completion.title,
     m.completion.summary(LANDMARKS.length),
     m.completion.resume,
+    ...Object.values(m.welcome),
     ...Object.values(m.gearReveal).flatMap(Object.values),
     m.promptRestore,
+    ...Object.values(m.controls).flatMap((v) => (typeof v === "string" ? [v] : Object.values(v))),
     m.promptRestoreLandmark,
     m.promptSkip,
     ...Object.values(m.map),
     m.mapNeeds("X"),
-    ...Object.values(m.settings).flat(),
+    ...Object.values(m.settings).flat().filter((v): v is string => typeof v === "string"),
+    ...m.settings.controlGroups.flatMap((g) => [g.title, ...g.rows.map((r) => r[0])]),
     ...Object.values(m.title).filter((v): v is string => typeof v === "string"),
     ...m.title.creditsLines,
     m.title.continueDetail("quiet-heron-1234", 7),
@@ -79,6 +82,15 @@ describe("i18n", () => {
     const same = ja.filter((s, i) => s === en[i]);
     expect(same).toEqual([]);
     for (const s of ja) expect(s).toMatch(/[぀-ヿ一-鿿]/);
+  });
+
+  it("gives every act prompt a device placeholder", () => {
+    for (const locale of LOCALES) {
+      const m = messagesFor(locale);
+      for (const text of [m.promptRestore, m.promptRestoreLandmark, m.promptSkip, m.monuments.promptRead, m.railway.board]) {
+        expect(text).toContain("{act}");
+      }
+    }
   });
 
   it("detects the language from the browser's preference order", () => {

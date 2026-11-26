@@ -113,6 +113,13 @@ export interface Minimap {
   update(input: MapInput): void;
   toggleExpanded(): void;
   isExpanded(): boolean;
+  /**
+   * Gamepad control of the expanded map: the stick pans, `zoom` (-1 out to 1 in) zooms, and a reticle at the centre
+   * picks the nearest shrine or landmark. `look` is screen-space, up positive. Does nothing while the map is closed.
+   */
+  pad(look: { readonly right: number; readonly up: number }, zoom: number, dt: number): void;
+  /** Travels to the shrine under the reticle. Returns whether there was one. */
+  travelToReticle(): boolean;
 }
 
 const CSS = `
@@ -143,6 +150,10 @@ const CSS = `
  * explored regions and revealed landmarks. It is drawn in screen orientation (the same
  * rotated view as the game), and unexplored regions stay fogged.
  */
+/** The gamepad reticle's reach, in canvas pixels, and how fast the stick pans (pixels per second at full tilt). */
+const PAD_PICK = 30;
+const PAD_PAN = 380;
+
 export function createMinimap(
   container: HTMLElement,
   world: World,
@@ -193,6 +204,8 @@ export function createMinimap(
   let lastKey = "";
   let waypoints: Waypoint[] = [];
   let hovered: Waypoint | null = null;
+  /** True while a gamepad is steering the map: a reticle marks the centre, and the shrine under it is picked. */
+  let reticle = false;
   let lastPos: Point = { x: Infinity, z: Infinity };
 
   const regionRgb = (r: Region, state: GameState): RGB => {
@@ -411,6 +424,21 @@ export function createMinimap(
     ctx.strokeStyle = "#2a2424";
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    if (expanded && reticle) {
+      const c = size / 2;
+      for (const [colour, width] of [["#2a2424", 4], ["#fffaf0", 2]] as const) {
+        ctx.beginPath();
+        ctx.arc(c, c, PAD_PICK, 0, Math.PI * 2);
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          ctx.moveTo(c + dx * (PAD_PICK - 6), c + dy * (PAD_PICK - 6));
+          ctx.lineTo(c + dx * (PAD_PICK + 6), c + dy * (PAD_PICK + 6));
+        }
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = width;
+        ctx.stroke();
+      }
+    }
   }
 
   let lastInput: MapInput | null = null;
@@ -473,6 +501,7 @@ export function createMinimap(
   let suppressClick = false;
   canvas.addEventListener("pointerdown", (e) => {
     if (!expanded || e.button !== 0) return;
+    reticle = false;
     const [x, y] = toCanvas(e);
     drag = { id: e.pointerId, x, y, moved: false };
   });
@@ -501,6 +530,10 @@ export function createMinimap(
   canvas.addEventListener("pointercancel", endDrag);
   canvas.addEventListener("mousemove", (e) => {
     if (drag?.moved) return;
+    if (reticle) {
+      reticle = false;
+      hovered = null;
+    }
     const next = hit(e);
     canvas.classList.toggle("travel", next !== null);
     if (next?.region.id === hovered?.region.id) return;
@@ -523,12 +556,44 @@ export function createMinimap(
 
   return {
     isExpanded: () => expanded,
+    pad(look, zoom, dt) {
+      if (!expanded || !lastInput) return;
+      const active = look.right !== 0 || look.up !== 0 || Math.abs(zoom) > 0.05;
+      if (!active && reticle) return;
+      reticle = true;
+      const scale = Math.max(0.25, Math.min(maxScale(), Math.abs(zoom) > 0.05 ? view.scale * Math.exp(-zoom * dt * 1.6) : view.scale));
+      const u = view.u + look.right * PAD_PAN * dt * scale;
+      const v = view.v + look.up * PAD_PAN * dt * scale;
+      view = { ...view, u, v, scale };
+      setView(u, v, scale);
+      const half = canvas.width / 2;
+      let best: Waypoint | null = null;
+      let bestD = PAD_PICK;
+      for (const w of waypoints) {
+        const { x: sx, z: sz } = w.region.shrine;
+        const x = half + (sx * R.x + sz * R.z - u) / scale;
+        const y = half - (sx * F.x + sz * F.z - v) / scale;
+        const d = Math.hypot(x - half, y - half);
+        if (d <= bestD) {
+          best = w;
+          bestD = d;
+        }
+      }
+      hovered = best;
+      redraw();
+    },
+    travelToReticle() {
+      if (!expanded || !hovered) return false;
+      onTravel(hovered.region);
+      return true;
+    },
     toggleExpanded() {
       if (!shown) return; // the key does nothing while the map is hidden
       expanded = !expanded;
       frame.className = expanded ? "map large" : "map small";
       zoom.style.display = expanded ? "none" : "";
       hovered = null;
+      reticle = false;
       lastKey = "";
       panU = 0;
       panV = 0;

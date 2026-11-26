@@ -21,7 +21,7 @@ const CSS = `
 .hud .gear{width:34px;font-size:18px;line-height:1}
 .sp-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#2a242455;pointer-events:auto;font:14px/1.4 ${UI_FONT};color:#2a2424}
 .sp-overlay.open{display:flex}
-.sp-card{width:min(380px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:18px 20px 20px;border-radius:16px;background:#fffaf0;border:1px solid #2a242433;box-shadow:0 8px 32px #0005;outline:none}
+.sp-card{width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:18px 20px 20px;border-radius:16px;background:#fffaf0;border:1px solid #2a242433;box-shadow:0 8px 32px #0005;outline:none}
 .sp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .sp-head h2{margin:0;font-size:18px}
 .sp-card h3{margin:16px 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
@@ -36,6 +36,15 @@ const CSS = `
 .sp-lang{all:unset;cursor:pointer;flex:1;text-align:center;padding:7px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .sp-lang[aria-pressed=true]{background:#d96b59;border-color:#d96b59;color:#fff}
 .sp-howto p{margin:6px 0;font-size:13px;line-height:1.45}
+.sp-tabs{display:flex;gap:6px;margin:4px 0 6px}
+.sp-tab{all:unset;cursor:pointer;flex:1;text-align:center;padding:6px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;font-size:17px}
+.sp-tab[aria-selected=true]{background:#2a2424;border-color:#2a2424;color:#fffaf0}
+.sp-tab:focus-visible{outline:2px solid #c8482f;outline-offset:2px}
+.sp-controls[hidden],.sp-main[hidden]{display:none}
+.sp-controls h3{font-size:14px}
+.sp-controls dl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:0;font-size:16px;line-height:1.35}
+.sp-controls dt{margin:0}
+.sp-controls dd{margin:0;text-align:right;font-weight:600;max-width:230px}
 .sp-title-button{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;margin-top:18px;text-align:center;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .sp-title-button:hover{background:#f6efe2}
 `;
@@ -80,12 +89,33 @@ export function createSettingsPanel(
   closeButton.type = "button";
   closeButton.textContent = "✕";
 
-  const howHeading = el("h3", undefined, card);
-  const howBody = el("div", "sp-howto", card);
+  const tabs = el("div", "sp-tabs", card);
+  tabs.setAttribute("role", "tablist");
+  const tabSettings = el("button", "sp-tab", tabs);
+  const tabControls = el("button", "sp-tab", tabs);
+  for (const tab of [tabSettings, tabControls]) {
+    tab.type = "button";
+    tab.setAttribute("role", "tab");
+  }
+  const controlsPane = el("div", "sp-controls", card);
+  controlsPane.hidden = true;
+  const main = el("div", "sp-main", card);
+  const showTab = (controls: boolean): void => {
+    controlsPane.hidden = !controls;
+    main.hidden = controls;
+    tabSettings.setAttribute("aria-selected", String(!controls));
+    tabControls.setAttribute("aria-selected", String(controls));
+  };
+  tabSettings.addEventListener("click", () => showTab(false));
+  tabControls.addEventListener("click", () => showTab(true));
+  showTab(false);
 
-  const audioHeading = el("h3", undefined, card);
+  const howHeading = el("h3", undefined, main);
+  const howBody = el("div", "sp-howto", main);
+
+  const audioHeading = el("h3", undefined, main);
   const slider = (): { label: HTMLElement; input: HTMLInputElement; out: HTMLOutputElement } => {
-    const row = el("label", "sp-row", card);
+    const row = el("label", "sp-row", main);
     const label = el("span", undefined, row);
     const input = el("input", undefined, row);
     input.type = "range";
@@ -98,7 +128,7 @@ export function createSettingsPanel(
   const music = slider();
   const sfx = slider();
   const checkbox = (): { label: HTMLElement; input: HTMLInputElement } => {
-    const row = el("label", "sp-check", card);
+    const row = el("label", "sp-check", main);
     const input = el("input", undefined, row);
     input.type = "checkbox";
     const label = el("span", undefined, row);
@@ -106,11 +136,11 @@ export function createSettingsPanel(
   };
   const mute = checkbox();
 
-  const displayHeading = el("h3", undefined, card);
+  const displayHeading = el("h3", undefined, main);
   const minimap = checkbox();
 
-  const characterHeading = el("h3", undefined, card);
-  const characters = el("div", "sp-langs", card);
+  const characterHeading = el("h3", undefined, main);
+  const characters = el("div", "sp-langs", main);
   const characterButtons = CHARACTER_CHOICES.map((choice) => {
     const b = el("button", "sp-lang", characters);
     b.type = "button";
@@ -118,8 +148,8 @@ export function createSettingsPanel(
     return [choice, b] as const;
   });
 
-  const languageHeading = el("h3", undefined, card);
-  const langs = el("div", "sp-langs", card);
+  const languageHeading = el("h3", undefined, main);
+  const langs = el("div", "sp-langs", main);
   const langButtons = LOCALES.map((locale) => {
     const b = el("button", "sp-lang", langs);
     b.type = "button";
@@ -128,7 +158,7 @@ export function createSettingsPanel(
     return [locale, b] as const;
   });
 
-  const titleButton = options.onTitle ? el("button", "sp-title-button", card) : null;
+  const titleButton = options.onTitle ? el("button", "sp-title-button", main) : null;
   if (titleButton) titleButton.type = "button";
 
   const percent = (v: number): string => `${Math.round(v * 100)}%`;
@@ -149,6 +179,21 @@ export function createSettingsPanel(
       const p = document.createElement("p");
       setText(p, line);
       return p;
+    }));
+    setText(tabSettings, t.tabSettings);
+    setText(tabControls, t.tabControls);
+    controlsPane.replaceChildren(...t.controlGroups.flatMap((group) => {
+      const h = document.createElement("h3");
+      setText(h, group.title);
+      const list = document.createElement("dl");
+      for (const [what, how] of group.rows) {
+        const dt = document.createElement("dt");
+        setText(dt, what);
+        const dd = document.createElement("dd");
+        setText(dd, how);
+        list.append(dt, dd);
+      }
+      return [h, list];
     }));
     setText(audioHeading, t.audio);
     setText(music.label, t.music);
@@ -183,7 +228,10 @@ export function createSettingsPanel(
   const setOpen = (next: boolean): void => {
     open = next;
     overlay.classList.toggle("open", open);
-    if (open) card.focus();
+    if (open) {
+      showTab(false);
+      card.focus();
+    }
     else (document.activeElement as HTMLElement | null)?.blur(); // hand the keyboard back to the game
   };
   gear?.addEventListener("click", () => setOpen(!open));

@@ -1,6 +1,8 @@
 import type { Music } from "../audio";
 import { createTitleScene } from "../render";
 import { messagesFor } from "./i18n";
+import { createGamepadReader } from "./input/gamepad";
+import { activateFocused, navigatePanel, pressKey } from "./input/panel-nav";
 import { createSettingsPanel } from "./settings-panel";
 import { randomSeed, type SaveSlot, type SaveStore } from "./saves";
 import type { SettingsStore } from "./settings";
@@ -13,7 +15,7 @@ export const LOGO_URL: string | null = `${import.meta.env.BASE_URL}images/wayshr
 
 export interface TitleScreen {
   /** Resolves with the journey the player chose to begin or resume. */
-  readonly chosen: Promise<SaveSlot>;
+  readonly chosen: Promise<{ readonly slot: SaveSlot; readonly isNew: boolean }>;
   destroy(): void;
 }
 
@@ -247,8 +249,8 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
   const options = createSettingsPanel(root, null, settings, { escapeToggles: false });
 
   let busy = false;
-  let resolve!: (slot: SaveSlot) => void;
-  const chosen = new Promise<SaveSlot>((r) => (resolve = r));
+  let resolve!: (choice: Awaited<TitleScreen["chosen"]>) => void;
+  const chosen = new Promise<Awaited<TitleScreen["chosen"]>>((r) => (resolve = r));
   const t = () => messagesFor(settings.get().language).title;
 
   const button = (label: string, onClick: () => void, className = "", detail?: string): HTMLButtonElement => {
@@ -266,7 +268,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
   };
 
   /** Hands the chosen journey on after the screen has had a chance to show that it is loading. */
-  const begin = (slot: SaveSlot): void => {
+  const begin = (slot: SaveSlot, isNew = false): void => {
     if (busy) return;
     busy = true;
     dialogs.forEach((d) => d.close());
@@ -275,7 +277,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
     loading.className = "ts-loading";
     loading.textContent = t().loading;
     panel.appendChild(loading);
-    requestAnimationFrame(() => setTimeout(() => resolve(slot), 30));
+    requestAnimationFrame(() => setTimeout(() => resolve({ slot, isNew }), 30));
   };
 
   const dateOf = (at: number): string =>
@@ -310,7 +312,7 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
     input.maxLength = 64;
     input.value = keep;
     input.dataset.autofocus = "";
-    const start = (): void => begin(saves.create(input.value.trim() || randomSeed()));
+    const start = (): void => begin(saves.create(input.value.trim() || randomSeed()), true);
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") start();
     });
@@ -386,6 +388,8 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
     if (saves.list().length === 0) load.disabled = true;
     const fresh = button(m.newGame, () => newGame.open(), last ? "" : "primary");
     panel.append(cont, fresh, load, button(m.options, () => options.toggle()), button(m.credits, () => credits.open()));
+    const desktop = window.wayshrineDesktop;
+    if (desktop) panel.append(button(messagesFor(settings.get().language).settings.quitGame, () => desktop.quit(), "quiet"));
     (last ? cont : fresh).focus();
   };
 
@@ -415,7 +419,16 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
   music.unlock();
   let frameId = 0;
   let last = performance.now();
+  const pads = createGamepadReader(() => (typeof navigator.getGamepads === "function" ? [...navigator.getGamepads()] : []));
   const tick = (now: number): void => {
+    // A controller drives the menu: stick or D-pad moves focus, A presses, B or Menu goes back.
+    const pad = pads.poll(now / 1000);
+    if (pad.active) music.unlock();
+    if (!busy && !(document.activeElement instanceof HTMLInputElement)) {
+      if (pad.nav) navigatePanel(pad.nav, document, root);
+      if (pad.pressed.includes("act")) activateFocused(document, root);
+      if (pad.pressed.includes("back") || pad.pressed.includes("menu")) pressKey("Escape");
+    }
     music.update(Math.min(0.1, Math.max(0, now - last) / 1000));
     last = now;
     frameId = requestAnimationFrame(tick);

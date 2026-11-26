@@ -34,7 +34,7 @@ Walking in Ginzan Onsen’s thawed stream and baths loops the supplied splash re
 
 **Breeze**, **Waves**, and **Ridgewalk** use **Dawn Reverence** for ordinary shrines. **Snowline** and **Marshwalk** use **Winter Light Restored**. Every set uses **Radiant Arrival** for landmarks and the same awakening burst.
 
-The **music button** at the top right (two eighth notes and a number) cycles the background through the themes the traveller has unlocked. The number is the playing theme's place among them. Breeze is always unlocked; Waves, Snowline, Ridgewalk, Marshwalk, Lantern, Basalt, and Open sea unlock with the first use of the matching gear (boat, snowshoes, climbing gear, geta, lantern, ash sandals, ship), and Sunlit fields with Pilgrim’s Wake. A click moves to the next unlocked theme and wraps; after the newest one it returns to following progression. A pick applies to normal travel and shrine restorations and persists across reloads. Gear moments play their scripted transitions, then the saved choice resumes. In a world where the saved theme is still locked, the soundtrack follows progression until that theme is earned.
+The **music button** at the top right (two eighth notes and a number) cycles the background through the themes the traveller has unlocked. The number is the playing theme's place among them. Breeze is always unlocked; Waves, Snowline, Ridgewalk, Marshwalk, Lantern, Basalt, and Open sea unlock with the first use of the matching gear (boat, snowshoes, climbing gear, geta, lantern, ash sandals, ship), and Sunlit fields with Pilgrim’s Wake. A click moves to the next unlocked theme and wraps; after the newest one it returns to following progression. A pick applies to normal travel and shrine restorations and persists across reloads. Each first-use animation plays the matching theme and lets its crossfade finish, even if higher-tier gear was used first. Then the saved choice or automatic progression resumes. In a world where the saved theme is still locked, the soundtrack follows progression until that theme is earned.
 
 ## Boat prototype
 
@@ -58,6 +58,10 @@ The first moving step into marsh after earning geta crouches the traveller to sl
 
 In **Gear acquisition**, **Preview geta unlock** and **Preview geta use** play the reveal and the slip-on moment without updating the save, fading back to Ridgewalk first if the save is already on Marshwalk.
 
+## First lantern use
+
+The first moving step into dark forest after earning the lantern starts the lighting animation. When the flame catches, the background crossfades to **Lantern Trail** over 5 s. The lantern’s first use is saved immediately. **Preview lantern use** in the debug panel plays the same animation and transition without recording first use.
+
 ## First ash sandals use
 
 The first moving step onto volcanic ground after earning ash sandals crouches the traveller to bind them on, then kicks up a small puff of ash as she steps off, and crossfades the background from **Lantern Trail** to **Basalt Crossing** over 5 s. There is no cue. The first step is saved immediately and Basalt Crossing remains the background on reload. The track is `basalt-crossing` (`public/audio/music/basalt-crossing.mp3`, supplied by the project owner, three minutes, about -18.6 LUFS, so it carries a track gain of 1.25 like Lantern Trail). Shrine restorations on this theme play `basalt-restoration` instead of the winter swell, and volcanic ground uses the mountain footstep loop.
@@ -76,7 +80,7 @@ Under way the ship uses the same rowing loop as the skiff (`MOVEMENT_CUES.sea`);
 
 Restoring the 58th landmark unlocks Pilgrim’s Wake. Its landmark swell hands off directly to **Road Through Sunlit Fields**, which stays selected in Auto after reload. Later passive restorations leave the background alone and play no restoration swell.
 
-In **Gear acquisition**, **Preview Pilgrim’s Wake unlock** shows the unlock message.
+In **Gear acquisition**, **Preview Pilgrim’s Wake unlock** shows the unlock message and previews the handoff to the final theme.
 
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed, lanternUsed, ashSandalsUsed, shipLaunched, pilgrimsWake)`, the set selection for each stage.

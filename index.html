@@ -4,9 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wayshrine</title>
+    <meta name="description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore shrines and visit famous landmarks as you bring life back to the land." />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Wayshrine" />
+    <meta property="og:site_name" content="Wayshrine" />
+    <meta property="og:description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore forgotten shrines, bring the land back to life, and uncover a lost civilization." />
+    <meta property="og:image" content="%WAYSHRINE_SOCIAL_IMAGE%" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Wayshrine logo above a mountain lake with a torii gate and floating lanterns at sunset." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Wayshrine" />
+    <meta name="twitter:description" content="Wayshrine is a quiet exploration game inspired by Japan. Restore forgotten shrines, bring the land back to life, and uncover a lost civilization." />
+    <meta name="twitter:image" content="%WAYSHRINE_SOCIAL_IMAGE%" />
+    <meta name="twitter:image:alt" content="The Wayshrine logo above a mountain lake with a torii gate and floating lanterns at sunset." />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <style>
       html, body { margin: 0; height: 100%; overflow: hidden; background: #f2ede0; }
-      body :focus { outline: none; }
+      /* Keep a visible focus ring for keyboard and controller users; mouse clicks show none. */
+      body :focus:not(:focus-visible) { outline: none; }
+      body :focus-visible { outline: 2px solid #c8482f; outline-offset: 2px; }
       canvas { display: block; touch-action: none; }
     </style>
   </head>
