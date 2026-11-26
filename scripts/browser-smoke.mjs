@@ -33,6 +33,14 @@ test("production build starts, explores, and resumes a journey", { timeout: 90_0
       errors.push(`${response.status()} ${response.url()}`);
     }
   });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      errors.push(`console.error: ${msg.text()}`);
+    }
+  });
+  page.on("requestfailed", (req) => {
+    errors.push(`requestfailed: ${req.method()} ${req.url()} (${req.failure()?.errorText ?? "unknown"})`);
+  });
   const startGame = async (start) => {
     const terrainWorker = page.waitForEvent("worker", {
       predicate: (worker) => new URL(worker.url()).pathname.includes("/assets/chunk-worker-"),
@@ -42,8 +50,9 @@ test("production build starts, explores, and resumes a journey", { timeout: 90_0
     await page.locator(".hud").waitFor();
   };
 
-  await page.goto(origin);
+  await page.goto(origin, { waitUntil: "domcontentloaded", timeout: 60_000 });
   const menu = page.locator(".ts-panel");
+  await menu.waitFor({ state: "visible" });
   const resume = menu.getByRole("button", { name: /^Continue/ });
   await menu.getByRole("button", { name: "New game", exact: true }).click();
   await page.getByRole("textbox", { name: /^World seed/ }).fill("browser-smoke");
