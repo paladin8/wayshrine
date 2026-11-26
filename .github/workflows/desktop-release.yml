@@ -26,6 +26,7 @@ jobs:
       # The packager downloads the runtime for the requested build architecture.
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       BUNDLE: ${{ matrix.bundle }}
+      WAYSHRINE_STEAM_APP_ID: ${{ vars.WAYSHRINE_STEAM_APP_ID }}
     steps:
       - uses: actions/checkout@v6
         with:

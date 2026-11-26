@@ -11,4 +11,7 @@ contextBridge.exposeInMainWorld("wayshrineDesktop", {
     };
   },
   quit: () => ipcRenderer.send("wayshrine:quit"),
+  loadSteamSaves: () => ipcRenderer.invoke("wayshrine:steam-saves"),
+  writeSteamSaves: (snapshot) => ipcRenderer.invoke("wayshrine:steam-save", snapshot),
+  reportSteamAchievements: (ids) => ipcRenderer.send("wayshrine:steam-achievements", ids),
 });

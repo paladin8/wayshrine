@@ -82,6 +82,10 @@ Restoring the 58th landmark unlocks Pilgrim’s Wake. Its landmark swell hands o
 
 In **Gear acquisition**, **Preview Pilgrim’s Wake unlock** shows the unlock message and previews the handoff to the final theme.
 
+## Journey finale
+
+The star map plays **Starbound Farewell** once after the last landmark’s restoration ceremony. Stars spread outward during the track’s opening phrases, and the last landmark lights at 20.54 s. Dismissing the chart returns to the current exploration theme.
+
 ## Code
 - `src/audio/tracks.ts`: `TRACK_IDS`, the `TRACKS` registry (id to URL), and `musicSetFor(launched, snowshoesUsed, climbingUsed, getaUsed, lanternUsed, ashSandalsUsed, shipLaunched, pilgrimsWake)`, the set selection for each stage.
 - `src/audio/music.ts`: the player (gain, ducking). Pure logic over an injected player interface, so it is tested without a browser.
@@ -92,7 +96,7 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 
 | Track id | File | Notes |
 | --- | --- | --- |
-| `homeward-breeze` | `homeward-breeze.mp3` | Pastoral background track made by the project owner with ElevenLabs Music (plan tier and licence terms to be confirmed before release; see the Project doc `music-generation-plan`). 3:00, 192 kbps stereo MP3, about -15 LUFS integrated, true peak -1.1 dBFS. Starts with about 1.5 s near-silence and ends on a roughly 6 s fade-out. Used before the first voyage. |
+| `homeward-breeze` | `homeward-breeze.mp3` | Pastoral background track made by the project owner with ElevenLabs Music (the project owner's plan allows commercial use; see the Project doc `music-generation-plan`). 3:00, 192 kbps stereo MP3, about -15 LUFS integrated, true peak -1.1 dBFS. Starts with about 1.5 s near-silence and ends on a roughly 6 s fade-out. Used before the first voyage. |
 | `waves-beyond-the-headlands` | `waves-beyond-the-headlands.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Plays after the first departure. |
 | `snowline-walk` | `snowline-walk.mp3` | Supplied by the project owner. Three minutes, stereo MP3. Becomes the background after the first use of snowshoes. |
 | `ridgewalk` | `ridgewalk.mp3` | Supplied by the project owner (`Ridgewalk_In_E_Major`). Three minutes, stereo MP3, about -16.2 LUFS. Becomes the background after the first climb. |
@@ -102,12 +106,14 @@ Files live in `public/audio/music/` and are served as `/audio/music/<name>.mp3`.
 
 | `road-through-sunlit-fields` | `road-through-sunlit-fields.mp3` | Supplied by the project owner (`Road_Through_Sunlit_Fields`). Three minutes, stereo MP3. Final background after Pilgrim’s Wake. |
 
+| `starbound-farewell` | `starbound-farewell.mp3` | Supplied by the project owner. 30 s, stereo MP3. Plays once on the final star map. |
+
 Record the origin and licence of each track here when it is added.
 
 ## Adding a track
 1. Put the file in `public/audio/music/`.
 2. Add its id to `TRACK_IDS` and its URL to `TRACKS`.
-3. Add a `MUSIC_SETS` entry for the track, then choose when to use it in `musicSetFor`.
+3. For a selectable background theme, add a `MUSIC_SETS` entry and choose when to use it in `musicSetFor`.
 4. Note it in the table above.
 
 ## Plan

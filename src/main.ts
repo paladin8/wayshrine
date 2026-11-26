@@ -1,3 +1,6 @@
 import { startApp } from "./app";
 
-startApp(document.body);
+// Ask the browser not to evict saved games when storage runs low. Ignored where unsupported or declined.
+void navigator.storage?.persist?.().catch(() => undefined);
+
+void startApp(document.body);

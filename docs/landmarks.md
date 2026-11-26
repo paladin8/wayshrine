@@ -4,7 +4,9 @@ Landmarks are hand-crafted places emblematic of Japan, one per special region, b
 
 Sixty-six are planned, in nine **acts**. An act is a band: its landmarks sit in a ring farther from the start than the act before, on a bearing that is rotated per seed, so the world grows outward in a spiral rather than along a chain. Geography is loose: an act's biome is the main constraint, and real-world location only decides order within it.
 
-Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for all sixty-six. The looks of the later biomes are still placeholders too. ## Models
+Status: all 66 are in the code, with their biomes and the abilities they unlock ([ADR 0007](decisions/0007-later-biomes-and-abilities.md)). Models exist for all sixty-six; props and gear visuals for the later biomes are still placeholders.
+
+## Models
 
 A landmark's model is `public/models/landmarks/<id>.glb` (binary glTF, Y up, one unit = one world unit), centred on the region's site and sitting on its flat plateau. Without a file, the landmark shows a plain placeholder. Conventions the loader relies on:
 

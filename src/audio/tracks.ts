@@ -1,11 +1,13 @@
 /** Every piece of music the game can play. */
-export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk", "marshwalk", "lantern-trail", "basalt-crossing", "open-sea", "road-through-sunlit-fields"] as const;
+export const TRACK_IDS = ["homeward-breeze", "waves-beyond-the-headlands", "snowline-walk", "ridgewalk", "marshwalk", "lantern-trail", "basalt-crossing", "open-sea", "road-through-sunlit-fields", "starbound-farewell"] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface TrackInfo {
   readonly url: string;
   /** Level relative to the other tracks, for ones mastered quieter than the rest (default 1). */
   readonly gain?: number;
+  /** One-shot pieces set this to false. Background themes loop by default. */
+  readonly loop?: boolean;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -19,6 +21,7 @@ export const TRACKS: Readonly<Record<TrackId, TrackInfo>> = {
   "basalt-crossing": { url: `${base}audio/music/basalt-crossing.mp3` },
   "open-sea": { url: `${base}audio/music/open-sea.mp3`, gain: 0.7 },
   "road-through-sunlit-fields": { url: `${base}audio/music/road-through-sunlit-fields.mp3`, gain: 0.8 },
+  "starbound-farewell": { url: `${base}audio/music/starbound-farewell.mp3`, loop: false },
   "homeward-breeze": { url: `${base}audio/music/homeward-breeze.mp3` },
 };
 
@@ -27,6 +30,8 @@ export interface MusicSet {
   readonly label: string;
   readonly background: TrackId;
 }
+
+export const COMPLETION_TRACK = "starbound-farewell" satisfies TrackId;
 
 export const FINAL_MUSIC = { label: "Sunlit fields", background: "road-through-sunlit-fields" } as const satisfies MusicSet;
 

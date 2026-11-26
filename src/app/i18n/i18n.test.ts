@@ -22,6 +22,7 @@ function allText(m: Messages): string[] {
     ...Object.values(m.welcome),
     ...Object.values(m.gearReveal).flatMap(Object.values),
     m.promptRestore,
+    ...Object.values(m.crash),
     ...Object.values(m.controls).flatMap((v) => (typeof v === "string" ? [v] : Object.values(v))),
     m.promptRestoreLandmark,
     m.promptSkip,

@@ -24,6 +24,10 @@ import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
 import { setLifeTime, type VitalityMesh } from "./vitality-mesh";
 import type { ChunkSource } from "./chunk-source";
+import {
+  browserTraits, createFrameGovernor, QUALITY_TIERS, renderQuality, startingPixelRatio,
+  type QualityChoice, type QualityState, type RenderQuality,
+} from "./quality";
 
 
 /** World units visible vertically in normal play, and when pulled back to see a whole region. */
@@ -136,6 +140,10 @@ export interface Stage {
   tick(dtSeconds: number): void;
   appendObstaclesNear(x: number, z: number, reach: number, out: Obstacle[]): void;
   railwayReady(): boolean;
+  /** Debug: the current rendering budget. */
+  quality(): QualityState;
+  /** Debug: force a quality tier, or "auto" to detect it and adapt to the frame rate again. */
+  setQuality(choice: QualityChoice): void;
   render(dtSeconds: number, view: StageView): void;
 }
 
@@ -163,7 +171,13 @@ export function createStage(
     return art.top(tx, tz, { ...tile, biome: isWater(tile.biome) ? "meadow" : tile.biome, height, shoal: 0 }, region);
   };
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const device = browserTraits();
+  let qualityChoice: QualityChoice = "auto";
+  let quality: RenderQuality = renderQuality(device);
+  renderer.setPixelRatio(startingPixelRatio(quality, device));
+  const autoGovernor = () =>
+    createFrameGovernor(renderer.getPixelRatio(), quality.minPixelRatio, (ratio) => renderer.setPixelRatio(ratio));
+  let governor: ReturnType<typeof createFrameGovernor> | null = autoGovernor();
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   container.appendChild(renderer.domElement);
@@ -193,7 +207,7 @@ export function createStage(
   const sun = new THREE.DirectionalLight(0xffffff, 2.4);
   sun.castShadow = true;
   sun.shadow.normalBias = 0.04; // stops shadow acne on large flat model surfaces
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = 160;
   scene.add(sun, sun.target);
@@ -419,6 +433,20 @@ export function createStage(
       const v = new THREE.Vector3().addScaledVector(RIGHT, right).addScaledVector(FORWARD, up);
       return { x: v.x, z: v.z };
     },
+    quality() {
+      return { choice: qualityChoice, tier: quality.tier, pixelRatio: renderer.getPixelRatio(), shadowMapSize: quality.shadowMapSize };
+    },
+    setQuality(choice) {
+      qualityChoice = choice;
+      quality = choice === "auto" ? renderQuality(device) : QUALITY_TIERS[choice];
+      renderer.setPixelRatio(startingPixelRatio(quality, device));
+      if (sun.shadow.mapSize.x !== quality.shadowMapSize) {
+        sun.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
+        sun.shadow.map?.dispose();
+        sun.shadow.map = null; // rebuilt at the new size on the next render
+      }
+      governor = choice === "auto" ? autoGovernor() : null;
+    },
     resize(w, h) {
       heightPixels = h;
       aspect = w / h;
@@ -447,6 +475,7 @@ export function createStage(
       return true;
     },
     render(dt, view) {
+      governor?.frame(performance.now());
       state = view.state;
       wakes = view.wakes;
       const awakening = view.awakening ?? null;

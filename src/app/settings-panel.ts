@@ -13,6 +13,7 @@ export interface SettingsPanel {
 export interface SettingsPanelOptions {
   /** Adds a button that leaves the game for the title screen. */
   readonly onTitle?: () => void;
+  readonly onQuit?: () => void;
   /** Whether Esc opens and closes the dialog. Default true. */
   readonly escapeToggles?: boolean;
 }
@@ -46,6 +47,7 @@ const CSS = `
 .sp-controls dt{margin:0}
 .sp-controls dd{margin:0;text-align:right;font-weight:600;max-width:230px}
 .sp-title-button{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box;margin-top:18px;text-align:center;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff}
+.sp-title-button+.sp-title-button{margin-top:8px}
 .sp-title-button:hover{background:#f6efe2}
 `;
 
@@ -138,6 +140,8 @@ export function createSettingsPanel(
 
   const displayHeading = el("h3", undefined, main);
   const minimap = checkbox();
+  const desktop = window.wayshrineDesktop;
+  const fullscreen = desktop ? checkbox() : null;
 
   const characterHeading = el("h3", undefined, main);
   const characters = el("div", "sp-langs", main);
@@ -158,8 +162,15 @@ export function createSettingsPanel(
     return [locale, b] as const;
   });
 
-  const titleButton = options.onTitle ? el("button", "sp-title-button", main) : null;
-  if (titleButton) titleButton.type = "button";
+  const actionButton = (action?: () => void): HTMLButtonElement | null => {
+    if (!action) return null;
+    const button = el("button", "sp-title-button", main);
+    button.type = "button";
+    button.addEventListener("click", action);
+    return button;
+  };
+  const titleButton = actionButton(options.onTitle);
+  const quitButton = actionButton(options.onQuit);
 
   const percent = (v: number): string => `${Math.round(v * 100)}%`;
   const render = (): void => {
@@ -201,6 +212,7 @@ export function createSettingsPanel(
     setText(mute.label, t.muteAll);
     setText(displayHeading, t.display);
     setText(minimap.label, t.minimap);
+    if (fullscreen) setText(fullscreen.label, t.fullscreen);
     setText(characterHeading, t.character);
     for (const [choice, b] of characterButtons) {
       b.textContent = t[choice];
@@ -208,6 +220,7 @@ export function createSettingsPanel(
     }
     setText(languageHeading, t.language);
     if (titleButton) setText(titleButton, t.returnToTitle);
+    if (quitButton) setText(quitButton, t.quitGame);
     music.input.value = String(s.musicVolume);
     sfx.input.value = String(s.sfxVolume);
     setText(music.out, percent(s.musicVolume));
@@ -221,6 +234,13 @@ export function createSettingsPanel(
   sfx.input.addEventListener("input", () => store.update({ sfxVolume: Number(sfx.input.value) }));
   mute.input.addEventListener("change", () => store.update({ muted: mute.input.checked }));
   minimap.input.addEventListener("change", () => store.update({ showMinimap: minimap.input.checked }));
+  let unsubscribeFullscreen: (() => void) | undefined;
+  if (desktop && fullscreen) {
+    const update = (active: boolean): void => { fullscreen.input.checked = active; };
+    unsubscribeFullscreen = desktop.onFullscreenChanged(update);
+    void desktop.getFullscreen().then(update);
+    fullscreen.input.addEventListener("change", () => desktop.setFullscreen(fullscreen.input.checked));
+  }
   const unsubscribe = store.subscribe(render);
   render();
 
@@ -236,7 +256,6 @@ export function createSettingsPanel(
   };
   gear?.addEventListener("click", () => setOpen(!open));
   closeButton.addEventListener("click", () => setOpen(false));
-  titleButton?.addEventListener("click", () => options.onTitle?.());
   overlay.addEventListener("pointerdown", (e) => {
     if (e.target === overlay) setOpen(false);
   });
@@ -251,6 +270,7 @@ export function createSettingsPanel(
     close: () => setOpen(false),
     destroy() {
       unsubscribe();
+      unsubscribeFullscreen?.();
       window.removeEventListener("keydown", onKey);
       overlay.remove();
       gear?.remove();

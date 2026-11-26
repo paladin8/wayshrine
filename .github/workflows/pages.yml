@@ -1,0 +1,51 @@
+name: Web release
+
+# Builds the web version and publishes it to GitHub Pages at https://wayshrine.app.
+# One-time setup: Settings → Pages → Source: GitHub Actions, then set the custom domain there.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits rather than cancelling a deploy halfway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Electron is only needed for desktop builds.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      # Canonical URL and absolute social preview image in index.html.
+      VITE_SITE_URL: https://wayshrine.app/
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

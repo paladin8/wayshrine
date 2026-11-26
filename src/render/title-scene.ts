@@ -4,6 +4,7 @@ import { Reflector } from "three/examples/jsm/objects/Reflector.js";
 import { HOKORA_SETBACK } from "../world";
 import { buildCharacter, type Character, type CharacterVariant } from "./character";
 import { buildHokora } from "./shrine-mesh";
+import { browserTraits, createFrameGovernor, renderQuality, startingPixelRatio } from "./quality";
 
 /**
  * The title screen's backdrop: the Blender scene in public/models/title/title.glb (made by content/title/title.py),
@@ -56,7 +57,9 @@ export function createTitleScene(container: HTMLElement, { reducedMotion, charac
   } catch {
     return null;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const device = browserTraits();
+  const quality = renderQuality(device);
+  renderer.setPixelRatio(startingPixelRatio(quality, device));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const canvas = renderer.domElement;
@@ -82,7 +85,7 @@ export function createTitleScene(container: HTMLElement, { reducedMotion, charac
   key.position.set(-5.6 - 22, 30, -4.4 + 26);
   key.target.position.set(-5.6, 0, -4.4);
   key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
   key.shadow.normalBias = 0.03;
   Object.assign(key.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: 5, far: 90 });
   scene.add(fill, key, key.target);
@@ -556,7 +559,13 @@ export function createTitleScene(container: HTMLElement, { reducedMotion, charac
     renderer.render(scene, camera);
   };
 
+  // The lake reflection's target follows the pixel ratio, so a step down re-sizes everything.
+  const governor = createFrameGovernor(renderer.getPixelRatio(), quality.minPixelRatio, (ratio) => {
+    renderer.setPixelRatio(ratio);
+    resize();
+  });
   const frame = (now: number): void => {
+    governor.frame(now);
     const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
     last = now;
     if (!reducedMotion) {

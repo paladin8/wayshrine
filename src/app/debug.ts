@@ -1,5 +1,9 @@
+import type { QualityChoice, QualityState } from "../render";
+
 /** Buttons for developer testing, shown only with ?debug. */
 export interface DebugActions {
+  /** Rendering quality override, to preview the phone tiers on a desktop. */
+  readonly quality?: { get(): QualityState; set(choice: QualityChoice): void };
   readonly restoreLandmarks: () => void;
   readonly unrestoreHere: () => void;
   readonly resetShrines: () => void;
@@ -31,6 +35,9 @@ const CSS = `
 .debug-box .debug-head span{opacity:.7}
 .debug-button{cursor:pointer;padding:4px 8px;border:0;border-radius:6px;background:#f2ede0;color:#2a2424;font:inherit}
 .debug-button:hover{background:#e9deca}
+.debug-quality{display:flex;align-items:center;gap:6px}
+.debug-quality select{padding:3px 4px;border:0;border-radius:6px;background:#f2ede0;color:#2a2424;font:inherit}
+.debug-quality output{opacity:.7;font-variant-numeric:tabular-nums}
 .debug-icon{width:28px;height:26px;padding:0;font-size:18px;line-height:1}
 .debug-dialog{width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;box-shadow:0 12px 36px #0006;font-size:14px}
 .debug-dialog::backdrop{background:#2a242477}
@@ -87,6 +94,7 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   add(panel, "Reset everything", actions.resetAll);
   add(panel, "Read a rubbing (R)", actions.readRubbing);
   add(panel, "Go to next shrine (G)", actions.goToTarget);
+  if (actions.quality) addQuality(panel, actions.quality);
 
   const content = document.createElement("div");
   content.className = "debug-content";
@@ -126,4 +134,30 @@ export function createDebugPanel(container: HTMLElement, actions: DebugActions, 
   container.append(style, panel, dialog);
 
   return { close, isOpen: () => dialog.open };
+}
+
+function addQuality(parent: HTMLElement, quality: NonNullable<DebugActions["quality"]>): void {
+  const row = document.createElement("label");
+  row.className = "debug-quality";
+  row.append("Quality");
+  const select = document.createElement("select");
+  for (const [value, text] of [["auto", "Auto"], ["desktop", "Desktop"], ["phone", "Phone"], ["low", "Low-end phone"]] as const) {
+    select.add(new Option(text, value));
+  }
+  const readout = document.createElement("output");
+  const show = (): void => {
+    const q = quality.get();
+    select.value = q.choice;
+    readout.textContent = `${q.choice === "auto" ? `${q.tier} · ` : ""}${q.pixelRatio}× · ${q.shadowMapSize}`;
+  };
+  select.addEventListener("change", () => {
+    quality.set(select.value as QualityChoice);
+    select.blur(); // keep the arrow keys for walking
+    show();
+  });
+  row.append(select, readout);
+  parent.appendChild(row);
+  show();
+  // In auto mode the frame governor can lower the pixel ratio at any time.
+  setInterval(show, 1000);
 }

@@ -29,7 +29,7 @@ export interface SaveStore {
   remove(id: string): void;
 }
 
-type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
+export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
 
 const INDEX_KEY = "wayshrine:slots";
 const LAST_KEY = "wayshrine:lastSlot";
@@ -56,6 +56,12 @@ const NOUNS = [
   "shell", "sand", "salt", "inn", "nest", "bow", "cave", "ice", "fog", "dale",
 ] as const;
 
+/** Only journey data travels with the save file. */
+export function isJourneyStorageKey(key: string, includeLegacy = false): boolean {
+  return key === INDEX_KEY || key === LAST_KEY || /^wayshrine:(?:slot|slotPosition):[a-z0-9]+$/.test(key)
+    || (includeLegacy && key.startsWith(LEGACY_PREFIX));
+}
+
 /** A readable random world seed, such as "misty-koi-482". */
 export function randomSeed(random: () => number = Math.random): string {
   const pick = <T>(list: readonly T[]): T => list[Math.min(list.length - 1, Math.floor(random() * list.length))]!;
@@ -66,7 +72,7 @@ export function randomSeed(random: () => number = Math.random): string {
 /** The words a random seed is drawn from. */
 export const SEED_WORDS = { adjectives: ADJECTIVES, nouns: NOUNS } as const;
 
-function memoryStorage(): StorageLike {
+export function memoryStorage(): StorageLike {
   const map = new Map<string, string>();
   return {
     getItem: (key) => map.get(key) ?? null,
@@ -79,7 +85,7 @@ function memoryStorage(): StorageLike {
   };
 }
 
-function browserStorage(): StorageLike | null {
+export function browserStorage(): StorageLike | null {
   try {
     return window.localStorage;
   } catch {
@@ -103,6 +109,7 @@ export function createSaveStore(
   random: () => number = Math.random,
   /** How many of a legacy save's restored regions are landmarks; the default counts them all. */
   countLandmarks: (seed: string, restoredIds: readonly string[]) => number = (_seed, ids) => ids.length,
+  onChange: () => void = () => {},
 ): SaveStore {
   const store: StorageLike = storage ?? memoryStorage();
   let slots: SaveSlot[] = [];
@@ -208,6 +215,7 @@ export function createSaveStore(
       place({ ...slot, playedAt: now(), restored });
       lastId = id;
       saveLast();
+      onChange();
     },
     readPosition(id) {
       try {
@@ -229,6 +237,7 @@ export function createSaveStore(
         lastId = id;
         saveLast();
       }
+      onChange();
     },
     remove(id) {
       slots = slots.filter((s) => s.id !== id);
@@ -243,6 +252,7 @@ export function createSaveStore(
           store.removeItem(LAST_KEY);
         }
       });
+      onChange();
     },
   };
 }

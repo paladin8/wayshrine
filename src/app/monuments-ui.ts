@@ -54,6 +54,7 @@ const CSS = `
 .mu-card.box .mu-x{top:9px;right:9px;color:#f4e3ba;background:#3b221e85}
 .mu-card.box .mu-x:hover{background:#39201c}
 .mu-overlay.reading .mu-card{width:min(700px,calc(100vw - 48px));max-height:calc(100svh - 64px);padding:0;overflow:visible;border:0;border-radius:0;background:none;box-shadow:none;text-shadow:0 1px 4px #120c0c,0 0 18px #120c0c99}
+.mu-overlay.reading .mu-card:focus{outline:none}
 .mu-overlay.reading .mu-x{top:-6px;right:0;pointer-events:auto;background:#120c0c80}
 .mu-overlay.reading .mu-x:hover{background:#120c0cbb}
 .mu-overlay.reading .mu-back{pointer-events:auto}

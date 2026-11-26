@@ -21,7 +21,7 @@ class FakePlayer implements AudioPlayer {
   }
 }
 
-const tracks = { a: { url: "a.mp3" }, b: { url: "b.mp3" } } as never;
+const tracks = { a: { url: "a.mp3" }, b: { url: "b.mp3", loop: false } } as never;
 
 function setup(opts: { release?: number; fade?: number; gain?: number } = {}) {
   const made: FakePlayer[] = [];
@@ -144,6 +144,26 @@ describe("music", () => {
     music.unlock();
     expect(made[0]!.loop).toBe(true);
     expect(made[0]!.onended).toBeNull();
+  });
+
+  it("reports one-shot playback time, plays it once, and can return to the looping theme", () => {
+    const { music, made } = setup();
+    music.setTrack("a" as never);
+    music.unlock();
+    music.setTrack("b" as never, 0.8);
+    const track = made[1]!;
+    expect(track.loop).toBe(false);
+    expect(music.playbackTime("b" as never)).toBeNull();
+    track.currentTime = 12.32;
+    expect(music.playbackTime("b" as never)).toBe(12.32);
+    expect(music.playbackTime("a" as never)).toBeNull();
+    track.onended?.();
+    music.setTrack("b" as never);
+    expect(made).toHaveLength(2);
+    expect(music.playbackTime("b" as never)).toBeNull();
+    music.setTrack("a" as never);
+    expect(made[2]!.loop).toBe(true);
+    expect(made[2]!.playing).toBe(true);
   });
 
   it("retries on the next gesture if the browser refuses autoplay", async () => {

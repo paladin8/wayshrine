@@ -51,6 +51,8 @@ export interface Music {
   setDuck(level: number): void;
   /** Advances fades and ducking; call once per frame. */
   update(dtSeconds: number): void;
+  /** Playback position in seconds once the selected track starts advancing. */
+  playbackTime(id: TrackId): number | null;
   status(): MusicStatus;
 }
 
@@ -105,8 +107,13 @@ export function createMusic(options: MusicOptions = {}): Music {
     const info = tracks[id];
     if (!info) throw new Error(`unknown track: ${id}`);
     const player = createPlayer(info.url);
-    player.loop = true;
+    player.loop = info.loop ?? true;
     const voice: Voice = { id, player, trackGain: info.gain ?? 1, level: 0, target: 1 };
+    if (!player.loop) {
+      player.onended = () => {
+        voices = voices.filter((v) => v !== voice);
+      };
+    }
     apply(voice);
     voices.push(voice);
     // Autoplay can still be refused (e.g. the gesture was too old); retry on the next unlock().
@@ -168,6 +175,11 @@ export function createMusic(options: MusicOptions = {}): Music {
         }
       }
       voices = voices.filter((v) => !(v.target === 0 && v.level === 0));
+    },
+    playbackTime(id) {
+      const playing = voices.find((v) => v.id === id && v.target === 1);
+      const time = playing?.player.currentTime ?? 0;
+      return time > 0 ? time : null;
     },
     status: () => ({
       track: desired,

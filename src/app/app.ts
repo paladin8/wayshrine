@@ -59,7 +59,7 @@ import {
   type RestorationWake,
   type SaveData,
 } from "../game";
-import { createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
+import { COMPLETION_TRACK, createCuePlayer, createMusic, FINAL_MUSIC, MUSIC_SETS, musicSetFor, nextTheme, unlockedThemes, type CueId, type Music, type MusicSet, type TrackId } from "../audio";
 import { createChunkSource, createStage, perfBegin, perfMark, perfEnd } from "../render";
 import { monumentSpecs } from "../content";
 import { CAPABILITY_THRESHOLDS, PILGRIMS_WAKE_STARS, capabilitiesForCount, createObstacles, createTerrain, createWorld, fujiRailway, ginzanStream, ginzanWarmth, planMonuments, railPoint, standPoint, type Biome, type Capability, type Obstacles, type Point, type Region, type World } from "../world";
@@ -70,13 +70,15 @@ import { createJourneyCompletion } from "./journey-completion";
 import { createMinimap } from "./minimap";
 import { createMonumentUi } from "./monuments-ui";
 import { createBackpack } from "./backpack";
+import { installCrashOverlay } from "./crash-overlay";
 import { activateFocused, createInput, formatPrompt, navigatePanel, pressKey, walkScale, type Action, type ActKind } from "./input";
 import { NO_MOVE, strongest } from "./input/actions";
 import { createMusicButton } from "./music-button";
 import { createNotebook } from "./notebook";
 import { createRailwayView } from "./railway-view";
-import { createSaveStore, type SaveSlot, type SaveStore } from "./saves";
+import { browserStorage, createSaveStore, type SaveSlot, type SaveStore } from "./saves";
 import { createSettingsStore, type SettingsStore } from "./settings";
+import { createSteamSaveStorage, earnedSteamAchievements } from "./steam";
 import { createTitleScreen } from "./title-screen";
 import { createSettingsPanel } from "./settings-panel";
 
@@ -178,29 +180,46 @@ const POSITION_SAVE_SECONDS = 1;
  * Browser entry: the title screen, then the game. ?seed=anything skips the title and plays that world
  * (the same seed always builds the same world).
  */
-export function startApp(container: HTMLElement): void {
+export async function startApp(container: HTMLElement): Promise<void> {
   const settings = createSettingsStore(undefined, navigator.languages);
-  const saves = createSaveStore(undefined, undefined, undefined, (seed, ids) => {
+  installCrashOverlay(container, () => settings.get().language);
+  const desktop = window.wayshrineDesktop;
+  let cloud: ReturnType<typeof createSteamSaveStorage> | undefined;
+  if (desktop) {
+    try {
+      const boot = await desktop.loadSteamSaves();
+      if (boot) cloud = createSteamSaveStorage(boot, desktop.writeSteamSaves, browserStorage());
+    } catch (error) {
+      console.error("Could not load Steam saves. Using the standalone profile.", error);
+    }
+  }
+  const reportAchievements = cloud && desktop?.reportSteamAchievements;
+  const saves = createSaveStore(cloud?.storage, undefined, undefined, (seed, ids) => {
     const world = createWorld(seed);
     return ids.filter((id) => world.regionById(id).landmark).length;
-  });
+  }, cloud?.persist);
+  if (cloud?.imported) cloud.persist();
   const seed = new URLSearchParams(window.location.search).get("seed");
   if (seed !== null) {
     const slot = saves.forSeed(seed);
     const isNew = !saves.list().some((saved) => saved.id === slot.id);
-    startGame(container, slot, settings, saves, createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS }), isNew);
+    startGame(container, slot, settings, saves, createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS }), isNew, reportAchievements, cloud?.flush);
     return;
   }
   const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
   const title = createTitleScreen(container, { saves, settings, music });
   void title.chosen.then(({ slot, isNew }) => {
     title.destroy();
-    startGame(container, slot, settings, saves, music, isNew);
+    startGame(container, slot, settings, saves, music, isNew, reportAchievements, cloud?.flush);
   });
 }
 
 /** Browser wiring: input, the game loop, the HUD and saving. */
-function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsStore, saves: SaveStore, music: Music, isNew: boolean): void {
+function startGame(
+  container: HTMLElement, slot: SaveSlot, settings: SettingsStore, saves: SaveStore, music: Music, isNew: boolean,
+  reportAchievements?: (ids: readonly string[]) => void,
+  flushSaves?: () => Promise<void>,
+): void {
   const params = new URLSearchParams(window.location.search);
   const world = createWorld(slot.seed);
   const terrain = createTerrain(world);
@@ -252,25 +271,32 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
   settings.subscribe(applyAudio);
 
   let state = loadGame(saves, slot, world);
+  const reported = new Set<string>();
+  const reportProgress = (game: GameState, count: number): void => {
+    if (!reportAchievements || debug) return;
+    const earned = earnedSteamAchievements(game, count, world.landmarks.length).filter((id) => !reported.has(id));
+    earned.forEach((id) => reported.add(id));
+    if (earned.length) reportAchievements(earned);
+  };
+  reportProgress(state, landmarksRestored(state, world));
   const monumentUi = createMonumentUi(container, hud.topLeft, {
     collected: () => state.collected,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
   });
   const musicButton = createMusicButton(hud.actions, () => cycleMusic());
-  const saveJourney = (): void => {
+  const saveJourney = async (): Promise<void> => {
     saveGame(state);
     savePosition();
+    await flushSaves?.();
   };
   const desktop = window.wayshrineDesktop;
   const panel = createSettingsPanel(container, hud.actions, settings, {
     onTitle: () => {
-      saveJourney();
-      window.location.href = window.location.pathname;
+      void saveJourney().then(() => { window.location.href = window.location.pathname; });
     },
     onQuit: desktop && (() => {
-      saveJourney();
-      desktop.quit();
+      void saveJourney().then(() => desktop.quit());
     }),
   });
   const backpack = createBackpack(container, hud.backpackButton);
@@ -459,7 +485,11 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
   /** Debug only: fixed sim step per frame (seconds), so slow renderers can step the sequence deterministically. */
   let fixedDt: number | null = null;
 
-  const saveGame = (game: GameState): void => saves.write(slot.id, JSON.stringify(serialize(game)), landmarksRestored(game, world));
+  const saveGame = (game: GameState): void => {
+    const count = landmarksRestored(game, world);
+    saves.write(slot.id, JSON.stringify(serialize(game)), count);
+    reportProgress(game, count);
+  };
   /** Remembers where the player stands, unless a scripted moment is carrying them. */
   const savePosition = (): void => {
     if (momentBusy() || (pos.x === savedAt.x && pos.z === savedAt.z)) return;
@@ -641,7 +671,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
         snowshoeMoment = { t: startGearMusic("snowshoes", 0, true) };
       },
     };
-    debugPanel = createDebugPanel(container, actions, () => down.clear());
+    debugPanel = createDebugPanel(container, { ...actions, quality: { get: () => stage.quality(), set: (c) => stage.setQuality(c) } }, () => down.clear());
     // Also available from the console: window.wayshrine.
     Object.assign(window, {
       wayshrine: { world, railway, railRideTime: () => trainRide?.t ?? null, monuments, obstacles, getPos: () => pos, readMonument, music, cues, setFixedDt: (d: number | null) => (fixedDt = d), teleport: (x: number, z: number) => { stopGearMoments(); pos = { x, z }; }, restore, ...actions },
@@ -1066,7 +1096,7 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       pendingCompletion = null;
       moving = false;
     }
-    completion.update(dt);
+    completion.update(dt, music.playbackTime(COMPLETION_TRACK));
 
     const prefs = settings.get();
     const t = messagesFor(prefs.language);
@@ -1177,7 +1207,9 @@ function startGame(container: HTMLElement, slot: SaveSlot, settings: SettingsSto
       finalMusicPending = false;
     }
     const background = selectedMusicSet();
-    if (!finalMusicPending) {
+    if (completion.isOpen()) {
+      music.setTrack(COMPLETION_TRACK, 0.8);
+    } else if (!finalMusicPending) {
       const restorationTrack = awakening?.unlocksGear === "pilgrimsWake" ? undefined : awakening?.backgroundTrack;
       const switching = gearMusic && gearMusic.t >= gearMusic.switchAt;
       music.setTrack(restorationTrack ?? background.background, switching ? GEAR_FADE_SECONDS : undefined);

@@ -50,6 +50,12 @@ export interface Messages {
     readonly summary: (count: number) => string;
     readonly resume: string;
   };
+  readonly crash: {
+    readonly title: string;
+    readonly message: string;
+    readonly contextLost: string;
+    readonly reload: string;
+  };
   readonly welcome: { readonly title: string; readonly hint: string };
   readonly gearReveal: Readonly<Record<"boat" | "snowshoes" | "climbing" | "geta" | "lantern" | "ashSandals" | "ship" | "pilgrimsWake", { readonly title: string; readonly hint: string }>>;
   readonly controls: {
@@ -110,7 +116,9 @@ export interface Messages {
     readonly tabControls: string;
     /** The controls tab: a titled list of [what, how] rows per kind of device. */
     readonly controlGroups: readonly { readonly title: string; readonly rows: readonly (readonly [string, string])[] }[];
+    readonly fullscreen: string;
     readonly returnToTitle: string;
+    readonly quitGame: string;
   };
   readonly title: {
     readonly continue: string;

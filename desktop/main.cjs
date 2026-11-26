@@ -4,6 +4,7 @@ const { stat } = require("node:fs/promises");
 const path = require("node:path");
 const { Readable } = require("node:stream");
 const { pathToFileURL } = require("node:url");
+const { startSteam } = require("./steam.cjs");
 
 const SCHEME = "app";
 const HOST = "wayshrine";
@@ -70,7 +71,7 @@ function isGameUrl(url) {
   return protocol === `${SCHEME}:` && host === HOST;
 }
 
-function createWindow() {
+function createWindow(steam) {
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -92,6 +93,14 @@ function createWindow() {
   });
   contents.ipc.on("wayshrine:quit", (event) => {
     if (fromGame(event)) app.quit();
+  });
+  contents.ipc.handle("wayshrine:steam-saves", (event) => fromGame(event) ? steam?.save.read() ?? null : null);
+  contents.ipc.handle("wayshrine:steam-save", (event, snapshot) => {
+    if (!fromGame(event)) return false;
+    return steam?.save.write(snapshot) ?? false;
+  });
+  contents.ipc.on("wayshrine:steam-achievements", (event, ids) => {
+    if (fromGame(event)) steam?.awards.report(ids);
   });
   const sendFullscreen = (fullscreen) => {
     if (!contents.isDestroyed()) contents.send("wayshrine:fullscreen-changed", fullscreen);
@@ -115,9 +124,22 @@ function createWindow() {
 
 void app.whenReady().then(() => {
   protocol.handle(SCHEME, handleGameFiles);
-  createWindow();
+  const steam = startSteam(app.getPath("userData"), process.resourcesPath, require("./package.json").steamAppId);
+  if (steam && !app.requestSingleInstanceLock()) {
+    app.quit();
+    return;
+  }
+  app.on("second-instance", () => {
+    const window = BrowserWindow.getAllWindows()[0];
+    if (!window) createWindow(steam);
+    else {
+      if (window.isMinimized()) window.restore();
+      window.focus();
+    }
+  });
+  createWindow(steam);
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(steam);
   });
 });
 

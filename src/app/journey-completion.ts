@@ -24,10 +24,25 @@ const ease = (x: number): number => {
   return t * t * (3 - 2 * t);
 };
 
+// Phrase accents in Starbound Farewell. Leave the final landmark for the last lift.
+const STAR_PHRASES = [1.45, 5.55, 7.20, 9.10, 12.32, 15.35, 17.40, 19.42] as const;
+const FINAL_STAR_AT = 20.54;
+const REVEAL_DURATION = FINAL_STAR_AT + 1.15;
+const AUDIO_START_GRACE = 0.65;
+
+function ignitionTime(index: number, count: number): number {
+  if (index === count - 1) return FINAL_STAR_AT;
+  const interval = index / Math.max(1, count - 2) * (STAR_PHRASES.length - 1);
+  const before = Math.min(Math.floor(interval), STAR_PHRASES.length - 2);
+  const start = STAR_PHRASES[before]!;
+  return start + (STAR_PHRASES[before + 1]! - start) * (interval - before);
+}
+
 interface ChartPoint {
   readonly x: number;
   readonly y: number;
   readonly last: boolean;
+  readonly igniteAt: number;
 }
 
 /** The Far Sight chart, repurposed to show every restored landmark. */
@@ -64,8 +79,8 @@ export function createJourneyCompletion(container: HTMLElement, basis: GroundBas
   const upAxis = basis(0, 1);
   const c = chart.width / 2;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const revealDuration = 2.4;
   let elapsed = 0;
+  let audioWait = 0;
   let points: ChartPoint[] = [];
 
   function draw(seconds: number): void {
@@ -86,8 +101,8 @@ export function createJourneyCompletion(container: HTMLElement, basis: GroundBas
     ctx.strokeStyle = "#e3ca8730";
     ctx.stroke();
 
-    for (const [i, point] of points.entries()) {
-      const age = seconds - 1.35 * i / Math.max(1, points.length - 1);
+    for (const point of points) {
+      const age = seconds - point.igniteAt;
       ctx.beginPath();
       if (age <= 0) {
         ctx.arc(point.x, point.y, 2.4, 0, 2 * Math.PI);
@@ -133,20 +148,27 @@ export function createJourneyCompletion(container: HTMLElement, basis: GroundBas
       const x0 = Math.min(...xs), x1 = Math.max(...xs);
       const y0 = Math.min(...ys), y1 = Math.max(...ys);
       const scale = 2 * (c - 54) / Math.max(1, x1 - x0, y1 - y0);
-      points = projected.map(({ id, right, up }) => ({
+      const sorted = projected.map(({ id, right, up }) => ({
         x: c + (right - (x0 + x1) / 2) * scale,
         y: c - (up - (y0 + y1) / 2) * scale,
         last: id === finalLandmark?.id,
       }));
       // Light the stars outward from the centre, with the final landmark appearing last.
-      points.sort((a, b) => Number(a.last) - Number(b.last) || Math.hypot(a.x - c, a.y - c) - Math.hypot(b.x - c, b.y - c));
-      elapsed = reducedMotion.matches ? revealDuration : 0;
+      sorted.sort((a, b) => Number(a.last) - Number(b.last) || Math.hypot(a.x - c, a.y - c) - Math.hypot(b.x - c, b.y - c));
+      points = sorted.map((point, index) => ({ ...point, igniteAt: ignitionTime(index, sorted.length) }));
+      elapsed = reducedMotion.matches ? REVEAL_DURATION : 0;
+      audioWait = AUDIO_START_GRACE;
       draw(elapsed);
       if (!dialog.open) dialog.showModal();
     },
-    update(dt: number) {
-      if (!dialog.open || elapsed >= revealDuration) return;
-      elapsed = reducedMotion.matches ? revealDuration : Math.min(elapsed + dt, revealDuration);
+    update(dt: number, playbackTime: number | null) {
+      if (!dialog.open || elapsed >= REVEAL_DURATION) return;
+      // A blocked or unavailable track still gets the same choreography on the game clock.
+      const fallback = elapsed + Math.max(0, dt - audioWait);
+      audioWait = Math.max(0, audioWait - dt);
+      const next = reducedMotion.matches ? REVEAL_DURATION : Math.min(playbackTime ?? fallback, REVEAL_DURATION);
+      if (next <= elapsed) return;
+      elapsed = next;
       draw(elapsed);
     },
   };

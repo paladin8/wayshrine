@@ -1,0 +1,15 @@
+{
+  "FIRST_SHRINE": { "name": "A Light in the Meadow", "description": "Restore your first ordinary shrine." },
+  "FIRST_LANDMARK": { "name": "A Place Remembered", "description": "Restore your first landmark." },
+  "FIRST_RUBBING": { "name": "Ink and Paper", "description": "Collect your first rubbing." },
+  "RUBBINGS_100": { "name": "Words Worth Keeping", "description": "Collect 100 rubbings in one journey." },
+  "FIRST_VOYAGE": { "name": "Crossing at Dawn", "description": "Launch your boat for the first time." },
+  "FIRST_SNOWSHOES": { "name": "Fresh Tracks", "description": "Use your snowshoes for the first time." },
+  "FIRST_CLIMB": { "name": "The Ridge Within Reach", "description": "Use your walking sticks for the first time." },
+  "FIRST_GETA": { "name": "Through the Reeds", "description": "Wear your geta for the first time." },
+  "FIRST_LANTERN": { "name": "A Light Among the Cedars", "description": "Light your lantern in the dark forest." },
+  "FIRST_ASH_SANDALS": { "name": "Walking on Ash", "description": "Use your ash sandals for the first time." },
+  "FIRST_SAILING": { "name": "Beyond the Headlands", "description": "Launch your ship onto the open sea." },
+  "PILGRIMS_WAKE": { "name": "Pilgrim’s Wake", "description": "Awaken Pilgrim’s Wake by restoring 58 landmarks." },
+  "ALL_LANDMARKS": { "name": "Journey Complete", "description": "Restore every landmark in one journey." }
+}
