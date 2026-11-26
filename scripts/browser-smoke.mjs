@@ -14,7 +14,13 @@ test("production build starts, explores, and resumes a journey", { timeout: 90_0
 
   const browser = await chromium.launch({
     // CI has no physical GPU. Allow Chromium to use its software WebGL renderer.
-    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+    args: [
+      "--use-gl=angle",
+      "--use-angle=swiftshader",
+      "--enable-webgl",
+      "--enable-unsafe-swiftshader",
+      "--ignore-gpu-blocklist",
+    ],
   });
   t.after(() => browser.close());
 
