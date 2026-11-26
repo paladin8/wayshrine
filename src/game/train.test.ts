@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   capabilitiesForCount, createTerrain, createWorld, footprintHalf, fujiRailway, isWater,
-  landmarksBeforeAct, LANDMARK_WINDOW, reachableRegions, railPoint, railwayClearance, railCoordinates, PLATFORM_END, PLATFORM_FAR, PLATFORM_NEAR, PLATFORM_TOP, RAIL_HALF_LENGTH,
+  landmarksBeforeAct, LANDMARK_WINDOW, reachableRegions, railPoint, railwayClearance, railCoordinates, PLATFORM_END, PLATFORM_FAR, PLATFORM_NEAR, PLATFORM_TOP, RAIL_HALF_LENGTH, RAIL_HALF_WIDTH,
 } from "../world";
 import { blockerAt, clearOfObstacles, movePlayer } from "./player";
 import { newGame, restoreShrine } from "./state";
@@ -115,7 +115,10 @@ describe("Mount Fuji railway", () => {
 });
 
 describe("Mount Fuji railway in generated worlds", () => {
-  it.each(["wayshrine", "spring", "default", "0", "fuji-corridor-37", "fuji-corridor-178"])("connects five restorable regions in %s", (seed) => {
+  it.each([
+    "wayshrine", "spring", "default", "0", "fuji-corridor-37", "fuji-corridor-178",
+    "quality-pass-108", "quality-pass-128", "quality-pass-182",
+  ])("connects five restorable regions in %s", (seed) => {
     const world = createWorld(seed);
     const line = fujiRailway(world)!;
     const terrain = createTerrain(world);
@@ -146,11 +149,15 @@ describe("Mount Fuji railway in generated worlds", () => {
     }
 
     const through = new Set<string>();
-    for (let distance = line.start; distance <= line.end; distance += 0.5) {
-      const point = railPoint(line, distance);
-      through.add(terrain.tileAtPoint(point.x, point.z).regionId);
+    // Terrain tiles can graze a bend in a regional border. Sample across the full
+    // track bed and check coverage without assuming which edge crosses first.
+    for (let distance = line.start; distance <= line.end; distance += 0.125) {
+      for (let step = -8; step <= 8; step++) {
+        const point = railPoint(line, distance, step * RAIL_HALF_WIDTH / 8);
+        through.add(terrain.tileAtPoint(point.x, point.z).regionId);
+      }
     }
-    expect([...through]).toEqual(line.crossedRegions);
+    expect(through).toEqual(new Set(line.crossedRegions));
 
     const almostReady = line.requiredRegions
       .filter((id) => id !== line.crossedRegions[1])

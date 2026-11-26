@@ -124,9 +124,13 @@ export interface Minimap {
 }
 
 const CSS = `
+:root{--corner-map-size:${SMALL_SIZE}px}
 .map{position:fixed;pointer-events:none;border-radius:14px;overflow:hidden;border:2px solid #fffaf0cc;box-shadow:0 2px 12px #0004;background:#3a3434}
+.map[hidden]{display:none}
 .map.small{right:14px;bottom:14px}
-.map-zoom{position:fixed;bottom:14px;right:calc(14px + 172px + 8px);width:34px;height:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid #2a242422;background:#fffaf0cc;color:#2a2424;font:600 15px/1 ${UI_FONT};cursor:pointer;pointer-events:auto}
+.map.small canvas{width:var(--corner-map-size);height:auto}
+@media(max-width:700px){:root{--corner-map-size:116px}}
+.map-zoom{position:fixed;bottom:14px;right:calc(26px + var(--corner-map-size));width:34px;height:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid #2a242422;background:#fffaf0cc;color:#2a2424;font:600 15px/1 ${UI_FONT};cursor:pointer;pointer-events:auto}
 .map-zoom:hover{background:#fffaf0}
 .map-zoom.alone{right:14px}
 .map.large{z-index:3;pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
@@ -605,7 +609,7 @@ export function createMinimap(
     update(input) {
       shown = input.visible;
       if (!shown && expanded) toggleExpanded();
-      frame.style.display = shown ? "" : "none";
+      frame.hidden = !shown;
       zoom.classList.toggle("alone", !shown);
       zoom.style.display = expanded || !input.showOverview ? "none" : "";
       zoom.title = input.labels.zoom ?? "";

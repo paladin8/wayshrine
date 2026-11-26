@@ -55,6 +55,9 @@ const CSS = `
 .hud .tr{--actions-top:14px;position:absolute;top:var(--actions-top);right:14px;display:flex;align-items:center;gap:8px}
 @media(max-width:600px){.hud .tr{--actions-top:56px}}
 .hud .bc{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);text-align:center}
+@media(max-width:700px){
+  body:has(.map.small:not([hidden])) .hud .bc{left:14px;right:calc(68px + var(--corner-map-size));transform:none}
+}
 .hud .msg{display:inline-block;padding:8px 16px;border-radius:10px;background:#2a2424dd;color:#f2ede0}
 .hud .lname{position:absolute;inset:0;opacity:0;--em:clamp(28px,10vh,100px)}
 .hud .lname::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 34% 52% at 50% 52%,#120c0c8c,#120c0c00)}
