@@ -48,6 +48,7 @@ export function biomeDetailData(
   const builder = new VitalityBuilder((id) => waveOriginOf(terrain.world.regionById(id)));
   const art = biomeArt(terrain);
   const rng = createRng(terrain.world.seed).fork(`brushwork:${cx},${cz}`);
+  const meadowRng = rng.fork("meadow-tufts");
   const x0 = cx * CHUNK_SIZE, z0 = cz * CHUNK_SIZE;
 
   for (let iz = 1; iz < CHUNK_SIZE; iz += 3) {
@@ -159,6 +160,10 @@ export function biomeDetailData(
           if (field > 0.51 && rng.chance(density * 0.49)) {
             blades(rng, x, y, z, turn, 4, rng.range(0.21, 0.42), 0.42, (v) => paint(v, COLORS.grass, grow(0.4)));
             if (field > 0.64 && rng.chance(0.49)) disc(x + 0.16, z + 0.1, 0.19, 0.12, COLORS.petals);
+          } else if (!tile.fujiField && !tile.tokyoSurface && field > 0.34 && meadowRng.chance(0.23)) {
+            // A few shorter tufts between the existing flower patches.
+            const height = meadowRng.range(0.18, 0.32);
+            blades(meadowRng, x, y, z, turn, 4, height, 0.38, (v) => paint(v, COLORS.grass, grow(height)));
           }
           break;
         case "snow":

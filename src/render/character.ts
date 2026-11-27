@@ -31,7 +31,7 @@ export interface Character {
   setLanternLighting(lighting: LanternLighting | undefined): void;
   /** Crouch to strap on gear: 0 stands normally, 1 is fully crouched. `fuss` moves the hands about the feet. */
   setCrouch(amount: number, fuss: number): void;
-  /** Seated only: rest both hands on the lap, 0 to 1 (the default seated pose holds them out front). */
+  /** Seated only: lean forward and rest the hands on the lap, 0 to 1. */
   setLapRest(amount: number): void;
   dispose(): void;
 }
@@ -65,7 +65,7 @@ interface Shape {
 }
 
 const SHAPES: Readonly<Record<CharacterVariant, Shape>> = {
-  female: { chest: 0.185, hip: 0.185, headR: 0.185, scale: 0.92, skirt: true, hair: 0x3a2a26 },
+  female: { chest: 0.18, hip: 0.194, headR: 0.185, scale: 0.92, skirt: true, hair: 0x3a2a26 },
   male: { chest: 0.235, hip: 0.17, headR: 0.18, scale: 1, skirt: false, hair: 0x4a3c37 },
 };
 
@@ -165,8 +165,8 @@ if (uShrineArrival < 1.0) {
     mesh(geometry, material, parent);
   };
 
-  const shirt = m(SHIRT);
-  const clothEdge = m(0xc4ac80);
+  const shirt = m(shape.skirt ? 0x899eae : SHIRT);
+  const clothEdge = m(shape.skirt ? 0xc5b49b : 0xc4ac80);
   const lining = m(0xf4e8ca);
   const trousers = m(TROUSERS);
   const skin = m(SKIN);
@@ -207,13 +207,14 @@ if (uShrineArrival < 1.0) {
 
   // --- Torso.
   const torso = group(pelvis, 0, 0.05, 0);
-  const waist = shape.hip * 0.88;
-  const lowerHem = shape.skirt ? -0.135 : -0.08;
+  const waist = shape.hip * (shape.skirt ? 0.76 : 0.88);
+  const lowerHem = shape.skirt ? -0.152 : -0.08;
+  const chestFront = shape.skirt ? 0.026 : 0;
   mesh(tailored([
     [lowerHem, shape.hip * (shape.skirt ? 1.24 : 1.09), 0.126, 0.013],
     [0.015, shape.hip * 1.02, 0.126, 0.007],
     [0.12, waist, 0.119],
-    [0.29, shape.chest * 0.96, 0.142],
+    [0.29, shape.chest * 0.96, 0.142, chestFront],
     [0.365, shape.chest * 1.04, 0.136],
     [0.421, 0.103, 0.094],
   ]), shirt, torso);
@@ -223,10 +224,13 @@ if (uShrineArrival < 1.0) {
   ]), clothEdge, torso);
 
   // A crossed collar and a broad woven sash give the jacket a distinct shape at game scale.
-  fold(torso, lining, 0.054, [[-0.07, 0.403, 0.093], [-0.058, 0.348, 0.133], [0.055, 0.235, 0.146]]);
-  fold(torso, clothEdge, 0.032, [[0.077, 0.402, 0.094], [0.052, 0.349, 0.134], [-0.018, 0.279, 0.153], [-0.073, 0.19, 0.136]]);
-  const sash = m(0x504d40);
+  fold(torso, lining, 0.054, [[-0.07, 0.403, 0.093], [-0.058, 0.348, 0.133], [0.055, 0.235, 0.146 + chestFront * 0.75]]);
+  fold(torso, clothEdge, 0.032, [[0.077, 0.402, 0.094], [0.052, 0.349, 0.134], [-0.018, 0.279, 0.153 + chestFront], [-0.073, 0.19, 0.136]]);
+  const sash = m(shape.skirt ? 0x574760 : 0x504d40);
   mesh(tailored([[0.061, waist + 0.026, 0.129], [0.105, waist + 0.013, 0.124]]), sash, torso);
+  if (shape.skirt) {
+    mesh(tailored([[0.076, waist + 0.023, 0.129], [0.083, waist + 0.021, 0.128]]), clothEdge, torso);
+  }
 
   // --- Head.
   const neck = group(torso, 0, 0.42, 0);
@@ -298,10 +302,19 @@ if (uShrineArrival < 1.0) {
   fringe.rotation.z = 0.44;
   fringe.rotation.x = -0.38;
   if (variant === "female") {
-    const ponyBase = group(head, 0.02, 0.075, -0.155);
-    mesh(new THREE.IcosahedronGeometry(0.063, 0), hairMat, ponyBase);
-    mesh(tailored([[-0.036, 0.049, 0.046], [-0.014, 0.054, 0.047]], 7), scarfMat, ponyBase);
-    const upper = group(ponyBase, 0, -0.029, -0.01);
+    // Side locks keep the haircut visible from the front, even when the pack hides the tail.
+    for (const side of [-1, 1]) {
+      const lock = mesh(tailored([[-0.164, 0.007, 0.009], [-0.106, 0.025, 0.023], [-0.034, 0.039, 0.028], [0.047, 0.034, 0.031]], 7),
+        hairMat, head, side * 0.151, 0.056, 0.076);
+      lock.rotation.z = side * 0.15;
+      lock.rotation.x = side * 0.10;
+    }
+    const ponyBase = group(head, 0.058, 0.097, -0.158);
+    ponyBase.rotation.z = 0.24;
+    mesh(new THREE.IcosahedronGeometry(0.069, 0), hairMat, ponyBase);
+    const tie = m(0xd39659);
+    mesh(tailored([[-0.046, 0.055, 0.050], [-0.022, 0.063, 0.055]], 7), tie, ponyBase);
+    const upper = group(ponyBase, 0.008, -0.036, -0.016);
     mesh(tailored([[-0.156, 0.045, 0.041, -0.017], [-0.073, 0.056, 0.049, -0.013], [0.011, 0.047, 0.043]], 7), hairMat, upper);
     const lower = group(upper, 0, -0.145, -0.016);
     mesh(tailored([[-0.163, 0.006, 0.008, -0.028], [-0.093, 0.03, 0.028, -0.009], [0.018, 0.047, 0.043]], 7), hairMat, lower);
@@ -313,7 +326,7 @@ if (uShrineArrival < 1.0) {
   mesh(tailored([[0.386, 0.113, 0.105], [0.437, 0.104, 0.103], [0.47, 0.081, 0.075]]), scarfMat, torso);
   const knot = mesh(new THREE.IcosahedronGeometry(0.055, 0), scarfMat, torso, 0.025, 0.412, 0.102);
   knot.scale.set(1.15, 0.75, 0.62);
-  fold(torso, scarfFold, 0.056, [[0.041, 0.413, 0.136], [0.042, 0.367, 0.137], [0.059, 0.326, 0.146]]);
+  fold(torso, scarfFold, 0.056, [[0.041, 0.413, 0.136], [0.042, 0.367, 0.137], [0.059, 0.326, 0.146 + chestFront * 0.63]]);
   const scarfTail = group(torso, 0.05, 0.423, -0.095);
   mesh(tailored([[-0.165, 0.043, 0.012, -0.009], [-0.095, 0.05, 0.012], [0.01, 0.039, 0.012]]), scarfMat, scarfTail);
   const scarfTip = group(scarfTail, 0, -0.154, -0.007);
@@ -540,6 +553,7 @@ if (uShrineArrival < 1.0) {
       const stride = gear === "snowshoes" ? 0.55 : gear === "geta" ? 0.45 : 0.68;
       const lift = (gear && FOOT_LIFT[gear]) || 0;
       const t = seatedSmooth;
+      const resting = lapRest * t;
 
       legs.forEach((leg, i) => {
         const side = i === 0 ? 1 : -1;
@@ -562,12 +576,12 @@ if (uShrineArrival < 1.0) {
         arm.shoulder.rotation.x = lerp(ph * 0.8 * w, -0.7, t);
         arm.shoulder.rotation.z = (i === 0 ? -1 : 1) * 0.08;
         arm.elbow.rotation.x = lerp(-0.3 - 0.5 * Math.max(0, -ph) * w, -0.55, t);
-        if (lapRest > 0) {
-          // Upper arms close to the sides, forearms folded forward so the hands rest on the thighs.
-          const a = lapRest * t;
-          arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, 0.35, a);
-          arm.shoulder.rotation.z = lerp(arm.shoulder.rotation.z, (i === 0 ? -1 : 1) * 0.02, a);
-          arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -1.1, a);
+        if (resting > 0) {
+          const side = i === 0 ? 1 : -1;
+          // Bring the elbows in and let one hand sit slightly ahead of the other.
+          arm.shoulder.rotation.x = lerp(arm.shoulder.rotation.x, -0.18 - side * 0.045, resting);
+          arm.shoulder.rotation.z = lerp(arm.shoulder.rotation.z, -side * (shape.skirt ? 0.29 : 0.39), resting);
+          arm.elbow.rotation.x = lerp(arm.elbow.rotation.x, -0.67 - side * 0.025, resting);
         }
       }
 
@@ -576,17 +590,17 @@ if (uShrineArrival < 1.0) {
       pelvis.position.y = lerp(HIP_Y + lift + bob, sit + lift * 0.3, t);
       pelvis.rotation.y = s * 0.13 * w;
       pelvis.position.x = c * 0.025 * w;
-      torso.rotation.y = -s * 0.17 * w;
-      torso.rotation.x = 0.05 * w + 0.12 * t;
+      torso.rotation.y = -s * 0.17 * w + 0.045 * resting;
+      torso.rotation.x = 0.05 * w + 0.12 * t + 0.25 * resting;
       torso.rotation.z = -c * 0.06 * w;
-      head.rotation.x = -0.04 * w - 0.08 * t;
+      head.rotation.x = -0.04 * w - 0.08 * t - 0.15 * resting;
       head.rotation.y = -(torso.rotation.y + pelvis.rotation.y) * 0.7;
       head.rotation.z = c * 0.03 * w;
       pack.rotation.z = -c * 0.03 * w;
       if (ponytail) {
         // The tail hangs back and swings, the tip lagging behind the base.
         ponytail.base.rotation.x = 0.32 + 0.26 * w - 0.40 * t;
-        ponytail.base.rotation.z = -s * 0.1 * w;
+        ponytail.base.rotation.z = 0.24 - s * 0.1 * w;
         ponytail.upper.rotation.x = 0.1 + Math.sin(phase * 2 + 0.6) * 0.14 * w;
         ponytail.upper.rotation.z = -s * 0.1 * w;
         ponytail.lower.rotation.x = 0.12 + Math.sin(phase * 2 + 1.5) * 0.24 * w + Math.sin(performance.now() / 900) * 0.02;
