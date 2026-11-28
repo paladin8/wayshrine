@@ -160,10 +160,15 @@ export function biomeDetailData(
           if (field > 0.51 && rng.chance(density * 0.49)) {
             blades(rng, x, y, z, turn, 4, rng.range(0.21, 0.42), 0.42, (v) => paint(v, COLORS.grass, grow(0.4)));
             if (field > 0.64 && rng.chance(0.49)) disc(x + 0.16, z + 0.1, 0.19, 0.12, COLORS.petals);
-          } else if (!tile.fujiField && !tile.tokyoSurface && field > 0.34 && meadowRng.chance(0.23)) {
-            // A few shorter tufts between the existing flower patches.
-            const height = meadowRng.range(0.18, 0.32);
-            blades(meadowRng, x, y, z, turn, 4, height, 0.38, (v) => paint(v, COLORS.grass, grow(height)));
+          } else if (field > 0.34 && !tile.tokyoSurface && meadowRng.chance(0.41) && art.pattern(x, z, 6) > 0.55) {
+            const edge = plateauDistance(region, x, z);
+            const treeline = [[-3, 0], [3, 0], [0, -3], [0, 3]].some(([dx, dz]) =>
+              terrain.biomeAt(Math.floor(x) + dx!, Math.floor(z) + dz!) === "forest");
+            // Keep the open meadow quiet. Short tufts cluster off the verge or around the edge of a clearing.
+            if (!tile.fujiField && (treeline || (edge > 3 && edge < 8) || (tile.fujiVerge ?? 0) > 0.2)) {
+              const height = meadowRng.range(0.18, 0.32);
+              blades(meadowRng, x, y, z, turn, 4, height, 0.38, (v) => paint(v, COLORS.grass, grow(height)));
+            }
           }
           break;
         case "snow":

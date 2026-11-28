@@ -14,6 +14,13 @@ import { deadOf } from "./vitality-mesh";
 const DEAD_STONE = new THREE.Color(0x77736f);
 const DEAD_RED = new THREE.Color(0x77716e);
 
+/** Muted edge tones on the actual walkable stone and timber. These surfaces never emit light. */
+const PATH_TONES: Readonly<Partial<Record<string, { readonly part: string; readonly tint: number }>>> = {
+  "koyasan-okunoin": { part: "oku_pave", tint: 0xbeb49d },
+  "shiratani-unsuikyo": { part: "shiratani_wood", tint: 0xb29a75 },
+  "iya-kazurabashi": { part: "iya_wood", tint: 0xb5a080 },
+};
+
 /** Where a landmark's model lives: public/models/landmarks/<id>.glb */
 function modelUrl(id: string): string {
   return `${import.meta.env.BASE_URL}models/landmarks/${id}.glb`;
@@ -115,7 +122,7 @@ interface ModelCollider {
  * to its authored one with the region's life (as props do), and `glow_*`
  * parts light up and flare while it wakes.
  */
-function adopt(root: THREE.Object3D, replaced: ReadonlySet<THREE.Object3D>): { tinted: Tinted[]; colliders: ModelCollider[] } {
+function adopt(root: THREE.Object3D, replaced: ReadonlySet<THREE.Object3D>, id: string): { tinted: Tinted[]; colliders: ModelCollider[] } {
   const tinted = new Map<THREE.Material, Tinted>();
   const colliders: ModelCollider[] = [];
   root.traverse((o) => {
@@ -133,7 +140,10 @@ function adopt(root: THREE.Object3D, replaced: ReadonlySet<THREE.Object3D>): { t
     const seen = tinted.get(material);
     if (seen) return;
     if (glows) material.emissive = material.color.clone();
-    tinted.set(material, { material, alive: material.color.clone(), dead: deadOf(material.color), glows });
+    const alive = material.color.clone();
+    const path = PATH_TONES[id];
+    if (path?.part === o.name) alive.lerp(new THREE.Color(path.tint), 0.34);
+    tinted.set(material, { material, alive, dead: deadOf(alive), glows });
   });
   return { tinted: [...tinted.values()], colliders };
 }
@@ -255,7 +265,7 @@ export function buildLandmark(id: string, paint?: GroundPaint): ShrineMesh {
         if (paint) painted = paintGround(gltf.scene, paint);
         const replacement = replaceLandmarkAnimals(gltf.scene);
         animals = replacement.animals;
-        model = adopt(gltf.scene, new Set(animals.map(animal => animal.anchor)));
+        model = adopt(gltf.scene, new Set(animals.map(animal => animal.anchor)), id);
         if (gltf.animations.length) {
           mixer = new THREE.AnimationMixer(gltf.scene);
           for (const clip of gltf.animations) {

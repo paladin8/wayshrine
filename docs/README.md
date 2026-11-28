@@ -5,6 +5,7 @@
 - [landmarks.md](landmarks.md): the sixty-six landmarks, their acts, biomes and unlock thresholds, and how their models are built.
 - [music.md](music.md): how music plays, assets, adding tracks.
 - [ROADMAP.md](ROADMAP.md): milestones and current status.
+- [visual-polish.md](visual-polish.md): follow-up priorities from the release visual audit.
 - [railway-plan.md](railway-plan.md): the scenic railway at Mount Fuji.
 - [steam.md](steam.md): Steam release setup (Cloud saves, achievements, beta checks).
 - [decisions/](decisions/): architecture decision records, one per costly-to-reverse choice.

@@ -19,6 +19,8 @@ import { createFootprints } from "./footprints";
 import { buildPlayer } from "./player-mesh";
 import { SHIP_DECK_HEIGHT } from "./ship-mesh";
 import { buildLandmark } from "./landmark-mesh";
+import { LANDMARK_VIEWS } from "./landmark-view";
+import { createRouteDetails } from "./route-details";
 import { biomeArt } from "./biome-art";
 import { createLargeWildlife } from "./large-wildlife";
 import { buildShrine, type ShrineMesh } from "./shrine-mesh";
@@ -182,6 +184,7 @@ export function createStage(
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
   const zoomCut = createZoomCut();
   let wasAwakening = false;
+  let wasFramed = false;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   container.appendChild(renderer.domElement);
@@ -413,6 +416,7 @@ export function createStage(
   const updateGinzan = createGinzanScenery(scene, terrain, shownProgress, lifeAtPoint);
   const updateHirosaki = createHirosakiScenery(scene, terrain, lifeAtPoint);
   const ambient = createAmbient(scene, terrain, lifeAtPoint, particlePixelScale);
+  const routeDetails = createRouteDetails(scene, terrain, monuments, lifeAtPoint, railway);
   const sightings = createLargeWildlife(terrain, lifeAtPoint);
   const haiku = createHaikuScenes(terrain, monuments, obstacles, lifeAtPoint, haikuSounds);
   scene.add(sightings.root, haiku.root);
@@ -487,14 +491,27 @@ export function createStage(
       awakeningProgress = awakening?.progress ?? 0;
       const lighting = view.lighting;
       const closeUp = lighting ? smooth(lighting.progress / 0.28) * (1 - smooth((lighting.progress - 0.67) / 0.33)) : 0;
-      const requestedZoom = awakening?.zoom ?? (Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0) - 0.17 * closeUp);
-      // With reduced motion the camera cuts between framings rather than zooming.
-      const cutZoom = zoomCut(requestedZoom, dt);
-      const still = reducedMotion?.matches === true;
-      const zoom = still ? cutZoom : requestedZoom;
-      const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       const pos = view.player;
       const riding = view.train !== undefined;
+      const still = reducedMotion?.matches === true;
+      const tile = terrain.tileAtPoint(pos.x, pos.z);
+      const region = world.regionById(awakening?.regionId ?? tile.regionId);
+      const shot = !riding && !view.voyage && !lighting && region.landmark ? LANDMARK_VIEWS[region.landmark.id] : undefined;
+      const distance = shot ? Math.hypot(pos.x - region.shrine.x, pos.z - region.shrine.z) : 0;
+      let framing = 0;
+      if (shot) {
+        if (awakening) framing = still ? Number(awakening.zoom >= 0.47) : smooth(awakening.zoom / 0.42);
+        else if (still) framing = Number(distance < shot.radius + (wasFramed ? 4.5 : 2.5));
+        else framing = smooth((shot.radius + 6 - distance) / 8);
+      }
+      const shotZoom = shot ? (Math.min(WIDE_VIEW_SIZE, Math.max(shot.height, shot.width / aspect)) - VIEW_SIZE) /
+        (WIDE_VIEW_SIZE - VIEW_SIZE) : 0;
+      const normalZoom = Math.max(view.overviewZoom ?? 0, view.voyage ? 0.07 * view.voyage.wake : 0) - 0.17 * closeUp;
+      const requestedZoom = Math.max(awakening?.zoom ?? normalZoom, framing > 0 ? framing * shotZoom : -1);
+      // With reduced motion the camera cuts between framings rather than zooming.
+      const cutZoom = zoomCut(requestedZoom, dt);
+      const zoom = still && framing > 0 ? Math.max(cutZoom, framing * shotZoom) : still ? cutZoom : requestedZoom;
+      const viewSize = VIEW_SIZE + (WIDE_VIEW_SIZE - VIEW_SIZE) * zoom;
       if (riding) fujiVista?.load();
       if (view.train?.windowView && fujiVista) {
         wasAtWindow = true;
@@ -503,11 +520,20 @@ export function createStage(
       }
       setLifeTime(clock);
 
-      // The camera follows the player, or the shrine being restored.
-      const focus = awakening ? world.regionById(awakening.regionId).shrine : pos;
-      const elevation = terrain.groundAt(focus.x, focus.z) + (still ? 0 : 0.65 * closeUp);
-      const cutToFocus = still && (awakening !== null) !== wasAwakening;
+      // Keep the walker in the composition on approach and centre the structure during the reveal.
+      const baseFocus = awakening ? region.shrine : pos;
+      const blend = framing * (awakening ? 1 : 0.65);
+      const focus = shot && blend > 0 ? {
+        x: THREE.MathUtils.lerp(baseFocus.x, region.shrine.x + shot.x, blend),
+        z: THREE.MathUtils.lerp(baseFocus.z, region.shrine.z + shot.z, blend),
+      } : baseFocus;
+      const ground = terrain.groundAt(baseFocus.x, baseFocus.z);
+      const elevation = shot && framing > 0 ? THREE.MathUtils.lerp(ground, plateauBase(region) + shot.y, framing)
+        : ground + (still ? 0 : 0.65 * closeUp);
+      const framed = framing > 0;
+      const cutToFocus = still && ((awakening !== null) !== wasAwakening || framed !== wasFramed);
       wasAwakening = awakening !== null;
+      wasFramed = framed;
       if (!targetReady || riding !== wasRiding || wasAtWindow || cutToFocus) {
         target.set(focus.x, elevation, focus.z);
         targetReady = true;
@@ -550,6 +576,8 @@ export function createStage(
         wakes,
       });
 
+      routeDetails(dt, centre, pos, viewSize * aspect, viewSize, sceneryPixelScale,
+        !still && !awakening && !riding && !view.voyage && !lighting && zoom < 0.22);
       perfMark("ambient");
       // During the wide shot, let the restoration wave light the stones in that region.
       const candidates = awakening
@@ -562,7 +590,6 @@ export function createStage(
       glimmer.update(clock, particlePixelScale() * (VIEW_SIZE / viewSize), unread);
 
       perfMark("glimmer");
-      const tile = terrain.tileAtPoint(pos.x, pos.z);
       lightBiome(sun, fill, tile.biome, dt);
       const voyage = view.voyage;
       // Lakes take the skiff and the open sea the ship, however the traveller came to be afloat.
