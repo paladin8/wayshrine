@@ -15,6 +15,7 @@ import {
   deserialize,
   discoverNear,
   isLegible,
+  isLandmarkMarked,
   landmarksRestored,
   isRestored,
   monumentInReach,
@@ -328,7 +329,7 @@ function startGame(
     if (travelToShrine(standPoint(region))) minimap.toggleExpanded();
   }, () => {
     if (!momentBusy() && overviewTime >= OVERVIEW_SECONDS) overviewTime = 0;
-  });
+  }, () => cues.play("star-twinkle"));
 
   let debugPanel: ReturnType<typeof createDebugPanel> | undefined;
   if (debug) {
@@ -361,10 +362,17 @@ function startGame(
     if (earned.length) reportAchievements(earned);
   };
   reportProgress(state, landmarksRestored(state, world));
+  let pendingRubbingReveals: Region[] = [];
   const monumentUi = createMonumentUi(container, hud.topLeft, {
     collected: () => state.collected,
     language: () => settings.get().language,
     sound: (cue) => cues.play(cue),
+    onReadingClosed: () => {
+      if (pendingRubbingReveals.length === 0) return;
+      const revealed = pendingRubbingReveals.filter(region => state.revealedLandmarks.has(region.landmark!.id));
+      pendingRubbingReveals = [];
+      minimap.reveal(revealed);
+    },
   });
   const musicButton = createMusicButton(hud.actions, () => cycleMusic());
   let leaving = false;
@@ -658,7 +666,13 @@ function startGame(
   const readMonument = (id: string): void => {
     const collected = collectMonument(state, id);
     if (collected !== state) {
+      const previous = state;
       state = revealLandmarks(collected, world);
+      if (state.revealedLandmarks !== previous.revealedLandmarks) {
+        const newlyMarked = world.landmarks.filter(region =>
+          state.revealedLandmarks.has(region.landmark!.id) && !isLandmarkMarked(previous, region));
+        pendingRubbingReveals.push(...newlyMarked);
+      }
       saveGame(state);
     }
     monumentUi.read(id);
@@ -703,8 +717,7 @@ function startGame(
       panel.close();
       notebook.close();
       backpack.close();
-      if (monumentUi.isBoxOpen()) monumentUi.toggleBox();
-      else monumentUi.dismissReading();
+      if (!monumentUi.dismissReading() && monumentUi.isBoxOpen()) monumentUi.toggleBox();
       if (minimap.isExpanded()) minimap.toggleExpanded();
       music.unlock();
     };
@@ -925,7 +938,14 @@ function startGame(
       }
       return;
     }
-    if (e.code === KEY_RUBBING_BOX && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey
+    if (monumentUi.isReading() && KEY_ACT.includes(e.code)) {
+      if (e.code === "KeyE") {
+        e.preventDefault();
+        monumentUi.dismissReading();
+      }
+      return;
+    }
+    if (e.code === KEY_RUBBING_BOX && !monumentUi.isReading() && !momentBusy() && !e.metaKey && !e.ctrlKey && !e.altKey
         && (monumentUi.isBoxOpen() || !modalOpen())) {
       down.clear();
       monumentUi.toggleBox();
@@ -936,7 +956,7 @@ function startGame(
       return;
     }
     down.add(e.code);
-    if (e.code === KEY_MAP) minimap.toggleExpanded();
+    if (e.code === KEY_MAP && !monumentUi.isReading()) minimap.toggleExpanded();
     if (e.code === KEY_OVERVIEW && !momentBusy() && overviewTime >= OVERVIEW_SECONDS && !e.metaKey && !e.ctrlKey && !e.altKey) {
       overviewTime = 0;
     }
@@ -970,7 +990,7 @@ function startGame(
         pressKey("Escape");
         return;
       case "back":
-        if (modal || minimap.isExpanded()) pressKey("Escape");
+        if (modal || monumentUi.isReading() || minimap.isExpanded()) pressKey("Escape");
         return;
       case "pagePrev":
         if (modal) pressKey("ArrowLeft");
@@ -997,7 +1017,7 @@ function startGame(
         else act();
         return;
       case "map":
-        if (!modal) minimap.toggleExpanded();
+        if (!modal && !monumentUi.isReading()) minimap.toggleExpanded();
         return;
       case "overview":
         if (!modal && !momentBusy() && overviewTime >= OVERVIEW_SECONDS) overviewTime = 0;
@@ -1030,7 +1050,6 @@ function startGame(
   function travelToShrine(destination: Point): boolean {
     if (momentBusy()) return false;
     releaseMovement();
-    monumentUi.dismissReading();
     overviewTime = OVERVIEW_SECONDS;
     pos = destination;
     shrineArrival = true;
@@ -1076,7 +1095,7 @@ function startGame(
     }
     const padInput = input.poll(now / 1000);
     const mapOpen = minimap.isExpanded();
-    const live = !modalOpen() && !mapOpen; // the map freezes walking
+    const live = !modalOpen() && !mapOpen && !monumentUi.isReading();
     const wanted = live ? strongest({ right: any(KEY_RIGHT) - any(KEY_LEFT), up: any(KEY_UP) - any(KEY_DOWN) }, padInput.move) : NO_MOVE;
     const right = wanted.right;
     const up = wanted.up;
@@ -1084,7 +1103,6 @@ function startGame(
     if (mapOpen && !modalOpen() && input.device() === "gamepad") minimap.pad(strongest(padInput.pad.look, padInput.pad.move), padInput.pad.zoom, dt); // either stick or the D-pad pans
     let moving = false;
     if (!momentBusy() && (right !== 0 || up !== 0)) {
-      monumentUi.dismissReading();
       const dir = stage.groundDirection(right, up);
       const from = pos;
       const moved = movePlayer(pos, dir, dt * walk, terrain, sailingCaps, obstacles);
@@ -1344,7 +1362,7 @@ function startGame(
       nearLandmarkName: nearModel,
       messages: t,
     });
-    minimap.update({ pos, state, target: debug ? guide?.region ?? null : null, visible: prefs.showMinimap, labels: device === "keyboard" ? t.map : t.map[device], showOverview: device === "keyboard", names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
+    minimap.update({ pos, state, heldReveals: pendingRubbingReveals, target: debug ? guide?.region ?? null : null, visible: prefs.showMinimap, labels: device === "keyboard" ? t.map : t.map[device], showOverview: device === "keyboard", names: { landmark: (id) => t.landmarkNames[id] ?? id, terrain: t.terrain, capability: t.capability, needs: t.mapNeeds }, monuments: debug ? monuments.all : undefined, travelToAny: debug });
 
     const movementTile = moving && !voyageFrame && !lanternMoment ? terrain.tileAtPoint(pos.x, pos.z) : undefined;
     let nextMovementCue = movementTile && MOVEMENT_CUES[movementTile.biome];

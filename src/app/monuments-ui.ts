@@ -148,6 +148,7 @@ export function createMonumentUi(
     language(): Locale;
     /** Plays a sound as the box opens or a page of the box turns. */
     sound(cue: "box-open" | "box-flip"): void;
+    onReadingClosed(): void;
   },
 ): MonumentUi {
   const style = el("style");
@@ -330,9 +331,11 @@ export function createMonumentUi(
   function close(): void {
     if (!open) return;
     const fromBox = isBoxOpen();
+    const wasReading = view.kind === "text";
     open = false;
     overlay.classList.remove("open");
     boxButton.setAttribute("aria-expanded", "false");
+    if (wasReading) source.onReadingClosed();
     if (fromBox) {
       boxButton.focus({ preventScroll: true });
       return;
@@ -342,6 +345,7 @@ export function createMonumentUi(
   }
 
   const toggleBox = (): void => {
+    if (open && view.kind === "text") return;
     if (isBoxOpen()) close();
     else {
       source.sound("box-open");
@@ -350,7 +354,7 @@ export function createMonumentUi(
   };
   boxButton.addEventListener("click", toggleBox);
   overlay.addEventListener("pointerdown", (e) => {
-    if (e.target === overlay) close();
+    if (e.target === overlay && view.kind === "box") close();
   });
   // Capture Escape while the box or a rubbing is open.
   window.addEventListener(

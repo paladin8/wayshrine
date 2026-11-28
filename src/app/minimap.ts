@@ -82,6 +82,8 @@ function drawShrineDot(ctx: CanvasRenderingContext2D, x: number, y: number, r: n
 export interface MapInput {
   readonly pos: Point;
   readonly state: GameState;
+  /** Newly revealed markers waiting for the inscription to be dismissed. */
+  readonly heldReveals: readonly Region[];
   /** The nearest reachable unrestored shrine, marked on the map, if any. */
   readonly target: Region | null;
   /** False hides the map entirely (a player setting). */
@@ -112,6 +114,8 @@ interface Waypoint {
 
 export interface Minimap {
   update(input: MapInput): void;
+  /** Shows a rubbing's newly marked landmarks on the next expanded view. */
+  reveal(regions: readonly Region[]): void;
   toggleExpanded(): void;
   isExpanded(): boolean;
   /**
@@ -136,6 +140,9 @@ const CSS = `
 .map.large{z-index:3;pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
 .map canvas.travel{cursor:pointer}
+.map-reveal-star{position:fixed;left:0;top:0;z-index:6;width:36px;height:36px;opacity:0;pointer-events:none;filter:drop-shadow(0 0 5px #ffd66b)}
+.map-reveal-ring{position:absolute;width:60px;height:60px;margin:-30px 0 0 -30px;box-sizing:border-box;border:2px solid #ffedac;
+  border-radius:50%;box-shadow:0 0 0 1px #2a2424,inset 0 0 0 1px #2a2424;pointer-events:none;z-index:1}
 .map .hint{position:absolute;left:5px;bottom:4px;max-width:calc(100% - 10px);box-sizing:border-box;padding:2px 4px;border-radius:4px;background:#252120e8;font:600 14px/1.25 ${UI_FONT};color:#fff8eb}
 .map .legend{position:absolute;left:10px;top:10px;display:none;flex-direction:column;gap:4px;max-width:min(calc(100% - 40px),260px);padding:8px 10px;border-radius:10px;background:#2a2424e8;font:14px/1.25 ${UI_FONT};color:#fff8eb;pointer-events:none}
 .map.large .legend{display:flex}
@@ -166,6 +173,8 @@ export function createMinimap(
   onTravel: (region: Region) => void,
   /** Called by the zoom-out button beside the corner map. */
   onZoom: () => void = () => {},
+  /** Called when the rubbing's star appears. */
+  onReveal: () => void = () => {},
 ): Minimap {
   const style = document.createElement("style");
   style.textContent = CSS;
@@ -190,6 +199,72 @@ export function createMinimap(
     zoom.blur(); // hand the keyboard back to the game
   });
   container.appendChild(zoom);
+  const revealStar = document.createElement("canvas");
+  revealStar.className = "map-reveal-star";
+  revealStar.width = revealStar.height = 36;
+  revealStar.setAttribute("aria-hidden", "true");
+  drawStar(revealStar.getContext("2d")!, 18, 18, 14, false);
+  container.appendChild(revealStar);
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const pendingReveals = new Set<string>();
+  const openingReveals = new Set<string>();
+  const revealRings = new Map<string, HTMLElement>();
+  let startRevealRings = false;
+  let flight: Animation | undefined;
+
+  function reveal(regions: readonly Region[]): void {
+    if (regions.length === 0) return;
+    regions.forEach(region => pendingReveals.add(region.id));
+    if (!shown || expanded) return;
+    const box = frame.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const x = window.innerWidth / 2;
+    const y = Math.min(118, window.innerHeight * 0.16);
+    const tx = box.left + box.width / 2;
+    const ty = box.top + box.height / 2;
+    const pose = (px: number, py: number, scale: number) => `translate(${px - 18}px,${py - 18}px) scale(${scale})`;
+    flight?.cancel();
+    const started = revealStar.animate(reduceMotion.matches ? [
+      { transform: pose(tx, ty, 0.8), opacity: 0.65 },
+      { transform: pose(tx, ty, 0.8), opacity: 1, offset: 0.2 },
+      { transform: pose(tx, ty, 0.8), opacity: 0 },
+    ] : [
+      { transform: pose(x, y, 0.55), opacity: 0.65, easing: "ease-out" },
+      { transform: pose(x, y, 1.12), opacity: 1, offset: 0.17, easing: "ease-out" },
+      { transform: pose(x, y, 1), opacity: 1, offset: 0.34, easing: "ease-in" },
+      { transform: pose(x + (tx - x) * 0.5, y + (ty - y) * 0.27 - 34, 0.7), opacity: 1, offset: 0.65, easing: "ease-out" },
+      { transform: pose(tx, ty, 0.26), opacity: 1, offset: 0.94 },
+      { transform: pose(tx, ty, 0.2), opacity: 0 },
+    ], { duration: reduceMotion.matches ? 650 : 1700 });
+    flight = started;
+    void started.ready.then(() => {
+      if (flight === started && started.playState !== "idle") onReveal();
+    }, () => {});
+  }
+
+  function showRevealRing(id: string, x: number, y: number): void {
+    const ring = document.createElement("div");
+    ring.className = "map-reveal-ring";
+    ring.setAttribute("aria-hidden", "true");
+    ring.style.left = `${x}px`;
+    ring.style.top = `${y}px`;
+    frame.appendChild(ring);
+    revealRings.set(id, ring);
+    const animation = ring.animate(reduceMotion.matches ? [
+      { transform: "scale(.45)", opacity: 1, offset: 0 },
+      { transform: "scale(.45)", opacity: 1, offset: 0.65 },
+      { transform: "scale(.45)", opacity: 0 },
+    ] : [
+      { transform: "scale(1)", opacity: 0.85, offset: 0 },
+      { transform: "scale(.42)", opacity: 1, offset: 0.73 },
+      { transform: "scale(.42)", opacity: 0 },
+    ], { duration: 1400, easing: "ease-in-out" });
+    const remove = () => {
+      ring.remove();
+      if (revealRings.get(id) === ring) revealRings.delete(id);
+    };
+    void animation.finished.then(remove, remove);
+  }
 
   let shown = true;
   const sample = document.createElement("canvas");
@@ -251,7 +326,15 @@ export function createMinimap(
   function draw(input: MapInput, size: number, block: number): void {
     const { pos, state, target } = input;
     const caps = capabilitiesOf(state, world);
-    const markedLandmarks = world.landmarks.filter((region) => isLandmarkMarked(state, region));
+    const markedLandmarks = world.landmarks.filter(region => isLandmarkMarked(state, region) &&
+      (isRestored(state, region) || !input.heldReveals.some(held => held.id === region.id)));
+    const newLandmarks = expanded && openingReveals.size > 0
+      ? markedLandmarks.filter(region => openingReveals.has(region.id) && !isRestored(state, region)) : [];
+    const animateReveals = expanded && startRevealRings;
+    if (animateReveals) {
+      openingReveals.forEach(id => pendingReveals.delete(id));
+      startRevealRings = false;
+    }
     // View: centre (ground point) and scale (world units per pixel).
     let centre: Point = pos;
     let scale = SMALL_SCALE;
@@ -273,10 +356,20 @@ export function createMinimap(
       let fitU = (minU + maxU) / 2;
       let fitV = (minV + maxV) / 2;
       if (fitScale > MAX_FIT_SCALE) {
-        // Too much explored to show at once: stay at a readable size, centred on the player.
+        // Keep the normal close framing unless it would put a first-open highlight offscreen.
         fitScale = MAX_FIT_SCALE;
         fitU = pos.x * R.x + pos.z * R.z;
         fitV = pos.x * F.x + pos.z * F.z;
+        if (newLandmarks.some(({ shrine: p }) =>
+          Math.max(Math.abs(p.x * R.x + p.z * R.z - fitU), Math.abs(p.x * F.x + p.z * F.z - fitV)) > size / 2 - 34)) {
+          minU = minV = Infinity;
+          maxU = maxV = -Infinity;
+          include(pos);
+          for (const region of newLandmarks) include(region.shrine);
+          fitScale = Math.max(MAX_FIT_SCALE, Math.max(maxU - minU, maxV - minV) / (size - 80));
+          fitU = (minU + maxU) / 2;
+          fitV = (minV + maxV) / 2;
+        }
       }
       scale = fitScale / zoomK;
       const u = fitU + panU;
@@ -357,6 +450,17 @@ export function createMinimap(
       const restored = isRestored(state, r);
       if (expanded && (restored || input.travelToAny)) waypoints.push({ x, y, region: r });
       drawStar(ctx, x, y, starR, restored);
+    }
+    for (const region of newLandmarks) {
+      const [x, y] = project(region.shrine);
+      if (animateReveals) showRevealRing(region.id, x, y);
+      else {
+        const ring = revealRings.get(region.id);
+        if (ring) {
+          ring.style.left = `${x}px`;
+          ring.style.top = `${y}px`;
+        }
+      }
     }
     // Debug: monuments in restored regions as diamonds, bright until read.
     for (const m of input.monuments ?? []) {
@@ -560,6 +664,16 @@ export function createMinimap(
   function toggleExpanded(): void {
     if (!shown && !expanded) return;
     expanded = !expanded;
+    openingReveals.clear();
+    if (expanded) {
+      flight?.cancel();
+      pendingReveals.forEach(id => openingReveals.add(id));
+      startRevealRings = openingReveals.size > 0;
+    } else {
+      startRevealRings = false;
+      revealRings.forEach(ring => ring.remove());
+      revealRings.clear();
+    }
     frame.className = expanded ? "map large" : "map small";
     hovered = null;
     reticle = false;
@@ -603,6 +717,7 @@ export function createMinimap(
       onTravel(hovered.region);
       return true;
     },
+    reveal,
     toggleExpanded,
     update(input) {
       shown = input.visible;
@@ -624,7 +739,8 @@ export function createMinimap(
         input.target?.id ?? "",
       ].join("|");
       const moved = Math.hypot(input.pos.x - lastPos.x, input.pos.z - lastPos.z);
-      if (key === lastKey && lastInput?.state === input.state && lastInput.names.terrain === input.names.terrain && moved < 2) return;
+      if (key === lastKey && lastInput?.state === input.state && lastInput.heldReveals === input.heldReveals &&
+          lastInput.names.terrain === input.names.terrain && moved < 2) return;
       lastKey = key;
       lastPos = input.pos;
       lastInput = input;
