@@ -33,6 +33,7 @@ function allText(m: Messages): string[] {
     ...m.settings.controlGroups.flatMap((g) => [g.title, ...g.rows.map((r) => r[0])]),
     ...Object.values(m.title).filter((v): v is string => typeof v === "string"),
     ...m.title.creditsLines,
+    ...m.title.creditNotices,
     m.title.continueDetail("quiet-heron-1234", 7),
     m.title.confirmDelete("quiet-heron-1234"),
     m.title.playtime(1, 25),

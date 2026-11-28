@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { defineConfig, loadEnv } from "vite";
 
+const notices = [
+  ["NOTICE", "NOTICE.txt"],
+  ["LICENSE", "LICENSE.txt"],
+  ["content/LICENSE.md", "content-license.txt"],
+] as const;
+const noticeAssets = notices.map(([source, filename]) => [filename, readFileSync(new URL(source, import.meta.url))] as const);
 const socialImage = "images/wayshrine-social.jpg";
 const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
@@ -23,13 +29,28 @@ export default defineConfig(({ mode }) => {
       // Shown in the corner of the title screen, so bug reports can name the build.
       "import.meta.env.WAYSHRINE_VERSION": JSON.stringify(version),
     },
-    plugins: siteUrl ? [{
+    plugins: [{
+      name: "wayshrine-notices",
+      configureServer(server) {
+        server.middlewares.use("/notices", (req, res, next) => {
+          const source = noticeAssets.find(([filename]) => req.url === `/${filename}`)?.[1];
+          if (!source) return next();
+          res.setHeader("Content-Type", "text/plain; charset=utf-8");
+          res.end(source);
+        });
+      },
+      generateBundle() {
+        for (const [filename, source] of noticeAssets) {
+          this.emitFile({ type: "asset", fileName: `notices/${filename}`, source });
+        }
+      },
+    }, ...(siteUrl ? [{
       name: "wayshrine-canonical-url",
       apply: "build",
       transformIndexHtml: () => [
         { tag: "link", attrs: { rel: "canonical", href: siteUrl.href }, injectTo: "head" },
         { tag: "meta", attrs: { property: "og:url", content: siteUrl.href }, injectTo: "head" },
       ],
-    }] : [],
+    }] : [])],
   };
 });

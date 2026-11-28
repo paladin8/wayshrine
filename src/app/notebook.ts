@@ -100,7 +100,7 @@ const CSS = `
 .nb-entry{position:relative;flex:1 1 0;min-height:0;display:flex;flex-direction:column;padding:6px 0 4px}
 .nb-entry+.nb-entry{border-top:1px dashed #8a6b3a44;padding-top:clamp(8px,1.6vh,14px)}
 .nb-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 2px;line-height:1.15}
-.nb-no{font:12px ${UI_FONT};letter-spacing:.08em;color:#9a8566;font-variant-numeric:tabular-nums}
+.nb-no{font:14px ${UI_FONT};letter-spacing:.08em;color:#9a8566;font-variant-numeric:tabular-nums}
 .nb-name{margin:0;font-weight:400;font-size:clamp(19px,3.4vh,26px);color:#2b2a4a}
 .nb-name.en{font-family:${HAND_EN}}
 .nb-name.ja,.nb-alt.ja{font-family:${HAND_JA}}

@@ -112,7 +112,8 @@ export const en: Messages = {
   },
   backpack: {
     title: "Backpack",
-    mystery: "???",
+    mystery: "Next gear",
+    empty: "No gear yet",
     complete: "You’ve collected every piece of gear.",
     close: "Close",
   },
@@ -132,7 +133,7 @@ export const en: Messages = {
     ship: { title: "Ship unlocked", hint: "Walk out to the open sea to board it." },
     pilgrimsWake: { title: "Pilgrim’s Wake awakened", hint: "Ordinary shrine regions awaken as you enter. Use E at landmarks to restore them." },
   },
-  saveNotice: { load: "This journey could not be opened. Its save is still available in Load Game.", write: "Progress could not be saved. Keep this window open and try again.", conflict: "This journey changed in another window. Reopen it from the title screen to continue.", cloud: "Steam saves could not be loaded. Showing journeys stored on this device." },
+  saveNotice: { load: "This journey could not be opened. Its save is still available in Load Game.", write: "Progress could not be saved. Keep this window open and try again.", conflict: "This journey changed in another window. Reopen it from the title screen to continue.", cloud: "Steam saves are unavailable. This session uses journeys stored on this device." },
   crash: {
     title: "Something went wrong",
     message: "The game hit an unexpected error. Your journey is saved. Reload to continue.",
@@ -231,6 +232,7 @@ export const en: Messages = {
     ],
     fullscreen: "Fullscreen",
     leaveWithoutSaving: "Leave without saving",
+    keepPlaying: "Keep playing",
     returnToTitle: "Return to title",
     quitGame: "Quit game",
   },
@@ -241,6 +243,8 @@ export const en: Messages = {
     loadGame: "Load game",
     options: "Options",
     credits: "Credits",
+    noticeUnavailable: "This notice could not be loaded. Select its link again to retry.",
+    creditNotices: ["Third-party notices", "Source code license", "Japanese text collection license"],
     creditsLines: [
       "Created by Jeffrey Wang using Claude and Codex",
       "Proverbs and idioms: JMdict/EDICT, © the Electronic Dictionary Research and Development Group, CC BY-SA 4.0.",

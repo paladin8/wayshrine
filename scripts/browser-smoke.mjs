@@ -79,6 +79,17 @@ test("production build starts, explores, and resumes a journey", { timeout: 90_0
   await page.keyboard.press("Escape");
   await page.locator(".map.small").waitFor();
 
+  const backpack = page.locator(".hud .backpack-button");
+  await backpack.focus();
+  await page.keyboard.press("Enter");
+  const closeBackpack = page.locator(".bp-overlay:modal .bp-x");
+  await closeBackpack.waitFor();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  assert.equal(await closeBackpack.evaluate((el) => el === document.activeElement), true);
+  await page.keyboard.press("Escape");
+  assert.equal(await backpack.evaluate((el) => el === document.activeElement), true);
+
   await page.locator(".hud .gear").click();
   await Promise.all([
     page.waitForEvent("domcontentloaded", { timeout: navigation.timeout }),
@@ -91,4 +102,40 @@ test("production build starts, explores, and resumes a journey", { timeout: 90_0
 
   assert.equal(await page.locator(".crash").count(), 0);
   assert.deepEqual([...errors], []);
+});
+
+test("the menu and distribution notices remain available if title art fails to download", { timeout: 45_000 }, async (t) => {
+  const server = await preview({ preview: { host: "127.0.0.1", port: 0, strictPort: true } });
+  let browser;
+  t.after(async () => {
+    try {
+      await browser?.close();
+    } finally {
+      await server.close();
+    }
+  });
+  const address = server.httpServer.address();
+  assert.ok(address && typeof address === "object");
+  browser = await chromium.launch({
+    args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+  });
+  const page = await browser.newPage({ locale: "en-US", reducedMotion: "reduce" });
+  await page.route("**/models/title/title.glb", (route) => route.fulfill({ status: 404 }));
+  await page.goto(`http://127.0.0.1:${address.port}`);
+  await page.locator(".ts-spinner").waitFor({ state: "hidden" });
+  assert.equal(await page.locator(".ts-fail").count(), 0);
+  await page.getByRole("button", { name: "Credits", exact: true }).click();
+
+  const links = page.locator(".sp-overlay.open .ts-credit a");
+  assert.equal(await links.count(), 3);
+  const licenseTexts = [/Permission is hereby granted/, /Apache License/, /Attribution-ShareAlike/];
+  for (const [i, link] of (await links.all()).entries()) {
+    const href = await link.getAttribute("href");
+    assert.ok(href);
+    const response = await page.request.get(new URL(href, page.url()).href);
+    assert.equal(response.status(), 200);
+    assert.match(await response.text(), licenseTexts[i]);
+  }
+  await links.first().click();
+  await page.locator(".ts-notice").filter({ hasText: "Permission is hereby granted" }).waitFor();
 });

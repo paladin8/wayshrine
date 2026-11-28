@@ -4,7 +4,7 @@ const MOVEMENT_GAIN = 0.32;
 const FOOTSTEP_GAIN = MOVEMENT_GAIN * 0.75;
 
 /** Sound effects, separate from background music. */
-export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "basalt-restoration", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "walk-meadow", "walk-snow", "walk-water", "walk-mountain", "walk-marsh", "row-water", "rail-roll", "shrine-travel"] as const;
+export const CUE_IDS = ["dawn-reverence", "radiant-arrival", "winter-light-restored", "basalt-restoration", "awakening-burst", "haiku-bell", "haiku-cicadas", "monument-read", "book-open", "page-flip", "box-open", "box-flip", "backpack-open", "walk-meadow", "walk-snow", "walk-water", "walk-mountain", "walk-marsh", "row-water", "rail-roll", "shrine-travel"] as const;
 export type CueId = (typeof CUE_IDS)[number];
 
 export interface CueInfo {
@@ -27,6 +27,7 @@ export const CUES: Readonly<Record<CueId, CueInfo>> = {
   "book-open": { url: `${base}audio/cues/book-open.mp3` },
   "page-flip": { url: `${base}audio/cues/page-flip.mp3` },
   "box-open": { url: `${base}audio/cues/box-open.mp3` },
+  "backpack-open": { url: `${base}audio/cues/backpack-open.wav`, gain: 0.72 },
   // Mastered about 1.2 dB hotter than the voyage cue; 0.5 (-6 dB) sits it well below that.
   "walk-meadow": { url: `${base}audio/cues/walk-meadow.wav`, loop: true, gain: FOOTSTEP_GAIN },
   "walk-snow": { url: `${base}audio/cues/walk-snow.wav`, loop: true, gain: FOOTSTEP_GAIN * 1.75 },

@@ -136,15 +136,13 @@ const CSS = `
 .map.large{z-index:3;pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:18px}
 .map canvas{display:block}
 .map canvas.travel{cursor:pointer}
-.map .hint{position:absolute;left:8px;bottom:6px;font:11px ${UI_FONT};color:#f2ede0;opacity:.8}
-.map .legend{position:absolute;left:10px;top:10px;display:none;flex-direction:column;gap:4px;padding:8px 10px;border-radius:10px;background:#2a2424d9;font:12px ${UI_FONT};color:#f2ede0;pointer-events:none}
+.map .hint{position:absolute;left:5px;bottom:4px;max-width:calc(100% - 10px);box-sizing:border-box;padding:2px 4px;border-radius:4px;background:#252120e8;font:600 14px/1.25 ${UI_FONT};color:#fff8eb}
+.map .legend{position:absolute;left:10px;top:10px;display:none;flex-direction:column;gap:4px;max-width:min(calc(100% - 40px),260px);padding:8px 10px;border-radius:10px;background:#2a2424e8;font:14px/1.25 ${UI_FONT};color:#fff8eb;pointer-events:none}
 .map.large .legend{display:flex}
-.map .legend div{display:flex;align-items:center;gap:7px;white-space:nowrap}
-.map .legend .sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #fffaf099}
+.map .legend div{display:flex;align-items:center;flex-wrap:wrap;gap:2px 7px}
+.map .legend .sw{display:inline-block;flex:none;width:14px;height:14px;border-radius:3px;border:1px solid #fffaf099}
 .map .legend .sw.blocked{background-image:repeating-linear-gradient(45deg,#0000 0 3px,#2a2424b3 3px 5px)}
-.map .legend .need{opacity:.75;display:none}
-.map.large .legend{pointer-events:auto}
-.map .legend:hover .need{display:inline}
+.map .legend .need{color:#f2ddbb}
 .map.large canvas{cursor:grab;touch-action:none}
 .map.large canvas.travel{cursor:pointer}
 .map.large canvas.dragging{cursor:grabbing}

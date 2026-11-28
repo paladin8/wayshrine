@@ -216,7 +216,9 @@ export async function startApp(container: HTMLElement): Promise<void> {
   const settings = createSettingsStore(undefined, navigator.languages);
   installCrashOverlay(container, () => settings.get().language);
   const desktop = window.wayshrineDesktop;
-  const notify = createSaveNotice(container, settings);
+  const showNotice = createSaveNotice(container, settings);
+  let steamUnavailable = false;
+  const notify = (notice?: SaveNotice): void => showNotice(notice ?? (steamUnavailable ? "cloud" : undefined));
   const local = browserStorage();
   let cloud: ReturnType<typeof createSteamSaveStorage> | undefined;
   if (desktop) {
@@ -225,7 +227,8 @@ export async function startApp(container: HTMLElement): Promise<void> {
       if (boot) cloud = createSteamSaveStorage(boot, desktop.writeSteamSaves, local);
     } catch (error) {
       console.error("Could not load Steam saves. Using the standalone profile.", error);
-      notify("cloud");
+      steamUnavailable = true;
+      notify();
     }
   }
   const reportAchievements = cloud && desktop?.reportSteamAchievements;
@@ -237,6 +240,20 @@ export async function startApp(container: HTMLElement): Promise<void> {
     cloud.persist();
     void cloud.flush().catch(() => notify("write"));
   }
+  let saveBeforeClose = async (): Promise<boolean> => {
+    await cloud?.flush();
+    return true;
+  };
+  desktop?.saveBeforeClose?.(async () => {
+    try {
+      if (await saveBeforeClose()) return null;
+    } catch (error) {
+      console.error("Could not save before closing", error);
+      notify("write");
+    }
+    const t = messagesFor(settings.get().language);
+    return { message: t.saveNotice.write, stay: t.settings.keepPlaying, discard: t.settings.leaveWithoutSaving };
+  });
   const seed = new URLSearchParams(window.location.search).get("seed");
   const music = createMusic({ duckReleaseSeconds: MUSIC_RETURN_SECONDS });
   let prepared: ReturnType<typeof loadGame> | undefined;
@@ -252,7 +269,7 @@ export async function startApp(container: HTMLElement): Promise<void> {
   };
   const play = (slot: SaveSlot, isNew: boolean): void => {
     const loaded = isNew ? { raw: null, state: newGame(slot.seed), world: createWorld(slot.seed) } : prepared!;
-    startGame(container, slot, settings, saves, music, isNew, loaded, notify, !!(cloud || local), reportAchievements, cloud?.flush);
+    saveBeforeClose = startGame(container, slot, settings, saves, music, isNew, loaded, notify, !!(cloud || local), reportAchievements, cloud?.flush);
   };
   if (seed !== null) {
     const slot = saves.forSeed(seed);
@@ -278,7 +295,7 @@ function startGame(
   loaded: ReturnType<typeof loadGame>, notify: (notice?: SaveNotice) => void, durable: boolean,
   reportAchievements?: (ids: readonly string[]) => void,
   flushSaves?: () => Promise<void>,
-): void {
+): () => Promise<boolean> {
   const params = new URLSearchParams(window.location.search);
   const world = loaded.world;
   const terrain = createTerrain(world);
@@ -368,7 +385,7 @@ function startGame(
     onTitle: () => { void leave(() => { window.location.href = window.location.pathname; }); },
     onQuit: desktop && (() => { void leave(() => desktop.quit()); }),
   });
-  const backpack = createBackpack(container, hud.backpackButton);
+  const backpack = createBackpack(container, hud.backpackButton, () => cues.play("backpack-open"));
   const completion = createJourneyCompletion(container, stage.groundDirection);
   const notebook = createNotebook(container, hud.landmarkButton, {
     all: world.landmarks.map((region) => region.landmark!.id),
@@ -1403,4 +1420,5 @@ function startGame(
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+  return () => saveGame(state, true);
 }

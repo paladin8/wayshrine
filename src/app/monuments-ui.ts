@@ -102,8 +102,8 @@ const CSS = `
 .mu-item .j{font:400 clamp(16px,2.45vw,23px)/1.24 ${JA_SCRIPT}}
 .mu-item .e{font-size:clamp(13px,2vw,16px);line-height:1.18;margin-top:5px;color:#504343}
 .mu-item.long .j{font-size:clamp(15px,2.15vw,20px)}
-.mu-item.long .e{font-size:clamp(12px,1.85vw,15px)}
-.mu-item .mu-seal{margin-top:auto;padding:8px 0 0;transform:rotate(-3.5deg);color:#943b32;font:11px/1.1 ${UI_FONT}}
+.mu-item.long .e{font-size:clamp(14px,1.85vw,16px)}
+.mu-item .mu-seal{margin-top:auto;padding:8px 0 0;transform:rotate(-3.5deg);color:#943b32;font:14px/1.2 ${UI_FONT}}
 .mu-seal span{display:inline-block;border:1px solid #a94438;border-radius:2px;padding:2px 4px}
 .mu-rail{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:7px 0 0;font-variant-numeric:tabular-nums;font-size:12px}
 .mu-turn{all:unset;cursor:pointer;min-height:34px;padding:0 8px;border-radius:3px;color:inherit;font-size:13px}

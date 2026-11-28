@@ -107,7 +107,8 @@ export const ja: Messages = {
   },
   backpack: {
     title: "背負い袋",
-    mystery: "ひみつ",
+    mystery: "次の道具",
+    empty: "道具はまだありません",
     complete: "道具はすべてそろいました。",
     close: "閉じる",
   },
@@ -127,7 +128,7 @@ export const ja: Messages = {
     ship: { title: "船を手に入れた", hint: "外海に出ると、船に乗れます。" },
     pilgrimsWake: { title: "巡礼の息吹が目覚めた", hint: "眠った祠のある土地は、足を踏み入れるだけでよみがえります。名所は近くでEを押すとよみがえります。" },
   },
-  saveNotice: { load: "この旅を開けませんでした。セーブは「旅をえらぶ」に残っています。", write: "進行を保存できませんでした。この画面を閉じずに、もう一度お試しください。", conflict: "別のウィンドウでこの旅が変更されました。タイトル画面から開き直してください。", cloud: "Steamのセーブを読み込めませんでした。この端末の旅を表示します。" },
+  saveNotice: { load: "この旅を開けませんでした。セーブは「旅をえらぶ」に残っています。", write: "進行を保存できませんでした。この画面を閉じずに、もう一度お試しください。", conflict: "別のウィンドウでこの旅が変更されました。タイトル画面から開き直してください。", cloud: "Steamのセーブを利用できません。今回はこの端末に保存した旅を使用します。" },
   crash: {
     title: "問題が発生しました",
     message: "予期しないエラーが起きました。旅は保存されています。再読み込みして続けてください。",
@@ -225,6 +226,7 @@ export const ja: Messages = {
       },
     ],
     fullscreen: "フルスクリーン",
+    keepPlaying: "旅を続ける",
     leaveWithoutSaving: "保存せずに戻る",
     returnToTitle: "タイトルへ戻る",
     quitGame: "ゲームを終了",
@@ -236,6 +238,8 @@ export const ja: Messages = {
     loadGame: "旅をえらぶ",
     options: "オプション",
     credits: "クレジット",
+    noticeUnavailable: "ライセンスを読み込めませんでした。リンクを選び直すと再試行できます。",
+    creditNotices: ["第三者ライセンス", "ソースコードのライセンス", "日本語作品集のライセンス"],
     creditsLines: [
       "制作: Jeffrey Wang（Claude と Codex を使用）",
       "諺・慣用句: JMdict/EDICT（© Electronic Dictionary Research and Development Group、CC BY-SA 4.0）",

@@ -52,11 +52,13 @@ const CSS = `
 .hud .landmark-count{gap:6px;padding:0 10px;font-variant-numeric:tabular-nums}
 .hud .landmark-book-icon{font-size:17px;line-height:1}
 .hud .tl{position:absolute;top:14px;left:14px;display:flex;align-items:center;gap:8px}
-.hud .tr{--actions-top:14px;position:absolute;top:var(--actions-top);right:14px;display:flex;align-items:center;gap:8px}
-@media(max-width:600px){.hud .tr{--actions-top:56px}}
+:root{--hud-actions-top:14px}
+.hud .tr{position:absolute;top:var(--hud-actions-top);right:14px;display:flex;align-items:center;gap:8px}
+@media(max-width:600px){:root{--hud-actions-top:56px}}
 .hud .bc{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);text-align:center}
 @media(max-width:700px){
   body:has(.map.small:not([hidden])) .hud .bc{left:14px;right:calc(68px + var(--corner-map-size));transform:none}
+  body:has(.map.small:not([hidden])) .hud .gear-reveal{left:calc((100% - var(--corner-map-size) - 12px)/2);max-width:calc(100% - var(--corner-map-size) - 44px)}
 }
 .hud .msg{display:inline-block;padding:8px 16px;border-radius:10px;background:#2a2424dd;color:#f2ede0}
 .hud .lname{position:absolute;inset:0;opacity:0;--em:clamp(28px,10vh,100px)}

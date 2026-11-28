@@ -1,4 +1,4 @@
-const { app, BrowserWindow, net, protocol } = require("electron");
+const { app, BrowserWindow, dialog, net, protocol } = require("electron");
 const { createReadStream } = require("node:fs");
 const { stat } = require("node:fs/promises");
 const path = require("node:path");
@@ -92,9 +92,15 @@ function createWindow(steam) {
     if (fromGame(event) && typeof fullscreen === "boolean") window.setFullScreen(fullscreen);
   });
   contents.ipc.on("wayshrine:quit", (event) => {
-    if (fromGame(event)) app.quit();
+    if (fromGame(event)) finishClose(true);
   });
-  contents.ipc.handle("wayshrine:steam-saves", (event) => fromGame(event) ? steam?.save.read() ?? null : null);
+  contents.ipc.handle("wayshrine:steam-saves", (event) => {
+    if (!fromGame(event)) return null;
+    if (!steam && (process.env.SteamAppId || process.env.SteamGameId || process.env.WAYSHRINE_STEAM_APP_ID)) {
+      throw new Error("Steamworks could not initialize");
+    }
+    return steam?.save.read() ?? null;
+  });
   contents.ipc.handle("wayshrine:steam-save", (event, snapshot) => {
     if (!fromGame(event)) return false;
     return steam?.save.write(snapshot) ?? false;
@@ -117,7 +123,74 @@ function createWindow(steam) {
     if (!input.isAutoRepeat) window.setFullScreen(!window.isFullScreen());
   });
   let closing = false;
-  window.on("close", () => { closing = true; });
+  let canSave = false;
+  let closeRequested = false;
+  let quitAfterSave = false;
+
+  function finishClose(quit) {
+    closing = true;
+    if (quit) app.quit();
+    else window.close();
+  }
+
+  function saveBeforeClose(event, quit) {
+    if (closing || !canSave) return;
+    event.preventDefault();
+    quitAfterSave ||= quit;
+    if (closeRequested) return;
+    closeRequested = true;
+    contents.send("wayshrine:close-requested");
+  }
+
+  contents.ipc.on("wayshrine:close-ready", (event) => {
+    if (fromGame(event)) canSave = true;
+  });
+  contents.ipc.on("wayshrine:close-result", async (event, failure) => {
+    if (!fromGame(event) || !closeRequested || closing) return;
+    if (failure === null) {
+      finishClose(quitAfterSave);
+      return;
+    }
+    const { message, stay, discard } = failure ?? {};
+    if (![message, stay, discard].every((label) => typeof label === "string")) {
+      closeRequested = false;
+      quitAfterSave = false;
+      return;
+    }
+    const { response } = await dialog.showMessageBox(window, {
+      type: "warning",
+      title: "Wayshrine",
+      message,
+      buttons: [stay, discard],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (response === 1 && !window.isDestroyed()) {
+      finishClose(quitAfterSave);
+      return;
+    }
+    closeRequested = false;
+    quitAfterSave = false;
+  });
+
+  function clearCloseRequest() {
+    canSave = false;
+    closeRequested = false;
+    quitAfterSave = false;
+  }
+
+  contents.on("did-start-navigation", (details) => {
+    if (details.isMainFrame && !details.isSameDocument) clearCloseRequest();
+  });
+  contents.on("render-process-gone", clearCloseRequest);
+  const beforeQuit = (event) => saveBeforeClose(event, true);
+  app.on("before-quit", beforeQuit);
+  window.once("closed", () => app.off("before-quit", beforeQuit));
+  window.on("close", (event) => {
+    saveBeforeClose(event, false);
+    if (!event.defaultPrevented) closing = true;
+  });
   void window.loadURL(`${SCHEME}://${HOST}/`).catch((error) => {
     // Closing or replacing the startup page can cancel its load.
     if (closing || error.code === "ERR_ABORTED") return;

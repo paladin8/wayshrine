@@ -43,6 +43,8 @@ export interface Messages {
     readonly title: string;
     /** The name shown for the next piece of gear, which stays a mystery. */
     readonly mystery: string;
+    /** Shown in the pack's lining before any gear has been found. */
+    readonly empty: string;
     /** Shown once every piece of gear has been found. */
     readonly complete: string;
     readonly close: string;
@@ -122,6 +124,7 @@ export interface Messages {
     readonly controlGroups: readonly { readonly title: string; readonly rows: readonly (readonly [string, string])[] }[];
     readonly fullscreen: string;
     readonly leaveWithoutSaving: string;
+    readonly keepPlaying: string;
     readonly returnToTitle: string;
     readonly quitGame: string;
   };
@@ -135,6 +138,8 @@ export interface Messages {
     readonly credits: string;
     /** One entry per line; the first is the author. */
     readonly creditsLines: readonly string[];
+    readonly noticeUnavailable: string;
+    readonly creditNotices: readonly [string, string, string];
     readonly back: string;
     readonly seedPlaceholder: string;
     readonly begin: string;

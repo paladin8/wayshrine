@@ -61,7 +61,7 @@ export function createTitleScene(container: HTMLElement, { reducedMotion, charac
   const quality = renderQuality(device);
   renderer.setPixelRatio(startingPixelRatio(quality, device));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   const canvas = renderer.domElement;
   canvas.className = "ts-scene ts-3d";
   canvas.style.opacity = "0";

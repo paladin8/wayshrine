@@ -32,6 +32,10 @@ const CSS = `
 .tc-act:active{background:#ffe6ad}
 .tc-act[hidden]{display:none}
 .tc-side{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+@media (orientation:landscape) and (max-height:360px),
+       (orientation:landscape) and (max-width:600px) and (max-height:404px){
+  .tc-side{top:calc(var(--hud-actions-top,14px) + 44px);bottom:auto;flex-direction:row}
+}
 .tc-small{min-width:48px;height:48px;padding:0 12px;border-radius:24px;border:1px solid #2a242433;background:#fffaf0d9;color:inherit;font:inherit;font-size:14px}
 .tc-small:active{background:#ffe6ad}
 .tc-stick{position:absolute;width:${RADIUS * 2}px;height:${RADIUS * 2}px;margin:-${RADIUS}px 0 0 -${RADIUS}px;border-radius:50%;border:2px solid #fffaf0cc;background:#2a242426}

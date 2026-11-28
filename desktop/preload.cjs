@@ -12,6 +12,13 @@ contextBridge.exposeInMainWorld("wayshrineDesktop", {
   },
   enterSeed: (label, text) => ipcRenderer.invoke("wayshrine:steam-seed-keyboard", label, text),
   quit: () => ipcRenderer.send("wayshrine:quit"),
+  saveBeforeClose: (save) => {
+    ipcRenderer.on("wayshrine:close-requested", async () => {
+      const failure = await save();
+      ipcRenderer.send("wayshrine:close-result", failure);
+    });
+    ipcRenderer.send("wayshrine:close-ready");
+  },
   loadSteamSaves: () => ipcRenderer.invoke("wayshrine:steam-saves"),
   writeSteamSaves: (snapshot) => ipcRenderer.invoke("wayshrine:steam-save", snapshot),
   reportSteamAchievements: (ids) => ipcRenderer.send("wayshrine:steam-achievements", ids),

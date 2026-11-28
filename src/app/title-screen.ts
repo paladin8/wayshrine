@@ -107,8 +107,10 @@ const CSS = `
 .ts-input{box-sizing:border-box;width:100%;padding:8px 10px;border-radius:10px;border:1px solid #2a242433;background:#fff;font:inherit;font-size:14px;color:${INK};outline:none;text-transform:none;letter-spacing:normal}
 .ts-input:focus{border-color:${RED}}
 .ts-help{margin:0;font-size:12px;opacity:.65}
-.ts-credit{margin:0;font-size:13px;line-height:1.45}
+.ts-credit{margin:0;font-size:14px;line-height:1.45}
 .ts-credit.author{font-size:15px;font-weight:600}
+.ts-credit a{color:#793b29;text-underline-offset:3px}
+.ts-notice{margin:0;padding:10px;border-radius:6px;background:#fffbf3;font:14px/1.45 ${UI_FONT};white-space:pre-wrap;overflow-wrap:anywhere}
 .ts-list{display:flex;flex-direction:column;gap:8px}
 .ts-save{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid #2a242433;background:#fff}
 .ts-save b{font-weight:600;word-break:break-all}
@@ -119,7 +121,7 @@ const CSS = `
 .ts-loading{margin:6px 0;text-align:center}
 .ts-spinner{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:3px solid #2a242426;border-top-color:${RED};animation:ts-spin .9s linear infinite;transition:opacity .4s ease}
 .ts-spinner.done{opacity:0}
-.ts-version{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));font-size:11px;letter-spacing:.06em;opacity:.55;pointer-events:none;user-select:none}
+.ts-version{position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));font-size:14px;letter-spacing:.06em;opacity:.75;pointer-events:none;user-select:none}
 .ts-fail{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px}
 .ts-fail .ts-panel{text-align:center;line-height:1.5}
 @keyframes ts-spin{to{transform:rotate(360deg)}}
@@ -213,8 +215,8 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
 
   const root = document.createElement("div");
   root.className = "ts-root";
-  // The backdrop is the live 3D scene (render/title-scene.ts); there is no fallback, as the game itself needs WebGL.
-  const backdrop = createTitleScene(root, { reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches, character: settings.get().character });
+  // The root gradient stays visible until the live backdrop is ready.
+  let backdrop = createTitleScene(root, { reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches, character: settings.get().character });
   const unsubscribeCharacter = settings.subscribe((s) => backdrop?.setCharacter(s.character));
   const vignette = document.createElement("div");
   vignette.className = "ts-vignette";
@@ -236,11 +238,17 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
   };
   const ui = document.createElement("div");
   void (backdrop ? backdrop.ready : Promise.resolve(false)).then((shown) => {
-    if (!shown) {
+    if (!root.isConnected) return;
+    if (!backdrop) {
       failed();
       return;
     }
-    vignette.classList.add("shown");
+    if (!shown) {
+      backdrop.destroy();
+      backdrop = null;
+    } else {
+      vignette.classList.add("shown");
+    }
     spinner.classList.add("done");
     setTimeout(() => spinner.remove(), 500);
   });
@@ -317,6 +325,37 @@ export function createTitleScreen(container: HTMLElement, { saves, settings, mus
         p.className = i === 0 ? "ts-credit author" : "ts-credit";
         p.textContent = line;
         return p;
+      }),
+      ...(["NOTICE.txt", "LICENSE.txt", "content-license.txt"] as const).flatMap((file, i) => {
+        const row = document.createElement("p");
+        row.className = "ts-credit";
+        const link = document.createElement("a");
+        link.href = `${import.meta.env.BASE_URL}notices/${file}`;
+        link.textContent = m.creditNotices[i]!;
+        const notice = document.createElement("pre");
+        notice.className = "ts-notice";
+        notice.id = `credit-notice-${i}`;
+        notice.hidden = true;
+        link.setAttribute("aria-controls", notice.id);
+        link.setAttribute("aria-expanded", "false");
+        let loaded = false;
+        link.addEventListener("click", async (event) => {
+          event.preventDefault();
+          notice.hidden = !notice.hidden;
+          link.setAttribute("aria-expanded", String(!notice.hidden));
+          if (notice.hidden || loaded) return;
+          notice.textContent = m.loading;
+          try {
+            const response = await fetch(link.href);
+            if (!response.ok) throw new Error(`Notice request failed: ${response.status}`);
+            notice.textContent = await response.text();
+            loaded = true;
+          } catch {
+            notice.textContent = m.noticeUnavailable;
+          }
+        });
+        row.appendChild(link);
+        return [row, notice];
       }),
     );
   });
